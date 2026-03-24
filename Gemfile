@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 
 ruby "3.2.0"
-
+gem 'twilio-ruby'
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 8.0.4"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
@@ -21,6 +21,12 @@ gem "cssbundling-rails"
 
 # JWT for mobile API authentication
 gem "jwt"
+
+# HTTP client for payment gateway integration
+gem 'httparty'
+
+# Load environment variables from .env file
+gem 'dotenv-rails', groups: [:development, :test]
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 

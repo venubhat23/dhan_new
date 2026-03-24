@@ -1064,6 +1064,18 @@ Rails.application.routes.draw do
     resources :client_requests, only: [:index, :show, :new, :create]
   end
 
+  # Payment Gateway routes
+  resources :payment, only: [] do
+    collection do
+      post :create_order
+      get :success
+      get :failure
+    end
+  end
+
+  # Cashfree webhook
+  post '/cashfree/webhook', to: 'cashfree#webhook'
+
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   get "up" => "rails/health#show", as: :rails_health_check
 end

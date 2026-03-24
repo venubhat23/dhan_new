@@ -1,0 +1,527 @@
+<!-- Cashfree Payment Integration Modal -->
+<!-- Include Cashfree JS SDK -->
+<script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+
+<style>
+  .checkout-modal {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .payment-option {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0.5rem 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .payment-option:hover,
+  .payment-option.selected {
+    border-color: #1C7C54;
+    background-color: rgba(28, 124, 84, 0.05);
+  }
+
+  .payment-option input[type="radio"] {
+    margin-right: 0.5rem;
+  }
+
+  .order-summary {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  .btn-pay-now {
+    background: linear-gradient(135deg, #1C7C54 0%, #10b981 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    padding: 12px 30px;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(28, 124, 84, 0.2);
+  }
+
+  .btn-pay-now:hover {
+    background: linear-gradient(135deg, #0f5d3d 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(28, 124, 84, 0.3);
+    color: white;
+  }
+
+  .btn-pay-now:disabled {
+    background: #6c757d;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .address-card {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0.5rem 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .address-card:hover,
+  .address-card.selected {
+    border-color: #1C7C54;
+    background-color: rgba(28, 124, 84, 0.05);
+  }
+</style>
+
+<!-- Checkout Modal -->
+<div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg checkout-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="checkoutModalLabel">
+          <i class="bi bi-credit-card me-2"></i>
+          Checkout
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Step 1: Delivery Address -->
+        <div class="checkout-step" id="step-address">
+          <h6 class="mb-3">
+            <i class="bi bi-geo-alt me-2"></i>
+            Delivery Address
+          </h6>
+
+          <div id="addressSelection">
+            <% if current_customer&.customer_addresses&.any? %>
+              <% current_customer.customer_addresses.each_with_index do |address, index| %>
+                <div class="address-card" onclick="selectAddress(<%= index %>)" data-address-id="<%= address.id %>">
+                  <input type="radio" name="delivery_address" id="address_<%= index %>" value="<%= address.id %>" <%= 'checked' if index == 0 %>>
+                  <label for="address_<%= index %>" class="mb-0">
+                    <strong><%= address.address_type || 'Home' %></strong><br>
+                    <%= address.full_address %><br>
+                    <% if address.phone.present? %>
+                      <small class="text-muted">📞 <%= address.phone %></small>
+                    <% end %>
+                  </label>
+                </div>
+              <% end %>
+            <% else %>
+              <div class="text-center py-4">
+                <i class="bi bi-house-add fs-1 text-muted"></i>
+                <p class="text-muted">No addresses saved</p>
+                <button type="button" class="btn btn-outline-primary" onclick="showAddAddressForm()">
+                  <i class="bi bi-plus me-2"></i>Add New Address
+                </button>
+              </div>
+            <% end %>
+          </div>
+
+          <!-- Add new address form (hidden by default) -->
+          <div id="newAddressForm" style="display: none;">
+            <h6 class="mt-4">Add New Address</h6>
+            <div class="row">
+              <div class="col-md-6">
+                <input type="text" class="form-control mb-2" id="new_address_line1" placeholder="Address Line 1" required>
+                <input type="text" class="form-control mb-2" id="new_address_line2" placeholder="Address Line 2">
+                <input type="text" class="form-control mb-2" id="new_address_city" placeholder="City" required>
+              </div>
+              <div class="col-md-6">
+                <input type="text" class="form-control mb-2" id="new_address_state" placeholder="State" required>
+                <input type="text" class="form-control mb-2" id="new_address_pincode" placeholder="Pincode" required>
+                <input type="text" class="form-control mb-2" id="new_address_phone" placeholder="Phone Number" required>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-primary" onclick="saveNewAddress()">Save Address</button>
+              <button type="button" class="btn btn-secondary" onclick="hideAddAddressForm()">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Payment Method -->
+        <div class="checkout-step mt-4" id="step-payment">
+          <h6 class="mb-3">
+            <i class="bi bi-wallet2 me-2"></i>
+            Payment Method
+          </h6>
+
+          <div class="payment-option selected" onclick="selectPaymentMethod('cashfree')">
+            <input type="radio" name="payment_method" id="payment_cashfree" value="cashfree" checked>
+            <label for="payment_cashfree" class="mb-0">
+              <i class="bi bi-credit-card me-2"></i>
+              <strong>UPI Payment</strong>
+              <small class="d-block text-muted">Pay securely using UPI, Credit Card, Debit Card, Net Banking</small>
+            </label>
+          </div>
+
+          <div class="payment-option" onclick="selectPaymentMethod('cod')">
+            <input type="radio" name="payment_method" id="payment_cod" value="cod">
+            <label for="payment_cod" class="mb-0">
+              <i class="bi bi-cash me-2"></i>
+              <strong>Cash on Delivery</strong>
+              <small class="d-block text-muted">Pay when your order is delivered</small>
+            </label>
+          </div>
+        </div>
+
+        <!-- Step 3: Order Summary -->
+        <div class="checkout-step mt-4" id="step-summary">
+          <h6 class="mb-3">
+            <i class="bi bi-receipt me-2"></i>
+            Order Summary
+          </h6>
+
+          <div class="order-summary">
+            <div id="orderItems">
+              <!-- Will be populated by JavaScript -->
+            </div>
+            <hr>
+            <div class="d-flex justify-content-between">
+              <strong>Subtotal:</strong>
+              <strong id="orderSubtotal">₹0.00</strong>
+            </div>
+            <div class="d-flex justify-content-between">
+              <span>Delivery:</span>
+              <span id="orderDelivery">Free</span>
+            </div>
+            <hr>
+            <div class="d-flex justify-content-between fs-5">
+              <strong>Total:</strong>
+              <strong id="orderTotal">₹0.00</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-2"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-pay-now" id="payNowBtn" onclick="processPayment()">
+          <i class="bi bi-credit-card me-2"></i>
+          <span id="payBtnText">Pay Now</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedPaymentMethod = 'cashfree';
+let orderTotal = 0;
+
+// Initialize Cashfree SDK
+let cashfree;
+const initializeCashfree = async () => {
+  try {
+    cashfree = await Cashfree({
+      mode: 'sandbox' // Change to 'production' for live
+    });
+  } catch (error) {
+    console.error('Failed to initialize Cashfree:', error);
+  }
+};
+
+// Initialize when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+  initializeCashfree();
+});
+
+function showCheckout() {
+  // Get cart items from localStorage
+  const cart = JSON.parse(localStorage.getItem('customerCart') || '[]');
+
+  if (cart.length === 0) {
+    alert('Your cart is empty. Please add items to your cart first.');
+    return;
+  }
+
+  // Populate order summary
+  updateOrderSummary(cart);
+
+  // Show the modal
+  const modal = new bootstrap.Modal(document.getElementById('checkoutModal'));
+  modal.show();
+}
+
+function updateOrderSummary(cart) {
+  const orderItemsContainer = document.getElementById('orderItems');
+  const subtotalElement = document.getElementById('orderSubtotal');
+  const totalElement = document.getElementById('orderTotal');
+
+  let subtotal = 0;
+  let itemsHtml = '';
+
+  cart.forEach(item => {
+    const itemTotal = item.price * item.quantity;
+    subtotal += itemTotal;
+
+    itemsHtml += `
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <strong>${item.name}</strong> × ${item.quantity}
+          <small class="text-muted d-block">₹${item.price} each</small>
+        </div>
+        <span>₹${itemTotal.toFixed(2)}</span>
+      </div>
+    `;
+  });
+
+  orderItemsContainer.innerHTML = itemsHtml;
+  subtotalElement.textContent = `₹${subtotal.toFixed(2)}`;
+  totalElement.textContent = `₹${subtotal.toFixed(2)}`;
+
+  orderTotal = subtotal;
+
+  // Update pay button text
+  updatePayButtonText();
+}
+
+function selectPaymentMethod(method) {
+  selectedPaymentMethod = method;
+
+  // Update radio buttons
+  document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+    radio.checked = radio.value === method;
+  });
+
+  // Update visual selection
+  document.querySelectorAll('.payment-option').forEach(option => {
+    option.classList.remove('selected');
+  });
+
+  event.currentTarget.classList.add('selected');
+
+  // Update pay button text
+  updatePayButtonText();
+}
+
+function updatePayButtonText() {
+  const payBtnText = document.getElementById('payBtnText');
+  const payBtn = document.getElementById('payNowBtn');
+
+  if (selectedPaymentMethod === 'cashfree') {
+    payBtnText.textContent = `Pay ₹${orderTotal.toFixed(2)}`;
+    payBtn.innerHTML = '<i class="bi bi-credit-card me-2"></i>' + payBtnText.textContent;
+  } else {
+    payBtnText.textContent = `Place Order - ₹${orderTotal.toFixed(2)}`;
+    payBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>' + payBtnText.textContent;
+  }
+}
+
+function selectAddress(index) {
+  // Update radio button
+  document.querySelectorAll('input[name="delivery_address"]').forEach((radio, i) => {
+    radio.checked = i === index;
+  });
+
+  // Update visual selection
+  document.querySelectorAll('.address-card').forEach(card => {
+    card.classList.remove('selected');
+  });
+
+  event.currentTarget.classList.add('selected');
+}
+
+function showAddAddressForm() {
+  document.getElementById('newAddressForm').style.display = 'block';
+}
+
+function hideAddAddressForm() {
+  document.getElementById('newAddressForm').style.display = 'none';
+}
+
+function saveNewAddress() {
+  // Get form values
+  const addressData = {
+    address_line1: document.getElementById('new_address_line1').value,
+    address_line2: document.getElementById('new_address_line2').value,
+    city: document.getElementById('new_address_city').value,
+    state: document.getElementById('new_address_state').value,
+    pincode: document.getElementById('new_address_pincode').value,
+    phone: document.getElementById('new_address_phone').value
+  };
+
+  // Validate required fields
+  if (!addressData.address_line1 || !addressData.city || !addressData.state || !addressData.pincode || !addressData.phone) {
+    alert('Please fill in all required fields');
+    return;
+  }
+
+  // Here you would typically send this to the server to save
+  // For now, we'll just add it to the UI
+  const fullAddress = `${addressData.address_line1}, ${addressData.address_line2 ? addressData.address_line2 + ', ' : ''}${addressData.city}, ${addressData.state} - ${addressData.pincode}`;
+
+  const addressHtml = `
+    <div class="address-card selected" onclick="selectAddress(999)" data-address-id="new">
+      <input type="radio" name="delivery_address" id="address_new" value="new" checked>
+      <label for="address_new" class="mb-0">
+        <strong>New Address</strong><br>
+        ${fullAddress}<br>
+        <small class="text-muted">📞 ${addressData.phone}</small>
+      </label>
+    </div>
+  `;
+
+  // Add to address selection
+  const addressSelection = document.getElementById('addressSelection');
+  addressSelection.insertAdjacentHTML('beforeend', addressHtml);
+
+  // Hide form
+  hideAddAddressForm();
+
+  // Clear form
+  document.getElementById('newAddressForm').querySelectorAll('input').forEach(input => {
+    input.value = '';
+  });
+}
+
+async function processPayment() {
+  const payBtn = document.getElementById('payNowBtn');
+  const originalContent = payBtn.innerHTML;
+
+  // Get cart and address data
+  const cart = JSON.parse(localStorage.getItem('customerCart') || '[]');
+  const selectedAddress = document.querySelector('input[name="delivery_address"]:checked');
+
+  if (!selectedAddress) {
+    alert('Please select a delivery address');
+    return;
+  }
+
+  if (cart.length === 0) {
+    alert('Your cart is empty');
+    return;
+  }
+
+  // Show loading
+  payBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+  payBtn.disabled = true;
+
+  try {
+    if (selectedPaymentMethod === 'cashfree') {
+      await processCashfreePayment(cart, selectedAddress.value);
+    } else {
+      await processCODOrder(cart, selectedAddress.value);
+    }
+  } catch (error) {
+    console.error('Payment processing error:', error);
+    alert('Payment failed. Please try again.');
+
+    // Reset button
+    payBtn.innerHTML = originalContent;
+    payBtn.disabled = false;
+  }
+}
+
+async function processCashfreePayment(cart, addressId) {
+  try {
+    // Create order with backend
+    const orderResponse = await fetch('/payment/create_order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      },
+      body: JSON.stringify({
+        cart_items: cart,
+        address_id: addressId,
+        payment_method: 'cashfree'
+      })
+    });
+
+    const orderData = await orderResponse.json();
+
+    if (!orderData.success) {
+      throw new Error(orderData.message || 'Failed to create order');
+    }
+
+    // Initialize Cashfree payment
+    if (!cashfree) {
+      await initializeCashfree();
+    }
+
+    const checkoutOptions = {
+      paymentSessionId: orderData.payment_session_id,
+      redirectTarget: '_self'
+    };
+
+    // Open Cashfree checkout
+    cashfree.checkout(checkoutOptions).then(() => {
+      console.log('Payment initiated');
+      // Payment initiated successfully
+      // The user will be redirected to the payment gateway
+    }).catch((error) => {
+      console.error('Cashfree checkout error:', error);
+      throw new Error('Failed to open payment gateway');
+    });
+
+  } catch (error) {
+    console.error('Cashfree payment error:', error);
+    throw error;
+  }
+}
+
+async function processCODOrder(cart, addressId) {
+  try {
+    // Create COD order
+    const response = await fetch('/customer/shop/cart_order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      },
+      body: JSON.stringify({
+        cart_items: cart.map(item => ({
+          product_id: item.id,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        address_id: addressId,
+        payment_method: 'cod'
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Clear cart
+      localStorage.removeItem('customerCart');
+
+      // Close modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
+      modal.hide();
+
+      // Show success message
+      alert('Order placed successfully! Order number: ' + data.booking_number);
+
+      // Redirect to success page
+      if (data.redirect_url) {
+        window.location.href = data.redirect_url;
+      } else {
+        // Fallback - refresh page and update cart
+        window.location.reload();
+      }
+    } else {
+      throw new Error(data.error || 'Failed to place order');
+    }
+
+  } catch (error) {
+    console.error('COD order error:', error);
+    throw error;
+  }
+}
+
+// Add event listener for cart checkout button
+document.addEventListener('DOMContentLoaded', function() {
+  // If there's a checkout button in the UI, bind it to showCheckout
+  const checkoutBtn = document.getElementById('checkoutBtn');
+  if (checkoutBtn) {
+    checkoutBtn.addEventListener('click', showCheckout);
+  }
+});
+</script>

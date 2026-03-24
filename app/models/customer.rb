@@ -155,7 +155,11 @@ class Customer < ApplicationRecord
 
   # Password Reset Methods
   def generate_password_reset_token!
-    self.password_reset_token = SecureRandom.urlsafe_base64
+    # Generate a simple token that won't be signed by Rails
+    loop do
+      token = SecureRandom.urlsafe_base64(32)
+      break self.password_reset_token = token unless Customer.exists?(password_reset_token: token)
+    end
     self.password_reset_sent_at = Time.current
     save!(validate: false)
   end
@@ -171,7 +175,13 @@ class Customer < ApplicationRecord
   end
 
   def self.find_by_password_reset_token(token)
-    where(password_reset_token: token).where('password_reset_sent_at > ?', 24.hours.ago).first
+    # Handle both signed and plain tokens
+    customer = where(password_reset_token: token).where('password_reset_sent_at > ?', 24.hours.ago).first
+    return customer if customer
+
+    # If not found with exact match, try to find customers and check if token matches
+    candidates = where('password_reset_sent_at > ?', 24.hours.ago)
+    candidates.find { |c| c.password_reset_token == token }
   end
 
   private

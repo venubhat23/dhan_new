@@ -330,7 +330,7 @@
 
   /* Compact Modern Card Images */
   .card-img-top {
-    height: 180px;
+    height: 150px;
     object-fit: cover;
     border-radius: 16px 16px 0 0;
     transition: all 0.3s ease;
@@ -449,11 +449,11 @@
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
   }
 
-  /* 5-column grid layout for XL screens */
+  /* 6-column grid layout for XL screens */
   @media (min-width: 1200px) {
-    .col-xl-2-4 {
-      flex: 0 0 20%;
-      max-width: 20%;
+    .col-xl-2 {
+      flex: 0 0 16.666667%;
+      max-width: 16.666667%;
     }
   }
 
@@ -482,7 +482,7 @@
   }
 
   .card-body {
-    padding: 1rem !important;
+    padding: 0.75rem !important;
   }
 
   /* Optimize content spacing for compact layout */
@@ -639,7 +639,7 @@
                 <% current_stock = product.cached_total_batch_stock %>
                 <% in_stock = current_stock > 0 %>
 
-                <div class="col-xl-2-4 col-lg-3 col-md-4 col-sm-6 product-grid-item"
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 product-grid-item"
                      data-product-id="<%= product.id %>"
                      data-category="<%= product.category_id %>"
                      data-stock="<%= current_stock %>">
@@ -647,14 +647,14 @@
                 <!-- Product Image -->
                 <div class="position-relative">
                   <% if product.images_attached? && product.images.any? %>
-                    <%= image_tag product.images.first, class: "card-img-top", style: "height: 180px; object-fit: cover;" %>
+                    <%= image_tag product.images.first, class: "card-img-top", style: "height: 150px; object-fit: cover;" %>
                   <% elsif product.image.present? %>
-                    <%= image_tag product.image, class: "card-img-top", style: "height: 180px; object-fit: cover;" %>
+                    <%= image_tag product.image, class: "card-img-top", style: "height: 150px; object-fit: cover;" %>
                   <% elsif product.image_url.present? %>
-                    <img src="<%= product.image_url %>" class="card-img-top" style="height: 180px; object-fit: cover;" alt="<%= product.name %>">
+                    <img src="<%= product.image_url %>" class="card-img-top" style="height: 150px; object-fit: cover;" alt="<%= product.name %>">
                   <% else %>
-                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 180px;">
-                      <i class="bi bi-box-seam fs-2 text-muted"></i>
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                      <i class="bi bi-box-seam fs-3 text-muted"></i>
                     </div>
                   <% end %>
 
@@ -831,6 +831,7 @@ document.addEventListener('DOMContentLoaded', function() {
   initializeFilters();
   initializeSearch();
   initializeSelect2();
+  addCheckoutButton();
 });
 
 // Initialize Select2 dropdowns
@@ -1155,7 +1156,7 @@ function toggleView(viewType) {
     // Reset all products to grid view
     const products = document.querySelectorAll('.product-grid-item');
     products.forEach(product => {
-      product.className = 'col-xl-3 col-lg-4 col-md-6 product-grid-item';
+      product.className = 'col-xl-2 col-lg-3 col-md-4 col-sm-6 product-grid-item';
     });
   } else if (viewType === 'list') {
     listViewBtn.classList.add('active');
@@ -1183,4 +1184,85 @@ document.addEventListener('DOMContentLoaded', function() {
     listViewBtn.addEventListener('click', () => toggleView('list'));
   }
 });
+
+// Add floating checkout button
+function addCheckoutButton() {
+  if (document.getElementById('floating-checkout')) return; // Already exists
+
+  const checkoutButton = document.createElement('div');
+  checkoutButton.id = 'floating-checkout';
+  checkoutButton.innerHTML = `
+    <button type="button" class="btn btn-primary btn-lg" id="checkoutBtn" onclick="showCheckout()" style="
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      border-radius: 25px;
+      padding: 12px 20px;
+      font-weight: 600;
+      box-shadow: 0 4px 20px rgba(28, 124, 84, 0.3);
+      display: none;
+    ">
+      <i class="bi bi-cart-check me-2"></i>
+      Checkout (<span id="cart-count">0</span>)
+    </button>
+  `;
+
+  document.body.appendChild(checkoutButton);
+
+  // Show/hide based on cart contents
+  updateCheckoutButtonVisibility();
+}
+
+function updateCheckoutButtonVisibility() {
+  const checkoutBtn = document.getElementById('checkoutBtn');
+  const cart = JSON.parse(localStorage.getItem('customerCart') || '[]');
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  if (checkoutBtn) {
+    if (totalItems > 0) {
+      checkoutBtn.style.display = 'block';
+      document.getElementById('cart-count').textContent = Math.round(totalItems);
+    } else {
+      checkoutBtn.style.display = 'none';
+    }
+  }
+}
+
+// Update the existing updateCartBadge function to also update checkout button
+function updateCartBadge() {
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartBadge = document.getElementById('cart-count');
+
+  if (cartBadge) {
+    if (totalItems > 0) {
+      cartBadge.textContent = Math.round(totalItems);
+      cartBadge.style.display = 'inline-block';
+    } else {
+      cartBadge.style.display = 'none';
+    }
+  }
+
+  // Also update header cart badge
+  const headerCartBadge = document.getElementById('cart-badge');
+  if (headerCartBadge) {
+    if (totalItems > 0) {
+      headerCartBadge.textContent = totalItems > 99 ? '99+' : Math.round(totalItems);
+      headerCartBadge.style.display = 'block';
+    } else {
+      headerCartBadge.style.display = 'none';
+    }
+  }
+
+  // Update checkout button visibility
+  updateCheckoutButtonVisibility();
+
+  // Dispatch custom event for other pages
+  window.dispatchEvent(new CustomEvent('cartUpdated', {
+    detail: { totalItems: totalItems }
+  }));
+}
 </script>
+
+<!-- Include the checkout modal -->
+<%= render 'customer/shop/checkout_modal' %>

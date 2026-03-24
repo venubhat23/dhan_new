@@ -41,7 +41,14 @@ class Booking < ApplicationRecord
     upi: 2,
     bank_transfer: 3,
     online: 4,
-    cod: 5
+    cod: 5,
+    cashfree: 6
+  }, prefix: true
+
+  enum :payment_gateway, {
+    cash: 'cash',
+    cashfree: 'cashfree',
+    upi_direct: 'upi_direct'
   }, prefix: true
 
   # Validations
@@ -311,6 +318,7 @@ class Booking < ApplicationRecord
     when 'bank_transfer', '3' then 'Bank Transfer'
     when 'online', '4' then 'Online'
     when 'cod', '5' then 'COD'
+    when 'cashfree', '6' then 'Online Payment'
     else raw_value.to_s.humanize
     end
   end
@@ -558,6 +566,57 @@ class Booking < ApplicationRecord
       # Mark the sale item as refunded/returned
       sale_item.destroy
     end
+  end
+
+  # Cashfree Payment Methods
+  def self.generate_cashfree_order_id
+    "MKS_#{Time.current.strftime('%Y%m%d%H%M%S')}_#{SecureRandom.hex(4).upcase}"
+  end
+
+  def mark_payment_initiated!(gateway = 'cashfree')
+    update!(
+      payment_gateway: gateway,
+      payment_initiated_at: Time.current,
+      payment_status: 'unpaid'
+    )
+  end
+
+  def mark_payment_completed!(payment_details = {})
+    update!(
+      payment_status: 'paid',
+      payment_completed_at: Time.current,
+      cashfree_payment_id: payment_details[:cf_payment_id],
+      payment_method: payment_details[:payment_method] || 'cashfree',
+      gateway_response: payment_details.to_json,
+      status: 'confirmed'
+    )
+  end
+
+  def mark_payment_failed!(failure_reason = nil)
+    response_data = { failure_reason: failure_reason, failed_at: Time.current }
+    update!(
+      payment_status: 'unpaid',
+      gateway_response: response_data.to_json
+    )
+  end
+
+  def can_initiate_payment?
+    draft? && total_amount.present? && total_amount > 0 && customer.present?
+  end
+
+  def payment_pending?
+    payment_initiated_at.present? && payment_completed_at.blank? && payment_status_unpaid?
+  end
+
+  def payment_successful?
+    payment_status_paid? && cashfree_payment_id.present?
+  end
+
+  def gateway_response_hash
+    return {} if gateway_response.blank?
+    JSON.parse(gateway_response)
+  rescue JSON::ParserError
+    {}
   end
 
 end
