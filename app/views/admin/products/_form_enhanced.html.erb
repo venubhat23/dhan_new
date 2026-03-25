@@ -1982,10 +1982,11 @@ document.addEventListener('DOMContentLoaded', function() {
         gstPercentage = 100;
       }
 
-      // Reverse calculation: Base Price = Inclusive Price / (1 + GST Rate)
+      // Fixed calculation: Base Price = Inclusive Price / (1 + GST Rate) but round to whole number for clean display
       basePrice = sellingPriceInclusive / (1 + (gstPercentage / 100));
-      // Round base price to 2 decimal places
-      basePrice = Math.round(basePrice * 100) / 100;
+      // Round base price to nearest whole number for clean display (e.g., 95.24 becomes 95)
+      basePrice = Math.round(basePrice);
+      // Calculate GST as the difference to ensure totals match
       totalGSTAmount = sellingPriceInclusive - basePrice;
       // Round GST amount to 2 decimal places
       totalGSTAmount = Math.round(totalGSTAmount * 100) / 100;
@@ -2007,24 +2008,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const totalGSTPercentage = cgstPercentage + sgstPercentage + igstPercentage;
 
-      // Reverse calculation: Base Price = Inclusive Price / (1 + Total GST Rate)
+      // Fixed calculation: Base Price = Inclusive Price / (1 + Total GST Rate) but round to whole number for clean display
       basePrice = sellingPriceInclusive / (1 + (totalGSTPercentage / 100));
-      // Round base price to 2 decimal places
-      basePrice = Math.round(basePrice * 100) / 100;
+      // Round base price to nearest whole number for clean display
+      basePrice = Math.round(basePrice);
 
-      // Calculate individual GST components based on base price
-      cgstAmount = (basePrice * cgstPercentage) / 100;
-      sgstAmount = (basePrice * sgstPercentage) / 100;
-      igstAmount = (basePrice * igstPercentage) / 100;
-
-      // Round individual GST amounts
-      cgstAmount = Math.round(cgstAmount * 100) / 100;
-      sgstAmount = Math.round(sgstAmount * 100) / 100;
-      igstAmount = Math.round(igstAmount * 100) / 100;
-
-      totalGSTAmount = cgstAmount + sgstAmount + igstAmount;
-      // Round total GST amount
+      // Calculate total GST as difference first
+      totalGSTAmount = sellingPriceInclusive - basePrice;
       totalGSTAmount = Math.round(totalGSTAmount * 100) / 100;
+
+      // Proportionally distribute GST among components based on their percentages
+      if (totalGSTPercentage > 0) {
+        cgstAmount = (totalGSTAmount * cgstPercentage) / totalGSTPercentage;
+        sgstAmount = (totalGSTAmount * sgstPercentage) / totalGSTPercentage;
+        igstAmount = (totalGSTAmount * igstPercentage) / totalGSTPercentage;
+
+        // Round individual GST amounts
+        cgstAmount = Math.round(cgstAmount * 100) / 100;
+        sgstAmount = Math.round(sgstAmount * 100) / 100;
+        igstAmount = Math.round(igstAmount * 100) / 100;
+      } else {
+        cgstAmount = sgstAmount = igstAmount = 0;
+      }
 
       // Update displays
       if (basePriceDetailedDisplay) basePriceDetailedDisplay.value = basePrice.toFixed(2);

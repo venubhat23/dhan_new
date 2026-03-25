@@ -54,9 +54,40 @@
   }
 
   .btn-pay-now:disabled {
-    background: #6c757d;
-    transform: none;
-    box-shadow: none;
+    background: #6c757d !important;
+    transform: none !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+  }
+
+  .btn-pay-now[disabled] {
+    background: #6c757d !important;
+    transform: none !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+  }
+
+  .btn-success {
+    background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    padding: 12px 30px;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(25, 135, 84, 0.2);
+  }
+
+  .btn-success:hover {
+    background: linear-gradient(135deg, #157347 0%, #0f5132 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(25, 135, 84, 0.3);
+    color: white;
   }
 
   .address-card {
@@ -149,7 +180,7 @@
             Payment Method
           </h6>
 
-          <div class="payment-option selected" onclick="selectPaymentMethod('cashfree')">
+          <div class="payment-option selected" id="payment-option-cashfree" data-method="cashfree">
             <input type="radio" name="payment_method" id="payment_cashfree" value="cashfree" checked>
             <label for="payment_cashfree" class="mb-0">
               <i class="bi bi-credit-card me-2"></i>
@@ -158,7 +189,7 @@
             </label>
           </div>
 
-          <div class="payment-option" onclick="selectPaymentMethod('cod')">
+          <div class="payment-option" id="payment-option-cod" data-method="cod">
             <input type="radio" name="payment_method" id="payment_cod" value="cod">
             <label for="payment_cod" class="mb-0">
               <i class="bi bi-cash me-2"></i>
@@ -226,9 +257,143 @@ const initializeCashfree = async () => {
   }
 };
 
-// Initialize when the page loads
+// Payment System - Isolated from browser extension conflicts
+const PaymentSystem = {
+  selectedMethod: 'cashfree',
+  orderTotal: 0,
+
+  init: function() {
+    try {
+      initializeCashfree();
+      this.setupPaymentHandlers();
+      this.updatePayButton();
+      console.log('✅ Payment System Initialized Successfully');
+    } catch (error) {
+      console.error('❌ Payment System Init Error:', error);
+    }
+  },
+
+  setupPaymentHandlers: function() {
+    // Setup click handlers for payment options
+    document.addEventListener('click', function(e) {
+      const paymentOption = e.target.closest('.payment-option');
+      if (paymentOption && paymentOption.dataset.method) {
+        e.preventDefault();
+        e.stopPropagation();
+        PaymentSystem.selectMethod(paymentOption.dataset.method);
+      }
+    });
+
+    // Also handle radio button changes
+    const radioButtons = document.querySelectorAll('input[name="payment_method"]');
+    radioButtons.forEach(radio => {
+      radio.addEventListener('change', function() {
+        if (this.checked) {
+          PaymentSystem.selectMethod(this.value);
+        }
+      });
+    });
+  },
+
+  selectMethod: function(method) {
+    try {
+      console.log('🔄 Selecting payment method:', method);
+      this.selectedMethod = method;
+
+      // Sync with old payment system
+      selectedPaymentMethod = method;
+      window.selectedPaymentMethod = method;
+
+      // Update radio buttons
+      const radioButtons = document.querySelectorAll('input[name="payment_method"]');
+      radioButtons.forEach(radio => {
+        radio.checked = radio.value === method;
+      });
+
+      // Update visual selection
+      document.querySelectorAll('.payment-option').forEach(option => {
+        option.classList.remove('selected');
+      });
+
+      const targetOption = document.getElementById(`payment-option-${method}`);
+      if (targetOption) {
+        targetOption.classList.add('selected');
+      }
+
+      this.updatePayButton();
+      this.showNotification(method);
+
+      console.log('✅ Payment method updated to:', this.selectedMethod);
+      console.log('✅ Synced selectedPaymentMethod to:', selectedPaymentMethod);
+    } catch (error) {
+      console.error('❌ Error selecting payment method:', error);
+    }
+  },
+
+  updatePayButton: function() {
+    try {
+      const payBtn = document.getElementById('payNowBtn');
+      if (!payBtn) return;
+
+      if (this.selectedMethod === 'cashfree') {
+        payBtn.innerHTML = `<i class="bi bi-credit-card me-2"></i>Pay ₹${this.orderTotal.toFixed(2)}`;
+        payBtn.className = 'btn btn-pay-now';
+      } else {
+        payBtn.innerHTML = `<i class="bi bi-check-circle me-2"></i>Place Order - ₹${this.orderTotal.toFixed(2)}`;
+        payBtn.className = 'btn btn-success';
+      }
+
+      console.log('✅ Pay button updated for method:', this.selectedMethod);
+    } catch (error) {
+      console.error('❌ Error updating pay button:', error);
+    }
+  },
+
+  showNotification: function(method) {
+    try {
+      // Remove any existing notifications
+      const existingNotification = document.querySelector('.payment-notification');
+      if (existingNotification) {
+        existingNotification.remove();
+      }
+
+      const notification = document.createElement('div');
+      notification.className = 'payment-notification';
+      notification.style.cssText = `
+        position: fixed;
+        top: 70px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        z-index: 10000;
+        font-weight: bold;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease-out;
+      `;
+
+      notification.textContent = method === 'cashfree' ?
+        '💳 UPI Payment Selected!' :
+        '💵 Cash on Delivery Selected!';
+
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        if (notification && notification.parentNode) {
+          notification.style.animation = 'slideOut 0.3s ease-in';
+          setTimeout(() => notification.remove(), 300);
+        }
+      }, 2500);
+    } catch (error) {
+      console.error('❌ Error showing notification:', error);
+    }
+  }
+};
+
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-  initializeCashfree();
+  PaymentSystem.init();
 });
 
 function showCheckout() {
@@ -254,26 +419,97 @@ function updateOrderSummary(cart) {
   const totalElement = document.getElementById('orderTotal');
 
   let subtotal = 0;
+  let totalGST = 0;
   let itemsHtml = '';
 
   cart.forEach(item => {
     const itemTotal = item.price * item.quantity;
     subtotal += itemTotal;
 
-    itemsHtml += `
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <div>
-          <strong>${item.name}</strong> × ${item.quantity}
-          <small class="text-muted d-block">₹${item.price} each</small>
+    // Calculate GST for this item - use proper rounding like the product display
+    const itemFinalPrice = item.price;
+    const itemGSTRate = item.gstRate || 0;
+
+    if (itemGSTRate > 0) {
+      // Use the same smart rounding logic as in the product cards
+      const roundedFinal = itemFinalPrice;
+      const roundedBase = Math.round(roundedFinal / (1 + (itemGSTRate / 100.0)));
+      const roundedGST = roundedFinal - roundedBase;
+      const itemGSTAmount = roundedGST * item.quantity;
+      totalGST += itemGSTAmount;
+
+      itemsHtml += `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <strong>${item.name}</strong><br>
+            <small class="text-muted">₹${roundedBase} + GST ${itemGSTRate}%</small><br>
+            <small class="text-muted">Only ${item.maxStock} in stock</small>
+          </div>
+          <div class="text-end">
+            <strong>${item.quantity}</strong><br>
+            <span>₹${itemTotal.toFixed(2)}</span>
+          </div>
         </div>
-        <span>₹${itemTotal.toFixed(2)}</span>
-      </div>
-    `;
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <small class="text-muted">${item.quantity} × ₹${roundedBase.toFixed(2)} (base)</small>
+          <div></div>
+        </div>
+      `;
+    } else {
+      itemsHtml += `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <strong>${item.name}</strong> × ${item.quantity}
+            <small class="text-muted d-block">₹${item.price} each</small>
+          </div>
+          <span>₹${itemTotal.toFixed(2)}</span>
+        </div>
+      `;
+    }
   });
 
+  // Calculate base amount (total - GST)
+  const baseAmount = subtotal - totalGST;
+
   orderItemsContainer.innerHTML = itemsHtml;
-  subtotalElement.textContent = `₹${subtotal.toFixed(2)}`;
-  totalElement.textContent = `₹${subtotal.toFixed(2)}`;
+
+  // Update summary with proper GST breakdown
+  const summaryHtml = `
+    <div class="d-flex justify-content-between">
+      <strong>Subtotal</strong>
+      <strong>₹${baseAmount.toFixed(2)}</strong>
+    </div>
+    <div class="d-flex justify-content-between">
+      <span>GST</span>
+      <span>₹${totalGST.toFixed(2)}</span>
+    </div>
+    <div class="d-flex justify-content-between">
+      <span>Delivery:</span>
+      <span id="orderDelivery">Free</span>
+    </div>
+    <hr>
+    <div class="d-flex justify-content-between fs-5">
+      <strong>Total:</strong>
+      <strong>₹${subtotal.toFixed(2)}</strong>
+    </div>
+  `;
+
+  // Replace the existing subtotal/total section
+  const orderSummary = document.querySelector('.order-summary');
+  const existingItemsDiv = orderSummary.querySelector('#orderItems');
+
+  // Clear everything after the items
+  let nextElement = existingItemsDiv.nextSibling;
+  while (nextElement) {
+    const elementToRemove = nextElement;
+    nextElement = nextElement.nextSibling;
+    if (elementToRemove.nodeType === 1 || elementToRemove.nodeType === 3) {
+      elementToRemove.remove();
+    }
+  }
+
+  // Add the new summary
+  existingItemsDiv.insertAdjacentHTML('afterend', summaryHtml);
 
   orderTotal = subtotal;
 
@@ -282,22 +518,41 @@ function updateOrderSummary(cart) {
 }
 
 function selectPaymentMethod(method) {
-  selectedPaymentMethod = method;
+  try {
+    console.log('💰 Legacy payment method selected:', method);
+    selectedPaymentMethod = method;
 
-  // Update radio buttons
-  document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
-    radio.checked = radio.value === method;
-  });
+    // Sync with new PaymentSystem
+    if (window.PaymentSystem && PaymentSystem.selectMethod) {
+      PaymentSystem.selectMethod(method);
+      return; // Let PaymentSystem handle everything
+    }
 
-  // Update visual selection
-  document.querySelectorAll('.payment-option').forEach(option => {
-    option.classList.remove('selected');
-  });
+    // Fallback for old system
+    // Update radio buttons
+    document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+      radio.checked = radio.value === method;
+    });
 
-  event.currentTarget.classList.add('selected');
+    // Update visual selection - remove selected class from all options
+    document.querySelectorAll('.payment-option').forEach(option => {
+      option.classList.remove('selected');
+    });
 
-  // Update pay button text
-  updatePayButtonText();
+    // Add selected class to the clicked option
+    const targetOption = document.getElementById(`payment-option-${method}`);
+    if (targetOption) {
+      targetOption.classList.add('selected');
+      console.log(`Added 'selected' class to payment-option-${method}`);
+    }
+
+    // Update pay button text
+    updatePayButtonText();
+
+    console.log('Selected payment method:', selectedPaymentMethod);
+  } catch (error) {
+    console.error('Error in selectPaymentMethod:', error);
+  }
 }
 
 function updatePayButtonText() {
@@ -307,9 +562,11 @@ function updatePayButtonText() {
   if (selectedPaymentMethod === 'cashfree') {
     payBtnText.textContent = `Pay ₹${orderTotal.toFixed(2)}`;
     payBtn.innerHTML = '<i class="bi bi-credit-card me-2"></i>' + payBtnText.textContent;
+    payBtn.className = 'btn btn-pay-now'; // UPI payment styling
   } else {
     payBtnText.textContent = `Place Order - ₹${orderTotal.toFixed(2)}`;
     payBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>' + payBtnText.textContent;
+    payBtn.className = 'btn btn-success'; // COD order styling
   }
 }
 
@@ -384,6 +641,10 @@ async function processPayment() {
   const payBtn = document.getElementById('payNowBtn');
   const originalContent = payBtn.innerHTML;
 
+  console.log('🚀 Starting payment process...');
+  console.log('PaymentSystem.selectedMethod:', PaymentSystem.selectedMethod);
+  console.log('selectedPaymentMethod:', selectedPaymentMethod);
+
   // Get cart and address data
   const cart = JSON.parse(localStorage.getItem('customerCart') || '[]');
   const selectedAddress = document.querySelector('input[name="delivery_address"]:checked');
@@ -401,35 +662,72 @@ async function processPayment() {
   // Hide payment method selection and show processing state
   hidePaymentMethodsAndShowProcessing();
 
-  // Show loading
+  // Show loading with proper button disabled state
   payBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing Payment...';
   payBtn.disabled = true;
+  payBtn.setAttribute('disabled', 'disabled');
+
+  // Ensure button is visually disabled with multiple approaches
+  payBtn.style.pointerEvents = 'none';
+  payBtn.style.opacity = '0.6';
+  payBtn.style.background = '#6c757d';
+  payBtn.style.cursor = 'not-allowed';
+  payBtn.classList.add('disabled');
+
+  // Prevent multiple clicks during processing
+  payBtn.onclick = function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+  };
+
+  console.log('💳 Button disabled, starting payment flow...');
 
   try {
-    if (selectedPaymentMethod === 'cashfree') {
+    // Use PaymentSystem.selectedMethod as the primary source of truth
+    const currentMethod = PaymentSystem.selectedMethod || selectedPaymentMethod || 'cashfree';
+    console.log('Selected payment method:', currentMethod);
+
+    if (currentMethod === 'cashfree' || currentMethod === 'upi') {
       await processCashfreePayment(cart, selectedAddress.value);
     } else {
       await processCODOrder(cart, selectedAddress.value);
     }
   } catch (error) {
-    console.error('Payment processing error:', error);
+    console.error('❌ Payment processing error:', error);
     alert('Payment failed. Please try again.');
 
     // Reset UI
     showPaymentMethodsAndHideProcessing();
     payBtn.innerHTML = originalContent;
     payBtn.disabled = false;
+    payBtn.removeAttribute('disabled');
+    payBtn.style.pointerEvents = 'auto';
+    payBtn.style.opacity = '1';
+    payBtn.style.background = '';
+    payBtn.style.cursor = '';
+    payBtn.classList.remove('disabled');
+    payBtn.onclick = processPayment; // Restore original click handler
   }
 }
 
 async function processCashfreePayment(cart, addressId) {
   try {
+    // Debug CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    console.log('CSRF Token meta tag found:', csrfToken ? 'YES' : 'NO');
+    console.log('CSRF Token value:', csrfToken ? csrfToken.getAttribute('content') : 'N/A');
+
+    if (!csrfToken || !csrfToken.getAttribute('content')) {
+      throw new Error('CSRF token not found. Please refresh the page and try again.');
+    }
+
     // Create order with backend
     const orderResponse = await fetch('/payment/create_order', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        'X-CSRF-Token': csrfToken.getAttribute('content')
       },
       body: JSON.stringify({
         booking_id: null, // Will be created in backend
@@ -446,7 +744,17 @@ async function processCashfreePayment(cart, addressId) {
       })
     });
 
+    console.log('Order Response Status:', orderResponse.status);
+    console.log('Order Response Headers:', Object.fromEntries(orderResponse.headers.entries()));
+
+    if (!orderResponse.ok) {
+      const errorText = await orderResponse.text();
+      console.error('Order Response Error Text:', errorText);
+      throw new Error(`HTTP ${orderResponse.status}: ${errorText}`);
+    }
+
     const orderData = await orderResponse.json();
+    console.log('Order Response Data:', orderData);
 
     if (!orderData.success) {
       throw new Error(orderData.message || 'Failed to create order');
@@ -480,12 +788,20 @@ async function processCashfreePayment(cart, addressId) {
 
 async function processCODOrder(cart, addressId) {
   try {
+    // Debug CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    console.log('COD - CSRF Token meta tag found:', csrfToken ? 'YES' : 'NO');
+
+    if (!csrfToken || !csrfToken.getAttribute('content')) {
+      throw new Error('CSRF token not found. Please refresh the page and try again.');
+    }
+
     // Create COD order using Payment controller
     const response = await fetch('/payment/create_order', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        'X-CSRF-Token': csrfToken.getAttribute('content')
       },
       body: JSON.stringify({
         booking_id: null, // Will be created in backend
@@ -502,7 +818,16 @@ async function processCODOrder(cart, addressId) {
       })
     });
 
+    console.log('COD Response Status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('COD Response Error Text:', errorText);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
     const data = await response.json();
+    console.log('COD Response Data:', data);
 
     if (data.success) {
       // Clear cart

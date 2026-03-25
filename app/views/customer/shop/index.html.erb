@@ -718,7 +718,13 @@
 
                     <% if product.gst_enabled && gst_rate > 0 %>
                       <small class="text-muted d-block">
-                        Base: ₹<%= number_with_delimiter(base_price.round(2)) %> + GST: ₹<%= number_with_delimiter(gst_amount.round(2)) %> (<%= gst_rate %>%) = ₹<%= number_with_delimiter(final_price.round(2)) %>
+                        <%
+                          # Smart rounding for GST display
+                          rounded_final = final_price.round
+                          rounded_base = (rounded_final / (1 + (gst_rate / 100.0))).round
+                          rounded_gst = rounded_final - rounded_base
+                        %>
+                        Base: ₹<%= number_with_delimiter(rounded_base) %> + GST: ₹<%= number_with_delimiter(rounded_gst) %> (<%= gst_rate %>%) = ₹<%= number_with_delimiter(rounded_final) %>
                       </small>
                     <% end %>
                   </div>
@@ -762,7 +768,7 @@
 
                       <!-- Add to Cart Button -->
                       <button class="btn btn-primary w-100"
-                              onclick="addToCart(<%= product.id %>, '<%= j(product.name) %>', <%= final_price %>, <%= current_stock %>, <%= base_price %>, <%= gst_rate %>)">
+                              onclick="addToCart(<%= product.id %>, '<%= j(product.name) %>', <%= rounded_final %>, <%= current_stock %>, <%= rounded_base %>, <%= gst_rate %>)">
                         <i class="bi bi-cart-plus me-2"></i>Add to Cart
                       </button>
                     <% else %>

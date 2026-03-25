@@ -1,6 +1,6 @@
 class PaymentController < ApplicationController
   before_action :authenticate_customer!
-  before_action :set_booking, only: [:create_order, :success]
+  before_action :set_booking, only: [:success]
 
   def create_order
     # Create booking from cart data
@@ -19,12 +19,13 @@ class PaymentController < ApplicationController
         @booking = Booking.new(
           customer: current_customer,
           booking_date: Time.current,
+          booking_number: generate_booking_number,
           customer_name: params[:customer_name] || current_customer&.display_name,
           customer_email: params[:customer_email] || current_customer&.email,
           customer_phone: params[:customer_phone] || current_customer&.mobile,
           delivery_address: params[:delivery_address],
-          payment_method: 'cashfree',
-          payment_gateway: 'cashfree',
+          payment_method: params[:payment_method] == 'cod' ? 'cod' : 'cashfree',
+          payment_gateway: params[:payment_method] == 'cod' ? 'cod' : 'cashfree',
           status: 'draft'
         )
 
@@ -202,5 +203,9 @@ class PaymentController < ApplicationController
         redirect_to customer_login_path, alert: 'Please login to continue'
       end
     end
+  end
+
+  def generate_booking_number
+    "BK#{Date.current.strftime('%Y%m%d')}#{rand(1000..9999)}"
   end
 end

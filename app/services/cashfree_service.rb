@@ -45,7 +45,7 @@ class CashfreeService
       customer = booking.customer
 
       {
-        order_id: booking.booking_number,
+        order_id: booking.cashfree_order_id,
         order_amount: booking.total_amount.to_f,
         order_currency: 'INR',
         customer_details: {

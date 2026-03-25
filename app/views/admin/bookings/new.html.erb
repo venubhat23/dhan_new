@@ -143,7 +143,13 @@
 
                     <% if product.gst_enabled && gst_rate > 0 %>
                       <small class="text-muted d-block">
-                        Base: ₹<%= number_with_delimiter(base_price.round(2)) %> + GST: ₹<%= number_with_delimiter(gst_amount.round(2)) %> (<%= gst_rate %>%) = ₹<%= number_with_delimiter(final_price.round(2)) %>
+                        <%
+                          # Smart rounding for GST display
+                          rounded_final = final_price.round
+                          rounded_base = (rounded_final / (1 + (gst_rate / 100.0))).round
+                          rounded_gst = rounded_final - rounded_base
+                        %>
+                        Base: ₹<%= number_with_delimiter(rounded_base) %> + GST: ₹<%= number_with_delimiter(rounded_gst) %> (<%= gst_rate %>%) = ₹<%= number_with_delimiter(rounded_final) %>
                       </small>
                     <% end %>
                   </div>
@@ -181,9 +187,9 @@
 
                       <!-- Add to Cart Button -->
                       <%
-                        # Use the same calculation logic as the display
-                        cart_final_price = final_price
-                        cart_base_price = base_price
+                        # Use the same smart rounding logic as the display
+                        cart_final_price = rounded_final
+                        cart_base_price = rounded_base
                         cart_gst_rate = gst_rate
                       %>
                       <button class="btn btn-primary w-100"
@@ -696,7 +702,7 @@ function updateCartDisplay() {
             <div class="fw-semibold text-dark" style="font-size: 0.95rem;">${item.name}</div>
             <div class="d-flex align-items-center gap-2 mt-1">
               ${itemGSTRate > 0 ?
-                `<span class="badge bg-light text-dark">₹${itemBasePrice.toFixed(2)} + GST ${itemGSTRate}%</span>` :
+                `<span class="badge bg-light text-dark">₹${Math.abs(itemBasePrice - Math.round(itemBasePrice)) < 0.01 ? Math.round(itemBasePrice) : itemBasePrice.toFixed(2)} + GST ${itemGSTRate}%</span>` :
                 `<span class="badge bg-light text-dark">₹${item.price} each</span>`
               }
               ${item.quantity >= item.stock - 2 ? `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Only ${item.stock} in stock</span>` : ''}
@@ -947,7 +953,7 @@ function updateCheckoutDisplay() {
         <div>
           <div class="fw-medium">${item.name}</div>
           <small class="text-muted">₹${item.price.toFixed(2)} × ${item.quantity}</small>
-          ${itemGSTRate > 0 ? `<br><small class="text-success">GST ${itemGSTRate}%: ₹${itemGSTAmount.toFixed(2)}</small>` : ''}
+          ${itemGSTRate > 0 ? `<br><small class="text-success">GST ${itemGSTRate}%: ₹${Math.abs(itemGSTAmount - Math.round(itemGSTAmount)) < 0.01 ? Math.round(itemGSTAmount) : itemGSTAmount.toFixed(2)}</small>` : ''}
         </div>
         <span class="fw-medium">₹${itemTotal.toFixed(2)}</span>
       </div>
