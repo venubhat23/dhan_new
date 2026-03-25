@@ -739,9 +739,12 @@ function updateCartDisplay() {
   for (const [productId, item] of Object.entries(cart)) {
     const itemGSTRate = item.gstRate || 0;
     if (itemGSTRate > 0) {
-      const itemBasePrice = item.basePrice || item.price;
-      const itemSubtotal = itemBasePrice * item.quantity;
-      totalGST += itemSubtotal * itemGSTRate / 100;
+      // Use smart rounding logic like in product display
+      const itemFinalPrice = item.price;
+      const roundedFinal = Math.round(itemFinalPrice);
+      const roundedBase = Math.round(roundedFinal / (1 + (itemGSTRate / 100.0)));
+      const roundedGST = roundedFinal - roundedBase;
+      totalGST += roundedGST * item.quantity;
     }
   }
 
@@ -937,11 +940,14 @@ function updateCheckoutDisplay() {
     let itemGSTAmount = 0;
 
     if (itemGSTRate > 0) {
-      // Product has GST enabled
-      const itemSubtotal = itemBasePrice * item.quantity;
-      itemGSTAmount = itemSubtotal * itemGSTRate / 100;
-      itemTotal = itemSubtotal + itemGSTAmount;
-      subtotal += itemSubtotal;
+      // Product has GST enabled - use smart rounding like product display
+      const itemFinalPrice = item.price;
+      const roundedFinal = Math.round(itemFinalPrice);
+      const roundedBase = Math.round(roundedFinal / (1 + (itemGSTRate / 100.0)));
+      const roundedGST = roundedFinal - roundedBase;
+      itemGSTAmount = roundedGST * item.quantity;
+      itemTotal = roundedFinal * item.quantity;
+      subtotal += roundedBase * item.quantity;
     } else {
       // Product has no GST
       itemTotal = item.price * item.quantity;
@@ -1010,11 +1016,13 @@ function updateCheckoutTotals() {
     const itemGSTRate = item.gstRate || 0;
 
     if (itemGSTRate > 0) {
-      // Product has GST enabled
-      const itemSubtotal = itemBasePrice * item.quantity;
-      const itemGST = itemSubtotal * itemGSTRate / 100;
-      subtotal += itemSubtotal;
-      totalGST += itemGST;
+      // Product has GST enabled - use smart rounding like product display
+      const itemFinalPrice = item.price;
+      const roundedFinal = Math.round(itemFinalPrice);
+      const roundedBase = Math.round(roundedFinal / (1 + (itemGSTRate / 100.0)));
+      const roundedGST = roundedFinal - roundedBase;
+      subtotal += roundedBase * item.quantity;
+      totalGST += roundedGST * item.quantity;
     } else {
       // Product has no GST
       subtotal += item.price * item.quantity;

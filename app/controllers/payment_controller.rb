@@ -1,5 +1,4 @@
-class PaymentController < ApplicationController
-  before_action :authenticate_customer!
+class PaymentController < Customer::BaseController
   before_action :set_booking, only: [:success]
 
   def create_order
@@ -15,6 +14,18 @@ class PaymentController < ApplicationController
 
     begin
       ActiveRecord::Base.transaction do
+        # Handle delivery method and address
+        delivery_method = params[:delivery_method] || 'home'
+
+        if delivery_method == 'pickup'
+          # For pickup orders, use pickup location as delivery address
+          pickup_location = params[:pickup_location] || 'Shop location not specified'
+          delivery_address = "PICKUP: #{pickup_location}"
+        else
+          # For home delivery, use provided delivery address
+          delivery_address = params[:delivery_address] || 'Address not specified'
+        end
+
         # Create booking
         @booking = Booking.new(
           customer: current_customer,
@@ -23,9 +34,9 @@ class PaymentController < ApplicationController
           customer_name: params[:customer_name] || current_customer&.display_name,
           customer_email: params[:customer_email] || current_customer&.email,
           customer_phone: params[:customer_phone] || current_customer&.mobile,
-          delivery_address: params[:delivery_address],
+          delivery_address: delivery_address,
           payment_method: params[:payment_method] == 'cod' ? 'cod' : 'cashfree',
-          payment_gateway: params[:payment_method] == 'cod' ? 'cod' : 'cashfree',
+          payment_gateway: params[:payment_method] == 'cod' ? 'cash' : 'cashfree',
           status: 'draft'
         )
 
@@ -195,15 +206,6 @@ class PaymentController < ApplicationController
     end
   end
 
-  def authenticate_customer!
-    unless current_customer
-      if request.format.json?
-        render json: { success: false, message: 'Authentication required' }, status: :unauthorized
-      else
-        redirect_to customer_login_path, alert: 'Please login to continue'
-      end
-    end
-  end
 
   def generate_booking_number
     "BK#{Date.current.strftime('%Y%m%d')}#{rand(1000..9999)}"

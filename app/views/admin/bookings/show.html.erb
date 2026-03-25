@@ -276,7 +276,17 @@
                       <small class="text-muted d-block">pcs</small>
                     </td>
                     <td class="align-middle text-end">
-                      <span class="fw-medium">₹<%= number_with_delimiter(item.price&.to_f || 0) %></span>
+                      <%
+                        if item.product&.gst_enabled && item.product.gst_percentage.to_f > 0
+                          # Show smart rounded base price (GST-exclusive) for GST products
+                          gst_rate = item.product.gst_percentage.to_f
+                          rounded_final = (item.price || 0).round
+                          rounded_base = (rounded_final / (1 + (gst_rate / 100.0))).round
+                        %>
+                          <span class="fw-medium">₹<%= number_with_delimiter(rounded_base) %></span>
+                        <% else %>
+                          <span class="fw-medium">₹<%= number_with_delimiter(item.price&.to_f || 0) %></span>
+                        <% end %>
                     </td>
                     <td class="align-middle text-end">
                       <span class="fw-bold text-success">₹<%= number_with_delimiter((item.quantity * item.price)&.to_f || 0) %></span>
@@ -316,9 +326,40 @@
         <h6 class="mb-0">Payment Summary</h6>
       </div>
       <div class="card-body">
+        <%
+          # Calculate GST correctly with smart rounding - item.price is inclusive of GST
+          total_tax_rate = 0
+          total_base_amount = 0
+          total_tax_amount = 0
+          @booking.booking_items.each do |item|
+            if item.product&.gst_enabled && item.product.gst_percentage.to_f > 0
+              gst_rate = item.product.gst_percentage.to_f
+              # Apply smart rounding logic like in the shopping cart
+              final_price_per_unit = (item.price || 0)
+              quantity = item.quantity
+
+              # Smart rounding: round final price, then calculate base price from rounded value
+              rounded_final_per_unit = final_price_per_unit.round
+              rounded_base_per_unit = (rounded_final_per_unit / (1 + (gst_rate / 100.0))).round
+              rounded_tax_per_unit = rounded_final_per_unit - rounded_base_per_unit
+
+              total_base_amount += rounded_base_per_unit * quantity
+              total_tax_amount += rounded_tax_per_unit * quantity
+              total_tax_rate += gst_rate
+            else
+              # No GST for this item
+              total_base_amount += (item.price || 0) * item.quantity
+            end
+          end
+          # Calculate weighted average tax rate
+          avg_tax_rate = @booking.booking_items.any? { |item| item.product&.gst_enabled } ?
+            (total_tax_rate / @booking.booking_items.select { |item| item.product&.gst_enabled }.count rescue 0) : 0
+          tax_display = avg_tax_rate.to_i == avg_tax_rate ? avg_tax_rate.to_i : avg_tax_rate.round(2)
+        %>
+
         <div class="d-flex justify-content-between align-items-center mb-2">
           <span class="text-muted">Subtotal:</span>
-          <span class="fw-medium">₹<%= number_with_delimiter(@booking.subtotal&.to_f || 0) %></span>
+          <span class="fw-medium">₹<%= number_with_delimiter(total_base_amount.round(2)) %></span>
         </div>
 
         <% if @booking.discount_amount.present? && @booking.discount_amount.to_f > 0 %>
@@ -329,40 +370,24 @@
         <% end %>
 
         <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-          <%
-            # Calculate the actual total tax rate from all booking items
-            total_tax_rate = 0
-            total_base_amount = 0
-            @booking.booking_items.each do |item|
-              if item.product&.gst_enabled && item.product.gst_percentage.to_f > 0
-                base_amount = item.quantity * (item.price || 0)
-                total_base_amount += base_amount
-                total_tax_rate += item.product.gst_percentage.to_f
-              end
-            end
-            # Calculate weighted average tax rate
-            avg_tax_rate = @booking.booking_items.any? { |item| item.product&.gst_enabled } ?
-              (total_tax_rate / @booking.booking_items.select { |item| item.product&.gst_enabled }.count rescue 0) : 0
-            tax_display = avg_tax_rate.to_i == avg_tax_rate ? avg_tax_rate.to_i : avg_tax_rate.round(2)
-          %>
           <span class="text-muted">Tax (<%= tax_display %>%):</span>
-          <span class="fw-medium">₹<%= number_with_delimiter(@booking.tax_amount&.to_f || 0) %></span>
+          <span class="fw-medium">₹<%= number_with_delimiter(total_tax_amount.round(2)) %></span>
         </div>
 
         <% if @booking.discount_amount.present? && @booking.discount_amount.to_f > 0 %>
-          <% original_total = (@booking.subtotal || @booking.calculated_subtotal).to_f + (@booking.tax_amount || @booking.calculated_tax_amount).to_f %>
+          <% original_total = total_base_amount + total_tax_amount %>
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="text-muted">Original Total:</span>
-            <span class="fw-medium text-muted"><s>₹<%= number_with_delimiter(original_total) %></s></span>
+            <span class="fw-medium text-muted"><s>₹<%= number_with_delimiter(original_total.round(2)) %></s></span>
           </div>
           <div class="d-flex justify-content-between align-items-center mb-3">
             <span class="fw-bold fs-5">Final Amount:</span>
-            <span class="fw-bold fs-5 text-success">₹<%= number_with_delimiter(original_total - @booking.discount_amount.to_f) %></span>
+            <span class="fw-bold fs-5 text-success">₹<%= number_with_delimiter((original_total - @booking.discount_amount.to_f).round(2)) %></span>
           </div>
         <% else %>
           <div class="d-flex justify-content-between align-items-center mb-3">
             <span class="fw-bold fs-5">Total:</span>
-            <span class="fw-bold fs-5 text-primary">₹<%= number_with_delimiter(@booking.total_amount&.to_f || 0) %></span>
+            <span class="fw-bold fs-5 text-primary">₹<%= number_with_delimiter((total_base_amount + total_tax_amount).round(2)) %></span>
           </div>
         <% end %>
 
