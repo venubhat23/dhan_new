@@ -4,7 +4,7 @@ class CustomerMailer < ApplicationMailer
 
   def password_reset_instructions(customer)
     @customer = customer
-    @reset_url = customer_reset_password_url(token: @customer.password_reset_token)
+    @reset_url = customer_reset_password_url(token: @customer.password_reset_token, host: 'maralisanthe.com', protocol: 'https')
     @app_name = 'Marali Santhe'
 
     mail(

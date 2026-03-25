@@ -1,5 +1,6 @@
 class Customer::PasswordsController < Customer::BaseController
   skip_before_action :authenticate_customer!
+  skip_before_action :ensure_customer_role
   layout 'customer_auth'
 
   def new
@@ -37,6 +38,12 @@ class Customer::PasswordsController < Customer::BaseController
   def edit
     # Reset password form (comes from email link)
     @token = params[:token]
+    # URL decode the token and clean up encoding issues
+    if @token
+      @token = CGI.unescape(@token)
+      # Remove leading 3D if present (URL encoded =)
+      @token = @token[2..-1] if @token.start_with?('3D')
+    end
     @customer = Customer.find_by_password_reset_token(@token)
 
     unless @customer
@@ -53,6 +60,12 @@ class Customer::PasswordsController < Customer::BaseController
   def update
     # Handle password reset
     @token = params[:token]
+    # URL decode the token and clean up encoding issues
+    if @token
+      @token = CGI.unescape(@token)
+      # Remove leading 3D if present (URL encoded =)
+      @token = @token[2..-1] if @token.start_with?('3D')
+    end
     @customer = Customer.find_by_password_reset_token(@token)
 
     unless @customer
