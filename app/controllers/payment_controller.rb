@@ -3,56 +3,118 @@ class PaymentController < ApplicationController
   before_action :set_booking, only: [:create_order, :success]
 
   def create_order
-    unless @booking.can_initiate_payment?
+    # Create booking from cart data
+    cart_items = params[:cart_items] || []
+
+    if cart_items.empty?
       return render json: {
         success: false,
-        message: 'Invalid booking for payment initiation'
+        message: 'Cart is empty'
       }, status: :unprocessable_entity
     end
 
-    # Mark payment as initiated
-    @booking.mark_payment_initiated!('cashfree')
+    begin
+      ActiveRecord::Base.transaction do
+        # Create booking
+        @booking = Booking.new(
+          customer: current_customer,
+          booking_date: Time.current,
+          customer_name: params[:customer_name] || current_customer&.display_name,
+          customer_email: params[:customer_email] || current_customer&.email,
+          customer_phone: params[:customer_phone] || current_customer&.mobile,
+          delivery_address: params[:delivery_address],
+          payment_method: 'cashfree',
+          payment_gateway: 'cashfree',
+          status: 'draft'
+        )
 
-    # Generate unique Cashfree order ID
-    cashfree_order_id = Booking.generate_cashfree_order_id
-    @booking.update!(cashfree_order_id: cashfree_order_id)
+        # Create booking items
+        total_amount = 0
+        cart_items.each do |item_data|
+          product = Product.find(item_data[:product_id])
+          quantity = item_data[:quantity].to_f
+          price = item_data[:price].to_f
 
-    # Create order with Cashfree
-    response = CashfreeService.create_order(@booking)
+          # Validate stock
+          if product.total_batch_stock < quantity
+            raise "Insufficient stock for #{product.name}. Only #{product.total_batch_stock} available."
+          end
 
-    if response[:success]
-      order_data = response[:data]
+          # Create booking item
+          @booking.booking_items.build(
+            product: product,
+            quantity: quantity,
+            price: price
+          )
 
-      # Store payment session ID
-      @booking.update!(
-        payment_session_id: order_data['payment_session_id']
-      )
+          total_amount += (price * quantity)
+        end
 
-      render json: {
-        success: true,
-        payment_session_id: order_data['payment_session_id'],
-        order_id: @booking.cashfree_order_id,
-        amount: @booking.total_amount,
-        customer_id: @booking.customer.id,
-        booking_id: @booking.id
-      }
-    else
-      @booking.mark_payment_failed!(response[:message])
+        # Calculate totals
+        @booking.calculate_totals
+        @booking.save!
 
-      render json: {
-        success: false,
-        message: response[:message] || 'Failed to create payment order',
-        error: response[:error]
-      }, status: :unprocessable_entity
+        # Mark payment as initiated
+        @booking.mark_payment_initiated!('cashfree')
+
+        # Generate unique Cashfree order ID
+        cashfree_order_id = Booking.generate_cashfree_order_id
+        @booking.update!(cashfree_order_id: cashfree_order_id)
+
+        if @booking.payment_method == 'cashfree'
+          # Create order with Cashfree
+          response = CashfreeService.create_order(@booking)
+
+          if response[:success]
+            order_data = response[:data]
+
+            # Store payment session ID
+            @booking.update!(
+              payment_session_id: order_data['payment_session_id']
+            )
+
+            render json: {
+              success: true,
+              payment_session_id: order_data['payment_session_id'],
+              order_id: @booking.cashfree_order_id,
+              amount: @booking.total_amount,
+              customer_id: @booking.customer.id,
+              booking_id: @booking.id
+            }
+          else
+            @booking.mark_payment_failed!(response[:message])
+
+            render json: {
+              success: false,
+              message: response[:message] || 'Failed to create payment order',
+              error: response[:error]
+            }, status: :unprocessable_entity
+          end
+        else
+          # COD Order - mark as completed immediately
+          @booking.mark_payment_completed!({
+            payment_method: 'cod',
+            order_status: 'COMPLETED',
+            payment_amount: @booking.total_amount
+          })
+
+          render json: {
+            success: true,
+            order_id: @booking.booking_number,
+            amount: @booking.total_amount,
+            customer_id: @booking.customer.id,
+            booking_id: @booking.id,
+            message: 'COD order placed successfully'
+          }
+        end
+      end
     end
   rescue => e
     Rails.logger.error "Payment order creation failed: #{e.message}"
 
-    @booking&.mark_payment_failed!(e.message)
-
     render json: {
       success: false,
-      message: 'Payment initialization failed. Please try again.'
+      message: "Payment initialization failed: #{e.message}"
     }, status: :internal_server_error
   end
 

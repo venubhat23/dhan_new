@@ -398,8 +398,11 @@ async function processPayment() {
     return;
   }
 
+  // Hide payment method selection and show processing state
+  hidePaymentMethodsAndShowProcessing();
+
   // Show loading
-  payBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+  payBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing Payment...';
   payBtn.disabled = true;
 
   try {
@@ -412,7 +415,8 @@ async function processPayment() {
     console.error('Payment processing error:', error);
     alert('Payment failed. Please try again.');
 
-    // Reset button
+    // Reset UI
+    showPaymentMethodsAndHideProcessing();
     payBtn.innerHTML = originalContent;
     payBtn.disabled = false;
   }
@@ -428,8 +432,16 @@ async function processCashfreePayment(cart, addressId) {
         'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
       },
       body: JSON.stringify({
-        cart_items: cart,
-        address_id: addressId,
+        booking_id: null, // Will be created in backend
+        cart_items: cart.map(item => ({
+          product_id: item.id,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        customer_name: getCurrentCustomerName(),
+        customer_email: getCurrentCustomerEmail(),
+        customer_phone: getCurrentCustomerPhone(),
+        delivery_address: getSelectedAddress(),
         payment_method: 'cashfree'
       })
     });
@@ -468,20 +480,24 @@ async function processCashfreePayment(cart, addressId) {
 
 async function processCODOrder(cart, addressId) {
   try {
-    // Create COD order
-    const response = await fetch('/customer/shop/cart_order', {
+    // Create COD order using Payment controller
+    const response = await fetch('/payment/create_order', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
       },
       body: JSON.stringify({
+        booking_id: null, // Will be created in backend
         cart_items: cart.map(item => ({
           product_id: item.id,
           quantity: item.quantity,
           price: item.price
         })),
-        address_id: addressId,
+        customer_name: getCurrentCustomerName(),
+        customer_email: getCurrentCustomerEmail(),
+        customer_phone: getCurrentCustomerPhone(),
+        delivery_address: getSelectedAddress(),
         payment_method: 'cod'
       })
     });
@@ -497,23 +513,108 @@ async function processCODOrder(cart, addressId) {
       modal.hide();
 
       // Show success message
-      alert('Order placed successfully! Order number: ' + data.booking_number);
+      alert('Order placed successfully! Order ID: ' + data.order_id);
 
-      // Redirect to success page
-      if (data.redirect_url) {
-        window.location.href = data.redirect_url;
-      } else {
-        // Fallback - refresh page and update cart
-        window.location.reload();
-      }
+      // Redirect to customer dashboard
+      window.location.href = '/customer/dashboard';
     } else {
-      throw new Error(data.error || 'Failed to place order');
+      throw new Error(data.message || 'Failed to place order');
     }
 
   } catch (error) {
     console.error('COD order error:', error);
     throw error;
   }
+}
+
+// UI Control Functions
+function hidePaymentMethodsAndShowProcessing() {
+  // Hide payment method section
+  const paymentStep = document.getElementById('step-payment');
+  if (paymentStep) {
+    paymentStep.style.display = 'none';
+  }
+
+  // Show processing message
+  const processingSectionHtml = `
+    <div id="processing-section" class="checkout-step mt-4">
+      <h6 class="mb-3">
+        <i class="bi bi-clock-history me-2"></i>
+        Processing Payment
+      </h6>
+      <div class="text-center py-4">
+        <div class="spinner-border text-primary mb-3" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted">
+          ${selectedPaymentMethod === 'cashfree' ?
+            'Please complete your payment on the secure gateway...' :
+            'Processing your order...'}
+        </p>
+        <small class="text-muted">Do not refresh or close this page</small>
+      </div>
+    </div>
+  `;
+
+  // Add processing section after address step
+  const addressStep = document.getElementById('step-address');
+  if (addressStep) {
+    addressStep.insertAdjacentHTML('afterend', processingSectionHtml);
+  }
+}
+
+function showPaymentMethodsAndHideProcessing() {
+  // Show payment method section
+  const paymentStep = document.getElementById('step-payment');
+  if (paymentStep) {
+    paymentStep.style.display = 'block';
+  }
+
+  // Remove processing section
+  const processingSection = document.getElementById('processing-section');
+  if (processingSection) {
+    processingSection.remove();
+  }
+}
+
+// Helper functions to get customer data
+function getCurrentCustomerName() {
+  // Get from the selected address card or form
+  const selectedCard = document.querySelector('.address-card.selected strong');
+  return selectedCard ? selectedCard.textContent : 'Customer Name';
+}
+
+function getCurrentCustomerEmail() {
+  // This should be populated from the logged-in customer session
+  // For now, return a placeholder - this will be handled by the backend
+  return '<%= current_customer&.email || "customer@example.com" %>';
+}
+
+function getCurrentCustomerPhone() {
+  // Get from the selected address card
+  const selectedCard = document.querySelector('.address-card.selected small');
+  if (selectedCard) {
+    const phoneMatch = selectedCard.textContent.match(/📞\s*([\d\+\-\s\(\)]+)/);
+    return phoneMatch ? phoneMatch[1].trim() : '9876543210';
+  }
+  return '9876543210';
+}
+
+function getSelectedAddress() {
+  const selectedCard = document.querySelector('.address-card.selected');
+  if (selectedCard) {
+    const labelElement = selectedCard.querySelector('label');
+    if (labelElement) {
+      // Extract address text excluding the strong tag
+      const addressText = labelElement.innerHTML
+        .replace(/<strong>.*?<\/strong><br>/, '') // Remove address type
+        .replace(/<small.*?<\/small>/, '') // Remove phone number
+        .replace(/<br>/g, '') // Remove br tags
+        .trim();
+      return addressText;
+    }
+  }
+  return 'Address not selected';
 }
 
 // Add event listener for cart checkout button

@@ -568,6 +568,8 @@ class Booking < ApplicationRecord
     end
   end
 
+  public
+
   # Cashfree Payment Methods
   def self.generate_cashfree_order_id
     "MKS_#{Time.current.strftime('%Y%m%d%H%M%S')}_#{SecureRandom.hex(4).upcase}"
@@ -618,5 +620,7 @@ class Booking < ApplicationRecord
   rescue JSON::ParserError
     {}
   end
+
+  private
 
 end
