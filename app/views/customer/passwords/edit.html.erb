@@ -1,306 +1,186 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reset Password - Marali Santhe</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-  <style>
-    body {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    .card {
-      border-radius: 20px;
-      border: none;
-      box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-      backdrop-filter: blur(10px);
-      background: rgba(255, 255, 255, 0.95);
-    }
-    .form-control {
-      border-radius: 10px;
-      border: 2px solid #e9ecef;
-      padding: 12px 16px;
-      font-size: 16px;
-    }
-    .form-control:focus {
-      border-color: #28a745;
-      box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.15);
-    }
-    .btn-success {
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-      border: none;
-      border-radius: 10px;
-      padding: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .btn-success:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
-    }
-    .icon-container {
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 20px;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
-    }
-    .title {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      font-weight: bold;
-    }
-  </style>
-</head>
-<body class="d-flex align-items-center">
-  <div class="container">
-    <div class="row justify-content-center">
-      <div class="col-lg-5 col-md-6 col-sm-8">
-        <div class="card">
-          <div class="card-body p-5">
-            <!-- Header -->
-            <div class="text-center mb-4">
-              <div class="icon-container">
-                <i class="bi bi-shield-lock-fill text-white" style="font-size: 2rem;"></i>
-              </div>
-              <h2 class="title mb-2">Reset Password</h2>
-              <p class="text-muted">Enter your new password below</p>
-            </div>
-
-            <!-- Flash Messages -->
-            <% if flash[:notice] %>
-              <div class="alert alert-success d-flex align-items-center" role="alert">
-                <i class="bi bi-check-circle-fill me-2"></i>
-                <%= flash[:notice] %>
-              </div>
-            <% end %>
-
-            <% if flash[:alert] %>
-              <div class="alert alert-danger d-flex align-items-center" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                <%= flash[:alert] %>
-              </div>
-            <% end %>
-
-            <!-- Form -->
-            <%= form_with url: customer_reset_password_path, method: :patch, local: true, id: "resetForm" do |form| %>
-              <%= form.hidden_field :token, value: @token %>
-
-              <div class="mb-3">
-                <%= form.label :password, "New Password", class: "form-label fw-bold" %>
-                <%= form.password_field :password,
-                    class: "form-control",
-                    placeholder: "Enter new password",
-                    required: true,
-                    minlength: 6,
-                    id: "password" %>
-                <div class="form-text text-muted">
-                  <small>Password must be at least 6 characters long</small>
-                </div>
-              </div>
-
-              <div class="mb-4">
-                <%= form.label :password_confirmation, "Confirm Password", class: "form-label fw-bold" %>
-                <%= form.password_field :password_confirmation,
-                    class: "form-control",
-                    placeholder: "Confirm new password",
-                    required: true,
-                    id: "password_confirmation" %>
-              </div>
-
-              <div class="d-grid mb-4">
-                <%= form.submit "Update Password",
-                    class: "btn btn-success btn-lg",
-                    data: { disable_with: "Updating..." } %>
-              </div>
-            <% end %>
-
-            <!-- Back to Login -->
-            <div class="text-center">
-              <p class="text-muted mb-0">
-                Remember your password?
-                <%= link_to "Sign In", customer_login_path, class: "text-decoration-none fw-bold" %>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    document.getElementById('resetForm').addEventListener('submit', function(e) {
-      const password = document.getElementById('password').value;
-      const passwordConfirmation = document.getElementById('password_confirmation').value;
-
-      if (password.length < 6) {
-        alert('Password must be at least 6 characters long');
-        e.preventDefault();
-        return false;
-      }
-
-      if (password !== passwordConfirmation) {
-        alert('Passwords do not match');
-        e.preventDefault();
-        return false;
-      }
-    });
-  </script>
-</body>
-</html>
-
-<!-- Bootstrap Form Validation -->
-<script>
-(function() {
-  'use strict';
-  window.addEventListener('load', function() {
-    var forms = document.getElementsByClassName('needs-validation');
-    var validation = Array.prototype.filter.call(forms, function(form) {
-      form.addEventListener('submit', function(event) {
-        // Password confirmation validation
-        var password = document.getElementById('password');
-        var passwordConfirmation = document.getElementById('password_confirmation');
-
-        if (password.value !== passwordConfirmation.value) {
-          passwordConfirmation.setCustomValidity("Passwords don't match");
-        } else {
-          passwordConfirmation.setCustomValidity('');
-        }
-
-        if (form.checkValidity() === false) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-        form.classList.add('was-validated');
-      }, false);
-    });
-
-    // Real-time password confirmation check
-    var passwordConfirmation = document.getElementById('password_confirmation');
-    if (passwordConfirmation) {
-      passwordConfirmation.addEventListener('input', function() {
-        var password = document.getElementById('password');
-        if (this.value !== password.value) {
-          this.setCustomValidity("Passwords don't match");
-        } else {
-          this.setCustomValidity('');
-        }
-      });
-    }
-  }, false);
-})();
-</script>
+<% content_for :title, "Reset Password" %>
 
 <style>
-  .shadow-xl {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  }
-
-  .rounded-4 {
-    border-radius: 1.5rem;
-  }
-
-  .btn-success {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    border: none;
-    border-radius: 12px;
-    transition: all 0.3s ease;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    font-size: 0.875rem;
-  }
-
-  .btn-success:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 15px 35px rgba(40, 167, 69, 0.4);
-    background: linear-gradient(135deg, #218838 0%, #1abc9c 100%);
-  }
-
-  .form-control {
-    border-radius: 12px;
-    border: 2px solid #e9ecef;
-    transition: all 0.3s ease;
-    font-size: 1.1rem;
-    padding: 0.875rem 1rem;
-  }
-
-  .form-control:focus {
-    border-color: #28a745;
-    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.15);
-    transform: translateY(-2px);
-  }
-
-  .input-group-text {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border: 2px solid #e9ecef;
-    border-right: none;
-    border-radius: 12px 0 0 12px;
-    color: #6c757d;
-    transition: all 0.3s ease;
-  }
-
-  .input-group:focus-within .input-group-text {
-    border-color: #28a745;
-    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-    color: #155724;
-  }
-
-  .input-group .form-control {
-    border-left: none;
-    border-radius: 0 12px 12px 0;
-  }
-
-  .card {
-    backdrop-filter: blur(10px);
-    background: rgba(255, 255, 255, 0.95);
+  .password-form-container {
+    max-width: 100%;
   }
 
   .form-label {
-    color: #495057;
-    margin-bottom: 0.75rem;
+    color: var(--green-dark);
+    font-weight: 600;
+    margin-bottom: 8px;
   }
 
-  .text-primary {
-    color: #667eea !important;
-    transition: color 0.3s ease;
+  .password-requirements {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 5px;
   }
 
-  .text-primary:hover {
-    color: #764ba2 !important;
+  .btn-reset {
+    background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+    border: none;
+    border-radius: 12px;
+    padding: 14px 24px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: all 0.4s ease;
+    width: 100%;
+    color: white;
+    position: relative;
+    overflow: hidden;
   }
 
-  /* Floating animation for icon */
-  @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
+  .btn-reset:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(93, 130, 51, 0.3);
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+    color: var(--dark);
   }
 
-  .rounded-circle {
-    animation: float 3s ease-in-out infinite;
+  .icon-container {
+    background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    animation: pulse 2s infinite;
   }
 
-  /* Gradient text effect */
-  .card-title {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
   }
 </style>
+
+<!-- Welcome Section -->
+<div class="welcome-section">
+  <div class="icon-container">
+    <i class="bi bi-shield-lock-fill text-white" style="font-size: 1.8rem;"></i>
+  </div>
+  <h2 class="welcome-title">Reset Your Password</h2>
+  <p class="welcome-subtitle">Create a new secure password for your account</p>
+</div>
+
+<!-- Password Reset Form -->
+<div class="password-form-container">
+  <%= form_with url: customer_reset_password_path, method: :patch, local: true, id: "resetForm", class: "needs-validation", novalidate: true do |form| %>
+    <%= form.hidden_field :token, value: @token %>
+
+    <!-- New Password Field -->
+    <div class="form-group">
+      <%= form.label :password, "New Password", class: "form-label" %>
+      <div class="input-group">
+        <span class="input-group-text">
+          <i class="bi bi-lock-fill"></i>
+        </span>
+        <%= form.password_field :password,
+            class: "form-control",
+            placeholder: "Enter new password",
+            required: true,
+            minlength: 6,
+            id: "password" %>
+      </div>
+      <div class="password-requirements">
+        <i class="bi bi-info-circle"></i> Password must be at least 6 characters long
+      </div>
+    </div>
+
+    <!-- Confirm Password Field -->
+    <div class="form-group">
+      <%= form.label :password_confirmation, "Confirm New Password", class: "form-label" %>
+      <div class="input-group">
+        <span class="input-group-text">
+          <i class="bi bi-lock-check-fill"></i>
+        </span>
+        <%= form.password_field :password_confirmation,
+            class: "form-control",
+            placeholder: "Confirm new password",
+            required: true,
+            id: "password_confirmation" %>
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="form-group">
+      <%= form.submit "Update Password", class: "btn btn-reset", data: { disable_with: "Updating..." } %>
+    </div>
+  <% end %>
+</div>
+
+<!-- Back to Login Link -->
+<div class="auth-links">
+  <div class="auth-separator">
+    <span>Remember your password?</span>
+  </div>
+  <%= link_to "Back to Sign In", customer_login_path, class: "register-link" %>
+</div>
+
+<!-- Form Validation Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('resetForm');
+  const password = document.getElementById('password');
+  const passwordConfirmation = document.getElementById('password_confirmation');
+
+  // Real-time password confirmation validation
+  function validatePasswordMatch() {
+    if (passwordConfirmation.value !== password.value) {
+      passwordConfirmation.setCustomValidity("Passwords don't match");
+      passwordConfirmation.classList.add('is-invalid');
+      passwordConfirmation.classList.remove('is-valid');
+    } else {
+      passwordConfirmation.setCustomValidity('');
+      passwordConfirmation.classList.remove('is-invalid');
+      passwordConfirmation.classList.add('is-valid');
+    }
+  }
+
+  // Password length validation
+  function validatePasswordLength() {
+    if (password.value.length >= 6) {
+      password.classList.remove('is-invalid');
+      password.classList.add('is-valid');
+    } else if (password.value.length > 0) {
+      password.classList.add('is-invalid');
+      password.classList.remove('is-valid');
+    }
+  }
+
+  // Event listeners
+  password.addEventListener('input', function() {
+    validatePasswordLength();
+    if (passwordConfirmation.value.length > 0) {
+      validatePasswordMatch();
+    }
+  });
+
+  passwordConfirmation.addEventListener('input', validatePasswordMatch);
+
+  // Form submission validation
+  form.addEventListener('submit', function(event) {
+    if (password.value.length < 6) {
+      event.preventDefault();
+      password.focus();
+      return false;
+    }
+
+    if (password.value !== passwordConfirmation.value) {
+      event.preventDefault();
+      passwordConfirmation.focus();
+      return false;
+    }
+
+    // Disable button to prevent double submission
+    const submitBtn = form.querySelector('input[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.value = 'Updating...';
+  });
+});
+</script>
