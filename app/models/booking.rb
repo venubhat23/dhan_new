@@ -203,7 +203,11 @@ class Booking < ApplicationRecord
   end
 
   def mark_as_confirmed!
-    update!(status: :confirmed) if draft? || ordered_and_delivery_pending?
+    if draft? || ordered_and_delivery_pending?
+      update!(status: :confirmed)
+      # Send booking confirmation email when order is confirmed
+      send_booking_confirmation_email
+    end
   end
 
   def mark_as_processing!
@@ -238,7 +242,11 @@ class Booking < ApplicationRecord
   end
 
   def mark_as_completed!
-    update!(status: :completed) if delivered?
+    if delivered?
+      update!(status: :completed)
+      # Generate and send invoice when booking is completed
+      generate_and_send_completion_notification
+    end
   end
 
   def cancel_order!(reason = nil)
@@ -403,6 +411,50 @@ class Booking < ApplicationRecord
       self.final_amount_after_discount = base_amount - discount_amt
     else
       self.final_amount_after_discount = base_amount
+    end
+  end
+
+  # Email notification methods
+  def send_booking_confirmation_email
+    return unless customer&.email.present?
+
+    begin
+      CustomerMailer.booking_confirmation(self).deliver_now
+      Rails.logger.info "Booking confirmation email sent for booking ##{booking_number} to #{customer.email}"
+    rescue => e
+      Rails.logger.error "Failed to send booking confirmation email for booking ##{booking_number}: #{e.message}"
+      # Don't fail the booking process if email fails
+    end
+  end
+
+  def send_booking_confirmation_email_async
+    return unless customer&.email.present?
+
+    begin
+      CustomerMailer.booking_confirmation(self).deliver_later
+      Rails.logger.info "Booking confirmation email queued for booking ##{booking_number} to #{customer.email}"
+    rescue => e
+      Rails.logger.error "Failed to queue booking confirmation email for booking ##{booking_number}: #{e.message}"
+    end
+  end
+
+  def generate_and_send_completion_notification
+    return unless customer&.email.present?
+
+    begin
+      # Generate invoice if not already generated
+      generate_invoice_number unless invoice_number.present?
+
+      # Ensure any associated invoice has a share token for public access
+      if associated_invoice && !associated_invoice.share_token.present?
+        associated_invoice.generate_share_token!
+      end
+
+      # Send completion email with invoice
+      send_booking_confirmation_email
+      Rails.logger.info "Booking completion notification sent for booking ##{booking_number} to #{customer.email}"
+    rescue => e
+      Rails.logger.error "Failed to send booking completion notification for booking ##{booking_number}: #{e.message}"
     end
   end
 
@@ -592,6 +644,8 @@ class Booking < ApplicationRecord
       gateway_response: payment_details.to_json,
       status: 'confirmed'
     )
+    # Send booking confirmation email when payment is completed
+    send_booking_confirmation_email
   end
 
   def mark_payment_failed!(failure_reason = nil)

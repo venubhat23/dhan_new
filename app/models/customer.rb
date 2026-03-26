@@ -153,35 +153,58 @@ class Customer < ApplicationRecord
     ""
   end
 
-  # Password Reset Methods
+  # Simple Password Reset Methods
   def generate_password_reset_token!
-    # Generate a simple token that won't be signed by Rails
     loop do
-      token = SecureRandom.urlsafe_base64(32)
-      break self.password_reset_token = token unless Customer.exists?(password_reset_token: token)
+      token = SecureRandom.hex(32)
+      unless Customer.exists?(password_reset_token: token)
+        update_columns(
+          password_reset_token: token,
+          password_reset_sent_at: Time.current
+        )
+        break
+      end
     end
-    self.password_reset_sent_at = Time.current
-    save!(validate: false)
   end
 
   def password_reset_expired?
+    return true unless password_reset_sent_at
     password_reset_sent_at < 24.hours.ago
   end
 
   def clear_password_reset_token!
-    self.password_reset_token = nil
-    self.password_reset_sent_at = nil
-    save!(validate: false)
+    update_columns(
+      password_reset_token: nil,
+      password_reset_sent_at: nil
+    )
   end
 
   def self.find_by_password_reset_token(token)
-    # Handle both signed and plain tokens
-    customer = where(password_reset_token: token).where('password_reset_sent_at > ?', 24.hours.ago).first
+    return nil if token.blank?
+
+    # Handle URL encoding from email clients (= becomes %3D)
+    decoded_token = CGI.unescape(token)
+
+    # Try original token first
+    customer = where(password_reset_token: token)
+               .where('password_reset_sent_at > ?', 24.hours.ago)
+               .first
+
     return customer if customer
 
-    # If not found with exact match, try to find customers and check if token matches
-    candidates = where('password_reset_sent_at > ?', 24.hours.ago)
-    candidates.find { |c| c.password_reset_token == token }
+    # Try decoded token
+    where(password_reset_token: decoded_token)
+      .where('password_reset_sent_at > ?', 24.hours.ago)
+      .first
+  end
+
+  # Override password_reset_token getter to return raw database value
+  def password_reset_token
+    # Get raw value directly from database to bypass Rails signed token mechanism
+    result = self.class.connection.execute(
+      "SELECT password_reset_token FROM customers WHERE id = #{self.id}"
+    ).first
+    result ? result['password_reset_token'] : nil
   end
 
   private

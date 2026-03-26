@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmation #<%= @booking.booking_number %></title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f8f9fa;
+      color: #333333;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 650px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .header {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      padding: 40px 30px;
+      text-align: center;
+      color: white;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    .header .order-number {
+      font-size: 16px;
+      margin-top: 10px;
+      opacity: 0.9;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 18px;
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+    .message {
+      font-size: 16px;
+      margin-bottom: 30px;
+      line-height: 1.7;
+    }
+    .order-summary {
+      background-color: #f8f9fa;
+      border-radius: 10px;
+      padding: 25px;
+      margin: 30px 0;
+      border: 1px solid #dee2e6;
+    }
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #e9ecef;
+    }
+    .order-info {
+      margin-bottom: 25px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+    .info-label {
+      color: #6c757d;
+      font-weight: 500;
+    }
+    .info-value {
+      font-weight: 600;
+      color: #495057;
+    }
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    .items-table th {
+      background-color: #e9ecef;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      color: #495057;
+      border-bottom: 2px solid #dee2e6;
+    }
+    .items-table td {
+      padding: 12px;
+      border-bottom: 1px solid #dee2e6;
+    }
+    .item-name {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    .item-price {
+      text-align: right;
+      font-weight: 600;
+    }
+    .total-section {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 2px solid #dee2e6;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+    .total-row.final {
+      font-size: 18px;
+      font-weight: 700;
+      color: #28a745;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #dee2e6;
+    }
+    .invoice-button {
+      text-align: center;
+      margin: 30px 0;
+    }
+    .invoice-button a {
+      display: inline-block;
+      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      color: white;
+      text-decoration: none;
+      padding: 15px 30px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 600;
+      transition: transform 0.2s;
+    }
+    .invoice-button a:hover {
+      transform: translateY(-2px);
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status-confirmed {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .status-processing {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    .status-paid {
+      background-color: #d1ecf1;
+      color: #0c5460;
+    }
+    .footer {
+      background-color: #f8f9fa;
+      padding: 30px;
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+    }
+    .contact-info {
+      background-color: #e7f3ff;
+      border: 1px solid #b3d4fc;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 25px 0;
+    }
+    .contact-info h4 {
+      margin-top: 0;
+      color: #0056b3;
+    }
+    @media only screen and (max-width: 600px) {
+      .container {
+        margin: 10px;
+        border-radius: 5px;
+      }
+      .header, .content {
+        padding: 30px 20px;
+      }
+      .order-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .info-row, .total-row {
+        font-size: 14px;
+      }
+      .items-table {
+        font-size: 14px;
+      }
+      .items-table th, .items-table td {
+        padding: 8px 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>✅ Order Confirmed!</h1>
+      <div class="order-number">Order #<%= @booking.booking_number %></div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <div class="greeting">
+        Hello <%= @customer.first_name || @customer.email %>,
+      </div>
+
+      <div class="message">
+        Thank you for your order! We've received your order and are preparing it for delivery.
+        Here's a summary of your purchase:
+      </div>
+
+      <!-- Order Summary -->
+      <div class="order-summary">
+        <div class="order-header">
+          <h3 style="margin: 0; color: #2c3e50;">Order Details</h3>
+          <span class="status-badge status-<%= @booking.status == 'confirmed' ? 'confirmed' : 'processing' %>">
+            <%= @booking.status.humanize %>
+          </span>
+        </div>
+
+        <div class="order-info">
+          <div class="info-row">
+            <span class="info-label">Order Number:</span>
+            <span class="info-value">#<%= @booking.booking_number %></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Order Date:</span>
+            <span class="info-value"><%= @order_date %></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Payment Status:</span>
+            <span class="info-value">
+              <span class="status-badge status-<%= @booking.payment_status == 'paid' ? 'paid' : 'processing' %>">
+                <%= @booking.payment_status_display %>
+              </span>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Payment Method:</span>
+            <span class="info-value"><%= @booking.payment_method_display %></span>
+          </div>
+          <% if @booking.delivery_address.present? %>
+          <div class="info-row">
+            <span class="info-label">Delivery Address:</span>
+            <span class="info-value"><%= @booking.delivery_address %></span>
+          </div>
+          <% end %>
+          <% if @booking.selected_shop_address.present? %>
+          <div class="info-row">
+            <span class="info-label">Pickup Location:</span>
+            <span class="info-value"><%= @booking.selected_shop_address %></span>
+          </div>
+          <% end %>
+        </div>
+
+        <!-- Items Table -->
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th style="text-align: center;">Quantity</th>
+              <th style="text-align: right;">Price</th>
+              <th style="text-align: right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @booking.booking_items.each do |item| %>
+            <tr>
+              <td class="item-name"><%= item.product&.name || 'Product' %></td>
+              <td style="text-align: center;"><%= item.quantity %></td>
+              <td class="item-price">₹<%= sprintf('%.2f', item.price || 0) %></td>
+              <td class="item-price">₹<%= sprintf('%.2f', (item.quantity || 0) * (item.price || 0)) %></td>
+            </tr>
+            <% end %>
+          </tbody>
+        </table>
+
+        <!-- Total Section -->
+        <div class="total-section">
+          <div class="total-row">
+            <span>Subtotal:</span>
+            <span>₹<%= sprintf('%.2f', @booking.calculated_subtotal) %></span>
+          </div>
+          <% if @booking.calculated_tax_amount > 0 %>
+          <div class="total-row">
+            <span>Tax (<%= @booking.calculated_gst_percentage %>%):</span>
+            <span>₹<%= sprintf('%.2f', @booking.calculated_tax_amount) %></span>
+          </div>
+          <% end %>
+          <% if @booking.discount_amount.to_f > 0 %>
+          <div class="total-row">
+            <span>Discount:</span>
+            <span>-₹<%= sprintf('%.2f', @booking.discount_amount) %></span>
+          </div>
+          <% end %>
+          <div class="total-row final">
+            <span>Total Amount:</span>
+            <span>₹<%= sprintf('%.2f', @booking.calculated_total_amount) %></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Invoice Button -->
+      <% if @invoice_url.present? %>
+      <div class="invoice-button">
+        <a href="<%= @invoice_url %>" target="_blank">📄 View Invoice</a>
+      </div>
+      <% end %>
+
+      <!-- Contact Information -->
+      <div class="contact-info">
+        <h4>Need Help?</h4>
+        <p>
+          If you have any questions about your order, please don't hesitate to contact us:<br>
+          📧 Email: <a href="mailto:support@maralisanthe.com">support@maralisanthe.com</a><br>
+          📞 Phone: +91-XXXXXXXXXX
+        </p>
+      </div>
+
+      <div class="message">
+        We'll keep you updated on your order status via email. Thank you for choosing Marali Santhe!
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>
+        <strong>Marali Santhe</strong><br>
+        Fresh. Natural. Delivered.<br>
+        <a href="mailto:support@maralisanthe.com">support@maralisanthe.com</a>
+      </p>
+      <p style="margin-top: 20px; font-size: 12px; color: #999;">
+        This email was sent to <%= @customer.email %> regarding order #<%= @booking.booking_number %>.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,17 +1,20 @@
 <%# Reset Password Form %>
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-5 col-md-7">
-      <div class="card shadow-lg border-0">
-        <div class="card-body p-5">
-          <!-- Header -->
-          <div class="text-center mb-4">
-            <div class="mb-3">
-              <i class="bi bi-shield-lock-fill text-success" style="font-size: 3rem;"></i>
+<div class="container-fluid min-vh-100 d-flex align-items-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-5 col-md-7 col-sm-9">
+        <div class="card shadow-xl border-0 rounded-4">
+          <div class="card-body p-5">
+            <!-- Header with Logo -->
+            <div class="text-center mb-4">
+              <div class="mb-3">
+                <div class="rounded-circle bg-success bg-gradient p-3 d-inline-block shadow-sm">
+                  <i class="bi bi-shield-lock-fill text-white" style="font-size: 2.5rem;"></i>
+                </div>
+              </div>
+              <h2 class="card-title fw-bold text-dark mb-2">Reset Password</h2>
+              <p class="text-muted fs-6">Enter your new password below.</p>
             </div>
-            <h2 class="card-title fw-bold text-dark">Reset Password</h2>
-            <p class="text-muted">Enter your new password below.</p>
-          </div>
 
           <!-- Flash Messages -->
           <% if flash[:notice] %>
@@ -136,29 +139,99 @@
 </script>
 
 <style>
-  .card {
-    border-radius: 1rem;
+  .shadow-xl {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+
+  .rounded-4 {
+    border-radius: 1.5rem;
   }
 
   .btn-success {
     background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
     border: none;
-    border-radius: 0.5rem;
+    border-radius: 12px;
     transition: all 0.3s ease;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-size: 0.875rem;
   }
 
   .btn-success:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 15px 35px rgba(40, 167, 69, 0.4);
+    background: linear-gradient(135deg, #218838 0%, #1abc9c 100%);
+  }
+
+  .form-control {
+    border-radius: 12px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+    font-size: 1.1rem;
+    padding: 0.875rem 1rem;
   }
 
   .form-control:focus {
     border-color: #28a745;
-    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.15);
+    transform: translateY(-2px);
   }
 
   .input-group-text {
-    background: #f8f9fa;
-    border-color: #dee2e6;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #e9ecef;
+    border-right: none;
+    border-radius: 12px 0 0 12px;
+    color: #6c757d;
+    transition: all 0.3s ease;
+  }
+
+  .input-group:focus-within .input-group-text {
+    border-color: #28a745;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    color: #155724;
+  }
+
+  .input-group .form-control {
+    border-left: none;
+    border-radius: 0 12px 12px 0;
+  }
+
+  .card {
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  .form-label {
+    color: #495057;
+    margin-bottom: 0.75rem;
+  }
+
+  .text-primary {
+    color: #667eea !important;
+    transition: color 0.3s ease;
+  }
+
+  .text-primary:hover {
+    color: #764ba2 !important;
+  }
+
+  /* Floating animation for icon */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .rounded-circle {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  /* Gradient text effect */
+  .card-title {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 </style>
