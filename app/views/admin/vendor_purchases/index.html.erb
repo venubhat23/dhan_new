@@ -175,15 +175,33 @@
                         <i class="bi bi-eye"></i>
                       <% end %>
 
-                      <!-- Generate Invoice Button -->
-                      <button type="button" class="btn btn-outline-success btn-sm" title="Generate Invoice" onclick="generateVendorInvoice(<%= purchase.id %>)">
-                        <i class="bi bi-receipt"></i>
-                      </button>
+                      <!-- Invoice Button - Generate or View -->
+                      <% if purchase.has_invoice? %>
+                        <a href="<%= purchase.invoice_url %>"
+                           target="_blank"
+                           class="btn btn-outline-info btn-sm"
+                           title="View Invoice">
+                          <i class="bi bi-file-earmark-pdf"></i>
+                        </a>
+                      <% else %>
+                        <button type="button"
+                                class="btn btn-outline-success btn-sm"
+                                title="Generate Invoice"
+                                onclick="generateVendorInvoice(<%= purchase.id %>)">
+                          <i class="bi bi-receipt-cutoff"></i>
+                        </button>
+                      <% end %>
 
                       <!-- WhatsApp Share Button -->
-                      <button type="button" class="btn btn-outline-success btn-sm" title="Share on WhatsApp" onclick="shareVendorInvoiceOnWhatsApp(<%= purchase.id %>)">
-                        <i class="bi bi-whatsapp"></i>
-                      </button>
+                      <% if purchase.has_invoice? %>
+                        <button type="button" class="btn btn-outline-success btn-sm" title="Share Invoice on WhatsApp" onclick="shareExistingInvoiceOnWhatsApp('<%= purchase.purchase_number %>', '<%= purchase.invoice_url %>')">
+                          <i class="bi bi-whatsapp"></i>
+                        </button>
+                      <% else %>
+                        <button type="button" class="btn btn-outline-success btn-sm" title="Generate & Share on WhatsApp" onclick="shareVendorInvoiceOnWhatsApp(<%= purchase.id %>)">
+                          <i class="bi bi-whatsapp"></i>
+                        </button>
+                      <% end %>
 
                       <% if purchase.can_be_edited? %>
                         <%= link_to edit_admin_vendor_purchase_path(purchase), class: "btn btn-outline-warning btn-sm", title: "Edit" do %>
@@ -282,16 +300,28 @@ function generateVendorInvoice(purchaseId) {
       if (data.invoice_url) {
         window.open(data.invoice_url, '_blank');
       }
+
+      // Transform the button into a "View Invoice" link
+      const newButtonHtml = `
+        <a href="${data.invoice_url}"
+           target="_blank"
+           class="btn btn-outline-info btn-sm"
+           title="View Invoice">
+          <i class="bi bi-file-earmark-pdf"></i>
+        </a>
+      `;
+      button.outerHTML = newButtonHtml;
     } else {
       showNotification('Error generating invoice: ' + (data.error || 'Unknown error'), 'error');
+      // Restore button state on error
+      button.innerHTML = originalContent;
+      button.disabled = false;
     }
   })
   .catch(error => {
     console.error('Error:', error);
     showNotification('Error generating invoice. Please try again.', 'error');
-  })
-  .finally(() => {
-    // Restore button state
+    // Restore button state on error
     button.innerHTML = originalContent;
     button.disabled = false;
   });
@@ -335,6 +365,17 @@ function shareVendorInvoiceOnWhatsApp(purchaseId) {
     button.innerHTML = originalContent;
     button.disabled = false;
   });
+}
+
+function shareExistingInvoiceOnWhatsApp(purchaseNumber, invoiceUrl) {
+  // Create WhatsApp message with existing invoice
+  const message = `Hi! Here is your invoice for purchase #${purchaseNumber}:\n${invoiceUrl}`;
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+  // Open WhatsApp
+  window.open(whatsappUrl, '_blank');
+
+  showNotification('WhatsApp opened with invoice link!', 'success');
 }
 
 function showNotification(message, type = 'info') {

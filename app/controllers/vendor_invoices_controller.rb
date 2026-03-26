@@ -1,5 +1,6 @@
 class VendorInvoicesController < ApplicationController
   skip_before_action :authenticate_user!
+  skip_authorization_check
   layout false
 
   def public_view

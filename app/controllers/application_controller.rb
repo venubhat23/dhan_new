@@ -81,6 +81,10 @@ class ApplicationController < ActionController::Base
     if self.class.name.start_with?('Admin::') && (current_user&.admin? || current_user&.user_type == 'admin')
       return false
     end
+    # Skip authorization for vendor invoices public view
+    if controller_name == 'vendor_invoices' && action_name == 'public_view'
+      return false
+    end
     true
   end
 

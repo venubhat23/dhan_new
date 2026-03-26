@@ -75,6 +75,14 @@ class VendorPurchase < ApplicationRecord
     status == 'pending'
   end
 
+  def has_invoice?
+    vendor_invoice.present?
+  end
+
+  def invoice_url
+    vendor_invoice&.public_url
+  end
+
   private
 
   def must_have_items

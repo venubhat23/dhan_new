@@ -374,7 +374,7 @@
                 <i class="bi bi-cart-check-fill"></i>
               </div>
             </div>
-            <span class="customer-nav-text">My Orders</span>
+            <span class="customer-nav-text">Orders</span>
             <% if current_customer && current_customer.bookings.where(status: ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery']).count > 0 %>
               <span class="customer-nav-badge"><%= current_customer.bookings.where(status: ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery']).count %></span>
             <% end %>
@@ -390,7 +390,7 @@
                 <i class="bi bi-receipt-cutoff"></i>
               </div>
             </div>
-            <span class="customer-nav-text">My Invoices</span>
+            <span class="customer-nav-text">Invoices</span>
             <% if current_customer && current_customer.bookings.where.not(invoice_number: [nil, '']).where(payment_status: [:unpaid, nil]).count > 0 %>
               <span class="customer-nav-badge"><%= current_customer.bookings.where.not(invoice_number: [nil, '']).where(payment_status: [:unpaid, nil]).count %></span>
             <% end %>
@@ -436,7 +436,7 @@
                 <i class="bi bi-person-circle"></i>
               </div>
             </div>
-            <span class="customer-nav-text">My Profile</span>
+            <span class="customer-nav-text">Profile</span>
             <div class="nav-indicator"></div>
           <% end %>
         </li>

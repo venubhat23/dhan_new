@@ -316,9 +316,7 @@
               <th class="border-0 fw-semibold">Booking Details</th>
               <th class="border-0 fw-semibold">Customer</th>
               <th class="border-0 fw-semibold">Items & Amount</th>
-              <th class="border-0 fw-semibold">Payment</th>
-              <th class="border-0 fw-semibold">Invoiced</th>
-              <th class="border-0 fw-semibold text-dark">Current Stage</th>
+              <th class="border-0 fw-semibold">Payment & Status</th>
               <th class="border-0 fw-semibold">Progress</th>
               <th class="border-0 fw-semibold">Actions</th>
             </tr>
@@ -376,48 +374,51 @@
                   </div>
                 </td>
                 <td class="align-middle">
-                  <% payment_class = case booking.payment_status
-                                    when 'paid' then 'bg-success-subtle text-success'
-                                    when 'unpaid' then 'bg-danger-subtle text-danger'
-                                    when 'partially_paid' then 'bg-warning-subtle text-warning'
-                                    else 'bg-secondary-subtle text-secondary'
-                                    end %>
-                  <span class="badge <%= payment_class %>">
-                    <%= booking.payment_status_display %>
-                  </span>
-                  <% if booking.payment_method.present? %>
-                    <div class="small text-muted mt-1">
+                  <!-- Payment Status -->
+                  <div class="mb-2">
+                    <% payment_class = case booking.payment_status
+                                      when 'paid' then 'bg-success-subtle text-success'
+                                      when 'unpaid' then 'bg-danger-subtle text-danger'
+                                      when 'partially_paid' then 'bg-warning-subtle text-warning'
+                                      else 'bg-secondary-subtle text-secondary'
+                                      end %>
+                    <span class="badge <%= payment_class %>">
                       <i class="bi bi-credit-card me-1"></i>
-                      <%= booking.payment_method_display %>
-                    </div>
-                  <% end %>
-                </td>
-                <td class="align-middle">
-                  <% if booking.has_invoice? %>
-                    <% if booking.invoice_link_path %>
-                      <%= link_to booking.invoice_link_path, class: "badge bg-success-subtle text-success text-decoration-none", target: "_blank", title: "View Invoice ##{booking.display_invoice_number}" do %>
-                        <i class="bi bi-check-circle me-1"></i>
-                        <%= booking.display_invoice_number %>
+                      <%= booking.payment_status_display %>
+                    </span>
+                    <% if booking.payment_method.present? %>
+                      <small class="text-muted ms-1">(<%= booking.payment_method_display %>)</small>
+                    <% end %>
+                  </div>
+
+                  <!-- Invoice Status -->
+                  <div class="mb-2">
+                    <% if booking.has_invoice? %>
+                      <% if booking.invoice_link_path %>
+                        <%= link_to booking.invoice_link_path, class: "badge bg-success-subtle text-success text-decoration-none", target: "_blank", title: "View Invoice ##{booking.display_invoice_number}" do %>
+                          <i class="bi bi-receipt me-1"></i>
+                          <%= booking.display_invoice_number %>
+                        <% end %>
+                      <% else %>
+                        <span class="badge bg-warning-subtle text-warning">
+                          <i class="bi bi-exclamation-triangle me-1"></i>
+                          Generated
+                        </span>
                       <% end %>
                     <% else %>
-                      <span class="badge bg-warning-subtle text-warning">
-                        <i class="bi bi-exclamation-triangle me-1"></i>
-                        Generated
+                      <span class="badge bg-secondary-subtle text-secondary">
+                        <i class="bi bi-file-x me-1"></i>
+                        No Invoice
                       </span>
                     <% end %>
-                  <% else %>
-                    <span class="badge bg-secondary-subtle text-secondary">
-                      <i class="bi bi-x-circle me-1"></i>
-                      No
-                    </span>
-                  <% end %>
-                </td>
-                <td class="align-middle">
+                  </div>
+
+                  <!-- Current Status -->
                   <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-<%= booking.status_color %> px-3 py-2" title="<%= booking.status&.humanize || 'Unknown' %>">
+                    <span class="badge bg-<%= booking.status_color %> px-2 py-1" title="<%= booking.status&.humanize || 'Unknown' %>">
                       <i class="bi <%= booking.status_icon %> me-1"></i>
                       <% status_text = booking.status&.humanize || 'Unknown' %>
-                      <%= status_text.length > 15 ? status_text[0..14] + '...' : status_text %>
+                      <%= status_text.length > 12 ? status_text[0..11] + '...' : status_text %>
                     </span>
 
                     <% if booking.next_possible_statuses.any? %>

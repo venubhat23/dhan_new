@@ -763,11 +763,82 @@ function saveNewAddress() {
   });
 }
 
+// Show immediate attractive loader on Place Order button click
+function showImmediateButtonLoader(button) {
+  if (!button) return;
+
+  // Store original content for restoration later
+  if (!button.originalContent) {
+    button.originalContent = button.innerHTML;
+  }
+
+  // Immediately disable button and add loading state
+  button.disabled = true;
+  button.style.pointerEvents = 'none';
+  button.style.opacity = '0.8';
+
+  // Create attractive loading content with spinner and animation
+  button.innerHTML = `
+    <div class="d-flex align-items-center justify-content-center">
+      <div class="spinner-border spinner-border-sm me-2" role="status" style="width: 1rem; height: 1rem; animation: spin 0.8s linear infinite;">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <span class="loading-text" style="animation: pulse 1.5s ease-in-out infinite;">Placing Order...</span>
+    </div>
+  `;
+
+  // Add CSS animations if not already present
+  if (!document.getElementById('immediate-loader-styles')) {
+    const styles = document.createElement('style');
+    styles.id = 'immediate-loader-styles';
+    styles.textContent = `
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+      .loading-text {
+        font-weight: 500;
+        letter-spacing: 0.5px;
+      }
+    `;
+    document.head.appendChild(styles);
+  }
+
+  console.log('✨ Immediate loader activated on Place Order button');
+}
+
+// Helper function to restore button to original state
+function restoreButtonState(button, originalContent) {
+  if (!button) return;
+
+  button.innerHTML = button.originalContent || originalContent;
+  button.disabled = false;
+  button.removeAttribute('disabled');
+  button.style.pointerEvents = 'auto';
+  button.style.opacity = '1';
+  button.style.background = '';
+  button.style.cursor = '';
+  button.classList.remove('disabled');
+  button.onclick = processPayment; // Restore original click handler
+}
+
 async function processPayment() {
   console.log('🚀🚀🚀 CASHFREE PAYMENT PROCESS STARTED 🚀🚀🚀');
 
   const payBtn = document.getElementById('payNowBtn');
+
+  // Store original content BEFORE showing the loader
   const originalContent = payBtn.innerHTML;
+  if (!payBtn.originalContent) {
+    payBtn.originalContent = originalContent;
+  }
+
+  // IMMEDIATE ATTRACTIVE LOADER - Show instantly on button click
+  showImmediateButtonLoader(payBtn);
 
   console.log('🚀 Starting payment process...');
   console.log('PaymentSystem.selectedMethod:', PaymentSystem.selectedMethod);
@@ -787,6 +858,7 @@ async function processPayment() {
     const selectedShop = document.querySelector('input[name="pickup_location"]:checked');
     if (!selectedShop) {
       alert('Please select a pickup location');
+      restoreButtonState(payBtn, originalContent);
       return;
     }
     deliveryInfo = {
@@ -797,6 +869,7 @@ async function processPayment() {
     const selectedAddress = document.querySelector('input[name="delivery_address"]:checked');
     if (!selectedAddress) {
       alert('Please select a delivery address');
+      restoreButtonState(payBtn, originalContent);
       return;
     }
     deliveryInfo = {
@@ -807,6 +880,7 @@ async function processPayment() {
 
   if (cart.length === 0) {
     alert('Your cart is empty');
+    restoreButtonState(payBtn, originalContent);
     return;
   }
 
@@ -814,6 +888,7 @@ async function processPayment() {
   hidePaymentMethodsAndShowProcessing();
 
   // Show loading with proper button disabled state
+  const currentMethod = PaymentSystem.selectedMethod || selectedPaymentMethod || 'cod';
   if (currentMethod === 'cod') {
     payBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Placing Order...';
   } else {
@@ -861,15 +936,7 @@ async function processPayment() {
 
     // Reset UI
     showPaymentMethodsAndHideProcessing();
-    payBtn.innerHTML = originalContent;
-    payBtn.disabled = false;
-    payBtn.removeAttribute('disabled');
-    payBtn.style.pointerEvents = 'auto';
-    payBtn.style.opacity = '1';
-    payBtn.style.background = '';
-    payBtn.style.cursor = '';
-    payBtn.classList.remove('disabled');
-    payBtn.onclick = processPayment; // Restore original click handler
+    restoreButtonState(payBtn, originalContent);
   }
 }
 
@@ -1005,12 +1072,32 @@ async function processCODOrder(cart, deliveryInfo) {
       // Clear cart
       localStorage.removeItem('customerCart');
 
-      // Close modal
-      const modal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
-      modal.hide();
+      // Close modal safely
+      try {
+        const modalElement = document.getElementById('checkoutModal');
+        if (modalElement) {
+          const modal = bootstrap.Modal.getInstance(modalElement);
+          if (modal) {
+            modal.hide();
+          } else {
+            // If no instance exists, create one and hide it
+            const newModal = new bootstrap.Modal(modalElement);
+            newModal.hide();
+          }
+        }
+      } catch (modalError) {
+        console.warn('Could not close modal:', modalError);
+        // Continue with success flow even if modal can't be closed
+      }
 
       // Show success message
       alert('Order placed successfully! Order ID: ' + data.order_id);
+
+      // Restore button state before redirect
+      const payBtn = document.getElementById('payNowBtn');
+      if (payBtn && payBtn.originalContent) {
+        restoreButtonState(payBtn, payBtn.originalContent);
+      }
 
       // Redirect to customer dashboard
       window.location.href = '/customer/dashboard';
@@ -1035,53 +1122,304 @@ function hidePaymentMethodsAndShowProcessing() {
   // Show processing message with enhanced loading
   const currentMethod = PaymentSystem.selectedMethod || selectedPaymentMethod || 'cod';
   const processingSectionHtml = `
-    <div id="processing-section" class="checkout-step mt-4">
-      <h6 class="mb-3">
-        <i class="bi bi-clock-history me-2"></i>
-        ${currentMethod === 'cod' ? 'Processing Order' : 'Processing Payment'}
-      </h6>
-      <div class="text-center py-4">
-        <div class="loading-container mb-3">
-          <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-            <span class="visually-hidden">Loading...</span>
+    <div id="processing-section" class="processing-section">
+      <div class="booking-loader-container">
+        <!-- Booking Icon Animation -->
+        <div class="booking-icon-wrapper mb-4">
+          <div class="booking-icon">
+            <i class="bi bi-cart-check-fill"></i>
           </div>
-          <div class="loading-dots mt-2">
+          <div class="pulse-rings">
+            <div class="pulse-ring pulse-ring-1"></div>
+            <div class="pulse-ring pulse-ring-2"></div>
+            <div class="pulse-ring pulse-ring-3"></div>
+          </div>
+        </div>
+
+        <!-- Loading Progress Bar -->
+        <div class="progress-wrapper mb-4">
+          <div class="progress-bar-custom">
+            <div class="progress-fill"></div>
+          </div>
+          <div class="progress-steps">
+            <div class="step step-active">
+              <i class="bi bi-check-circle-fill"></i>
+              <span>Order Details</span>
+            </div>
+            <div class="step step-processing" id="payment-step">
+              <div class="step-loader">
+                <div class="spinner-border spinner-border-sm"></div>
+              </div>
+              <span>${currentMethod === 'cod' ? 'Confirming Order' : 'Processing Payment'}</span>
+            </div>
+            <div class="step">
+              <i class="bi bi-circle"></i>
+              <span>Confirmation</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Message -->
+        <h5 class="booking-title mb-3">
+          <i class="bi bi-hourglass-split me-2 text-primary"></i>
+          ${currentMethod === 'cod' ? 'Creating Your Order' : 'Secure Payment Processing'}
+        </h5>
+
+        <p class="booking-message mb-3">
+          ${currentMethod === 'cod' ?
+            '🛒 Confirming your Cash on Delivery order...<br>📦 Preparing order details...' :
+            '🔒 Redirecting to secure payment gateway...<br>💳 Please complete your payment...'}
+        </p>
+
+        <!-- Animated Dots -->
+        <div class="loading-dots-container mb-4">
+          <div class="loading-dots">
             <span class="dot"></span>
             <span class="dot"></span>
             <span class="dot"></span>
           </div>
         </div>
-        <p class="text-muted mb-2">
-          ${currentMethod === 'cod' ?
-            'Processing your Cash on Delivery order...' :
-            'Please complete your payment on the secure gateway...'}
-        </p>
-        <small class="text-muted">
-          <i class="bi bi-shield-check me-1"></i>
-          Do not refresh or close this page
-        </small>
+
+        <!-- Security Notice -->
+        <div class="security-notice">
+          <i class="bi bi-shield-lock-fill me-2 text-success"></i>
+          <small class="text-muted">
+            <strong>Secure Processing</strong> • Do not refresh or close this page
+          </small>
+        </div>
       </div>
     </div>
 
     <style>
-      .loading-dots {
+      /* Main Processing Section */
+      .processing-section {
+        border: 2px solid #e9ecef;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        margin: 1rem 0;
+        padding: 3rem 2rem;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        animation: fadeInScale 0.6s ease-out;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .processing-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        animation: shimmer 2s infinite;
+      }
+
+      /* Booking Loader Container */
+      .booking-loader-container {
+        position: relative;
+        z-index: 2;
+      }
+
+      /* Booking Icon Animation */
+      .booking-icon-wrapper {
+        position: relative;
+        display: inline-block;
+      }
+
+      .booking-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #1C7C54 0%, #10b981 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        color: white;
+        box-shadow: 0 8px 25px rgba(28, 124, 84, 0.3);
+        animation: bounce 2s ease-in-out infinite;
+        position: relative;
+        z-index: 3;
+      }
+
+      .pulse-rings {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      .pulse-ring {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80px;
+        height: 80px;
+        border: 3px solid rgba(28, 124, 84, 0.3);
+        border-radius: 50%;
+        animation: pulseRing 2s ease-out infinite;
+      }
+
+      .pulse-ring-2 {
+        animation-delay: 0.5s;
+      }
+
+      .pulse-ring-3 {
+        animation-delay: 1s;
+      }
+
+      /* Progress Bar */
+      .progress-wrapper {
+        max-width: 400px;
+        margin: 0 auto;
+      }
+
+      .progress-bar-custom {
+        height: 6px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #1C7C54, #10b981);
+        width: 0%;
+        border-radius: 10px;
+        animation: progressFill 3s ease-out infinite;
+      }
+
+      .progress-steps {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 0.75rem;
+        color: #6c757d;
+        gap: 0.5rem;
+      }
+
+      .step-active {
+        color: #1C7C54;
+      }
+
+      .step-processing {
+        color: #0d6efd;
+        font-weight: 600;
+      }
+
+      .step i {
+        font-size: 1.2rem;
+      }
+
+      .step-loader .spinner-border {
+        width: 1.2rem;
+        height: 1.2rem;
+        border-width: 2px;
+      }
+
+      /* Typography */
+      .booking-title {
+        color: #2c3e50;
+        font-weight: 700;
+        margin-bottom: 1rem;
+      }
+
+      .booking-message {
+        color: #5a6c7d;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+      }
+
+      /* Loading Dots */
+      .loading-dots-container {
         display: flex;
         justify-content: center;
-        align-items: center;
+      }
+
+      .loading-dots {
+        display: flex;
         gap: 8px;
+        align-items: center;
       }
 
       .dot {
-        width: 8px;
-        height: 8px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
-        background-color: #007bff;
+        background: linear-gradient(135deg, #1C7C54 0%, #10b981 100%);
         animation: loadingDots 1.4s ease-in-out infinite both;
+        box-shadow: 0 2px 8px rgba(28, 124, 84, 0.25);
       }
 
       .dot:nth-child(1) { animation-delay: -0.32s; }
       .dot:nth-child(2) { animation-delay: -0.16s; }
       .dot:nth-child(3) { animation-delay: 0s; }
+
+      /* Security Notice */
+      .security-notice {
+        background: rgba(25, 135, 84, 0.1);
+        border: 1px solid rgba(25, 135, 84, 0.2);
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        display: inline-block;
+      }
+
+      /* Animations */
+      @keyframes fadeInScale {
+        0% {
+          opacity: 0;
+          transform: scale(0.9) translateY(20px);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+
+      @keyframes shimmer {
+        0% { left: -100%; }
+        100% { left: 100%; }
+      }
+
+      @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+          transform: translateY(0);
+        }
+        40% {
+          transform: translateY(-10px);
+        }
+        60% {
+          transform: translateY(-5px);
+        }
+      }
+
+      @keyframes pulseRing {
+        0% {
+          transform: translate(-50%, -50%) scale(0.8);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(2);
+          opacity: 0;
+        }
+      }
+
+      @keyframes progressFill {
+        0% { width: 0%; }
+        50% { width: 65%; }
+        100% { width: 85%; }
+      }
 
       @keyframes loadingDots {
         0%, 80%, 100% {
@@ -1089,8 +1427,34 @@ function hidePaymentMethodsAndShowProcessing() {
           opacity: 0.5;
         }
         40% {
-          transform: scale(1.2);
+          transform: scale(1.4);
           opacity: 1;
+        }
+      }
+
+      /* Responsive Design */
+      @media (max-width: 768px) {
+        .processing-section {
+          padding: 2rem 1.5rem;
+        }
+
+        .booking-icon {
+          width: 60px;
+          height: 60px;
+          font-size: 2rem;
+        }
+
+        .pulse-ring {
+          width: 60px;
+          height: 60px;
+        }
+
+        .booking-title {
+          font-size: 1.1rem;
+        }
+
+        .booking-message {
+          font-size: 0.9rem;
         }
       }
     </style>
@@ -1101,6 +1465,25 @@ function hidePaymentMethodsAndShowProcessing() {
   if (deliveryStep) {
     deliveryStep.insertAdjacentHTML('afterend', processingSectionHtml);
   }
+
+  // Add dynamic progress animation
+  setTimeout(() => {
+    const progressFill = document.querySelector('.progress-fill');
+    const paymentStep = document.getElementById('payment-step');
+
+    if (progressFill) {
+      progressFill.style.width = '50%';
+    }
+
+    // Simulate progress updates for visual feedback
+    setTimeout(() => {
+      if (progressFill) progressFill.style.width = '75%';
+    }, 1500);
+
+    setTimeout(() => {
+      if (progressFill) progressFill.style.width = '90%';
+    }, 2500);
+  }, 500);
 }
 
 function showPaymentMethodsAndHideProcessing() {

@@ -1549,14 +1549,45 @@
       }
 
       function placeOrder() {
+        // Get the place order button immediately
+        const placeOrderBtn = document.querySelector('.checkout-footer button');
+
+        // Store original content and show immediate attractive loader
+        if (placeOrderBtn && !placeOrderBtn.originalContent) {
+          placeOrderBtn.originalContent = placeOrderBtn.innerHTML;
+        }
+
+        // Show immediate attractive loader
+        if (placeOrderBtn) {
+          placeOrderBtn.disabled = true;
+          placeOrderBtn.innerHTML = `
+            <div class="d-flex align-items-center justify-content-center">
+              <div class="spinner-border spinner-border-sm me-2" role="status" style="width: 1rem; height: 1rem;">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <span>Placing Order...</span>
+            </div>
+          `;
+        }
+
         if (!selectedAddress) {
           alert('Please select a delivery address');
+          // Restore button state
+          if (placeOrderBtn) {
+            placeOrderBtn.innerHTML = placeOrderBtn.originalContent || '<i class="fas fa-check me-2"></i>Place Order';
+            placeOrderBtn.disabled = false;
+          }
           return;
         }
 
         const cart = JSON.parse(localStorage.getItem('customerCart') || '[]');
         if (cart.length === 0) {
           alert('Your cart is empty');
+          // Restore button state
+          if (placeOrderBtn) {
+            placeOrderBtn.innerHTML = placeOrderBtn.originalContent || '<i class="fas fa-check me-2"></i>Place Order';
+            placeOrderBtn.disabled = false;
+          }
           return;
         }
 
@@ -1565,6 +1596,11 @@
         const selectedDeliveryStore = document.querySelector('input[name="delivery_store"]:checked');
         if (!selectedDeliveryStore) {
           alert('Please select a pickup location');
+          // Restore button state
+          if (placeOrderBtn) {
+            placeOrderBtn.innerHTML = placeOrderBtn.originalContent || '<i class="fas fa-check me-2"></i>Place Order';
+            placeOrderBtn.disabled = false;
+          }
           return;
         }
         <% end %>
@@ -1589,8 +1625,7 @@
         }
         <% end %>
 
-        // Show loading
-        const placeOrderBtn = event.target;
+        // Continue with existing loading (kept for compatibility)
         placeOrderBtn.disabled = true;
         placeOrderBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Placing Order...';
 
@@ -1663,7 +1698,7 @@
 
             // Reset button on error only
             placeOrderBtn.disabled = false;
-            placeOrderBtn.innerHTML = '<i class="fas fa-check me-2"></i>Place Order';
+            placeOrderBtn.innerHTML = placeOrderBtn.originalContent || '<i class="fas fa-check me-2"></i>Place Order';
           }
         });
       }
