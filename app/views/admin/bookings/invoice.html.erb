@@ -217,11 +217,6 @@
         background-color: #f8f9fa;
       }
 
-      .description {
-        color: #666;
-        font-size: 10px;
-        font-style: italic;
-      }
 
       .tax-rate {
         font-size: 9px;
@@ -723,9 +718,6 @@
               <td>
                 <div>
                   <%= item.product&.name || 'Product' %>
-                  <% if item.product&.description.present? && item.product.description != (item.product&.name || 'Product') %>
-                    <br><span class="description"><%= item.product.description %></span>
-                  <% end %>
                 </div>
               </td>
               <td class="center-align"><%= item.product&.hsn_code || '-' %></td>

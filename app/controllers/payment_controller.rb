@@ -66,14 +66,14 @@ class PaymentController < Customer::BaseController
         @booking.calculate_totals
         @booking.save!
 
-        # Mark payment as initiated
-        @booking.mark_payment_initiated!('cashfree')
-
-        # Generate unique Cashfree order ID
-        cashfree_order_id = Booking.generate_cashfree_order_id
-        @booking.update!(cashfree_order_id: cashfree_order_id)
-
         if @booking.payment_method == 'cashfree'
+          # Mark payment as initiated only for Cashfree
+          @booking.mark_payment_initiated!('cashfree')
+
+          # Generate unique Cashfree order ID
+          cashfree_order_id = Booking.generate_cashfree_order_id
+          @booking.update!(cashfree_order_id: cashfree_order_id)
+
           # Create order with Cashfree
           response = CashfreeService.create_order(@booking)
 
