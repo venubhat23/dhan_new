@@ -705,6 +705,11 @@
                         gst_amount = 0
                         final_price = selling_price
                       end
+
+                      # Smart rounding for cart - always define these variables
+                      rounded_final = final_price.round
+                      rounded_base = (rounded_final / (1 + (gst_rate / 100.0))).round
+                      rounded_gst = rounded_final - rounded_base
                     %>
 
                     <% if product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price %>
@@ -718,12 +723,6 @@
 
                     <% if product.gst_enabled && gst_rate > 0 %>
                       <small class="text-muted d-block">
-                        <%
-                          # Smart rounding for GST display
-                          rounded_final = final_price.round
-                          rounded_base = (rounded_final / (1 + (gst_rate / 100.0))).round
-                          rounded_gst = rounded_final - rounded_base
-                        %>
                         Base: ₹<%= number_with_delimiter(rounded_base) %> + GST: ₹<%= number_with_delimiter(rounded_gst) %> (<%= gst_rate %>%) = ₹<%= number_with_delimiter(rounded_final) %>
                       </small>
                     <% end %>

@@ -1,5 +1,6 @@
 class PaymentController < Customer::BaseController
   before_action :set_booking, only: [:success]
+  skip_before_action :verify_authenticity_token, only: [:cloudflare_webhook]
 
   def create_order
     # Create booking from cart data
@@ -66,8 +67,45 @@ class PaymentController < Customer::BaseController
         @booking.calculate_totals
         @booking.save!
 
-        if @booking.payment_method == 'cashfree'
-          # Mark payment as initiated only for Cashfree
+        if @booking.payment_method == 'cloudflare'
+          # Mark payment as initiated for Cloudflare
+          @booking.mark_payment_initiated!('cloudflare')
+
+          # Generate unique Cloudflare order ID
+          cloudflare_order_id = Booking.generate_cloudflare_order_id
+          @booking.update!(cloudflare_order_id: cloudflare_order_id)
+
+          # Create order with Cloudflare Worker
+          response = CloudflarePaymentService.create_order(@booking)
+
+          if response[:success]
+            order_data = response[:data]
+
+            # Store payment session ID
+            @booking.update!(
+              payment_session_id: order_data['payment_session_id']
+            )
+
+            render json: {
+              success: true,
+              payment_session_id: order_data['payment_session_id'],
+              order_id: @booking.cloudflare_order_id,
+              payment_url: order_data['payment_url'],
+              amount: @booking.total_amount,
+              customer_id: @booking.customer.id,
+              booking_id: @booking.id
+            }
+          else
+            @booking.mark_payment_failed!(response[:message])
+
+            render json: {
+              success: false,
+              message: response[:message] || 'Failed to create payment order',
+              error: response[:error]
+            }, status: :unprocessable_entity
+          end
+        elsif @booking.payment_method == 'cashfree'
+          # Keep existing Cashfree logic for backward compatibility
           @booking.mark_payment_initiated!('cashfree')
 
           # Generate unique Cashfree order ID
@@ -135,7 +173,7 @@ class PaymentController < Customer::BaseController
     order_id = params[:order_id]
 
     if payment_id.blank?
-      redirect_to customer_dashboard_path, alert: 'Payment verification failed'
+      redirect_to customer_orders_path, alert: 'Payment verification failed'
       return
     end
 
@@ -154,19 +192,19 @@ class PaymentController < Customer::BaseController
           payment_amount: payment_data['order_amount']
         })
 
-        redirect_to customer_dashboard_path,
+        redirect_to customer_orders_path,
                    notice: "Payment successful! Your order ##{@booking.booking_number} has been confirmed."
       else
         # Payment verification failed
         @booking.mark_payment_failed!("Payment status: #{payment_data['order_status']}")
 
-        redirect_to customer_dashboard_path,
+        redirect_to customer_orders_path,
                    alert: 'Payment verification failed. Please contact support.'
       end
     else
       @booking.mark_payment_failed!(response[:message])
 
-      redirect_to customer_dashboard_path,
+      redirect_to customer_orders_path,
                  alert: 'Payment verification failed. Please try again or contact support.'
     end
   rescue => e
@@ -174,7 +212,7 @@ class PaymentController < Customer::BaseController
 
     @booking&.mark_payment_failed!(e.message)
 
-    redirect_to customer_dashboard_path,
+    redirect_to customer_orders_path,
                alert: 'Payment verification error. Please contact support.'
   end
 
@@ -187,8 +225,33 @@ class PaymentController < Customer::BaseController
       booking&.mark_payment_failed!(reason)
     end
 
-    redirect_to customer_dashboard_path,
+    redirect_to customer_orders_path,
                alert: 'Payment failed. You can try again from your orders.'
+  end
+
+  def cloudflare_webhook
+    Rails.logger.info "Cloudflare webhook received: #{request.body.read}"
+
+    begin
+      request_body = request.body.read
+      webhook_data = JSON.parse(request_body)
+
+      # Process webhook
+      result = CloudflarePaymentService.process_webhook(webhook_data)
+
+      if result[:success]
+        render json: { status: 'success', message: 'Webhook processed' }, status: :ok
+      else
+        render json: { status: 'error', message: result[:message] }, status: :unprocessable_entity
+      end
+
+    rescue JSON::ParserError => e
+      Rails.logger.error "Invalid JSON in webhook: #{e.message}"
+      render json: { status: 'error', message: 'Invalid JSON' }, status: :bad_request
+    rescue => e
+      Rails.logger.error "Webhook processing error: #{e.message}"
+      render json: { status: 'error', message: 'Processing failed' }, status: :internal_server_error
+    end
   end
 
   private
@@ -200,7 +263,7 @@ class PaymentController < Customer::BaseController
       if request.format.json?
         render json: { success: false, message: 'Booking not found' }, status: :not_found
       else
-        redirect_to customer_dashboard_path, alert: 'Order not found'
+        redirect_to customer_orders_path, alert: 'Order not found'
       end
       return
     end

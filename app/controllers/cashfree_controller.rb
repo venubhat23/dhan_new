@@ -1,16 +1,29 @@
 class CashfreeController < ApplicationController
   skip_before_action :verify_authenticity_token, only: [:webhook]
+  skip_before_action :authenticate_user!, only: [:webhook]
+  skip_load_and_authorize_resource only: [:webhook]
 
   def webhook
+    Rails.logger.info "🚀 Cashfree webhook received at #{Time.current}"
+    Rails.logger.info "Request headers: #{request.headers.to_h.select { |k, _| k.start_with?('HTTP_') || k.downcase.include?('webhook') }}"
+
     timestamp = request.headers['x-webhook-timestamp']
     signature = request.headers['x-webhook-signature']
     request_body = request.raw_post
 
-    # Verify webhook signature
-    unless CashfreeService.verify_signature(request_body, signature, timestamp)
-      Rails.logger.warn "Cashfree webhook signature verification failed"
-      render json: { status: 'error', message: 'Invalid signature' }, status: :unauthorized
-      return
+    Rails.logger.info "Raw request body: #{request_body}"
+
+    # Skip signature verification in development for easier testing
+    if Rails.env.development?
+      Rails.logger.warn "⚠️ Skipping signature verification in development mode"
+    else
+      # Verify webhook signature
+      unless CashfreeService.verify_signature(request_body, signature, timestamp)
+        Rails.logger.error "❌ Cashfree webhook signature verification failed"
+        render json: { status: 'error', message: 'Invalid signature' }, status: :unauthorized
+        return
+      end
+      Rails.logger.info "✅ Webhook signature verified"
     end
 
     begin
@@ -43,37 +56,51 @@ class CashfreeController < ApplicationController
   private
 
   def handle_payment_success(payment_data)
+    Rails.logger.info "💰 Processing payment success webhook"
+    Rails.logger.info "Payment data: #{payment_data.inspect}"
+
     order_id = payment_data['order']['order_id']
     payment_id = payment_data['payment']['cf_payment_id']
 
     booking = Booking.find_by(cashfree_order_id: order_id)
 
     unless booking
-      Rails.logger.warn "Booking not found for Cashfree order: #{order_id}"
+      Rails.logger.error "❌ Booking not found for Cashfree order: #{order_id}"
       return
     end
 
+    Rails.logger.info "📦 Found booking: #{booking.id} (#{booking.booking_number})"
+
     if booking.payment_successful?
-      Rails.logger.info "Payment already processed for booking: #{booking.booking_number}"
+      Rails.logger.info "⚠️ Payment already processed for booking: #{booking.booking_number}"
       return
     end
 
     # Mark payment as successful
-    booking.mark_payment_completed!({
+    payment_details = {
       cf_payment_id: payment_id,
       payment_method: payment_data['payment']['payment_method'],
       order_status: 'PAID',
       payment_amount: payment_data['order']['order_amount'],
       bank_reference: payment_data['payment']['bank_reference'],
       auth_id: payment_data['payment']['auth_id']
-    })
+    }
 
-    Rails.logger.info "Payment confirmed via webhook for booking: #{booking.booking_number}"
+    booking.mark_payment_completed!(payment_details)
 
-    # Send confirmation email/SMS if needed
-    # PaymentNotificationMailer.payment_success(booking).deliver_later
+    Rails.logger.info "✅ Payment confirmed via webhook for booking: #{booking.booking_number}"
+
+    # Send confirmation email
+    begin
+      CustomerMailer.booking_confirmation(booking).deliver_now
+      Rails.logger.info "📧 Confirmation email sent to #{booking.customer_email}"
+    rescue => e
+      Rails.logger.error "📧 Email sending failed: #{e.message}"
+    end
+
   rescue => e
-    Rails.logger.error "Error processing payment success webhook: #{e.message}"
+    Rails.logger.error "❌ Error processing payment success webhook: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
   end
 
   def handle_payment_failed(payment_data)

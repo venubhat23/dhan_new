@@ -1,7 +1,7 @@
 class CashfreeService
   include HTTParty
 
-  base_uri 'https://sandbox.cashfree.com/pg'
+  base_uri Rails.env.production? ? 'https://api.cashfree.com/pg' : 'https://sandbox.cashfree.com/pg'
   headers 'Content-Type' => 'application/json'
 
   API_VERSION = '2022-09-01'
@@ -143,7 +143,7 @@ class CashfreeService
       if Rails.env.development?
         ENV['BASE_URL'] || 'http://localhost:3000'
       elsif Rails.env.production?
-        ENV['BASE_URL'] || 'https://your-app.com'
+        ENV['BASE_URL'] || 'https://maralisanthe.com'
       else
         'http://localhost:3000'
       end

@@ -179,11 +179,14 @@ class Customer::CheckoutController < Customer::BaseController
         @booking.subtotal = total_amount
         @booking.total_amount = total_amount
 
-        # Set payment status based on payment method
+        # Set initial status based on payment method
         if params[:payment_method] == 'cod'
           @booking.payment_status = :unpaid
+          @booking.status = 'confirmed' # COD orders are confirmed immediately
         else
-          @booking.payment_status = :unpaid # Can be changed later for online payments
+          # For online payments, start as draft until payment is completed
+          @booking.payment_status = :unpaid
+          @booking.status = 'draft'
         end
 
         if @booking.save
@@ -193,14 +196,68 @@ class Customer::CheckoutController < Customer::BaseController
 
           Rails.logger.info "Booking created successfully: #{@booking.booking_number}"
           Rails.logger.info "Total amount: ₹#{@booking.total_amount}"
+          Rails.logger.info "Payment method: #{params[:payment_method]}"
 
-          render json: {
-            success: true,
-            message: 'Order placed successfully',
-            booking_number: @booking.booking_number,
-            booking_id: @booking.id,
-            total_amount: @booking.total_amount
-          }
+          # Handle different payment methods
+          if params[:payment_method] == 'cod'
+            # COD Order - Complete immediately
+            @booking.update!(status: 'confirmed')
+
+            render json: {
+              success: true,
+              message: 'Order placed successfully! Pay on delivery.',
+              booking_number: @booking.booking_number,
+              booking_id: @booking.id,
+              total_amount: @booking.total_amount,
+              payment_method: 'cod',
+              redirect_url: customer_orders_path
+            }
+          else
+            # Online Payment - Integrate with Cashfree
+            Rails.logger.info "🚀 Initiating Cashfree payment for booking #{@booking.id}"
+
+            # Generate Cashfree order ID
+            cashfree_order_id = Booking.generate_cashfree_order_id
+            @booking.update!(cashfree_order_id: cashfree_order_id)
+
+            # Mark payment as initiated
+            @booking.mark_payment_initiated!('cashfree')
+
+            # Create Cashfree order
+            response = CashfreeService.create_order(@booking)
+
+            if response[:success]
+              order_data = response[:data]
+
+              # Store payment session ID
+              @booking.update!(payment_session_id: order_data['payment_session_id'])
+
+              Rails.logger.info "✅ Cashfree order created: #{order_data['order_id']}"
+
+              render json: {
+                success: true,
+                message: 'Redirecting to payment gateway...',
+                booking_number: @booking.booking_number,
+                booking_id: @booking.id,
+                total_amount: @booking.total_amount,
+                payment_method: 'cashfree',
+                payment_session_id: order_data['payment_session_id'],
+                cashfree_order_id: cashfree_order_id,
+                redirect_to_payment: true
+              }
+            else
+              # Cashfree order creation failed
+              @booking.mark_payment_failed!(response[:message])
+
+              Rails.logger.error "❌ Cashfree order creation failed: #{response[:message]}"
+
+              render json: {
+                success: false,
+                error: response[:message] || 'Payment gateway error. Please try again.',
+                booking_id: @booking.id
+              }, status: 422
+            end
+          end
         else
           Rails.logger.error "Booking creation failed: #{@booking.errors.full_messages.join(', ')}"
           raise ActiveRecord::Rollback, @booking.errors.full_messages.join(', ')

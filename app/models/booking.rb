@@ -42,12 +42,14 @@ class Booking < ApplicationRecord
     bank_transfer: 3,
     online: 4,
     cod: 5,
-    cashfree: 6
+    cashfree: 6,
+    cloudflare: 7
   }, prefix: true
 
   enum :payment_gateway, {
     cash: 'cash',
     cashfree: 'cashfree',
+    cloudflare: 'cloudflare',
     upi_direct: 'upi_direct'
   }, prefix: true
 

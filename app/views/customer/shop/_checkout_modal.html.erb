@@ -223,17 +223,25 @@
             Payment Method
           </h6>
 
-          <div class="payment-option" id="payment-option-cashfree" data-method="cashfree">
-            <input type="radio" name="payment_method" id="payment_cashfree" value="cashfree">
+          <!-- Online Payment Option -->
+          <div class="payment-option selected" id="payment-option-cashfree" data-method="cashfree">
+            <input type="radio" name="payment_method" id="payment_cashfree" value="cashfree" checked>
             <label for="payment_cashfree" class="mb-0">
               <i class="bi bi-credit-card me-2"></i>
-              <strong>UPI Payment</strong>
-              <small class="d-block text-muted">Pay securely using UPI, Credit Card, Debit Card, Net Banking</small>
+              <strong>Pay Online</strong>
+              <small class="d-block text-muted">UPI, Cards, Net Banking, Wallets</small>
+              <div class="payment-methods-icons mt-1">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='20' viewBox='0 0 32 20'%3E%3Crect width='32' height='20' rx='3' fill='%23ff6600'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='Arial,sans-serif' font-size='6' font-weight='bold'%3EUPI%3C/text%3E%3C/svg%3E" alt="UPI" style="height: 16px; margin-right: 4px;">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='20' viewBox='0 0 32 20'%3E%3Crect width='32' height='20' rx='3' fill='%230066cc'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='Arial,sans-serif' font-size='5' font-weight='bold'%3EVISA%3C/text%3E%3C/svg%3E" alt="VISA" style="height: 16px; margin-right: 4px;">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='20' viewBox='0 0 32 20'%3E%3Crect width='32' height='20' rx='3' fill='%23eb001b'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='Arial,sans-serif' font-size='5' font-weight='bold'%3EMC%3C/text%3E%3C/svg%3E" alt="Mastercard" style="height: 16px; margin-right: 4px;">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='20' viewBox='0 0 32 20'%3E%3Crect width='32' height='20' rx='3' fill='%2300457c'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='Arial,sans-serif' font-size='5' font-weight='bold'%3EAMEX%3C/text%3E%3C/svg%3E" alt="AMEX" style="height: 16px;">
+              </div>
             </label>
           </div>
 
-          <div class="payment-option selected" id="payment-option-cod" data-method="cod">
-            <input type="radio" name="payment_method" id="payment_cod" value="cod" checked>
+          <!-- Cash on Delivery Option -->
+          <div class="payment-option" id="payment-option-cod" data-method="cod">
+            <input type="radio" name="payment_method" id="payment_cod" value="cod">
             <label for="payment_cod" class="mb-0">
               <i class="bi bi-cash me-2"></i>
               <strong>Cash on Delivery</strong>
@@ -285,7 +293,7 @@
 </div>
 
 <script>
-let selectedPaymentMethod = 'cod';
+let selectedPaymentMethod = 'cashfree'; // Default to online payment
 let selectedDeliveryMethod = 'pickup';
 let orderTotal = 0;
 
@@ -294,21 +302,26 @@ let cashfree;
 const initializeCashfree = async () => {
   try {
     cashfree = await Cashfree({
-      mode: 'sandbox' // Change to 'production' for live
+      mode: '<%= Rails.env.production? ? "production" : "sandbox" %>'
     });
+    console.log('✅ Cashfree SDK initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize Cashfree:', error);
+    console.error('❌ Failed to initialize Cashfree:', error);
+    // Ensure this doesn't throw an uncaught error
+    return Promise.resolve(null);
   }
 };
 
 // Payment System - Isolated from browser extension conflicts
 const PaymentSystem = {
-  selectedMethod: 'cod',
+  selectedMethod: 'cashfree', // Default to online payment
   orderTotal: 0,
 
   init: function() {
     try {
-      initializeCashfree();
+      initializeCashfree().catch(error => {
+        console.error('❌ Cashfree initialization failed:', error);
+      });
       this.setupPaymentHandlers();
       this.updatePayButton();
       console.log('✅ Payment System Initialized Successfully');
@@ -379,12 +392,12 @@ const PaymentSystem = {
       const payBtn = document.getElementById('payNowBtn');
       if (!payBtn) return;
 
-      if (this.selectedMethod === 'cod') {
+      if (this.selectedMethod === 'cashfree') {
+        payBtn.innerHTML = `<i class="bi bi-credit-card me-2"></i>Pay Now - ₹${this.orderTotal.toFixed(2)}`;
+        payBtn.className = 'btn btn-pay-now';
+      } else {
         payBtn.innerHTML = `<i class="bi bi-check-circle me-2"></i>Place Order - ₹${this.orderTotal.toFixed(2)}`;
         payBtn.className = 'btn btn-success';
-      } else {
-        payBtn.innerHTML = `<i class="bi bi-credit-card me-2"></i>Pay ₹${this.orderTotal.toFixed(2)}`;
-        payBtn.className = 'btn btn-pay-now';
       }
 
       console.log('✅ Pay button updated for method:', this.selectedMethod);
@@ -417,9 +430,13 @@ const PaymentSystem = {
         animation: slideIn 0.3s ease-out;
       `;
 
-      notification.textContent = method === 'cashfree' ?
-        '💳 UPI Payment Selected!' :
-        '💵 Cash on Delivery Selected!';
+      if (method === 'cashfree') {
+        notification.textContent = '💳 Online Payment Selected!';
+        notification.style.background = '#007bff';
+      } else {
+        notification.textContent = '💵 Cash on Delivery Selected!';
+        notification.style.background = '#28a745';
+      }
 
       document.body.appendChild(notification);
 
@@ -630,13 +647,13 @@ function updatePayButtonText() {
   const payBtn = document.getElementById('payNowBtn');
 
   if (selectedPaymentMethod === 'cashfree') {
-    payBtnText.textContent = `Pay ₹${orderTotal.toFixed(2)}`;
+    payBtnText.textContent = `Pay Now - ₹${orderTotal.toFixed(2)}`;
     payBtn.innerHTML = '<i class="bi bi-credit-card me-2"></i>' + payBtnText.textContent;
-    payBtn.className = 'btn btn-pay-now'; // UPI payment styling
+    payBtn.className = 'btn btn-pay-now';
   } else {
     payBtnText.textContent = `Place Order - ₹${orderTotal.toFixed(2)}`;
     payBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>' + payBtnText.textContent;
-    payBtn.className = 'btn btn-success'; // COD order styling
+    payBtn.className = 'btn btn-success';
   }
 }
 
@@ -919,15 +936,29 @@ async function processPayment() {
   console.log('💳 Button disabled, starting payment flow...');
 
   try {
-    // Use PaymentSystem.selectedMethod as the primary source of truth
-    const currentMethod = PaymentSystem.selectedMethod || selectedPaymentMethod || 'cashfree';
-    console.log('🎯 Selected payment method:', currentMethod);
-    console.log('🎯 Will route to:', currentMethod === 'cod' ? 'COD Order' : 'Cashfree Payment Gateway');
+    // Get the currently selected payment method from radio buttons
+    const selectedRadio = document.querySelector('input[name="payment_method"]:checked');
+    const currentMethod = selectedRadio ? selectedRadio.value : 'cashfree';
 
-    if (currentMethod === 'cod') {
+    console.log('🎯 Selected payment method from radio:', currentMethod);
+    console.log('🎯 PaymentSystem.selectedMethod:', PaymentSystem.selectedMethod);
+    console.log('🎯 selectedPaymentMethod variable:', selectedPaymentMethod);
+    console.log('🎯 Radio button found:', selectedRadio ? 'YES' : 'NO');
+    console.log('🎯 All payment method radios:', document.querySelectorAll('input[name="payment_method"]'));
+
+    // Force to use the selected radio button value or default to cashfree
+    const finalMethod = selectedRadio ? selectedRadio.value : 'cashfree';
+    console.log('🎯 FINAL METHOD TO USE:', finalMethod);
+
+    // Handle both cashfree and upi as online payment methods
+    if (finalMethod === 'cashfree' || finalMethod === 'upi') {
+      console.log('🎯 Will route to: Cashfree Payment Gateway');
+      await processCashfreePayment(cart, deliveryInfo);
+    } else if (finalMethod === 'cod') {
+      console.log('🎯 Will route to: COD Order');
       await processCODOrder(cart, deliveryInfo);
     } else {
-      // For any UPI/Online payment, use Cashfree
+      console.log('🎯 Unknown payment method, defaulting to Cashfree');
       await processCashfreePayment(cart, deliveryInfo);
     }
   } catch (error) {
@@ -955,28 +986,31 @@ async function processCashfreePayment(cart, deliveryInfo) {
       throw new Error('CSRF token not found. Please refresh the page and try again.');
     }
 
-    console.log('💳 Making request to /payment/create_order...');
+    console.log('💳 Making request to /customer/checkout/cart_order...');
 
-    // Create order with backend
-    const orderResponse = await fetch('/payment/create_order', {
+    // Prepare cart data in format expected by cart_order endpoint
+    const cartData = cart.map(item => ({
+      id: item.id,
+      quantity: item.quantity,
+      price: item.price,
+      name: item.name
+    }));
+
+    // Create order using customer checkout cart_order endpoint
+    const orderResponse = await fetch('/customer/checkout/cart_order', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken.getAttribute('content')
       },
       body: JSON.stringify({
-        booking_id: null, // Will be created in backend
-        cart_items: cart.map(item => ({
-          product_id: item.id,
-          quantity: item.quantity,
-          price: item.price
-        })),
+        cart_data: cartData,
         customer_name: getCurrentCustomerName(),
         customer_email: getCurrentCustomerEmail(),
         customer_phone: getCurrentCustomerPhone(),
         delivery_address: getSelectedDeliveryInfo(deliveryInfo),
         delivery_method: deliveryInfo.type,
-        pickup_location: deliveryInfo.type === 'pickup' ? getSelectedPickupLocation(deliveryInfo.location) : null,
+        delivery_store: deliveryInfo.type === 'pickup' ? getSelectedPickupLocation(deliveryInfo.location) : null,
         payment_method: 'cashfree'
       })
     });
@@ -994,31 +1028,48 @@ async function processCashfreePayment(cart, deliveryInfo) {
     console.log('Order Response Data:', orderData);
 
     if (!orderData.success) {
-      throw new Error(orderData.message || 'Failed to create order');
+      throw new Error(orderData.error || orderData.message || 'Failed to create order');
     }
 
-    // Initialize Cashfree payment
-    if (!cashfree) {
-      await initializeCashfree();
+    // Check if this is a Cashfree payment that needs redirection
+    if (orderData.redirect_to_payment && orderData.payment_session_id) {
+      console.log('🎯 Redirecting to Cashfree payment gateway...');
+
+      // Initialize Cashfree payment
+      if (!cashfree) {
+        try {
+          await initializeCashfree();
+          if (!cashfree) {
+            throw new Error('Cashfree SDK failed to initialize');
+          }
+        } catch (initError) {
+          console.error('❌ Failed to initialize Cashfree SDK:', initError);
+          throw new Error('Payment gateway initialization failed');
+        }
+      }
+
+      const checkoutOptions = {
+        paymentSessionId: orderData.payment_session_id,
+        redirectTarget: '_self'
+      };
+
+      // Open Cashfree checkout
+      try {
+        await cashfree.checkout(checkoutOptions);
+        console.log('✅ Payment gateway opened successfully');
+        // Payment initiated successfully
+        // The user will be redirected to the payment gateway
+      } catch (checkoutError) {
+        console.error('❌ Cashfree checkout error:', checkoutError);
+        throw new Error('Failed to open payment gateway: ' + checkoutError.message);
+      }
+    } else {
+      // This shouldn't happen for Cashfree payments, but handle gracefully
+      throw new Error('Payment session not created properly');
     }
-
-    const checkoutOptions = {
-      paymentSessionId: orderData.payment_session_id,
-      redirectTarget: '_self'
-    };
-
-    // Open Cashfree checkout
-    cashfree.checkout(checkoutOptions).then(() => {
-      console.log('Payment initiated');
-      // Payment initiated successfully
-      // The user will be redirected to the payment gateway
-    }).catch((error) => {
-      console.error('Cashfree checkout error:', error);
-      throw new Error('Failed to open payment gateway');
-    });
 
   } catch (error) {
-    console.error('Cashfree payment error:', error);
+    console.error('❌ Cashfree payment error:', error);
     throw error;
   }
 }
@@ -1033,26 +1084,31 @@ async function processCODOrder(cart, deliveryInfo) {
       throw new Error('CSRF token not found. Please refresh the page and try again.');
     }
 
-    // Create COD order using Payment controller
-    const response = await fetch('/payment/create_order', {
+    console.log('💵 Making COD request to /customer/checkout/cart_order...');
+
+    // Prepare cart data in format expected by cart_order endpoint
+    const cartData = cart.map(item => ({
+      id: item.id,
+      quantity: item.quantity,
+      price: item.price,
+      name: item.name
+    }));
+
+    // Create COD order using customer checkout cart_order endpoint
+    const response = await fetch('/customer/checkout/cart_order', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken.getAttribute('content')
       },
       body: JSON.stringify({
-        booking_id: null, // Will be created in backend
-        cart_items: cart.map(item => ({
-          product_id: item.id,
-          quantity: item.quantity,
-          price: item.price
-        })),
+        cart_data: cartData,
         customer_name: getCurrentCustomerName(),
         customer_email: getCurrentCustomerEmail(),
         customer_phone: getCurrentCustomerPhone(),
         delivery_address: getSelectedDeliveryInfo(deliveryInfo),
         delivery_method: deliveryInfo.type,
-        pickup_location: deliveryInfo.type === 'pickup' ? getSelectedPickupLocation(deliveryInfo.location) : null,
+        delivery_store: deliveryInfo.type === 'pickup' ? getSelectedPickupLocation(deliveryInfo.location) : null,
         payment_method: 'cod'
       })
     });
@@ -1091,7 +1147,7 @@ async function processCODOrder(cart, deliveryInfo) {
       }
 
       // Show success message
-      alert('Order placed successfully! Order ID: ' + data.order_id);
+      alert('Order placed successfully! Order Number: ' + (data.booking_number || data.booking_id));
 
       // Restore button state before redirect
       const payBtn = document.getElementById('payNowBtn');
@@ -1099,14 +1155,14 @@ async function processCODOrder(cart, deliveryInfo) {
         restoreButtonState(payBtn, payBtn.originalContent);
       }
 
-      // Redirect to customer dashboard
-      window.location.href = '/customer/dashboard';
+      // Redirect using the redirect URL from response or default to dashboard
+      window.location.href = data.redirect_url || '/customer/dashboard';
     } else {
-      throw new Error(data.message || 'Failed to place order');
+      throw new Error(data.error || data.message || 'Failed to place order');
     }
 
   } catch (error) {
-    console.error('COD order error:', error);
+    console.error('❌ COD order error:', error);
     throw error;
   }
 }
@@ -1150,7 +1206,7 @@ function hidePaymentMethodsAndShowProcessing() {
               <div class="step-loader">
                 <div class="spinner-border spinner-border-sm"></div>
               </div>
-              <span>${currentMethod === 'cod' ? 'Confirming Order' : 'Processing Payment'}</span>
+              <span id="processing-step-text">Processing Payment</span>
             </div>
             <div class="step">
               <i class="bi bi-circle"></i>
@@ -1162,13 +1218,11 @@ function hidePaymentMethodsAndShowProcessing() {
         <!-- Main Message -->
         <h5 class="booking-title mb-3">
           <i class="bi bi-hourglass-split me-2 text-primary"></i>
-          ${currentMethod === 'cod' ? 'Creating Your Order' : 'Secure Payment Processing'}
+          Creating Your Order
         </h5>
 
-        <p class="booking-message mb-3">
-          ${currentMethod === 'cod' ?
-            '🛒 Confirming your Cash on Delivery order...<br>📦 Preparing order details...' :
-            '🔒 Redirecting to secure payment gateway...<br>💳 Please complete your payment...'}
+        <p class="booking-message mb-3" id="processing-message">
+          💳 Preparing secure payment...<br>🔐 Connecting to payment gateway...
         </p>
 
         <!-- Animated Dots -->
@@ -1464,6 +1518,19 @@ function hidePaymentMethodsAndShowProcessing() {
   const deliveryStep = document.getElementById('step-delivery-options');
   if (deliveryStep) {
     deliveryStep.insertAdjacentHTML('afterend', processingSectionHtml);
+
+    // Update messages based on payment method
+    const currentMethod = PaymentSystem.selectedMethod || selectedPaymentMethod || 'cashfree';
+    const messageElement = document.getElementById('processing-message');
+    const stepTextElement = document.getElementById('processing-step-text');
+
+    if (currentMethod === 'cashfree') {
+      if (messageElement) messageElement.innerHTML = '💳 Preparing secure payment...<br>🔐 Connecting to payment gateway...';
+      if (stepTextElement) stepTextElement.textContent = 'Processing Payment';
+    } else {
+      if (messageElement) messageElement.innerHTML = '🛒 Confirming your Cash on Delivery order...<br>📦 Preparing order details...';
+      if (stepTextElement) stepTextElement.textContent = 'Confirming Order';
+    }
   }
 
   // Add dynamic progress animation
@@ -1656,6 +1723,21 @@ document.addEventListener('click', function(e) {
     }
   }
 }, true); // Use capture phase to intercept early
+
+// Global error handler for uncaught promise rejections
+window.addEventListener('unhandledrejection', function(event) {
+  console.error('🚨 Uncaught promise rejection:', event.reason);
+  // Prevent the default browser behavior (logging to console)
+  event.preventDefault();
+
+  // Handle specific payment-related promise rejections
+  if (event.reason && event.reason.message) {
+    if (event.reason.message.includes('Cashfree') || event.reason.message.includes('payment')) {
+      console.error('💳 Payment system error caught:', event.reason.message);
+      // Could show user-friendly error message here if needed
+    }
+  }
+});
 
 console.log('💰 Cashfree Payment System Loaded Successfully');
 </script>

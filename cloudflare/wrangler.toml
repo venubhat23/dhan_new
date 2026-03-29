@@ -1,0 +1,28 @@
+# Cloudflare Workers Configuration for Payment Processing
+
+name = "marali-santhe-payment-processor"
+main = "workers/payment-processor.js"
+compatibility_date = "2023-12-01"
+
+# KV Namespaces for storing payment data
+[[kv_namespaces]]
+binding = "PAYMENT_ORDERS"
+id = "your-kv-namespace-id-here"
+preview_id = "your-preview-kv-namespace-id-here"
+
+# Environment Variables
+[env.production]
+name = "marali-santhe-payment-processor"
+
+[env.staging]
+name = "marali-santhe-payment-processor-staging"
+
+# Routes - Replace with your domain
+[[routes]]
+pattern = "maralisanthe.com/cf-payment/*"
+zone_name = "maralisanthe.com"
+
+# Secrets (set using wrangler secret put)
+# WEBHOOK_SECRET - for validating webhook signatures
+# PAYMENT_GATEWAY_KEY - for payment gateway integration
+# RAILS_API_KEY - for authenticating with your Rails app
