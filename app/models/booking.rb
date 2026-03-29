@@ -682,44 +682,15 @@ class Booking < ApplicationRecord
 
   def generate_invoice_after_payment
     # Check if invoice already exists
-    return if invoices.exists?
+    return if booking_invoices.exists?
 
     begin
-      # Create invoice for the booking
-      invoice = invoices.create!(
-        invoice_number: generate_invoice_number,
-        invoice_date: Date.current,
-        due_date: Date.current + 30.days,
-        customer: customer,
-        customer_name: customer_name,
-        customer_email: customer_email,
-        customer_phone: customer_phone,
-        delivery_address: delivery_address,
-        subtotal_amount: subtotal_amount || total_amount,
-        tax_amount: tax_amount || 0,
-        total_amount: total_amount,
-        payment_status: 'paid',
-        payment_method: payment_method,
-        payment_date: Time.current,
-        notes: "Auto-generated invoice for order ##{booking_number}",
-        status: 'paid'
-      )
+      # Create invoice for the booking using existing method
+      create_booking_invoice_record
 
-      # Create invoice items from booking items
-      booking_items.each do |booking_item|
-        invoice.invoice_items.create!(
-          product: booking_item.product,
-          product_name: booking_item.product&.name || 'Product',
-          quantity: booking_item.quantity,
-          unit_price: booking_item.price,
-          total_price: booking_item.quantity * booking_item.price,
-          description: booking_item.product&.description || ''
-        )
-      end
+      Rails.logger.info "📄 Auto-generated invoice for booking ##{booking_number}"
 
-      Rails.logger.info "📄 Auto-generated invoice ##{invoice.invoice_number} for booking ##{booking_number}"
-
-      invoice
+      booking_invoices.first
     rescue => e
       Rails.logger.error "❌ Failed to auto-generate invoice for booking ##{booking_number}: #{e.message}"
       nil

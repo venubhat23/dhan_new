@@ -279,45 +279,22 @@ class PaymentController < Customer::BaseController
 
   def generate_invoice_for_booking(booking)
     # Check if invoice already exists
-    return if booking.invoices.exists?
+    return if booking.booking_invoices.exists?
 
     begin
-      # Create invoice for the booking
-      invoice = booking.invoices.create!(
-        invoice_number: generate_invoice_number,
-        invoice_date: Date.current,
-        due_date: Date.current + 30.days,
-        customer: booking.customer,
-        customer_name: booking.customer_name,
-        customer_email: booking.customer_email,
-        customer_phone: booking.customer_phone,
-        delivery_address: booking.delivery_address,
-        subtotal_amount: booking.subtotal_amount || booking.total_amount,
-        tax_amount: booking.tax_amount || 0,
-        total_amount: booking.total_amount,
-        payment_status: 'paid',
-        payment_method: booking.payment_method,
-        payment_date: Time.current,
-        notes: "Auto-generated invoice for order ##{booking.booking_number}",
-        status: 'paid'
-      )
+      # Create invoice for the booking using existing method
+      booking.create_booking_invoice_record
 
-      # Create invoice items from booking items
-      booking.booking_items.each do |booking_item|
-        invoice.invoice_items.create!(
-          product: booking_item.product,
-          product_name: booking_item.product&.name || 'Product',
-          quantity: booking_item.quantity,
-          unit_price: booking_item.price,
-          total_price: booking_item.quantity * booking_item.price,
-          description: booking_item.product&.description || ''
-        )
-      end
+      Rails.logger.info "📄 Generated invoice for booking ##{booking.booking_number}"
 
-      Rails.logger.info "📄 Generated invoice ##{invoice.invoice_number} for booking ##{booking.booking_number}"
+      # Get the created invoice
+      invoice = booking.booking_invoices.first
+
+      # Mark as paid since payment was successful
+      invoice&.mark_as_paid!
 
       # Send invoice email to customer
-      send_invoice_email(invoice) if invoice.customer_email.present?
+      send_invoice_email(invoice) if invoice&.customer_email.present?
 
       invoice
     rescue => e
