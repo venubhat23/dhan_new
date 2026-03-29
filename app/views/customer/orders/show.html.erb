@@ -11,8 +11,13 @@
     </p>
   </div>
   <div class="d-flex gap-2">
-    <!-- Download Invoice if available -->
-    <% if @booking.invoice_generated? && @booking.invoice_number.present? %>
+    <!-- View Invoice for paid orders -->
+    <% if @booking.payment_status == 'paid' %>
+      <%= link_to customer_order_invoice_path(@booking), class: "btn btn-primary", target: "_blank" do %>
+        <i class="bi bi-receipt me-1"></i>
+        View Invoice
+      <% end %>
+    <% elsif @booking.invoice_generated? && @booking.invoice_number.present? %>
       <%= link_to customer_order_invoice_path(@booking), class: "btn btn-outline-primary", target: "_blank" do %>
         <i class="bi bi-download me-1"></i>
         Download Invoice
@@ -244,6 +249,16 @@
           <div class="d-flex justify-content-between align-items-center mb-3">
             <span class="fw-bold fs-5">Total:</span>
             <span class="fw-bold fs-5 text-primary">₹<%= number_with_delimiter(@booking.total_amount&.to_f || 0) %></span>
+          </div>
+        <% end %>
+
+        <!-- View Invoice Button for Paid Orders -->
+        <% if @booking.payment_status == 'paid' %>
+          <div class="d-grid mt-3">
+            <%= link_to customer_order_invoice_path(@booking), class: "btn btn-success", target: "_blank" do %>
+              <i class="bi bi-receipt-cutoff me-2"></i>
+              View Invoice
+            <% end %>
           </div>
         <% end %>
       </div>

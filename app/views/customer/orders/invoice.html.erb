@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="csrf-token" content="<%= form_authenticity_token %>">
+    <title>Invoice #<%= @booking.invoice_number || @booking.booking_number %></title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 10px;
+        background-color: #f5f5f5;
+        font-size: 11px;
+      }
+
+      .invoice-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 15px;
+        border: 1px solid #ddd;
+      }
+
+      /* Header section */
+      .invoice-header-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 8px;
+      }
+
+      .invoice-header-table td {
+        vertical-align: top;
+        padding: 0;
+      }
+
+      .logo-cell {
+        width: 150px;
+        padding-right: 12px;
+      }
+
+      .logo {
+        width: 100px;
+        height: auto;
+        border-radius: 50%;
+        border: 3px solid #1C7C54;
+      }
+
+      .company-info-cell {
+        width: auto;
+        padding-right: 12px;
+      }
+
+      .company-name {
+        font-size: 20px;
+        font-weight: bold;
+        color: #1C7C54;
+        margin: 0 0 2px 0;
+      }
+
+      .company-details {
+        font-size: 9px;
+        line-height: 1.3;
+        color: #555;
+        margin: 0;
+      }
+
+      .invoice-title-cell {
+        width: 140px;
+        text-align: right;
+      }
+
+      .invoice-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #1C7C54;
+        margin: 0 0 4px 0;
+      }
+
+      .invoice-details {
+        font-size: 9px;
+        line-height: 1.4;
+        color: #555;
+      }
+
+      /* Customer and billing info */
+      .billing-info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0;
+      }
+
+      .billing-info-table td {
+        vertical-align: top;
+        padding: 0;
+        width: 50%;
+      }
+
+      .info-section {
+        margin-bottom: 12px;
+      }
+
+      .info-title {
+        font-size: 11px;
+        font-weight: bold;
+        color: #1C7C54;
+        margin: 0 0 3px 0;
+        border-bottom: 1px solid #1C7C54;
+        padding-bottom: 1px;
+      }
+
+      .info-content {
+        font-size: 10px;
+        line-height: 1.3;
+        color: #333;
+      }
+
+      /* Items table */
+      .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0;
+        font-size: 9px;
+      }
+
+      .items-table th {
+        background-color: #1C7C54;
+        color: white;
+        padding: 6px 4px;
+        text-align: left;
+        font-size: 9px;
+        font-weight: bold;
+      }
+
+      .items-table td {
+        padding: 4px;
+        border-bottom: 1px solid #ddd;
+        font-size: 9px;
+      }
+
+      .items-table tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+
+      .text-right {
+        text-align: right !important;
+      }
+
+      .text-center {
+        text-align: center !important;
+      }
+
+      /* Totals section */
+      .totals-section {
+        margin: 12px 0;
+      }
+
+      .totals-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .totals-table td {
+        padding: 3px 0;
+        font-size: 10px;
+      }
+
+      .totals-label {
+        text-align: right;
+        width: 70%;
+        padding-right: 10px;
+        font-weight: bold;
+        color: #555;
+      }
+
+      .totals-amount {
+        text-align: right;
+        width: 30%;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .total-final .totals-label,
+      .total-final .totals-amount {
+        font-size: 12px;
+        color: #1C7C54;
+        border-top: 2px solid #1C7C54;
+        padding-top: 6px;
+      }
+
+      /* Footer */
+      .footer-section {
+        margin-top: 20px;
+        font-size: 8px;
+        color: #666;
+        text-align: center;
+        border-top: 1px solid #ddd;
+        padding-top: 8px;
+      }
+
+      /* Print styles */
+      @media print {
+        body {
+          background-color: white;
+          padding: 0;
+        }
+
+        .invoice-container {
+          border: none;
+          padding: 0;
+          margin: 0;
+          max-width: none;
+        }
+
+        .no-print {
+          display: none !important;
+        }
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 600px) {
+        .invoice-container {
+          padding: 8px;
+        }
+
+        .invoice-header-table,
+        .billing-info-table {
+          display: block;
+        }
+
+        .invoice-header-table td,
+        .billing-info-table td {
+          display: block;
+          width: 100% !important;
+          margin-bottom: 10px;
+        }
+
+        .logo-cell {
+          text-align: center;
+          padding-right: 0;
+        }
+
+        .invoice-title-cell {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="invoice-container">
+      <!-- Header Section -->
+      <table class="invoice-header-table">
+        <tr>
+          <td class="logo-cell">
+            <% begin %>
+              <%= image_tag('logo.jpeg', class: 'logo', alt: 'Marali Santhe Logo') %>
+            <% rescue %>
+              <div style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid #1C7C54; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #1C7C54; font-weight: bold;">
+                LOGO
+              </div>
+            <% end %>
+          </td>
+          <td class="company-info-cell">
+            <h1 class="company-name">Marali Santhe</h1>
+            <div class="company-details">
+              Fresh & Organic Farm Products<br>
+              Email: support@maralisanthe.com<br>
+              Phone: +91 888 888 8888<br>
+              Website: www.maralisanthe.com
+            </div>
+          </td>
+          <td class="invoice-title-cell">
+            <h2 class="invoice-title">INVOICE</h2>
+            <div class="invoice-details">
+              <strong>Invoice #:</strong> <%= @booking.invoice_number || @booking.booking_number %><br>
+              <strong>Date:</strong> <%= @booking.created_at.strftime("%d/%m/%Y") %><br>
+              <strong>Order #:</strong> <%= @booking.booking_number %>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Billing Information -->
+      <table class="billing-info-table">
+        <tr>
+          <td>
+            <div class="info-section">
+              <h3 class="info-title">Bill To:</h3>
+              <div class="info-content">
+                <strong><%= @booking.customer_name %></strong><br>
+                <% if @booking.customer_email.present? %>
+                  <%= @booking.customer_email %><br>
+                <% end %>
+                <% if @booking.customer_phone.present? %>
+                  <%= @booking.customer_phone %><br>
+                <% end %>
+                <% if @booking.delivery_address.present? %>
+                  <%= simple_format(@booking.delivery_address) %>
+                <% end %>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="info-section">
+              <h3 class="info-title">Order Details:</h3>
+              <div class="info-content">
+                <strong>Order Date:</strong> <%= @booking.booking_date&.strftime("%d/%m/%Y") || @booking.created_at.strftime("%d/%m/%Y") %><br>
+                <strong>Payment Method:</strong> <%= @booking.payment_method&.humanize || 'Cash on Delivery' %><br>
+                <strong>Payment Status:</strong>
+                <span style="color: <%= @booking.payment_status == 'paid' ? '#28a745' : '#dc3545' %>; font-weight: bold;">
+                  <%= @booking.payment_status&.humanize || 'Unpaid' %>
+                </span><br>
+                <strong>Order Status:</strong>
+                <span style="color: #17a2b8; font-weight: bold;">
+                  <%= @booking.status&.humanize || 'Pending' %>
+                </span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Items Table -->
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width: 8%;">#</th>
+            <th style="width: 42%;">Product Description</th>
+            <th style="width: 12%;" class="text-center">Qty</th>
+            <th style="width: 15%;" class="text-right">Unit Price (₹)</th>
+            <th style="width: 12%;" class="text-right">Tax (₹)</th>
+            <th style="width: 15%;" class="text-right">Total (₹)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @booking.booking_items.each_with_index do |item, index| %>
+            <%
+              # Calculate GST details for each item
+              unit_price = item.price.to_f
+              quantity = item.quantity.to_f
+
+              if item.product&.gst_enabled && item.product.gst_percentage.to_f > 0
+                gst_rate = item.product.gst_percentage.to_f
+                # Unit price is GST inclusive
+                base_unit_price = unit_price / (1 + (gst_rate / 100.0))
+                gst_per_unit = unit_price - base_unit_price
+                total_base_amount = base_unit_price * quantity
+                total_gst_amount = gst_per_unit * quantity
+                total_amount = unit_price * quantity
+              else
+                base_unit_price = unit_price
+                gst_per_unit = 0
+                total_base_amount = unit_price * quantity
+                total_gst_amount = 0
+                total_amount = unit_price * quantity
+              end
+            %>
+            <tr>
+              <td class="text-center"><%= index + 1 %></td>
+              <td>
+                <strong><%= item.product&.name || 'Product' %></strong>
+                <% if item.product&.category %>
+                  <br><small style="color: #666;">Category: <%= item.product.category.name %></small>
+                <% end %>
+                <% if item.product&.sku %>
+                  <br><small style="color: #666;">SKU: <%= item.product.sku %></small>
+                <% end %>
+                <% if item.product&.gst_enabled && item.product.gst_percentage.to_f > 0 %>
+                  <br><small style="color: #666;">GST Rate: <%= item.product.gst_percentage %>%</small>
+                <% end %>
+              </td>
+              <td class="text-center"><%= quantity.to_i == quantity ? quantity.to_i : quantity %></td>
+              <td class="text-right">₹<%= number_with_delimiter(base_unit_price.round(2)) %></td>
+              <td class="text-right">₹<%= number_with_delimiter(total_gst_amount.round(2)) %></td>
+              <td class="text-right">₹<%= number_with_delimiter(total_amount.round(2)) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+
+      <!-- Totals Section -->
+      <div class="totals-section">
+        <table class="totals-table">
+          <tr>
+            <td class="totals-label">Subtotal (excluding tax):</td>
+            <td class="totals-amount">₹<%= number_with_delimiter((@booking.subtotal.to_f - @booking.tax_amount.to_f).round(2)) %></td>
+          </tr>
+          <% if @booking.discount_amount.present? && @booking.discount_amount.to_f > 0 %>
+            <tr>
+              <td class="totals-label">Discount:</td>
+              <td class="totals-amount" style="color: #28a745;">-₹<%= number_with_delimiter(@booking.discount_amount.to_f.round(2)) %></td>
+            </tr>
+          <% end %>
+          <tr>
+            <td class="totals-label">Total Tax:</td>
+            <td class="totals-amount">₹<%= number_with_delimiter(@booking.tax_amount.to_f.round(2)) %></td>
+          </tr>
+          <tr class="total-final">
+            <td class="totals-label">TOTAL AMOUNT:</td>
+            <td class="totals-amount">₹<%= number_with_delimiter(@booking.total_amount.to_f.round(2)) %></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer-section">
+      <p>Thank you for your business!</p>
+      <p>This is a computer-generated invoice. For any queries, please contact us at support@maralisanthe.com</p>
+    </div>
+
+    <!-- Print Button (only visible on screen) -->
+    <div class="no-print" style="text-align: center; margin-top: 20px;">
+      <button onclick="window.print()" style="background: #1C7C54; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+        <i>🖨️</i> Print Invoice
+      </button>
+    </div>
+  </div>
+</body>
+</html>
