@@ -1,23 +1,44 @@
 class CashfreeService
   include HTTParty
 
-  base_uri Rails.env.production? ? 'https://api.cashfree.com/pg' : 'https://sandbox.cashfree.com/pg'
   headers 'Content-Type' => 'application/json'
 
   API_VERSION = '2022-09-01'
 
   class << self
+    def production_credentials?
+      # Check if using production credentials (non-test keys)
+      client_id = Rails.application.credentials.dig(:cashfree, :client_id) ||
+                  ENV['CASHFREE_APP_ID'] ||
+                  'CASHFREE_APPID_REMOVED'
+
+      !client_id.start_with?('TEST')
+    end
+
+    def api_base_uri
+      production_credentials? ? 'https://api.cashfree.com/pg' : 'https://sandbox.cashfree.com/pg'
+    end
+
     def create_order(booking)
-      response = post('/orders', {
+      Rails.logger.info "🔑 Cashfree API Configuration:"
+      Rails.logger.info "   API URI: #{api_base_uri}"
+      Rails.logger.info "   Client ID: #{client_id}"
+      Rails.logger.info "   Production Mode: #{production_credentials?}"
+
+      order_data = build_order_request(booking)
+      Rails.logger.info "📤 Creating Cashfree order: #{order_data.to_json}"
+
+      response = post("#{api_base_uri}/orders", {
         headers: auth_headers,
-        body: build_order_request(booking).to_json
+        body: order_data.to_json
       })
 
+      Rails.logger.info "📥 Cashfree API Response: #{response.code} - #{response.body}"
       handle_response(response)
     end
 
     def verify_payment(payment_id)
-      response = get("/payments/#{payment_id}", {
+      response = get("#{api_base_uri}/payments/#{payment_id}", {
         headers: auth_headers
       })
 
@@ -122,12 +143,14 @@ class CashfreeService
     def client_id
       Rails.application.credentials.dig(:cashfree, :client_id) ||
       ENV['CASHFREE_APP_ID'] ||
+      ENV['CASHFREE_CLIENT_ID'] ||
       'CASHFREE_APPID_REMOVED'
     end
 
     def client_secret
       Rails.application.credentials.dig(:cashfree, :client_secret) ||
       ENV['CASHFREE_SECRET_KEY'] ||
+      ENV['CASHFREE_CLIENT_SECRET'] ||
       'CASHFREE_SECRET_REMOVED'
     end
 
