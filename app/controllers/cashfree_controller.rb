@@ -9,9 +9,13 @@ class CashfreeController < ApplicationController
 
     timestamp = request.headers['x-webhook-timestamp']
     signature = request.headers['x-webhook-signature']
+    webhook_version = request.headers['x-webhook-version']
     request_body = request.raw_post
 
     Rails.logger.info "Raw request body: #{request_body}"
+    Rails.logger.info "Webhook version: #{webhook_version}"
+    Rails.logger.info "Timestamp: #{timestamp}"
+    Rails.logger.info "Signature: #{signature}"
 
     # Skip signature verification in development for easier testing
     if Rails.env.development?
@@ -19,12 +23,21 @@ class CashfreeController < ApplicationController
     else
       # Verify webhook signature
       begin
-        unless CashfreeService.verify_signature(request_body, signature, timestamp)
+        signature_valid = case webhook_version
+        when '2023-08-01', '2022-09-01'
+          # For newer webhook versions, use base64 encoded signature
+          CashfreeService.verify_signature_v2(request_body, signature, timestamp)
+        else
+          # Fallback to original method for older versions
+          CashfreeService.verify_signature(request_body, signature, timestamp)
+        end
+
+        unless signature_valid
           Rails.logger.error "❌ Cashfree webhook signature verification failed"
-          Rails.logger.debug "Expected signature: #{CashfreeService.send(:compute_signature, request_body, timestamp)}"
+          Rails.logger.debug "Webhook version: #{webhook_version}"
           Rails.logger.debug "Received signature: #{signature}"
           Rails.logger.debug "Timestamp: #{timestamp}"
-          Rails.logger.debug "Body: #{request_body}"
+          Rails.logger.debug "Body length: #{request_body.length}"
 
           # For now, allow webhook processing but log the failure
           # TODO: Enable this in production after signature verification is working

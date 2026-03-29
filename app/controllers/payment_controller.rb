@@ -171,8 +171,17 @@ class PaymentController < Customer::BaseController
     payment_id = params[:cf_payment_id]
     order_id = params[:order_id]
 
+    # Check if payment was already processed by webhook
+    if @booking.payment_successful?
+      Rails.logger.info "✅ Payment already processed by webhook for booking: #{@booking.booking_number}"
+      redirect_to customer_order_path(@booking),
+                 notice: "Payment successful! Your order ##{@booking.booking_number} has been confirmed."
+      return
+    end
+
     if payment_id.blank?
-      redirect_to customer_orders_path, alert: 'Payment verification failed'
+      # If no payment ID but booking exists, redirect to specific order page
+      redirect_to customer_order_path(@booking), alert: 'Payment verification failed'
       return
     end
 
@@ -201,13 +210,13 @@ class PaymentController < Customer::BaseController
         # Payment verification failed
         @booking.mark_payment_failed!("Payment status: #{payment_data['order_status']}")
 
-        redirect_to customer_orders_path,
+        redirect_to customer_order_path(@booking),
                    alert: 'Payment verification failed. Please contact support.'
       end
     else
       @booking.mark_payment_failed!(response[:message])
 
-      redirect_to customer_orders_path,
+      redirect_to customer_order_path(@booking),
                  alert: 'Payment verification failed. Please try again or contact support.'
     end
   rescue => e
@@ -215,7 +224,7 @@ class PaymentController < Customer::BaseController
 
     @booking&.mark_payment_failed!(e.message)
 
-    redirect_to customer_orders_path,
+    redirect_to customer_order_path(@booking),
                alert: 'Payment verification error. Please contact support.'
   end
 

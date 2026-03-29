@@ -51,6 +51,15 @@ class CashfreeService
       ActiveSupport::SecurityUtils.secure_compare(computed_signature, signature)
     end
 
+    def verify_signature_v2(request_body, signature, timestamp)
+      # For newer webhook versions, use base64 encoded signature
+      computed_signature = compute_signature_v2(request_body, timestamp)
+      ActiveSupport::SecurityUtils.secure_compare(computed_signature, signature)
+    rescue => e
+      Rails.logger.error "Error in signature verification v2: #{e.message}"
+      false
+    end
+
     private
 
     def auth_headers
@@ -135,9 +144,17 @@ class CashfreeService
     end
 
     def compute_signature(request_body, timestamp)
-      # Cashfree webhook signature verification
+      # Cashfree webhook signature verification (older versions)
       data = "#{timestamp}.#{request_body}"
       OpenSSL::HMAC.hexdigest('sha256', client_secret, data)
+    end
+
+    def compute_signature_v2(request_body, timestamp)
+      # Cashfree webhook signature verification for newer versions (2022-09-01, 2023-08-01)
+      # These versions use base64 encoded signatures
+      data = "#{timestamp}.#{request_body}"
+      digest = OpenSSL::HMAC.digest('sha256', client_secret, data)
+      Base64.strict_encode64(digest)
     end
 
     def client_id
