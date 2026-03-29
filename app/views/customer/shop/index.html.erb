@@ -828,10 +828,34 @@
 </div>
 
 <script>
-// Modern Shopping Cart Management - Based on Admin Booking Design
-let cart = JSON.parse(localStorage.getItem('customerCart') || '[]');
+// FIXED: Cart management functions - defined first
+function getCleanCart() {
+  try {
+    const savedCart = localStorage.getItem('customerCart');
+    if (savedCart) {
+      const parsedCart = JSON.parse(savedCart);
+      // Filter out any invalid items or items with quantity <= 0
+      return parsedCart.filter(item =>
+        item &&
+        item.id &&
+        item.quantity &&
+        item.quantity > 0
+      );
+    }
+    return [];
+  } catch (error) {
+    console.error('Error loading cart:', error);
+    localStorage.removeItem('customerCart'); // Clean up corrupted cart
+    return [];
+  }
+}
+
+// Modern Shopping Cart Management - Based on Admin Booking Design with proper cleanup
+let cart = getCleanCart(); // Load cart immediately with cleanup
 
 document.addEventListener('DOMContentLoaded', function() {
+  // Refresh cart and UI on page load
+  cart = getCleanCart();
   updateCartBadge();
   initializeFilters();
   initializeSearch();
@@ -949,7 +973,7 @@ function validateQty(productId, maxStock) {
   }
 }
 
-// Enhanced Add to Cart functionality
+// Enhanced Add to Cart functionality with proper cart management
 function addToCart(productId, productName, finalPrice, maxStock, basePrice, gstRate) {
   const qtyInput = document.getElementById(`qty-${productId}`);
   const quantity = parseInt(qtyInput.value);
@@ -972,16 +996,23 @@ function addToCart(productId, productName, finalPrice, maxStock, basePrice, gstR
 
   // Simulate API call delay for better UX
   setTimeout(() => {
+    // FIXED: Ensure cart is properly loaded and cleaned
+    cart = getCleanCart();
+
     // Check if product already exists in cart
     const existingIndex = cart.findIndex(item => item.id == productId);
 
     if (existingIndex > -1) {
-      // Update quantity
-      cart[existingIndex].quantity += quantity;
+      // FIXED: Instead of adding to existing quantity, set the new quantity
+      // This prevents accumulation from "removed" items
+      cart[existingIndex].quantity = quantity;
+
       if (cart[existingIndex].quantity > maxStock) {
         cart[existingIndex].quantity = maxStock;
         alert(`Quantity adjusted to maximum available stock: ${maxStock}`);
       }
+
+      console.log(`Updated existing item ${productId}: quantity = ${cart[existingIndex].quantity}`);
     } else {
       // Add new item
       cart.push({
@@ -993,6 +1024,8 @@ function addToCart(productId, productName, finalPrice, maxStock, basePrice, gstR
         quantity: quantity,
         maxStock: maxStock
       });
+
+      console.log(`Added new item ${productId}: quantity = ${quantity}`);
     }
 
     // Save to localStorage
@@ -1007,6 +1040,60 @@ function addToCart(productId, productName, finalPrice, maxStock, basePrice, gstR
     button.disabled = false;
     qtyInput.value = 1;
   }, 500);
+}
+
+// FIXED: Add proper cart management functions (getCleanCart is defined at top of script)
+
+function removeFromCart(productId) {
+  console.log(`Removing product ${productId} from cart`);
+
+  // Load clean cart
+  cart = getCleanCart();
+
+  // Remove the item completely
+  cart = cart.filter(item => item.id != productId);
+
+  // Save to localStorage
+  localStorage.setItem('customerCart', JSON.stringify(cart));
+
+  // Update UI
+  updateCartBadge();
+
+  console.log(`Cart after removal:`, cart);
+}
+
+function updateCartQuantity(productId, newQuantity) {
+  console.log(`Updating product ${productId} quantity to ${newQuantity}`);
+
+  // Load clean cart
+  cart = getCleanCart();
+
+  const existingIndex = cart.findIndex(item => item.id == productId);
+
+  if (existingIndex > -1) {
+    if (newQuantity <= 0) {
+      // Remove item if quantity is 0 or less
+      cart.splice(existingIndex, 1);
+      console.log(`Removed product ${productId} - quantity was ${newQuantity}`);
+    } else {
+      // Update quantity
+      cart[existingIndex].quantity = newQuantity;
+      console.log(`Updated product ${productId} quantity to ${newQuantity}`);
+    }
+
+    // Save to localStorage
+    localStorage.setItem('customerCart', JSON.stringify(cart));
+
+    // Update UI
+    updateCartBadge();
+  }
+}
+
+function clearCart() {
+  console.log('Clearing entire cart');
+  cart = [];
+  localStorage.removeItem('customerCart');
+  updateCartBadge();
 }
 
 // Modern toast notifications

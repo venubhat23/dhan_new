@@ -660,6 +660,28 @@
 </div>
 
 <script>
+// FIXED: Cart management functions for checkout modal
+function getCleanCart() {
+  try {
+    const savedCart = localStorage.getItem('customerCart');
+    if (savedCart) {
+      const parsedCart = JSON.parse(savedCart);
+      // Filter out any invalid items or items with quantity <= 0
+      return parsedCart.filter(item =>
+        item &&
+        item.id &&
+        item.quantity &&
+        item.quantity > 0
+      );
+    }
+    return [];
+  } catch (error) {
+    console.error('Error loading cart:', error);
+    localStorage.removeItem('customerCart'); // Clean up corrupted cart
+    return [];
+  }
+}
+
 let selectedPaymentMethod = 'cashfree'; // Default to online payment
 let selectedDeliveryMethod = 'pickup';
 let orderTotal = 0;
@@ -827,8 +849,8 @@ document.addEventListener('DOMContentLoaded', function() {
 function showCheckout() {
   console.log('🛒 showCheckout() called - Cashfree Modal System');
 
-  // Get cart items from localStorage
-  const cart = JSON.parse(localStorage.getItem('customerCart') || '[]');
+  // FIXED: Get cart items with proper cleanup
+  const cart = getCleanCart();
 
   if (cart.length === 0) {
     alert('Your cart is empty. Please add items to your cart first.');
@@ -1319,8 +1341,8 @@ async function processPayment() {
   window.event?.stopImmediatePropagation?.();
   window.event?.preventDefault?.();
 
-  // Get cart and delivery data
-  const cart = JSON.parse(localStorage.getItem('customerCart') || '[]');
+  // FIXED: Get cart and delivery data with proper cleanup
+  const cart = getCleanCart();
 
   // Validate based on delivery method
   let deliveryInfo = null;
