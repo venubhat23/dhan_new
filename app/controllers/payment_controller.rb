@@ -191,7 +191,11 @@ class PaymentController < Customer::BaseController
           payment_amount: payment_data['order_amount']
         })
 
-        redirect_to customer_orders_path,
+        # Generate invoice after successful payment
+        generate_invoice_for_booking(@booking)
+
+        # Redirect to the specific order page
+        redirect_to customer_order_path(@booking),
                    notice: "Payment successful! Your order ##{@booking.booking_number} has been confirmed."
       else
         # Payment verification failed
@@ -271,5 +275,71 @@ class PaymentController < Customer::BaseController
 
   def generate_booking_number
     "BK#{Date.current.strftime('%Y%m%d')}#{rand(1000..9999)}"
+  end
+
+  def generate_invoice_for_booking(booking)
+    # Check if invoice already exists
+    return if booking.invoices.exists?
+
+    begin
+      # Create invoice for the booking
+      invoice = booking.invoices.create!(
+        invoice_number: generate_invoice_number,
+        invoice_date: Date.current,
+        due_date: Date.current + 30.days,
+        customer: booking.customer,
+        customer_name: booking.customer_name,
+        customer_email: booking.customer_email,
+        customer_phone: booking.customer_phone,
+        delivery_address: booking.delivery_address,
+        subtotal_amount: booking.subtotal_amount || booking.total_amount,
+        tax_amount: booking.tax_amount || 0,
+        total_amount: booking.total_amount,
+        payment_status: 'paid',
+        payment_method: booking.payment_method,
+        payment_date: Time.current,
+        notes: "Auto-generated invoice for order ##{booking.booking_number}",
+        status: 'paid'
+      )
+
+      # Create invoice items from booking items
+      booking.booking_items.each do |booking_item|
+        invoice.invoice_items.create!(
+          product: booking_item.product,
+          product_name: booking_item.product&.name || 'Product',
+          quantity: booking_item.quantity,
+          unit_price: booking_item.price,
+          total_price: booking_item.quantity * booking_item.price,
+          description: booking_item.product&.description || ''
+        )
+      end
+
+      Rails.logger.info "📄 Generated invoice ##{invoice.invoice_number} for booking ##{booking.booking_number}"
+
+      # Send invoice email to customer
+      send_invoice_email(invoice) if invoice.customer_email.present?
+
+      invoice
+    rescue => e
+      Rails.logger.error "❌ Failed to generate invoice for booking ##{booking.booking_number}: #{e.message}"
+      nil
+    end
+  end
+
+  def generate_invoice_number
+    "INV#{Date.current.strftime('%Y%m%d')}#{rand(1000..9999)}"
+  end
+
+  def send_invoice_email(invoice)
+    # Send invoice email (implement based on your mailer)
+    begin
+      # Assuming you have InvoiceMailer
+      if defined?(InvoiceMailer)
+        InvoiceMailer.invoice_generated(invoice).deliver_now
+        Rails.logger.info "📧 Invoice email sent to #{invoice.customer_email}"
+      end
+    rescue => e
+      Rails.logger.error "❌ Failed to send invoice email: #{e.message}"
+    end
   end
 end
