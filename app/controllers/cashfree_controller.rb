@@ -90,10 +90,25 @@ class CashfreeController < ApplicationController
       return
     end
 
+    # Extract payment method from complex object
+    raw_payment_method = payment_data['payment']['payment_method']
+    Rails.logger.info "🔍 Raw payment method from webhook: #{raw_payment_method.inspect}"
+
+    extracted_payment_method = if raw_payment_method.is_a?(Hash)
+      # Extract the main payment type from complex object like {"upi"=>{"channel"=>nil, "upi_id"=>"..."}}
+      extracted = raw_payment_method.keys.first
+      Rails.logger.info "📤 Extracted payment method from hash: #{extracted}"
+      extracted
+    else
+      # Use as-is if it's already a string
+      Rails.logger.info "📤 Using payment method as-is: #{raw_payment_method}"
+      raw_payment_method
+    end
+
     # Mark payment as successful
     payment_details = {
       cf_payment_id: payment_id,
-      payment_method: payment_data['payment']['payment_method'],
+      payment_method: extracted_payment_method,
       order_status: 'PAID',
       payment_amount: payment_data['order']['order_amount'],
       bank_reference: payment_data['payment']['bank_reference'],
