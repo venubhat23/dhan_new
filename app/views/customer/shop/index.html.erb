@@ -284,6 +284,38 @@
     margin-bottom: 0.5rem;
   }
 
+  /* Ensure filter dropdowns are visible and increase height */
+  .category-select2,
+  .stock-select2 {
+    display: block !important;
+    visibility: visible !important;
+    min-height: 45px !important;
+  }
+
+  /* Increase Select2 container height for category and stock filters */
+  .category-select2 + .select2-container .select2-selection,
+  .stock-select2 + .select2-container .select2-selection {
+    min-height: 45px !important;
+    height: 45px !important;
+  }
+
+  .category-select2 + .select2-container .select2-selection--single .select2-selection__rendered,
+  .stock-select2 + .select2-container .select2-selection--single .select2-selection__rendered {
+    line-height: 43px !important;
+    padding: 0 12px !important;
+  }
+
+  .category-select2 + .select2-container .select2-selection__arrow,
+  .stock-select2 + .select2-container .select2-selection__arrow {
+    height: 43px !important;
+  }
+
+  .select2-container {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+  }
+
   /* Responsive improvements */
   @media (max-width: 768px) {
     .d-flex.gap-2 {
@@ -865,22 +897,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Initialize Select2 dropdowns
 function initializeSelect2() {
-  // Category Select2
-  $('.category-select2').select2({
-    theme: 'bootstrap-5',
-    placeholder: 'All Categories',
-    allowClear: true,
-    width: '100%'
-  });
+  console.log('🔧 Initializing Select2 dropdowns...');
 
-  // Stock Filter Select2
-  $('.stock-select2').select2({
-    theme: 'bootstrap-5',
-    placeholder: 'Select Stock Status',
-    allowClear: false,
-    width: '100%',
-    minimumResultsForSearch: Infinity // Disable search for simple dropdown
-  });
+  try {
+    // Check if elements exist
+    const categorySelect = $('.category-select2');
+    const stockSelect = $('.stock-select2');
+
+    console.log('Category select found:', categorySelect.length);
+    console.log('Stock select found:', stockSelect.length);
+
+    // Category Select2
+    if (categorySelect.length > 0) {
+      categorySelect.select2({
+        theme: 'bootstrap-5',
+        placeholder: 'All Categories',
+        allowClear: true,
+        width: '100%'
+      });
+      console.log('✅ Category Select2 initialized');
+    }
+
+    // Stock Filter Select2
+    if (stockSelect.length > 0) {
+      stockSelect.select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Select Stock Status',
+        allowClear: false,
+        width: '100%',
+        minimumResultsForSearch: Infinity // Disable search for simple dropdown
+      });
+      console.log('✅ Stock Select2 initialized');
+    }
+  } catch (error) {
+    console.error('❌ Error initializing Select2:', error);
+  }
 
   // Event listeners for Select2 changes
   $('.category-select2').on('change', function() {
