@@ -1,6 +1,5 @@
 class PaymentController < Customer::BaseController
   before_action :set_booking, only: [:success]
-  skip_before_action :verify_authenticity_token, only: [:cloudflare_webhook]
 
   def create_order
     # Create booking from cart data
