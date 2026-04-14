@@ -6,10 +6,15 @@ default: &default
 development:
   primary: &primary_development
     <<: *default
+    <% if ENV['USE_RENDER_DB'] == 'true' %>
     host: <%= ENV['DB_HOST'] || 'dpg-d7f0kknaqgkc739uphc0-a' %>
     database: <%= ENV['DB_NAME'] || 'marlai_santhe_002' %>
     username: <%= ENV['DB_USERNAME'] || 'marlai_santhe_002_user' %>
     password: <%= ENV['DB_PASSWORD'] || 'P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm' %>
+    <% else %>
+    database: <%= ENV['DB_NAME'] || 'ecommerce_store_development' %>
+    username: <%= ENV['DB_USERNAME'] || 'mahadev-bhat' %>
+    <% end %>
     port: <%= ENV['DB_PORT'] || 5432 %>
   cable:
     <<: *primary_development

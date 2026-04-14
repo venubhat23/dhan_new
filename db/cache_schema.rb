@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_18_041321) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_24_011944) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -210,13 +210,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_18_041321) do
     t.string "booked_by", default: "admin"
     t.text "selected_shop_address"
     t.text "delivery_store"
+    t.string "cashfree_order_id"
+    t.string "payment_session_id"
+    t.string "cashfree_payment_id"
+    t.text "gateway_response"
+    t.string "payment_gateway", default: "cash"
+    t.datetime "payment_initiated_at"
+    t.datetime "payment_completed_at"
     t.index ["booked_by"], name: "index_bookings_on_booked_by"
     t.index ["booking_schedule_id"], name: "index_bookings_on_booking_schedule_id"
+    t.index ["cashfree_order_id"], name: "index_bookings_on_cashfree_order_id"
+    t.index ["cashfree_payment_id"], name: "index_bookings_on_cashfree_payment_id"
     t.index ["courier_service"], name: "index_bookings_on_courier_service"
     t.index ["delivery_person_id"], name: "index_bookings_on_delivery_person_id"
     t.index ["delivery_time"], name: "index_bookings_on_delivery_time"
     t.index ["expected_delivery_date"], name: "index_bookings_on_expected_delivery_date"
     t.index ["franchise_id"], name: "index_bookings_on_franchise_id"
+    t.index ["payment_gateway"], name: "index_bookings_on_payment_gateway"
     t.index ["stage_updated_at"], name: "index_bookings_on_stage_updated_at"
     t.index ["stage_updated_by"], name: "index_bookings_on_stage_updated_by"
     t.index ["store_id"], name: "index_bookings_on_store_id"
@@ -361,6 +371,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_18_041321) do
     t.text "notes"
     t.boolean "status", default: true, null: false
     t.boolean "is_registered_by_mobile"
+    t.string "password_reset_token"
+    t.datetime "password_reset_sent_at"
     t.index ["latitude", "longitude"], name: "index_customers_on_location"
     t.index ["whatsapp_number"], name: "index_customers_on_whatsapp_number"
   end
