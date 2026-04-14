@@ -4,48 +4,43 @@ default: &default
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
 
 development:
-  primary: &primary_development
+  primary:
     <<: *default
-    <% if ENV['USE_RENDER_DB'] == 'true' %>
-    host: <%= ENV['DB_HOST'] || 'dpg-d7f0kknaqgkc739uphc0-a' %>
-    database: <%= ENV['DB_NAME'] || 'marlai_santhe_002' %>
-    username: <%= ENV['DB_USERNAME'] || 'marlai_santhe_002_user' %>
-    password: <%= ENV['DB_PASSWORD'] || 'P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm' %>
-    <% else %>
-    database: <%= ENV['DB_NAME'] || 'ecommerce_store_development' %>
-    username: <%= ENV['DB_USERNAME'] || 'mahadev-bhat' %>
-    <% end %>
-    port: <%= ENV['DB_PORT'] || 5432 %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
   cable:
-    <<: *primary_development
+    <<: *default
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
   queue:
-    <<: *primary_development
+    <<: *default
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
   cache:
-    <<: *primary_development
+    <<: *default
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
 
 test:
-  primary: &primary_test
+  primary:
     <<: *default
     database: marali_sante_test
   cable:
-    <<: *primary_test
+    <<: *default
+    database: marali_sante_test
   queue:
-    <<: *primary_test
+    <<: *default
+    database: marali_sante_test
   cache:
-    <<: *primary_test
+    <<: *default
+    database: marali_sante_test
 
 production:
-  primary: &primary_production
+  primary:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a/marlai_santhe_002' %>
-    host: <%= ENV['DB_HOST'] || 'dpg-d7f0kknaqgkc739uphc0-a' %>
-    database: <%= ENV['DB_NAME'] || 'marlai_santhe_002' %>
-    username: <%= ENV['DB_USERNAME'] || 'marlai_santhe_002_user' %>
-    password: <%= ENV['DB_PASSWORD'] || 'P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm' %>
-    port: <%= ENV['DB_PORT'] || 5432 %>
+    url: <%= ENV['DATABASE_URL'] %>
   cable:
-    <<: *primary_production
+    <<: *default
+    url: <%= ENV['DATABASE_URL'] %>
   queue:
-    <<: *primary_production
+    <<: *default
+    url: <%= ENV['DATABASE_URL'] %>
   cache:
-    <<: *primary_production
+    <<: *default
+    url: <%= ENV['DATABASE_URL'] %>
