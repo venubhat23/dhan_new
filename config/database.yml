@@ -34,13 +34,14 @@ test:
 production:
   primary:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
   cable:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
   queue:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
   cache:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
+    
