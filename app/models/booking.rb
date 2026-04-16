@@ -74,18 +74,6 @@ class Booking < ApplicationRecord
     self.booking_number ||= "BK#{Date.current.strftime('%Y%m%d')}#{SecureRandom.hex(3).upcase}"
   end
 
-  def generate_invoice_number
-    return if invoice_number.present?
-
-    self.invoice_number = "INV#{Date.current.strftime('%Y%m%d')}#{SecureRandom.hex(3).upcase}"
-    self.invoice_generated = true
-
-    # Save the booking first
-    if save
-      # BookingInvoice creation disabled - invoices will be generated via consolidated system
-      # create_booking_invoice_record
-    end
-  end
 
   def create_booking_invoice_record
     return if booking_invoices.any? # Avoid duplicates
@@ -460,6 +448,19 @@ class Booking < ApplicationRecord
     end
   end
 
+  def generate_invoice_number
+    return if invoice_number.present?
+
+    self.invoice_number = "INV#{Date.current.strftime('%Y%m%d')}#{SecureRandom.hex(3).upcase}"
+    self.invoice_generated = true
+
+    # Save the booking first
+    if save
+      # BookingInvoice creation disabled - invoices will be generated via consolidated system
+      # create_booking_invoice_record
+    end
+  end
+
   private
 
   def ensure_total_amount_present
@@ -698,9 +699,5 @@ class Booking < ApplicationRecord
   end
 
   private
-
-  def generate_invoice_number
-    "INV#{Date.current.strftime('%Y%m%d')}#{SecureRandom.hex(3).upcase}"
-  end
 
 end
