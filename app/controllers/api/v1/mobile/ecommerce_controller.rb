@@ -72,8 +72,12 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     end
 
     # Handle count for grouped queries (like rating sort)
-    total_count = @products.count
-    total_count = total_count.is_a?(Hash) ? total_count.keys.count : total_count
+    total_count = case params[:sort_by]
+    when 'rating'
+      @products.count.size
+    else
+      @products.count
+    end
     @products = @products.offset((page - 1) * per_page).limit(per_page)
 
     products_data = @products.map { |product| format_product_data(product) }
@@ -127,7 +131,14 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       @products = @products.order(:name)
     end
 
-    total_count = @products.count
+    # Handle count properly when grouping is involved
+    total_count = case sort_by
+    when 'rating'
+      @products.group('products.id').count.size
+    else
+      @products.count
+    end
+
     @products = @products.offset((page - 1) * per_page).limit(per_page)
 
     products_data = @products.map { |product| format_product_data(product) }
@@ -298,7 +309,6 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       Rails.logger.info "Current user: #{@current_user&.id}"
 
       ActiveRecord::Base.transaction do
-        debugger
         @booking = Booking.new(booking_params.except(:pincode, :latitude, :longitude))
 
         # Ensure customer association is properly set
@@ -326,14 +336,12 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
         @booking.save!
 
         # Update product stock
-        debugger
         @booking.booking_items.each do |item|
-          debugger
           product = item.product
           new_stock = product.stock - item.quantity
           product.update!(stock: new_stock)
         end
-      debugger
+
         booking_response_data = format_booking_data(@booking).merge({
           location_saved: {
             latitude: latitude,
@@ -658,7 +666,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
 
       # Get count properly based on whether we have grouping
       if has_grouping
-        total_count = @products.count.is_a?(Hash) ? @products.count.keys.count : @products.count
+        total_count = @products.count.size
       else
         total_count = @products.count
       end
@@ -1276,6 +1284,92 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
         message: 'Failed to save location',
         errors: customer.errors.full_messages
       }, :unprocessable_entity)
+    end
+  end
+
+  # POST /api/v1/mobile/ecommerce/delivery_charges
+  def delivery_charges
+    pincode = params[:pincode]
+    address = params[:address]
+
+    begin
+      # Validate required parameters
+      if pincode.blank?
+        return json_response({
+          success: false,
+          message: 'Pincode is required',
+          error: 'Missing pincode parameter'
+        }, :unprocessable_entity)
+      end
+
+      # Sanitize pincode (remove any non-numeric characters)
+      sanitized_pincode = pincode.to_s.gsub(/[^0-9]/, '')
+
+      # Validate pincode format (should be 6 digits)
+      unless sanitized_pincode.match?(/^\d{6}$/)
+        return json_response({
+          success: false,
+          message: 'Invalid pincode format. Pincode should be 6 digits.',
+          error: 'Invalid pincode format',
+          data: {
+            pincode: sanitized_pincode,
+            address: address,
+            delivery_charge: 0.0,
+            is_deliverable: false
+          }
+        }, :unprocessable_entity)
+      end
+
+      # Find delivery charge for the pincode
+      delivery_charge_record = DeliveryCharge.for_pincode(sanitized_pincode)
+
+      if delivery_charge_record
+        # Pincode is deliverable
+        json_response({
+          success: true,
+          message: 'Delivery charges calculated successfully',
+          data: {
+            pincode: sanitized_pincode,
+            address: address,
+            area: delivery_charge_record.area,
+            delivery_charge: delivery_charge_record.charge_amount,
+            formatted_charge: delivery_charge_record.formatted_charge,
+            is_deliverable: true,
+            delivery_available: true
+          }
+        })
+      else
+        # Pincode not available for delivery
+        json_response({
+          success: false,
+          message: 'Delivery not available for this pincode',
+          error: 'Pincode not serviceable',
+          data: {
+            pincode: sanitized_pincode,
+            address: address,
+            delivery_charge: 0.0,
+            is_deliverable: false,
+            delivery_available: false,
+            suggested_message: "We don't currently deliver to pincode #{sanitized_pincode}. Please contact support for more information."
+          }
+        }, :unprocessable_entity)
+      end
+
+    rescue => e
+      Rails.logger.error "Delivery Charges API Error: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+
+      json_response({
+        success: false,
+        message: 'An error occurred while calculating delivery charges',
+        error: e.message,
+        data: {
+          pincode: pincode,
+          address: address,
+          delivery_charge: 0.0,
+          is_deliverable: false
+        }
+      }, :internal_server_error)
     end
   end
 

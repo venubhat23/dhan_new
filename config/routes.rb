@@ -772,6 +772,7 @@ Rails.application.routes.draw do
         # Pincode & Delivery Validation APIs
         get 'ecommerce/delivery/check-pincode/:pincode', to: 'ecommerce#check_pincode'
         post 'ecommerce/delivery/validate', to: 'ecommerce#validate_delivery'
+        post 'ecommerce/delivery/charges', to: 'ecommerce#delivery_charges'
         post 'ecommerce/location/save', to: 'ecommerce#save_location'
 
         # Delivery Person APIs
@@ -1062,6 +1063,9 @@ Rails.application.routes.draw do
 
     # Client requests/support tickets
     resources :client_requests, only: [:index, :show, :new, :create]
+
+    # Delivery Settings management
+    resources :delivery_settings
   end
 
   # Payment Gateway routes

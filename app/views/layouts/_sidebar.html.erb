@@ -812,6 +812,21 @@
           <% end %>
         </li>
         <% end %>
+
+        <!-- Delivery Settings -->
+        <% if current_user.has_sidebar_permission?('delivery_settings') %>
+        <li class="nav-item">
+          <%= link_to admin_delivery_settings_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/delivery_settings')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-orange">
+                <i class="fas fa-truck"></i>
+              </div>
+            </div>
+            <span class="nav-text">Delivery Settings</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+        <% end %>
       </ul>
     </div>
     <% end %>

@@ -1,0 +1,310 @@
+<% content_for :title, "Delivery Settings" %>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h4 class="mb-0">
+            <i class="fas fa-truck"></i>
+            Delivery Charges Management
+          </h4>
+          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDeliveryChargeModal">
+            <i class="fas fa-plus"></i> Add New Pincode
+          </button>
+        </div>
+
+        <div class="card-body">
+          <!-- Summary Cards - Simple and Visible -->
+          <div class="row mb-4">
+            <div class="col-md-3">
+              <div class="card border-primary border-2">
+                <div class="card-body text-center" style="background-color: #f8f9fa; color: #333;">
+                  <i class="fas fa-map-marker-alt fa-2x text-primary mb-2"></i>
+                  <h6 class="text-muted mb-1">Total Pincodes</h6>
+                  <h3 class="text-primary fw-bold"><%= @bangalore_pincodes.count %></h3>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card border-success border-2">
+                <div class="card-body text-center" style="background-color: #f8f9fa; color: #333;">
+                  <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                  <h6 class="text-muted mb-1">Active Zones</h6>
+                  <h3 class="text-success fw-bold"><%= @bangalore_pincodes.active.count %></h3>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card border-warning border-2">
+                <div class="card-body text-center" style="background-color: #f8f9fa; color: #333;">
+                  <i class="fas fa-pause-circle fa-2x text-warning mb-2"></i>
+                  <h6 class="text-muted mb-1">Inactive Zones</h6>
+                  <h3 class="text-warning fw-bold"><%= @bangalore_pincodes.inactive.count %></h3>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card border-info border-2">
+                <div class="card-body text-center" style="background-color: #f8f9fa; color: #333;">
+                  <i class="fas fa-rupee-sign fa-2x text-info mb-2"></i>
+                  <h6 class="text-muted mb-1">Avg. Charge</h6>
+                  <h3 class="text-info fw-bold">₹<%= @bangalore_pincodes.active.average(:charge_amount)&.round(2) || 0 %></h3>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Delivery Charges Table -->
+          <div class="table-responsive">
+            <table class="table table-striped" id="deliveryChargesTable">
+              <thead class="table-dark">
+                <tr>
+                  <th>Pincode</th>
+                  <th>Area</th>
+                  <th>Charge Amount</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @bangalore_pincodes.each do |delivery_charge| %>
+                  <tr id="delivery-charge-<%= delivery_charge.id %>">
+                    <td><strong><%= delivery_charge.pincode %></strong></td>
+                    <td><%= delivery_charge.area || 'Not specified' %></td>
+                    <td class="text-success"><strong><%= delivery_charge.formatted_charge %></strong></td>
+                    <td>
+                      <% if delivery_charge.is_active? %>
+                        <span class="badge bg-success">Active</span>
+                      <% else %>
+                        <span class="badge bg-secondary">Inactive</span>
+                      <% end %>
+                    </td>
+                    <td>
+                      <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                onclick="editDeliveryCharge(<%= delivery_charge.id %>, '<%= delivery_charge.pincode %>', '<%= delivery_charge.area %>', <%= delivery_charge.charge_amount %>, <%= delivery_charge.is_active %>)">
+                          <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-<%= delivery_charge.is_active? ? 'warning' : 'success' %>"
+                                onclick="toggleStatus(<%= delivery_charge.id %>, <%= !delivery_charge.is_active %>)">
+                          <i class="fas fa-<%= delivery_charge.is_active? ? 'pause' : 'play' %>"></i>
+                          <%= delivery_charge.is_active? ? 'Deactivate' : 'Activate' %>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+
+            <% if @bangalore_pincodes.empty? %>
+              <div class="text-center py-4">
+                <i class="fas fa-truck fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No delivery charges configured</h5>
+                <p class="text-muted">Add delivery charges for different pincodes to get started.</p>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Delivery Charge Modal -->
+<div class="modal fade" id="addDeliveryChargeModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add New Delivery Charge</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="addDeliveryChargeForm">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="pincode" class="form-label">Pincode <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="pincode" name="pincode" required pattern="[0-9]{6}" placeholder="560001">
+            <div class="form-text">Enter 6-digit pincode</div>
+          </div>
+          <div class="mb-3">
+            <label for="area" class="form-label">Area</label>
+            <input type="text" class="form-control" id="area" name="area" placeholder="e.g., Bangalore Central">
+          </div>
+          <div class="mb-3">
+            <label for="charge_amount" class="form-label">Charge Amount (₹) <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="charge_amount" name="charge_amount" min="0" step="0.01" required placeholder="30.00">
+          </div>
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+              <label class="form-check-label" for="is_active">
+                Active
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Delivery Charge</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Delivery Charge Modal -->
+<div class="modal fade" id="editDeliveryChargeModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Delivery Charge</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="editDeliveryChargeForm">
+        <input type="hidden" id="edit_delivery_charge_id">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="edit_pincode" class="form-label">Pincode <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="edit_pincode" name="pincode" required readonly>
+          </div>
+          <div class="mb-3">
+            <label for="edit_area" class="form-label">Area</label>
+            <input type="text" class="form-control" id="edit_area" name="area">
+          </div>
+          <div class="mb-3">
+            <label for="edit_charge_amount" class="form-label">Charge Amount (₹) <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="edit_charge_amount" name="charge_amount" min="0" step="0.01" required>
+          </div>
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="edit_is_active" name="is_active">
+              <label class="form-check-label" for="edit_is_active">
+                Active
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Delivery Charge</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Add new delivery charge
+  document.getElementById('addDeliveryChargeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const data = {
+      delivery_charge: {
+        pincode: formData.get('pincode'),
+        area: formData.get('area'),
+        charge_amount: formData.get('charge_amount'),
+        is_active: formData.get('is_active') === 'on'
+      }
+    };
+
+    fetch('/admin/delivery_settings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').getAttribute('content')
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Error: ' + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An error occurred while adding the delivery charge');
+    });
+  });
+
+  // Edit delivery charge
+  document.getElementById('editDeliveryChargeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const deliveryChargeId = document.getElementById('edit_delivery_charge_id').value;
+    const formData = new FormData(this);
+    const data = {
+      delivery_charge: {
+        area: formData.get('area'),
+        charge_amount: formData.get('charge_amount'),
+        is_active: formData.get('is_active') === 'on'
+      }
+    };
+
+    fetch(`/admin/delivery_settings/${deliveryChargeId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').getAttribute('content')
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Error: ' + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An error occurred while updating the delivery charge');
+    });
+  });
+});
+
+function editDeliveryCharge(id, pincode, area, chargeAmount, isActive) {
+  document.getElementById('edit_delivery_charge_id').value = id;
+  document.getElementById('edit_pincode').value = pincode;
+  document.getElementById('edit_area').value = area || '';
+  document.getElementById('edit_charge_amount').value = chargeAmount;
+  document.getElementById('edit_is_active').checked = isActive;
+
+  new bootstrap.Modal(document.getElementById('editDeliveryChargeModal')).show();
+}
+
+function toggleStatus(id, newStatus) {
+  const data = {
+    delivery_charge: {
+      is_active: newStatus
+    }
+  };
+
+  fetch(`/admin/delivery_settings/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('An error occurred while updating the status');
+  });
+}
+</script>
