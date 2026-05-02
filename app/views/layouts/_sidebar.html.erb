@@ -814,7 +814,7 @@
         <% end %>
 
         <!-- Delivery Settings -->
-        <% if current_user.has_sidebar_permission?('delivery_settings') %>
+        <% if current_user.has_sidebar_permission?('delivery_settings') || current_user.admin? || current_user.super_admin? %>
         <li class="nav-item">
           <%= link_to admin_delivery_settings_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/delivery_settings')}" do %>
             <div class="nav-icon-modern">
