@@ -24,8 +24,7 @@ class Customer < ApplicationRecord
   has_many :milk_delivery_tasks, dependent: :destroy
   has_many :customer_addresses, dependent: :destroy
   has_many :wishlists, dependent: :destroy
-  has_many :notifications, dependent: :destroy
-  has_many :pending_amounts, dependent: :destroy
+has_many :pending_amounts, dependent: :destroy
   has_many :client_requests, dependent: :destroy
 
   # Referral associations

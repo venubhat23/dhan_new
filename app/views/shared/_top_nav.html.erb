@@ -18,61 +18,6 @@
       <input type="search" placeholder="Search customers, policies..." aria-label="Search">
     </div>
 
-    <!-- Notifications -->
-    <button class="notification-bell" data-bs-toggle="dropdown">
-      <i class="bi bi-bell"></i>
-      <span class="badge"></span>
-    </button>
-    <ul class="dropdown-menu dropdown-menu-end notification-dropdown">
-      <li class="dropdown-header">
-        <div class="d-flex justify-content-between align-items-center">
-          <h6 class="mb-0">Notifications</h6>
-          <span class="badge bg-primary">3</span>
-        </div>
-      </li>
-      <li><hr class="dropdown-divider"></li>
-      <li class="notification-item">
-        <div class="notification-content">
-          <div class="notification-icon bg-success">
-            <i class="bi bi-check-circle"></i>
-          </div>
-          <div class="notification-text">
-            <p class="mb-1"><strong>New Policy Created</strong></p>
-            <small class="text-muted">Life insurance policy for John Doe</small>
-            <div class="notification-time">2 minutes ago</div>
-          </div>
-        </div>
-      </li>
-      <li class="notification-item">
-        <div class="notification-content">
-          <div class="notification-icon bg-info">
-            <i class="bi bi-person"></i>
-          </div>
-          <div class="notification-text">
-            <p class="mb-1"><strong>Customer Updated Profile</strong></p>
-            <small class="text-muted">Sarah Wilson updated contact info</small>
-            <div class="notification-time">1 hour ago</div>
-          </div>
-        </div>
-      </li>
-      <li class="notification-item">
-        <div class="notification-content">
-          <div class="notification-icon bg-warning">
-            <i class="bi bi-currency-dollar"></i>
-          </div>
-          <div class="notification-text">
-            <p class="mb-1"><strong>Payment Received</strong></p>
-            <small class="text-muted">₹25,000 premium payment</small>
-            <div class="notification-time">3 hours ago</div>
-          </div>
-        </div>
-      </li>
-      <li><hr class="dropdown-divider"></li>
-      <li class="text-center">
-        <a href="#" class="dropdown-item">View all notifications</a>
-      </li>
-    </ul>
-
     <!-- User Profile -->
     <div class="user-dropdown" data-bs-toggle="dropdown">
       <%= image_tag "https://via.placeholder.com/36x36/667eea/ffffff?text=#{current_user.email[0].upcase}", class: "user-avatar" %>

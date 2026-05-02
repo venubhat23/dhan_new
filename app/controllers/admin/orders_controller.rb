@@ -88,9 +88,6 @@ class Admin::OrdersController < Admin::ApplicationController
     end
 
     if @order.update(update_attributes)
-      # Send notifications based on status
-      send_status_notification(@order, params[:status])
-
       respond_to do |format|
         format.html { redirect_to admin_orders_path, notice: "Order #{@order.order_number} has been moved to #{params[:status].humanize} stage." }
         format.json { render json: { success: true, message: "Order status updated to #{params[:status].humanize}" } }
@@ -208,19 +205,4 @@ class Admin::OrdersController < Admin::ApplicationController
     timeline
   end
 
-  def send_status_notification(order, status)
-    # Implement notification logic based on status
-    case status
-    when 'processing'
-      # Send processing notification to warehouse
-    when 'packed'
-      # Send packed notification
-    when 'shipped'
-      # Send shipping notification to customer
-    when 'delivered'
-      # Send delivery confirmation to customer
-    when 'cancelled'
-      # Send cancellation notification
-    end
-  end
 end

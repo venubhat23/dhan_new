@@ -326,63 +326,6 @@ class Api::V1::Mobile::SettingsController < Api::V1::Mobile::BaseController
     end
   end
 
-  # GET /api/v1/mobile/settings/notifications
-  def notification_settings
-    customer = current_user
-
-    # Get all notifications due today for this customer
-    notifications = []
-
-    # Get health insurance notifications
-    health_insurances = HealthInsurance.where(customer: customer)
-    health_insurances.each do |insurance|
-      insurance.notifications_due_today.each do |notification|
-        notifications << {
-          id: "health_#{insurance.id}_#{notification['type']}",
-          type: notification['type'],
-          title: notification['title'],
-          message: notification['message'],
-          date: notification['date']
-        }
-      end
-    end
-
-    # Get life insurance notifications
-    life_insurances = LifeInsurance.where(customer: customer)
-    life_insurances.each do |insurance|
-      insurance.notifications_due_today.each do |notification|
-        notifications << {
-          id: "life_#{insurance.id}_#{notification['type']}",
-          type: notification['type'],
-          title: notification['title'],
-          message: notification['message'],
-          date: notification['date']
-        }
-      end
-    end
-
-    render json: {
-      success: true,
-      data: notifications
-    }
-  end
-
-  # PUT /api/v1/mobile/settings/notifications
-  def update_notification_settings
-    notification_params = params.permit(
-      :email_notifications, :sms_notifications, :push_notifications,
-      :policy_reminders, :payment_reminders, :renewal_alerts, :promotional_emails
-    )
-
-    # Here you would update the user preferences in database
-    # For now, returning success response
-
-    render json: {
-      success: true,
-      message: 'Notification settings updated successfully'
-    }
-  end
-
   private
 
   def get_terms_content

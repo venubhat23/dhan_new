@@ -610,25 +610,7 @@ class Admin::CustomersController < Admin::ApplicationController
           end
         end
 
-        # 12. Delete notifications
-        if ActiveRecord::Base.connection.table_exists?('notifications')
-          notifications_count = ActiveRecord::Base.connection.execute("SELECT COUNT(*) FROM notifications WHERE customer_id = #{@customer.id}").first['count'].to_i
-          if notifications_count > 0
-            ActiveRecord::Base.connection.execute("DELETE FROM notifications WHERE customer_id = #{@customer.id}")
-            deleted_items << "#{notifications_count} notification(s)"
-          end
-        end
-
-        # 13. Delete device tokens
-        if ActiveRecord::Base.connection.table_exists?('device_tokens')
-          device_tokens_count = ActiveRecord::Base.connection.execute("SELECT COUNT(*) FROM device_tokens WHERE customer_id = #{@customer.id}").first['count'].to_i
-          if device_tokens_count > 0
-            ActiveRecord::Base.connection.execute("DELETE FROM device_tokens WHERE customer_id = #{@customer.id}")
-            deleted_items << "#{device_tokens_count} device token(s)"
-          end
-        end
-
-        # 14. Delete wishlists
+        # 12. Delete wishlists
         if ActiveRecord::Base.connection.table_exists?('wishlists')
           wishlists_count = ActiveRecord::Base.connection.execute("SELECT COUNT(*) FROM wishlists WHERE customer_id = #{@customer.id}").first['count'].to_i
           if wishlists_count > 0

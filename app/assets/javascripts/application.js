@@ -178,20 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Enhanced dropdown functionality
 document.addEventListener('DOMContentLoaded', function() {
-  // Notification dropdown enhancements
-  const notificationDropdown = document.querySelector('.notification-dropdown');
-  if (notificationDropdown) {
-    notificationDropdown.addEventListener('shown.bs.dropdown', function() {
-      // Mark notifications as seen
-      const badge = document.querySelector('.notification-bell .badge');
-      if (badge) {
-        setTimeout(() => {
-          badge.style.opacity = '0';
-        }, 2000);
-      }
-    });
-  }
-
   // Search functionality
   const searchInput = document.querySelector('.search-box input');
   if (searchInput) {

@@ -144,10 +144,11 @@
                     <% if product.gst_enabled && gst_rate > 0 %>
                       <small class="text-muted d-block">
                         <%
-                          # Smart rounding for GST display
                           rounded_final = final_price.round
-                          rounded_base = (rounded_final / (1 + (gst_rate / 100.0))).round
-                          rounded_gst = rounded_final - rounded_base
+                          gst_val = rounded_final * gst_rate / 100.0
+                          rounded_gst = gst_val % 1 == 0 ? gst_val.to_i : gst_val.round(2)
+                          base_val = rounded_final - gst_val
+                          rounded_base = base_val % 1 == 0 ? base_val.to_i : base_val.round(2)
                         %>
                         Base: ₹<%= number_with_delimiter(rounded_base) %> + GST: ₹<%= number_with_delimiter(rounded_gst) %> (<%= gst_rate %>%) = ₹<%= number_with_delimiter(rounded_final) %>
                       </small>
@@ -739,11 +740,9 @@ function updateCartDisplay() {
   for (const [productId, item] of Object.entries(cart)) {
     const itemGSTRate = item.gstRate || 0;
     if (itemGSTRate > 0) {
-      // Use smart rounding logic like in product display
       const itemFinalPrice = item.price;
       const roundedFinal = Math.round(itemFinalPrice);
-      const roundedBase = Math.round(roundedFinal / (1 + (itemGSTRate / 100.0)));
-      const roundedGST = roundedFinal - roundedBase;
+      const roundedGST = roundedFinal * itemGSTRate / 100;
       totalGST += roundedGST * item.quantity;
     }
   }
@@ -940,11 +939,11 @@ function updateCheckoutDisplay() {
     let itemGSTAmount = 0;
 
     if (itemGSTRate > 0) {
-      // Product has GST enabled - use smart rounding like product display
+      // Product has GST enabled
       const itemFinalPrice = item.price;
       const roundedFinal = Math.round(itemFinalPrice);
-      const roundedBase = Math.round(roundedFinal / (1 + (itemGSTRate / 100.0)));
-      const roundedGST = roundedFinal - roundedBase;
+      const roundedGST = roundedFinal * itemGSTRate / 100;
+      const roundedBase = roundedFinal - roundedGST;
       itemGSTAmount = roundedGST * item.quantity;
       itemTotal = roundedFinal * item.quantity;
       subtotal += roundedBase * item.quantity;
@@ -1016,11 +1015,11 @@ function updateCheckoutTotals() {
     const itemGSTRate = item.gstRate || 0;
 
     if (itemGSTRate > 0) {
-      // Product has GST enabled - use smart rounding like product display
+      // Product has GST enabled
       const itemFinalPrice = item.price;
       const roundedFinal = Math.round(itemFinalPrice);
-      const roundedBase = Math.round(roundedFinal / (1 + (itemGSTRate / 100.0)));
-      const roundedGST = roundedFinal - roundedBase;
+      const roundedGST = roundedFinal * itemGSTRate / 100;
+      const roundedBase = roundedFinal - roundedGST;
       subtotal += roundedBase * item.quantity;
       totalGST += roundedGST * item.quantity;
     } else {

@@ -25,7 +25,7 @@ class Api::V1::Mobile::BannersController < Api::V1::Mobile::BaseController
           redirect_link: banner.redirect_link,
           display_location: banner.display_location,
           display_order: banner.display_order,
-          image_url: banner.banner_image.attached? ? url_for(banner.banner_image) : nil,
+          image_url: banner.main_image_url,
           display_start_date: banner.display_start_date.strftime('%Y-%m-%d'),
           display_end_date: banner.display_end_date.strftime('%Y-%m-%d'),
           is_active: banner.active?,
@@ -33,7 +33,7 @@ class Api::V1::Mobile::BannersController < Api::V1::Mobile::BaseController
         }
       end
 
-      render_success(banner_data, "Banners fetched successfully")
+      render_success({ banners: banner_data, total_count: banner_data.length }, "Banners fetched successfully")
 
     rescue => e
       Rails.logger.error "Error fetching banners: #{e.message}"
@@ -81,7 +81,7 @@ class Api::V1::Mobile::BannersController < Api::V1::Mobile::BaseController
         display_location: banner.display_location,
         display_location_text: banner.display_location_humanized,
         display_order: banner.display_order,
-        image_url: banner.banner_image.attached? ? url_for(banner.banner_image) : nil,
+        image_url: banner.main_image_url,
         display_start_date: banner.display_start_date.strftime('%Y-%m-%d'),
         display_end_date: banner.display_end_date.strftime('%Y-%m-%d'),
         is_active: banner.active?,
