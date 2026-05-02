@@ -794,7 +794,7 @@
     <% end %>
 
     <!-- Delivery Management Section -->
-    <% if current_user.has_sidebar_permission?('delivery_people') %>
+    <% if current_user.has_sidebar_permission?('delivery_people') || current_user.has_sidebar_permission?('delivery_settings') || current_user.admin? || current_user.super_admin? %>
     <div class="nav-section">
       <div class="nav-section-title">Delivery Management</div>
       <ul class="nav-menu">

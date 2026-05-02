@@ -71,13 +71,8 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       @products = @products.order(:name)
     end
 
-    # Handle count for grouped queries (like rating sort)
-    total_count = case params[:sort_by]
-    when 'rating'
-      @products.count.size
-    else
-      @products.count
-    end
+    count_result = @products.count
+    total_count = count_result.is_a?(Hash) ? count_result.size : count_result
     @products = @products.offset((page - 1) * per_page).limit(per_page)
 
     products_data = @products.map { |product| format_product_data(product) }
@@ -131,13 +126,8 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       @products = @products.order(:name)
     end
 
-    # Handle count properly when grouping is involved
-    total_count = case params[:sort_by]
-    when 'rating'
-      @products.group('products.id').count.size
-    else
-      @products.count
-    end
+    count_result = @products.count
+    total_count = count_result.is_a?(Hash) ? count_result.size : count_result
 
     @products = @products.offset((page - 1) * per_page).limit(per_page)
 
@@ -646,9 +636,6 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       @products = @products.where('price >= ?', params[:min_price]) if params[:min_price].present?
       @products = @products.where('price <= ?', params[:max_price]) if params[:max_price].present?
 
-      # Handle count for queries with GROUP BY
-      has_grouping = false
-
       # Apply sorting
       case params[:sort_by]
       when 'price_low' then @products = @products.order(:price)
@@ -659,17 +646,12 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
         @products = @products.joins(:product_reviews)
                              .group('products.id')
                              .order('AVG(product_reviews.rating) DESC NULLS LAST')
-        has_grouping = true
       else
         @products = @products.order(:name)
       end
 
-      # Get count properly based on whether we have grouping
-      if has_grouping
-        total_count = @products.count.size
-      else
-        total_count = @products.count
-      end
+      count_result = @products.count
+      total_count = count_result.is_a?(Hash) ? count_result.size : count_result
 
       @products = @products.offset((page - 1) * per_page).limit(per_page)
       products_data = @products.map { |product| format_product_data(product) }
@@ -870,6 +852,27 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     })
   rescue ActiveRecord::RecordNotFound
     json_response({ success: false, message: 'Product not found' }, :not_found)
+  end
+
+  # POST /api/v1/mobile/ecommerce/check_delivery
+  def check_delivery_by_pincode
+    pincode = params[:pincode].to_s.strip
+    return json_response({ success: false, message: 'Pincode is required' }, :bad_request) if pincode.blank?
+
+    charge_record = DeliveryCharge.for_pincode(pincode)
+    deliverable = charge_record.present?
+
+    json_response({
+      success: true,
+      data: {
+        pincode: pincode,
+        deliverable: deliverable,
+        delivery_charge: deliverable ? charge_record.charge_amount.to_f : nil,
+        area: deliverable ? charge_record.area : nil,
+        message: deliverable ? "Delivery available to #{pincode}" : "Delivery not available to this pincode"
+      },
+      message: deliverable ? 'Delivery available' : 'Delivery not available'
+    })
   end
 
   # POST /api/v1/mobile/ecommerce/subscriptions

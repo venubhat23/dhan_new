@@ -700,6 +700,14 @@ Rails.application.routes.draw do
       end
     end
 
+    # Delivery Settings Management
+    resources :delivery_settings, only: [:index, :create, :update] do
+      collection do
+        get :edit_pincode_charges
+        patch :update_pincode_charges
+      end
+    end
+
     # Coupons Management
     resources :coupons do
       member do
@@ -750,6 +758,7 @@ Rails.application.routes.draw do
         get 'ecommerce/featured_products', to: 'ecommerce#featured_products'
         get 'ecommerce/search', to: 'ecommerce#search'
         post 'ecommerce/products/:id/check_delivery', to: 'ecommerce#check_delivery'
+        post 'ecommerce/check_delivery', to: 'ecommerce#check_delivery_by_pincode'
         get 'ecommerce/filters', to: 'ecommerce#filters'
         get 'ecommerce/banners', to: 'ecommerce#banners'
 
