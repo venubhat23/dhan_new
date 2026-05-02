@@ -132,7 +132,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     end
 
     # Handle count properly when grouping is involved
-    total_count = case sort_by
+    total_count = case params[:sort_by]
     when 'rating'
       @products.group('products.id').count.size
     else
@@ -1407,8 +1407,8 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       weight: product.weight&.to_f,
       dimensions: product.dimensions,
       product_type: product.product_type,
-      barcode: product.barcode,
-      hsn_code: product.hsn_code,
+      barcode: product.try(:barcode),
+      hsn_code: product.try(:hsn_code),
       tags: product.tags,
       display_order: product.display_order,
       is_subscription_enabled: product.is_subscription_enabled,
