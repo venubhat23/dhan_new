@@ -1378,13 +1378,24 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
 
   # POST /api/v1/mobile/ecommerce/checkout/cart_order
   def cart_order
-    customer = @current_user
-    return json_response({ success: false, message: 'Customer not found' }, :not_found) unless customer.is_a?(Customer)
+    booking_params = params.require(:booking).permit(
+      :customer_id, :customer_name, :customer_email, :customer_phone,
+      :delivery_address, :payment_method, :pincode, :latitude, :longitude, :notes,
+      booking_items_attributes: [:product_id, :quantity, :price]
+    )
 
-    cart_items = params[:cart_data]
+    # Resolve customer: prefer customer_id param, fall back to authenticated user
+    customer = if booking_params[:customer_id].present?
+      Customer.find_by(id: booking_params[:customer_id])
+    else
+      @current_user.is_a?(Customer) ? @current_user : nil
+    end
+    return json_response({ success: false, message: 'Customer not found' }, :not_found) unless customer
+
+    cart_items = booking_params[:booking_items_attributes]
     return json_response({ success: false, message: 'Cart is empty' }, :bad_request) if cart_items.blank?
 
-    payment_method = params[:payment_method].presence || 'cod'
+    payment_method = booking_params[:payment_method].presence || 'cod'
     booking = nil
 
     ActiveRecord::Base.transaction do
@@ -1393,18 +1404,18 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
         booking_number: "BK#{Date.current.strftime('%Y%m%d')}#{rand(1000..9999)}",
         booking_date: Time.current,
         payment_method: payment_method,
-        customer_name: params[:customer_name].presence || customer.display_name,
-        customer_email: params[:customer_email].presence || customer.email,
-        customer_phone: params[:customer_phone].presence || customer.mobile,
-        delivery_address: params[:delivery_address],
+        customer_name: booking_params[:customer_name].presence || customer.display_name,
+        customer_email: booking_params[:customer_email].presence || customer.email,
+        customer_phone: booking_params[:customer_phone].presence || customer.mobile,
+        delivery_address: booking_params[:delivery_address],
+        notes: booking_params[:notes],
         payment_status: :unpaid,
         status: payment_method == 'cod' ? 'confirmed' : 'draft'
       )
-      booking.delivery_store = params[:delivery_store] if params[:delivery_store].present?
 
       total_amount = 0
       cart_items.each do |item|
-        product = Product.find(item[:id] || item['id'])
+        product = Product.find(item[:product_id] || item['product_id'])
         quantity = (item[:quantity] || item['quantity']).to_f
         price = (item[:price] || item['price']).to_f
         booking.booking_items.build(product: product, quantity: quantity, price: price)
@@ -1416,6 +1427,17 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       booking.save!
       booking.calculate_totals
       booking.save!
+
+      # Save location data to customer if provided
+      pincode  = booking_params[:pincode]
+      latitude = booking_params[:latitude]
+      longitude = booking_params[:longitude]
+      if latitude.present? || longitude.present?
+        customer_updates = { location_obtained_at: Time.current }
+        customer_updates[:latitude]  = latitude  if latitude.present?
+        customer_updates[:longitude] = longitude if longitude.present?
+        customer.update!(customer_updates)
+      end
     end
 
     if payment_method == 'cod'
