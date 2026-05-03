@@ -104,8 +104,16 @@ class Admin::ProductsController < Admin::ApplicationController
   end
 
   def destroy
-    @product.destroy
-    redirect_to admin_products_path, notice: 'Product was successfully deleted.'
+    product_name = @product.name
+
+    # Preserve historical booking/order records — clear product reference instead of deleting
+    @product.booking_items.update_all(product_id: nil)
+    @product.order_items.update_all(product_id: nil) if @product.respond_to?(:order_items)
+
+    @product.destroy!
+    redirect_to admin_products_path, notice: "Product '#{product_name}' was deleted successfully."
+  rescue => e
+    redirect_to admin_products_path, alert: "Could not delete product: #{e.message}"
   end
 
   def toggle_status
