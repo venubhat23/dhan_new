@@ -1376,7 +1376,187 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     end
   end
 
+  # POST /api/v1/mobile/ecommerce/checkout/cart_order
+  def cart_order
+    customer = @current_user
+    return json_response({ success: false, message: 'Customer not found' }, :not_found) unless customer.is_a?(Customer)
+
+    cart_items = params[:cart_data]
+    return json_response({ success: false, message: 'Cart is empty' }, :bad_request) if cart_items.blank?
+
+    payment_method = params[:payment_method].presence || 'cod'
+    booking = nil
+
+    ActiveRecord::Base.transaction do
+      booking = Booking.new(
+        customer: customer,
+        booking_number: "BK#{Date.current.strftime('%Y%m%d')}#{rand(1000..9999)}",
+        booking_date: Time.current,
+        payment_method: payment_method,
+        customer_name: params[:customer_name].presence || customer.display_name,
+        customer_email: params[:customer_email].presence || customer.email,
+        customer_phone: params[:customer_phone].presence || customer.mobile,
+        delivery_address: params[:delivery_address],
+        payment_status: :unpaid,
+        status: payment_method == 'cod' ? 'confirmed' : 'draft'
+      )
+      booking.delivery_store = params[:delivery_store] if params[:delivery_store].present?
+
+      total_amount = 0
+      cart_items.each do |item|
+        product = Product.find(item[:id] || item['id'])
+        quantity = (item[:quantity] || item['quantity']).to_f
+        price = (item[:price] || item['price']).to_f
+        booking.booking_items.build(product: product, quantity: quantity, price: price)
+        total_amount += price * quantity
+      end
+
+      booking.subtotal = total_amount
+      booking.total_amount = total_amount
+      booking.save!
+      booking.calculate_totals
+      booking.save!
+    end
+
+    if payment_method == 'cod'
+      return json_response({
+        success: true,
+        message: 'Order placed successfully! Pay on delivery.',
+        booking_number: booking.booking_number,
+        booking_id: booking.id,
+        total_amount: booking.total_amount.to_f,
+        payment_method: 'cod'
+      })
+    end
+
+    cashfree_order_id = Booking.generate_cashfree_order_id
+    booking.update!(cashfree_order_id: cashfree_order_id)
+    booking.mark_payment_initiated!('cashfree')
+
+    cashfree_response = CashfreeService.create_order(booking)
+
+    unless cashfree_response[:success]
+      booking.mark_payment_failed!(cashfree_response[:message])
+      return json_response({ success: false, message: cashfree_response[:message] || 'Payment gateway error. Please try again.' }, :unprocessable_entity)
+    end
+
+    booking.update!(payment_session_id: cashfree_response[:data]['payment_session_id'])
+
+    json_response({
+      success: true,
+      message: 'Payment session created. Complete payment using Cashfree SDK.',
+      booking_number: booking.booking_number,
+      booking_id: booking.id,
+      total_amount: booking.total_amount.to_f,
+      payment_method: 'cashfree',
+      payment_session_id: cashfree_response[:data]['payment_session_id'],
+      cashfree_order_id: cashfree_order_id,
+      redirect_to_payment: true
+    })
+  rescue ActiveRecord::RecordNotFound
+    json_response({ success: false, message: 'Product not found in cart' }, :unprocessable_entity)
+  rescue ActiveRecord::RecordInvalid => e
+    json_response({ success: false, message: e.message }, :unprocessable_entity)
+  rescue => e
+    Rails.logger.error "Mobile cart_order error: #{e.message}\n#{e.backtrace.first(3).join("\n")}"
+    json_response({ success: false, message: 'An unexpected error occurred' }, :internal_server_error)
+  end
+
+  # GET /api/v1/mobile/ecommerce/bookings/:id/payment_status
+  def payment_status
+    customer = @current_user
+    return json_response({ success: false, message: 'Customer not found' }, :not_found) unless customer.is_a?(Customer)
+
+    booking = customer.bookings.find_by(id: params[:id])
+    return json_response({ success: false, message: 'Booking not found' }, :not_found) unless booking
+
+    json_response({
+      success: true,
+      data: {
+        booking_id: booking.id,
+        booking_number: booking.booking_number,
+        status: booking.status,
+        payment_status: booking.payment_status,
+        payment_method: booking.payment_method,
+        payment_gateway: booking.payment_gateway,
+        cashfree_order_id: booking.cashfree_order_id,
+        cashfree_payment_id: booking.cashfree_payment_id,
+        total_amount: booking.total_amount.to_f,
+        payment_initiated_at: booking.payment_initiated_at,
+        payment_completed_at: booking.payment_completed_at,
+        is_paid: booking.payment_successful?,
+        is_pending: booking.payment_pending?
+      },
+      message: if booking.payment_successful?
+                 'Payment completed successfully'
+               elsif booking.payment_pending?
+                 'Payment is pending'
+               else
+                 'Payment status retrieved'
+               end
+    })
+  end
+
+  # POST /api/v1/mobile/ecommerce/verify_payment
+  def verify_payment
+    customer = @current_user
+    return json_response({ success: false, message: 'Customer not found' }, :not_found) unless customer.is_a?(Customer)
+
+    return json_response({ success: false, message: 'booking_id is required' }, :bad_request) if params[:booking_id].blank?
+
+    booking = customer.bookings.find_by(id: params[:booking_id])
+    return json_response({ success: false, message: 'Booking not found' }, :not_found) unless booking
+
+    if booking.payment_successful?
+      return json_response({
+        success: true,
+        data: payment_result_data(booking),
+        message: 'Payment already completed'
+      })
+    end
+
+    # Query Cashfree for current order status
+    if booking.cashfree_order_id.present?
+      cashfree_response = CashfreeService.get_order(booking.cashfree_order_id)
+
+      if cashfree_response[:success]
+        order_data = cashfree_response[:data]
+        if order_data['order_status'] == 'PAID' && !booking.payment_successful?
+          booking.mark_payment_completed!(
+            cf_payment_id: order_data.dig('cf_order_id')&.to_s,
+            payment_method: 'cashfree'
+          )
+        end
+      end
+    end
+
+    booking.reload
+
+    json_response({
+      success: booking.payment_successful?,
+      data: payment_result_data(booking),
+      message: booking.payment_successful? ? 'Payment verified successfully' : 'Payment not yet completed'
+    })
+  rescue => e
+    Rails.logger.error "Mobile verify_payment error: #{e.message}"
+    json_response({ success: false, message: 'Unable to verify payment' }, :internal_server_error)
+  end
+
   private
+
+  def payment_result_data(booking)
+    {
+      booking_id: booking.id,
+      booking_number: booking.booking_number,
+      status: booking.status,
+      payment_status: booking.payment_status,
+      cashfree_order_id: booking.cashfree_order_id,
+      cashfree_payment_id: booking.cashfree_payment_id,
+      total_amount: booking.total_amount.to_f,
+      payment_completed_at: booking.payment_completed_at,
+      is_paid: booking.payment_successful?
+    }
+  end
 
   def set_category
     @category = Category.find(params[:id] || params[:category_id])

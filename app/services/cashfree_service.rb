@@ -45,6 +45,14 @@ class CashfreeService
       handle_response(response)
     end
 
+    def get_order(order_id)
+      response = get("#{api_base_uri}/orders/#{order_id}", {
+        headers: auth_headers
+      })
+
+      handle_response(response)
+    end
+
     def verify_signature(request_body, signature, timestamp)
       # Generate signature for webhook verification
       computed_signature = compute_signature(request_body, timestamp)

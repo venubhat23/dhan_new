@@ -765,6 +765,11 @@ Rails.application.routes.draw do
         # Booking APIs
         post 'ecommerce/bookings', to: 'ecommerce#create_booking'
         get 'ecommerce/bookings', to: 'ecommerce#bookings'
+        get 'ecommerce/bookings/:id/payment_status', to: 'ecommerce#payment_status'
+
+        # Payment / Checkout APIs
+        post 'ecommerce/checkout/cart_order', to: 'ecommerce#cart_order'
+        post 'ecommerce/verify_payment', to: 'ecommerce#verify_payment'
 
         # Order APIs
         get 'ecommerce/orders', to: 'ecommerce#orders'
