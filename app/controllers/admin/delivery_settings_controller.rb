@@ -1,6 +1,6 @@
 class Admin::DeliverySettingsController < ApplicationController
   before_action :authenticate_admin
-  before_action :set_delivery_charge, only: [:update]
+  before_action :set_delivery_charge, only: [:edit, :update]
 
   def index
     @bangalore_pincodes = DeliveryCharge.bangalore_pincodes.order(:pincode)
@@ -18,10 +18,20 @@ class Admin::DeliverySettingsController < ApplicationController
 
   def update
     if @delivery_charge.update(delivery_charge_params)
-      render json: { success: true, message: 'Delivery charge updated successfully' }
+      respond_to do |format|
+        format.html { redirect_to admin_delivery_settings_path, notice: 'Delivery charge updated successfully.' }
+        format.json { render json: { success: true, message: 'Delivery charge updated successfully' } }
+      end
     else
-      render json: { success: false, message: 'Failed to update delivery charge', errors: @delivery_charge.errors.full_messages }
+      respond_to do |format|
+        format.html { render :edit, status: :unprocessable_entity }
+        format.json { render json: { success: false, message: 'Failed to update delivery charge', errors: @delivery_charge.errors.full_messages } }
+      end
     end
+  end
+
+  def edit
+    # @delivery_charge set by before_action
   end
 
   def edit_pincode_charges
