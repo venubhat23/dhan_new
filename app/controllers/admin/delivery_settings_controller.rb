@@ -6,13 +6,21 @@ class Admin::DeliverySettingsController < ApplicationController
     @bangalore_pincodes = DeliveryCharge.bangalore_pincodes.order(:pincode)
   end
 
+  def new
+    @delivery_charge = DeliveryCharge.new
+  end
+
   def create
     @delivery_charge = DeliveryCharge.new(delivery_charge_params)
 
-    if @delivery_charge.save
-      render json: { success: true, message: 'Delivery charge created successfully' }
-    else
-      render json: { success: false, message: 'Failed to create delivery charge', errors: @delivery_charge.errors.full_messages }
+    respond_to do |format|
+      if @delivery_charge.save
+        format.html { redirect_to admin_delivery_settings_path, notice: 'Delivery charge created successfully.' }
+        format.json { render json: { success: true, message: 'Delivery charge created successfully' } }
+      else
+        format.html { render :new, status: :unprocessable_entity }
+        format.json { render json: { success: false, message: 'Failed to create delivery charge', errors: @delivery_charge.errors.full_messages } }
+      end
     end
   end
 
