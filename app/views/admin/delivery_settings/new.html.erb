@@ -27,7 +27,7 @@
             </div>
           <% end %>
 
-          <%= form_with model: [:admin, @delivery_charge], local: true do |f| %>
+          <%= form_with model: @delivery_charge, url: admin_delivery_settings_path, local: true do |f| %>
 
             <div class="mb-3">
               <label for="delivery_charge_pincode" class="form-label fw-semibold">
