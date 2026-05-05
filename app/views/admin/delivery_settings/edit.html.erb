@@ -41,15 +41,7 @@
               <%= f.number_field :charge_amount, class: "form-control", min: 0, step: 0.01, required: true, id: "delivery_charge_charge_amount" %>
             </div>
 
-            <div class="mb-4">
-              <div class="form-check form-switch">
-                <%= f.check_box :is_active, class: "form-check-input", id: "delivery_charge_is_active", role: "switch" %>
-                <label class="form-check-label fw-semibold" for="delivery_charge_is_active">Active</label>
-              </div>
-              <div class="form-text">Inactive zones are hidden from customers.</div>
-            </div>
-
-            <div class="d-flex gap-2">
+<div class="d-flex gap-2">
               <%= f.submit "Update Delivery Charge", class: "btn btn-primary px-4" %>
               <%= link_to "Cancel", admin_delivery_settings_path, class: "btn btn-outline-secondary" %>
             </div>

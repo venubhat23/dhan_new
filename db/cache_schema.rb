@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_24_011944) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_05_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -375,6 +375,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_24_011944) do
     t.datetime "password_reset_sent_at"
     t.index ["latitude", "longitude"], name: "index_customers_on_location"
     t.index ["whatsapp_number"], name: "index_customers_on_whatsapp_number"
+  end
+
+  create_table "delivery_charges", force: :cascade do |t|
+    t.string "pincode", null: false
+    t.string "area"
+    t.decimal "charge_amount", precision: 10, scale: 2, default: "0.0"
+    t.boolean "is_active", default: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["is_active"], name: "index_delivery_charges_on_is_active"
+    t.index ["pincode"], name: "index_delivery_charges_on_pincode", unique: true
   end
 
   create_table "delivery_people", force: :cascade do |t|

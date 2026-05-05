@@ -81,19 +81,12 @@
                       <% end %>
                     </td>
                     <td>
-                      <div class="btn-group" role="group">
-                        <%= link_to edit_admin_delivery_setting_path(delivery_charge),
-                              target: "_blank",
-                              rel: "noopener",
-                              class: "btn btn-sm btn-outline-primary" do %>
-                          <i class="fas fa-edit"></i> Edit
-                        <% end %>
-                        <button type="button" class="btn btn-sm btn-outline-<%= delivery_charge.is_active? ? 'warning' : 'success' %>"
-                                onclick="toggleStatus(<%= delivery_charge.id %>, <%= !delivery_charge.is_active %>)">
-                          <i class="fas fa-<%= delivery_charge.is_active? ? 'pause' : 'play' %>"></i>
-                          <%= delivery_charge.is_active? ? 'Deactivate' : 'Activate' %>
-                        </button>
-                      </div>
+                      <%= link_to edit_admin_delivery_setting_path(delivery_charge),
+                            target: "_blank",
+                            rel: "noopener",
+                            class: "btn btn-sm btn-outline-primary" do %>
+                        <i class="fas fa-edit"></i> Edit
+                      <% end %>
                     </td>
                   </tr>
                 <% end %>
@@ -113,34 +106,3 @@
     </div>
   </div>
 </div>
-
-<script>
-function toggleStatus(id, newStatus) {
-  const data = {
-    delivery_charge: {
-      is_active: newStatus
-    }
-  };
-
-  fetch(`/admin/delivery_settings/${id}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': document.querySelector('[name="csrf-token"]').getAttribute('content')
-    },
-    body: JSON.stringify(data)
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      location.reload();
-    } else {
-      alert('Error: ' + data.message);
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('An error occurred while updating the status');
-  });
-}
-</script>

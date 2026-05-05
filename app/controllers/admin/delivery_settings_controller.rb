@@ -27,7 +27,7 @@ class Admin::DeliverySettingsController < ApplicationController
   def update
     if @delivery_charge.update(delivery_charge_params)
       respond_to do |format|
-        format.html { redirect_to admin_delivery_settings_path, notice: 'Delivery charge updated successfully.' }
+        format.html { redirect_to admin_delivery_settings_path, notice: 'Delivery charge updated successfully.', status: :see_other }
         format.json { render json: { success: true, message: 'Delivery charge updated successfully' } }
       end
     else
