@@ -114,25 +114,51 @@
                   <%# Price %>
                   <div class="mb-3">
                     <%
-                      # Get the selling price (including any discounts and GST)
-                      selling_price = product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price ? product.discount_price : product.price
+                      if product.has_multiple_quantities? && product.product_variants.any?
+                        default_v = product.default_variant || product.product_variants.ordered.first
+                        variant_price = default_v.effective_price
+                        selling_price = variant_price
+                      else
+                        selling_price = product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price ? product.discount_price : product.price
+                      end
 
-                      # For GST enabled products, calculate base price and GST
                       if product.gst_enabled && product.gst_percentage.present? && product.gst_percentage > 0
                         gst_rate = product.gst_percentage
-                        # selling_price includes GST, so extract base price
                         base_price = selling_price / (1 + (gst_rate / 100.0))
-                        gst_amount = selling_price - base_price
                         final_price = selling_price
                       else
                         base_price = selling_price
                         gst_rate = 0
-                        gst_amount = 0
                         final_price = selling_price
                       end
+
+                      rounded_final = final_price.round
+                      gst_val = rounded_final * gst_rate / 100.0
+                      rounded_gst = gst_val % 1 == 0 ? gst_val.to_i : gst_val.round(2)
+                      base_val = rounded_final - gst_val
+                      rounded_base = base_val % 1 == 0 ? base_val.to_i : base_val.round(2)
                     %>
 
-                    <% if product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price %>
+                    <% if product.has_multiple_quantities? && product.product_variants.any? %>
+                      <!-- Variant selector -->
+                      <select class="form-select form-select-sm mb-2"
+                              id="variant-select-<%= product.id %>"
+                              onchange="bookingUpdateVariant(this, <%= product.id %>)">
+                        <% product.product_variants.default_first.each do |v| %>
+                          <option value="<%= v.id %>"
+                                  data-price="<%= v.effective_price %>"
+                                  data-stock="<%= v.available_stock %>"
+                                  data-label="<%= j(v.label) %>"
+                                  <%= 'selected' if v.id == default_v.id %>>
+                            <%= v.label %> — ₹<%= number_with_delimiter(v.effective_price) %>
+                          </option>
+                        <% end %>
+                      </select>
+                      <span class="h6 text-primary mb-0" id="booking-variant-price-<%= product.id %>">
+                        ₹<%= number_with_delimiter(rounded_final) %>
+                      </span>
+                      <input type="hidden" id="booking-selected-variant-<%= product.id %>" value="<%= default_v.id %>">
+                    <% elsif product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price %>
                       <div class="d-flex align-items-center gap-2">
                         <span class="h6 text-success mb-0">₹<%= number_with_delimiter(final_price.round(2)) %></span>
                         <small class="text-muted text-decoration-line-through">₹<%= number_with_delimiter(product.price) %></small>
@@ -143,13 +169,6 @@
 
                     <% if product.gst_enabled && gst_rate > 0 %>
                       <small class="text-muted d-block">
-                        <%
-                          rounded_final = final_price.round
-                          gst_val = rounded_final * gst_rate / 100.0
-                          rounded_gst = gst_val % 1 == 0 ? gst_val.to_i : gst_val.round(2)
-                          base_val = rounded_final - gst_val
-                          rounded_base = base_val % 1 == 0 ? base_val.to_i : base_val.round(2)
-                        %>
                         Base: ₹<%= number_with_delimiter(rounded_base) %> + GST: ₹<%= number_with_delimiter(rounded_gst) %> (<%= gst_rate %>%) = ₹<%= number_with_delimiter(rounded_final) %>
                       </small>
                     <% end %>
@@ -157,28 +176,34 @@
 
 
                   <%# Quantity and Add to Cart %>
-                  <div class="mt-3">
-                    <% if current_stock > 0 %>
+                  <%
+                    effective_stock = if product.has_multiple_quantities? && product.product_variants.any?
+                      (default_v&.available_stock || 0)
+                    else
+                      current_stock
+                    end
+                  %>
+                  <div class="mt-3" id="booking-stock-section-<%= product.id %>">
+                    <% if effective_stock > 0 %>
                       <!-- Quantity Selector -->
                       <div class="mb-3">
                         <label class="form-label fw-bold small">
                           Quantity
-                          <span class="badge bg-info-subtle text-info ms-1">
-                            Max: <%= current_stock.to_i %>
+                          <span class="badge bg-info-subtle text-info ms-1" id="booking-max-stock-<%= product.id %>">
+                            Max: <%= effective_stock.to_i %>
                           </span>
                         </label>
                         <div class="input-group">
                           <button class="btn btn-outline-primary" type="button" onclick="decreaseQuantity(<%= product.id %>)" style="width: 45px; height: 45px; border-radius: 8px 0 0 8px;">
                             <i class="bi bi-dash fw-bold"></i>
                           </button>
-                          <input type="number" id="qty-<%= product.id %>" value="1" min="0.1" step="0.1" max="<%= current_stock %>" class="form-control text-center fw-bold" style="height: 45px; font-size: 1.1rem;" onchange="validateQuantity(<%= product.id %>, <%= current_stock %>)">
+                          <input type="number" id="qty-<%= product.id %>" value="1" min="0.1" step="0.1" max="<%= effective_stock %>" class="form-control text-center fw-bold" style="height: 45px; font-size: 1.1rem;" onchange="validateQuantity(<%= product.id %>, <%= effective_stock %>)">
                           <button class="btn btn-outline-primary" type="button" onclick="increaseQuantity(<%= product.id %>)" style="width: 45px; height: 45px; border-radius: 0 8px 8px 0;">
                             <i class="bi bi-plus fw-bold"></i>
                           </button>
                         </div>
 
-                        <%# Simple Stock Warning - Only for Low Stock %>
-                        <% if product.low_stock? %>
+                        <% if product.low_stock? && !product.has_multiple_quantities? %>
                           <small class="text-warning d-block mt-1">
                             <i class="bi bi-exclamation-triangle-fill"></i>
                             <strong>Low Stock!</strong> Only <%= current_stock.to_i %> left
@@ -188,22 +213,19 @@
 
                       <!-- Add to Cart Button -->
                       <%
-                        # Use the same smart rounding logic as the display
                         cart_final_price = rounded_final
                         cart_base_price = rounded_base
                         cart_gst_rate = gst_rate
                       %>
                       <button class="btn btn-primary w-100"
-                              onclick="addToCart(<%= product.id %>, '<%= j(product.name) %>', <%= cart_final_price %>, <%= current_stock %>, <%= cart_base_price %>, <%= cart_gst_rate %>)"
+                              id="booking-add-btn-<%= product.id %>"
+                              onclick="bookingAddToCart(<%= product.id %>, '<%= j(product.name) %>', <%= cart_final_price %>, <%= effective_stock %>, <%= cart_base_price %>, <%= cart_gst_rate %>)"
                               data-base-price="<%= cart_base_price %>"
                               data-gst-rate="<%= cart_gst_rate %>"
                               data-final-price="<%= cart_final_price %>"
-                              <%= 'disabled' if product.out_of_stock? %>>
-                        <% if product.out_of_stock? %>
-                          <i class="bi bi-x-circle me-2"></i>Out of Stock
-                        <% else %>
-                          <i class="bi bi-cart-plus me-2"></i>Add to Cart
-                        <% end %>
+                              data-has-variants="<%= product.has_multiple_quantities? ? 'true' : 'false' %>"
+                              <%= 'disabled' if effective_stock <= 0 %>>
+                        <i class="bi bi-cart-plus me-2"></i>Add to Cart
                       </button>
                     <% else %>
                       <div class="text-center">
@@ -469,6 +491,17 @@
               <%= f.text_area :notes, class: 'form-control', rows: 3, placeholder: 'Add any special instructions or notes for this booking...' %>
             </div>
 
+            <%# B2B Booking %>
+            <div class="mb-4">
+              <div class="form-check form-switch">
+                <%= f.check_box :is_b2b, class: 'form-check-input', id: 'b2bBookingToggle', role: 'switch' %>
+                <%= f.label :is_b2b, class: 'form-check-label fw-semibold', for: 'b2bBookingToggle' do %>
+                  <i class="bi bi-building me-1"></i>B2B Booking
+                  <small class="text-muted fw-normal ms-1">(Business-to-Business order)</small>
+                <% end %>
+              </div>
+            </div>
+
             <%# Hidden Fields for Cart Items %>
             <div id="checkoutItemsFields"></div>
 
@@ -599,7 +632,7 @@ function initializeCart() {
 }
 
 // Add item to cart
-function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate) {
+function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate, variantId) {
   const quantity = parseFloat(document.getElementById(`qty-${productId}`).value) || 1;
 
   if (quantity > stock) {
@@ -607,18 +640,22 @@ function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate
     return;
   }
 
-  if (cart[productId]) {
-    if (cart[productId].quantity + quantity > stock) {
+  const cartKey = variantId ? `${productId}_v${variantId}` : String(productId);
+
+  if (cart[cartKey]) {
+    if (cart[cartKey].quantity + quantity > stock) {
       alert(`Cannot add more items. Maximum stock: ${stock}`);
       return;
     }
-    cart[productId].quantity += quantity;
+    cart[cartKey].quantity += quantity;
   } else {
-    cart[productId] = {
+    cart[cartKey] = {
+      productId: productId,
+      variantId: variantId || null,
       name: productName,
-      price: finalPrice,  // Final price including GST
-      basePrice: basePrice || finalPrice,  // Base price without GST
-      gstRate: gstRate || 0,  // GST percentage
+      price: finalPrice,
+      basePrice: basePrice || finalPrice,
+      gstRate: gstRate || 0,
       quantity: quantity,
       stock: stock
     };
@@ -641,6 +678,57 @@ function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate
     setTimeout(() => minimizedCart.classList.remove('cart-pulse'), 500);
   }
 
+}
+
+// Variant selector change handler for booking page
+function bookingUpdateVariant(selectEl, productId) {
+  const opt = selectEl.options[selectEl.selectedIndex];
+  const price = parseFloat(opt.dataset.price);
+  const stock = parseInt(opt.dataset.stock);
+  const variantId = selectEl.value;
+
+  // Update price display
+  const priceEl = document.getElementById(`booking-variant-price-${productId}`);
+  if (priceEl) priceEl.textContent = '₹' + price.toLocaleString('en-IN');
+
+  // Update hidden variant id
+  const hiddenInput = document.getElementById(`booking-selected-variant-${productId}`);
+  if (hiddenInput) hiddenInput.value = variantId;
+
+  // Update stock max & badge
+  const qtyInput = document.getElementById(`qty-${productId}`);
+  if (qtyInput) { qtyInput.max = stock; qtyInput.value = 1; }
+  const maxBadge = document.getElementById(`booking-max-stock-${productId}`);
+  if (maxBadge) maxBadge.textContent = 'Max: ' + stock;
+
+  // Update add button
+  const btn = document.getElementById(`booking-add-btn-${productId}`);
+  if (btn) {
+    btn.disabled = stock <= 0;
+    btn.dataset.finalPrice = price;
+    btn.dataset.basePrice = price;
+    btn.onclick = function() {
+      bookingAddToCart(productId, btn.closest('.card')?.querySelector('.card-title')?.textContent?.trim() || '', price, stock, price, parseFloat(btn.dataset.gstRate || 0));
+    };
+  }
+}
+
+// Wrapper for variant-aware add-to-cart on booking page
+function bookingAddToCart(productId, productName, finalPrice, stock, basePrice, gstRate) {
+  // Pick up variant info if available
+  const variantInput = document.getElementById(`booking-selected-variant-${productId}`);
+  const variantId = variantInput ? variantInput.value : null;
+
+  // Use live price from variant selector if present
+  const variantSelect = document.getElementById(`variant-select-${productId}`);
+  if (variantSelect) {
+    const opt = variantSelect.options[variantSelect.selectedIndex];
+    finalPrice = parseFloat(opt.dataset.price);
+    stock = parseInt(opt.dataset.stock);
+    basePrice = finalPrice;
+  }
+
+  addToCart(productId, productName, finalPrice, stock, basePrice, gstRate, variantId);
 }
 
 // Update cart display
@@ -965,9 +1053,10 @@ function updateCheckoutDisplay() {
     `;
 
     fieldsHtml += `
-      <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][product_id]" value="${productId}">
+      <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][product_id]" value="${item.productId || productId}">
       <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][quantity]" value="${item.quantity}">
       <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][price]" value="${item.price}">
+      ${item.variantId ? `<input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][product_variant_id]" value="${item.variantId}">` : ''}
     `;
     fieldIndex++;
   }
@@ -987,11 +1076,12 @@ function ensureCartItemsInForm() {
     let fieldsHtml = '';
     let fieldIndex = 0;
 
-    for (const [productId, item] of Object.entries(cart)) {
+    for (const [cartKey, item] of Object.entries(cart)) {
       fieldsHtml += `
-        <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][product_id]" value="${productId}">
+        <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][product_id]" value="${item.productId || cartKey}">
         <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][quantity]" value="${item.quantity}">
         <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][price]" value="${item.price}">
+        ${item.variantId ? `<input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][product_variant_id]" value="${item.variantId}">` : ''}
       `;
       fieldIndex++;
     }

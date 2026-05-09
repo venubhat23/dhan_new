@@ -553,20 +553,26 @@ class Admin::InvoicesController < Admin::ApplicationController
   end
 
   def prepare_invoice_data(invoice, type)
+    actual_type = (type == 'regular' && invoice.quick_invoice?) ? 'booking' : type
+
+    booking_number = if actual_type == 'booking'
+      Booking.find_by(invoice_number: invoice.invoice_number)&.booking_number
+    end
+
     {
       id: invoice.id,
       invoice_number: invoice.invoice_number,
-      customer_name: invoice.customer&.display_name || 'N/A',
-      customer_mobile: invoice.customer&.mobile,
+      customer_name: invoice.customer&.display_name || invoice.customer_display_name || 'N/A',
+      customer_mobile: invoice.customer&.mobile || invoice.customer_mobile,
       total_amount: invoice.total_amount,
       paid_amount: invoice.paid_amount || 0,
       payment_status: invoice.payment_status,
       status: invoice.status,
       invoice_date: invoice.invoice_date || invoice.created_at&.to_date,
       created_at: invoice.created_at,
-      type: type,
+      type: actual_type,
       model_object: invoice,
-      booking_number: type == 'booking' ? invoice.booking&.booking_number : nil
+      booking_number: booking_number
     }
   end
 

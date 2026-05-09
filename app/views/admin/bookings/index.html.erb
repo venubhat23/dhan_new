@@ -265,7 +265,7 @@
           </div>
 
           <!-- Search Input -->
-          <div class="col-lg-4 col-md-4 col-sm-12">
+          <div class="col-lg-3 col-md-4 col-sm-12">
             <div class="filter-group">
               <label class="form-label text-muted mb-1 small fw-semibold">
                 <i class="bi bi-search me-1"></i>Search
@@ -286,18 +286,35 @@
             </div>
           </div>
 
+          <!-- B2B Filter -->
+          <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="filter-group">
+              <label class="form-label text-muted mb-1 small fw-semibold d-block">
+                <i class="bi bi-building me-1"></i>B2B
+              </label>
+              <div class="form-check form-switch mt-1 pt-1">
+                <%= form.check_box :b2b, checked: params[:b2b] == '1',
+                    class: 'form-check-input',
+                    id: 'b2bFilterToggle',
+                    role: 'switch',
+                    onchange: 'this.form.submit();' %>
+                <label class="form-check-label small" for="b2bFilterToggle">B2B only</label>
+              </div>
+            </div>
+          </div>
+
           <!-- Filter Actions -->
-          <div class="col-lg-2 col-md-12">
+          <div class="col-lg-1 col-md-12">
             <div class="filter-actions d-flex gap-2 flex-wrap justify-content-end">
               <%= form.submit "Apply", class: "btn btn-primary btn-sm px-3 shadow-sm d-none" %>
-              <% if params[:search].present? || params[:status].present? || params[:customer_id].present? %>
+              <% if params[:search].present? || params[:status].present? || params[:customer_id].present? || params[:b2b].present? %>
                 <%= link_to admin_bookings_path, class: "btn btn-outline-secondary btn-sm px-3 shadow-sm", title: "Clear all filters" do %>
                   <i class="bi bi-arrow-clockwise me-1"></i>Reset
                 <% end %>
               <% end %>
               <div class="filter-status small text-muted align-self-center">
                 <%= pluralize(@bookings.respond_to?(:total_count) ? @bookings.total_count : @bookings.count, 'result') %>
-                <% if params[:search].present? || params[:status].present? || params[:customer_id].present? %>
+                <% if params[:search].present? || params[:status].present? || params[:customer_id].present? || params[:b2b].present? %>
                   <span class="text-primary">(filtered)</span>
                 <% end %>
               </div>
@@ -337,6 +354,13 @@
                           <span class="badge bg-info-subtle text-info">
                             <i class="bi bi-building me-1"></i>
                             <%= booking.user.franchise.name %>
+                          </span>
+                        </div>
+                      <% end %>
+                      <% if booking.is_b2b? %>
+                        <div class="mt-1">
+                          <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                            <i class="bi bi-briefcase me-1"></i>B2B
                           </span>
                         </div>
                       <% end %>

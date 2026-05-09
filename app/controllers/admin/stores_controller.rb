@@ -81,7 +81,7 @@ class Admin::StoresController < Admin::ApplicationController
 
   def check_collect_from_store_enabled
     unless SystemSetting.collect_from_store_enabled?
-      redirect_to admin_system_settings_path, alert: 'Enable "Collect From Store" feature first in System Settings.'
+      redirect_to admin_settings_system_path, alert: 'Enable "Collect From Store" feature first in System Settings.'
     end
   end
 

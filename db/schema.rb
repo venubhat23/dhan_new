@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_05_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_09_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -124,6 +124,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000000) do
     t.decimal "total"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "product_variant_id"
+    t.index ["product_variant_id"], name: "index_booking_items_on_product_variant_id"
   end
 
   create_table "booking_schedules", force: :cascade do |t|
@@ -217,6 +219,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000000) do
     t.string "payment_gateway", default: "cash"
     t.datetime "payment_initiated_at"
     t.datetime "payment_completed_at"
+    t.boolean "is_b2b", default: false, null: false
     t.index ["booked_by"], name: "index_bookings_on_booked_by"
     t.index ["booking_schedule_id"], name: "index_bookings_on_booking_schedule_id"
     t.index ["cashfree_order_id"], name: "index_bookings_on_cashfree_order_id"
@@ -630,6 +633,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000000) do
     t.decimal "total"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "product_variant_id"
+    t.index ["product_variant_id"], name: "index_order_items_on_product_variant_id"
   end
 
   create_table "orders", force: :cascade do |t|
@@ -754,6 +759,26 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000000) do
     t.index ["user_id"], name: "index_product_reviews_on_user_id"
   end
 
+  create_table "product_variants", force: :cascade do |t|
+    t.bigint "product_id", null: false
+    t.decimal "weight", precision: 8, scale: 3, null: false
+    t.string "unit", default: "Kg", null: false
+    t.decimal "buying_price", precision: 10, scale: 2, default: "0.0"
+    t.decimal "selling_price", precision: 10, scale: 2, null: false
+    t.boolean "discount_enabled", default: false
+    t.string "discount_type"
+    t.decimal "discount_value", precision: 10, scale: 2
+    t.decimal "discount_amount", precision: 10, scale: 2
+    t.integer "available_stock", default: 0, null: false
+    t.boolean "is_default", default: false
+    t.integer "display_order", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["is_default"], name: "index_product_variants_on_is_default"
+    t.index ["product_id", "weight", "unit"], name: "index_product_variants_uniqueness", unique: true
+    t.index ["product_id"], name: "index_product_variants_on_product_id"
+  end
+
   create_table "products", force: :cascade do |t|
     t.string "name", null: false
     t.text "description"
@@ -813,6 +838,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000000) do
     t.decimal "base_price_excluding_gst"
     t.string "r2_image_url"
     t.text "r2_additional_images"
+    t.boolean "has_multiple_quantities", default: false, null: false
     t.index ["category_id"], name: "index_products_on_category_id"
     t.index ["is_occasional_product", "occasional_start_date", "occasional_end_date"], name: "index_products_on_occasional_dates"
     t.index ["is_occasional_product"], name: "index_products_on_is_occasional_product"
@@ -1368,6 +1394,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000000) do
   add_foreign_key "product_reviews", "customers"
   add_foreign_key "product_reviews", "products"
   add_foreign_key "product_reviews", "users"
+  add_foreign_key "product_variants", "products"
   add_foreign_key "products", "categories"
   add_foreign_key "referrals", "affiliates"
   add_foreign_key "referrals", "customers"

@@ -239,6 +239,75 @@
         <h5 class="card-title mb-0">Pricing</h5>
       </div>
       <div class="card-body">
+
+        <!-- Multi-quantity toggle -->
+        <div class="form-check form-switch mb-3 p-3 bg-light rounded border">
+          <%= form.check_box :has_multiple_quantities, class: "form-check-input", id: "has_multiple_quantities", style: "transform: scale(1.4);" %>
+          <%= form.label :has_multiple_quantities, class: "form-check-label fw-semibold ms-2" do %>
+            <i class="bi bi-layers me-1 text-primary"></i> Product has multiple quantity options
+          <% end %>
+          <small class="d-block text-muted mt-1 ms-4">e.g. 500g at ₹40, 1kg at ₹75</small>
+        </div>
+
+        <!-- Variants table (shown when multi-qty enabled) -->
+        <div id="variants_section" style="<%= @product.has_multiple_quantities? ? '' : 'display:none;' %>">
+          <div class="table-responsive mb-2">
+            <table class="table table-bordered table-sm align-middle" id="variants_table">
+              <thead class="table-primary text-center">
+                <tr>
+                  <th>Weight/Qty</th>
+                  <th>Unit</th>
+                  <th>Buying ₹</th>
+                  <th>Selling ₹</th>
+                  <th>Discount?</th>
+                  <th>Type</th>
+                  <th>Value</th>
+                  <th>Stock</th>
+                  <th>Default</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="variants_body">
+                <% if @product.product_variants.any? %>
+                  <%= form.fields_for :product_variants, @product.product_variants.ordered do |vf| %>
+                    <tr class="variant-row">
+                      <td><%= vf.number_field :weight, class: "form-control form-control-sm", step: 0.001, min: 0.001, placeholder: "1.000", style: "width:80px" %></td>
+                      <td>
+                        <%= vf.select :unit, options_for_select(Product::UNIT_TYPES, vf.object.unit), {}, { class: "form-select form-select-sm", style: "width:80px" } %>
+                      </td>
+                      <td><%= vf.number_field :buying_price, class: "form-control form-control-sm", step: 0.01, min: 0, placeholder: "0.00", style: "width:80px" %></td>
+                      <td><%= vf.number_field :selling_price, class: "form-control form-control-sm", step: 0.01, min: 0, placeholder: "0.00", required: true, style: "width:80px" %></td>
+                      <td class="text-center"><%= vf.check_box :discount_enabled, class: "form-check-input variant-discount-toggle" %></td>
+                      <td>
+                        <div class="variant-discount-fields" style="<%= vf.object.discount_enabled? ? '' : 'display:none;' %>">
+                          <%= vf.select :discount_type, options_for_select([['%', 'percentage'], ['₹', 'fixed']], vf.object.discount_type), {include_blank: '-'}, { class: "form-select form-select-sm", style: "width:65px" } %>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="variant-discount-fields" style="<%= vf.object.discount_enabled? ? '' : 'display:none;' %>">
+                          <%= vf.number_field :discount_value, class: "form-control form-control-sm", step: 0.01, min: 0, placeholder: "0", style: "width:70px" %>
+                        </div>
+                      </td>
+                      <td><%= vf.number_field :available_stock, class: "form-control form-control-sm", min: 0, placeholder: "0", style: "width:70px" %></td>
+                      <td class="text-center"><%= vf.check_box :is_default, class: "form-check-input variant-default-radio" %></td>
+                      <td>
+                        <%= vf.hidden_field :_destroy, class: "destroy-field", value: "0" %>
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-variant-row"><i class="bi bi-trash"></i></button>
+                      </td>
+                    </tr>
+                  <% end %>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+          <button type="button" id="add_variant_row" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-plus-circle me-1"></i>Add Row
+          </button>
+          <hr>
+        </div>
+
+        <!-- Single pricing fields (hidden when multi-qty enabled) -->
+        <div id="single_pricing_section" style="<%= @product.has_multiple_quantities? ? 'display:none;' : '' %>">
         <div class="row g-3">
           <div class="col-md-6">
             <%= form.label :buying_price, "Buying Price", class: "form-label" %>
@@ -549,6 +618,7 @@
             </div>
           </div>
         </div>
+        </div><!-- /single_pricing_section -->
       </div>
     </div>
   </div>
@@ -4606,3 +4676,111 @@ document.getElementById('product-form').addEventListener('submit', function(e) {
     </div>
   </div>
 </template>
+
+<!-- Template row for new variant -->
+<template id="variant_row_template">
+  <tr class="variant-row">
+    <td><input type="number" name="product[product_variants_attributes][NEW_IDX][weight]" class="form-control form-control-sm" step="0.001" min="0.001" placeholder="1.000" style="width:80px"></td>
+    <td>
+      <select name="product[product_variants_attributes][NEW_IDX][unit]" class="form-select form-select-sm" style="width:80px">
+        <% Product::UNIT_TYPES.each do |label, val| %>
+          <option value="<%= val %>"><%= label %></option>
+        <% end %>
+      </select>
+    </td>
+    <td><input type="number" name="product[product_variants_attributes][NEW_IDX][buying_price]" class="form-control form-control-sm" step="0.01" min="0" placeholder="0.00" style="width:80px"></td>
+    <td><input type="number" name="product[product_variants_attributes][NEW_IDX][selling_price]" class="form-control form-control-sm" step="0.01" min="0" placeholder="0.00" required style="width:80px"></td>
+    <td class="text-center"><input type="checkbox" name="product[product_variants_attributes][NEW_IDX][discount_enabled]" value="1" class="form-check-input variant-discount-toggle"></td>
+    <td>
+      <div class="variant-discount-fields" style="display:none">
+        <select name="product[product_variants_attributes][NEW_IDX][discount_type]" class="form-select form-select-sm" style="width:65px">
+          <option value="">-</option>
+          <option value="percentage">%</option>
+          <option value="fixed">₹</option>
+        </select>
+      </div>
+    </td>
+    <td>
+      <div class="variant-discount-fields" style="display:none">
+        <input type="number" name="product[product_variants_attributes][NEW_IDX][discount_value]" class="form-control form-control-sm" step="0.01" min="0" placeholder="0" style="width:70px">
+      </div>
+    </td>
+    <td><input type="number" name="product[product_variants_attributes][NEW_IDX][available_stock]" class="form-control form-control-sm" min="0" placeholder="0" style="width:70px"></td>
+    <td class="text-center"><input type="checkbox" name="product[product_variants_attributes][NEW_IDX][is_default]" value="1" class="form-check-input variant-default-radio"></td>
+    <td>
+      <input type="hidden" name="product[product_variants_attributes][NEW_IDX][_destroy]" class="destroy-field" value="0">
+      <button type="button" class="btn btn-outline-danger btn-sm remove-variant-row"><i class="bi bi-trash"></i></button>
+    </td>
+  </tr>
+</template>
+
+<script>
+(function() {
+  const multiQtyToggle = document.getElementById('has_multiple_quantities');
+  const variantsSection = document.getElementById('variants_section');
+  const singlePricingSection = document.getElementById('single_pricing_section');
+
+  function toggleVariantMode() {
+    if (multiQtyToggle && multiQtyToggle.checked) {
+      variantsSection.style.display = '';
+      singlePricingSection.style.display = 'none';
+    } else {
+      variantsSection.style.display = 'none';
+      singlePricingSection.style.display = '';
+    }
+  }
+
+  if (multiQtyToggle) {
+    multiQtyToggle.addEventListener('change', toggleVariantMode);
+    toggleVariantMode();
+  }
+
+  let variantIndex = Date.now();
+
+  document.getElementById('add_variant_row')?.addEventListener('click', function() {
+    const template = document.getElementById('variant_row_template');
+    if (!template) return;
+    const html = template.innerHTML.replace(/NEW_IDX/g, variantIndex++);
+    const tbody = document.getElementById('variants_body');
+    tbody.insertAdjacentHTML('beforeend', html);
+    bindVariantRowEvents(tbody.lastElementChild);
+  });
+
+  function bindVariantRowEvents(row) {
+    const toggle = row.querySelector('.variant-discount-toggle');
+    if (toggle) {
+      toggle.addEventListener('change', function() {
+        row.querySelectorAll('.variant-discount-fields').forEach(el => {
+          el.style.display = this.checked ? '' : 'none';
+        });
+      });
+    }
+    const removeBtn = row.querySelector('.remove-variant-row');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', function() {
+        const destroyField = row.querySelector('.destroy-field');
+        if (destroyField && destroyField.name.includes('[id]') === false) {
+          // new row — just remove from DOM
+          row.remove();
+        } else {
+          destroyField.value = '1';
+          row.style.display = 'none';
+        }
+      });
+    }
+  }
+
+  // Bind events on existing rows
+  document.querySelectorAll('#variants_body .variant-row').forEach(bindVariantRowEvents);
+
+  // Variant discount toggle for existing rows
+  document.querySelectorAll('.variant-discount-toggle').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      const row = cb.closest('tr');
+      row.querySelectorAll('.variant-discount-fields').forEach(el => {
+        el.style.display = cb.checked ? '' : 'none';
+      });
+    });
+  });
+})();
+</script>

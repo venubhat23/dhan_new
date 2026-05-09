@@ -34,6 +34,10 @@ class Admin::BookingsController < Admin::ApplicationController
       @bookings = @bookings.where(customer_id: params[:customer_id])
     end
 
+    if params[:b2b].present? && params[:b2b] == '1'
+      @bookings = @bookings.where(is_b2b: true)
+    end
+
     # Get pagination settings from system settings
     @per_page = SystemSetting.default_pagination_per_page
 
@@ -57,6 +61,7 @@ class Admin::BookingsController < Admin::ApplicationController
                        .includes(
                          :category,
                          :stock_batches,
+                         :product_variants,
                          image_attachment: :blob,
                          additional_images_attachments: :blob
                        )
@@ -246,8 +251,18 @@ class Admin::BookingsController < Admin::ApplicationController
   end
 
   def generate_invoice
-    @booking.generate_invoice_number
-    redirect_to invoice_admin_booking_path(@booking)
+    if @booking.invoice_generated?
+      redirect_to admin_booking_path(@booking), notice: 'Invoice already generated.'
+      return
+    end
+
+    invoice = generate_immediate_invoice_for_booking(@booking)
+    if invoice
+      redirect_to admin_booking_path(@booking), notice: "Invoice ##{invoice.invoice_number} generated successfully."
+    else
+      @booking.generate_invoice_number
+      redirect_to admin_booking_path(@booking), notice: 'Invoice generated successfully.'
+    end
   end
 
   def invoice
@@ -738,7 +753,7 @@ class Admin::BookingsController < Admin::ApplicationController
       :customer_id, :customer_name, :customer_email, :customer_phone,
       :payment_method, :payment_status, :discount_amount, :notes,
       :delivery_address, :cash_received, :change_amount, :status, :store_id,
-      :booking_date, booking_items_attributes: [:id, :product_id, :quantity, :price, :_destroy]
+      :booking_date, :is_b2b, booking_items_attributes: [:id, :product_id, :product_variant_id, :quantity, :price, :_destroy]
     )
   end
 

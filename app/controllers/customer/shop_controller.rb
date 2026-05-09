@@ -8,7 +8,7 @@ class Customer::ShopController < Customer::BaseController
 
     # Simple query without complex SQL to avoid syntax errors
     @products = Product.active
-                      .includes(:category, :stock_batches, :product_reviews)
+                      .includes(:category, :stock_batches, :product_reviews, :product_variants)
                       .order(:display_order, :name)
 
     # Apply search filter if present

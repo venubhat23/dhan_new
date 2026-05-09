@@ -84,6 +84,9 @@ class Admin::ProductsController < Admin::ApplicationController
     vendor_purchase_id = params[:vendor_purchase_id].presence
 
     if @product.update(product_params)
+      # Clean up variants if multi-quantity was disabled
+      @product.product_variants.destroy_all unless @product.has_multiple_quantities?
+
       # Handle Cloudinary uploads
       handle_cloudinary_uploads if params[:product][:cloudinary_images].present?
 
@@ -598,10 +601,16 @@ class Admin::ProductsController < Admin::ApplicationController
       # GST Configuration Parameters
       :gst_enabled, :gst_percentage, :cgst_percentage, :sgst_percentage, :igst_percentage,
       :gst_amount, :cgst_amount, :sgst_amount, :igst_amount, :final_amount_with_gst, :base_price_excluding_gst,
+      :has_multiple_quantities,
       :image,
       additional_images: [],
       remove_images: [],
       cloudinary_images: [],
+      product_variants_attributes: [
+        :id, :weight, :unit, :buying_price, :selling_price,
+        :discount_enabled, :discount_type, :discount_value, :discount_amount,
+        :available_stock, :is_default, :display_order, :_destroy
+      ],
       delivery_rules_attributes: [
         :id, :rule_type, :location_data, :is_excluded, :delivery_days, :delivery_charge, :_destroy,
         :location_data_pincodes, { location_data_states: [] }, { location_data_cities: [] }

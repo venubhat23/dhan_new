@@ -23,6 +23,7 @@ class Product < ApplicationRecord
   ].freeze
 
   belongs_to :category
+  has_many :product_variants, dependent: :destroy
   has_many :delivery_rules, dependent: :destroy
   has_many :booking_items
   has_many :order_items
@@ -86,6 +87,7 @@ class Product < ApplicationRecord
   validate :occasional_dates_validation
   validate :gst_rates_validation
 
+  accepts_nested_attributes_for :product_variants, allow_destroy: true, reject_if: ->(attrs) { attrs['weight'].blank? || attrs['selling_price'].blank? }
   accepts_nested_attributes_for :delivery_rules, allow_destroy: true, reject_if: :all_blank
 
   enum :status, { active: 'active', inactive: 'inactive', draft: 'draft' }
@@ -126,6 +128,18 @@ class Product < ApplicationRecord
 
   def in_stock?
     cached_total_batch_stock > 0
+  end
+
+  def default_variant
+    product_variants.default_first.first
+  end
+
+  def display_price
+    if has_multiple_quantities? && (dv = default_variant)
+      dv.effective_price
+    else
+      price
+    end
   end
 
   # Inventory tracking methods

@@ -245,9 +245,13 @@
                   <% end %>
                 </td>
                 <td class="fw-medium text-primary">
-                  <%= link_to invoice_number,
-                      invoice_type == 'booking' ? "#" : admin_invoice_path(model_object),
+                  <%= link_to invoice_number, admin_invoice_path(model_object),
                       class: "text-decoration-none fw-medium" %>
+                  <% if invoice_type == 'booking' %>
+                    <span class="badge bg-info bg-opacity-10 text-info border border-info ms-1" style="font-size: 0.65rem;">
+                      <i class="bi bi-bookmark me-1"></i>Booking
+                    </span>
+                  <% end %>
                 </td>
                 <td>
                   <div class="d-flex flex-column">
@@ -288,74 +292,48 @@
                 </td>
                 <td>
                   <div class="d-flex gap-1">
-                    <% if invoice_type == 'booking' %>
-                      <!-- Booking Invoice Actions -->
-                      <% if model_object&.share_token.present? %>
-                        <%= link_to "/invoice/#{model_object.share_token}",
-                                   class: "btn btn-sm btn-outline-primary", target: "_blank",
-                                   title: "View Booking Invoice", data: { bs_toggle: "tooltip" } do %>
-                          <i class="bi bi-eye"></i>
-                        <% end %>
-                        <%= link_to "/invoice/#{model_object.share_token}.pdf",
-                                   class: "btn btn-sm btn-outline-info", target: "_blank",
-                                   title: "Download PDF", data: { bs_toggle: "tooltip" } do %>
-                          <i class="bi bi-download"></i>
-                        <% end %>
-                        <% if customer_mobile.present? %>
-                          <button type="button" class="btn btn-sm btn-outline-success"
-                                 onclick="shareBookingViaWhatsApp('<%= model_object.share_token %>', '<%= customer_mobile %>', '<%= invoice_number %>', <%= total_amount %>)"
-                                 title="Share via WhatsApp"
-                                 data-bs-toggle="tooltip">
-                            <i class="bi bi-whatsapp"></i>
-                          </button>
-                        <% end %>
-                      <% else %>
-                        <span class="text-muted small">No share token</span>
+                    <!-- Invoice Actions (same for both regular and booking invoices) -->
+                    <%= link_to admin_invoice_path(model_object), class: "btn btn-sm btn-outline-primary",
+                               title: "View Invoice", data: { bs_toggle: "tooltip" } do %>
+                      <i class="bi bi-eye"></i>
+                    <% end %>
+                    <%= link_to edit_admin_invoice_path(model_object), class: "btn btn-sm btn-outline-warning",
+                               title: "Edit Invoice", data: { bs_toggle: "tooltip" } do %>
+                      <i class="bi bi-pencil-square"></i>
+                    <% end %>
+                    <% unless payment_status == 'fully_paid' %>
+                      <button type="button" class="btn btn-sm btn-outline-warning"
+                             onclick="openPartialPaymentModal(<%= invoice_id %>, '<%= invoice_number %>', <%= total_amount %>, '<%= customer_name %>', <%= paid_amount || 0 %>)"
+                             title="Partial Payment"
+                             data-bs-toggle="tooltip">
+                        <i class="bi bi-cash"></i>
+                      </button>
+                      <%= button_to mark_as_paid_admin_invoice_path(model_object),
+                                    method: :patch,
+                                    class: "btn btn-sm btn-outline-success",
+                                    title: "Mark as Paid",
+                                    form: { style: "display: inline;" },
+                                    data: {
+                                      bs_toggle: "tooltip",
+                                      confirm: "Mark this invoice as paid?"
+                                    } do %>
+                        <i class="bi bi-check-circle"></i>
                       <% end %>
-                    <% else %>
-                      <!-- Regular Invoice Actions -->
-                      <%= link_to admin_invoice_path(model_object), class: "btn btn-sm btn-outline-primary",
-                                 title: "View Invoice", data: { bs_toggle: "tooltip" } do %>
-                        <i class="bi bi-eye"></i>
+                    <% end %>
+                    <% if respond_to?(:download_pdf_admin_invoice_path) %>
+                      <%= link_to download_pdf_admin_invoice_path(model_object),
+                                 class: "btn btn-sm btn-outline-info", target: "_blank",
+                                 title: "Download PDF", data: { bs_toggle: "tooltip" } do %>
+                        <i class="bi bi-download"></i>
                       <% end %>
-                      <%= link_to edit_admin_invoice_path(model_object), class: "btn btn-sm btn-outline-warning",
-                                 title: "Edit Invoice", data: { bs_toggle: "tooltip" } do %>
-                        <i class="bi bi-pencil-square"></i>
-                      <% end %>
-                      <% unless payment_status == 'fully_paid' %>
-                        <button type="button" class="btn btn-sm btn-outline-warning"
-                               onclick="openPartialPaymentModal(<%= invoice_id %>, '<%= invoice_number %>', <%= total_amount %>, '<%= customer_name %>', <%= paid_amount || 0 %>)"
-                               title="Partial Payment"
-                               data-bs-toggle="tooltip">
-                          <i class="bi bi-cash"></i>
-                        </button>
-                        <%= button_to mark_as_paid_admin_invoice_path(model_object),
-                                      method: :patch,
-                                      class: "btn btn-sm btn-outline-success",
-                                      title: "Mark as Paid",
-                                      form: { style: "display: inline;" },
-                                      data: {
-                                        bs_toggle: "tooltip",
-                                        confirm: "Mark this invoice as paid?"
-                                      } do %>
-                          <i class="bi bi-check-circle"></i>
-                        <% end %>
-                      <% end %>
-                      <% if respond_to?(:download_pdf_admin_invoice_path) %>
-                        <%= link_to download_pdf_admin_invoice_path(model_object),
-                                   class: "btn btn-sm btn-outline-info", target: "_blank",
-                                   title: "Download PDF", data: { bs_toggle: "tooltip" } do %>
-                          <i class="bi bi-download"></i>
-                        <% end %>
-                      <% end %>
-                      <% if customer_mobile.present? %>
-                        <button type="button" class="btn btn-sm btn-outline-success"
-                               onclick="shareViaWhatsApp('<%= invoice_id %>', '<%= customer_mobile %>', '<%= invoice_number %>', <%= total_amount %>)"
-                               title="Share via WhatsApp"
-                               data-bs-toggle="tooltip">
-                          <i class="bi bi-whatsapp"></i>
-                        </button>
-                      <% end %>
+                    <% end %>
+                    <% if customer_mobile.present? %>
+                      <button type="button" class="btn btn-sm btn-outline-success"
+                             onclick="shareViaWhatsApp('<%= invoice_id %>', '<%= customer_mobile %>', '<%= invoice_number %>', <%= total_amount %>)"
+                             title="Share via WhatsApp"
+                             data-bs-toggle="tooltip">
+                        <i class="bi bi-whatsapp"></i>
+                      </button>
                     <% end %>
                     <% if invoice_type == 'regular' %>
                       <%= button_to admin_invoice_path(model_object),

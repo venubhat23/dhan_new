@@ -723,28 +723,53 @@
                   <!-- Price -->
                   <div class="mb-3">
                     <%
-                      # Calculate final price with GST
-                      selling_price = product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price ? product.discount_price : product.price
+                      if product.has_multiple_quantities? && product.product_variants.any?
+                        shop_default_v = product.default_variant || product.product_variants.ordered.first
+                        selling_price = shop_default_v.effective_price
+                      else
+                        shop_default_v = nil
+                        selling_price = product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price ? product.discount_price : product.price
+                      end
 
                       if product.gst_enabled && product.gst_percentage.present? && product.gst_percentage > 0
                         gst_rate = product.gst_percentage
                         base_price = selling_price / (1 + (gst_rate / 100.0))
-                        gst_amount = selling_price - base_price
                         final_price = selling_price
                       else
                         base_price = selling_price
                         gst_rate = 0
-                        gst_amount = 0
                         final_price = selling_price
                       end
 
-                      # Smart rounding for cart - always define these variables
                       rounded_final = final_price.round
                       rounded_base = (rounded_final / (1 + (gst_rate / 100.0))).round
                       rounded_gst = rounded_final - rounded_base
+
+                      effective_stock = shop_default_v ? shop_default_v.available_stock : current_stock
                     %>
 
-                    <% if product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price %>
+                    <% if product.has_multiple_quantities? && product.product_variants.any? %>
+                      <!-- Variant pills -->
+                      <div class="d-flex flex-wrap gap-1 mb-2" id="shop-variant-pills-<%= product.id %>">
+                        <% product.product_variants.ordered.each do |v| %>
+                          <button type="button"
+                                  class="btn btn-xs px-2 py-1 shop-variant-pill <%= v.id == shop_default_v.id ? 'btn-primary' : 'btn-outline-secondary' %>"
+                                  style="font-size:0.75rem; line-height:1.2;"
+                                  data-variant-id="<%= v.id %>"
+                                  data-product-id="<%= product.id %>"
+                                  data-price="<%= v.effective_price %>"
+                                  data-stock="<%= v.available_stock %>"
+                                  data-label="<%= j(v.label) %>"
+                                  onclick="shopSelectVariant(this)">
+                            <%= v.label %>
+                          </button>
+                        <% end %>
+                      </div>
+                      <span class="h6 text-primary mb-0" id="shop-vprice-<%= product.id %>">
+                        ₹<%= number_with_delimiter(rounded_final) %>
+                      </span>
+                      <input type="hidden" id="shop-selected-variant-<%= product.id %>" value="<%= shop_default_v.id %>">
+                    <% elsif product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price %>
                       <div class="d-flex align-items-center gap-2">
                         <span class="h6 text-success mb-0">₹<%= number_with_delimiter(final_price.round(2)) %></span>
                         <small class="text-muted text-decoration-line-through">₹<%= number_with_delimiter(product.price) %></small>
@@ -761,14 +786,14 @@
                   </div>
 
                   <!-- Quantity and Add to Cart -->
-                  <div class="mt-auto">
-                    <% if current_stock > 0 %>
+                  <div class="mt-auto" id="shop-stock-section-<%= product.id %>">
+                    <% if effective_stock > 0 %>
                       <!-- Quantity Selector -->
                       <div class="mb-3">
                         <label class="form-label fw-bold small">
                           Quantity
-                          <span class="badge bg-info-subtle text-info ms-1">
-                            Max: <%= current_stock.to_i %>
+                          <span class="badge bg-info-subtle text-info ms-1" id="shop-max-stock-<%= product.id %>">
+                            Max: <%= effective_stock.to_i %>
                           </span>
                         </label>
                         <div class="input-group">
@@ -780,31 +805,38 @@
                                  value="1"
                                  min="1"
                                  step="1"
-                                 max="<%= current_stock %>"
+                                 max="<%= effective_stock %>"
                                  class="form-control text-center fw-bold quantity-input"
-                                 onchange="validateQty(<%= product.id %>, <%= current_stock %>)">
+                                 onchange="validateQty(<%= product.id %>, <%= effective_stock %>)">
                           <button class="btn btn-outline-primary quantity-btn" type="button" onclick="increaseQty(<%= product.id %>)">
                             <i class="bi bi-plus fw-bold"></i>
                           </button>
                         </div>
 
-                        <!-- Simple Stock Warning - Only for Low Stock -->
-                        <% if current_stock < 10 %>
+                        <% if effective_stock < 10 %>
                           <small class="text-warning d-block mt-1">
                             <i class="bi bi-exclamation-triangle-fill"></i>
-                            <strong>Low Stock!</strong> Only <%= current_stock.to_i %> left
+                            <strong>Low Stock!</strong> Only <%= effective_stock.to_i %> left
                           </small>
                         <% end %>
                       </div>
 
                       <!-- Add to Cart Button -->
                       <button class="btn btn-primary w-100"
-                              onclick="addToCart(<%= product.id %>, '<%= j(product.name) %>', <%= rounded_final %>, <%= current_stock %>, <%= rounded_base %>, <%= gst_rate %>)">
+                              id="shop-add-btn-<%= product.id %>"
+                              data-product-id="<%= product.id %>"
+                              data-product-name="<%= j(product.name) %>"
+                              data-final-price="<%= rounded_final %>"
+                              data-stock="<%= effective_stock %>"
+                              data-base-price="<%= rounded_base %>"
+                              data-gst-rate="<%= gst_rate %>"
+                              data-has-variants="<%= product.has_multiple_quantities? ? 'true' : 'false' %>"
+                              onclick="shopAddToCart(<%= product.id %>)">
                         <i class="bi bi-cart-plus me-2"></i>Add to Cart
                       </button>
                     <% else %>
                       <!-- Out of Stock Button -->
-                      <button class="btn btn-danger w-100" disabled>
+                      <button class="btn btn-danger w-100" disabled id="shop-add-btn-<%= product.id %>">
                         <i class="bi bi-x-circle me-2"></i>Out of Stock
                       </button>
                     <% end %>
@@ -987,6 +1019,61 @@ function initializeFilters() {
   }
 }
 
+// Variant pill selection for shop
+function shopSelectVariant(btn) {
+  const productId = btn.dataset.productId;
+  const price = parseFloat(btn.dataset.price);
+  const stock = parseInt(btn.dataset.stock);
+  const variantId = btn.dataset.variantId;
+
+  // Toggle pill active state
+  document.querySelectorAll(`#shop-variant-pills-${productId} .shop-variant-pill`).forEach(p => {
+    p.classList.remove('btn-primary');
+    p.classList.add('btn-outline-secondary');
+  });
+  btn.classList.remove('btn-outline-secondary');
+  btn.classList.add('btn-primary');
+
+  // Update price display
+  const priceEl = document.getElementById(`shop-vprice-${productId}`);
+  if (priceEl) priceEl.textContent = '₹' + price.toLocaleString('en-IN');
+
+  // Update hidden variant input
+  const hiddenInput = document.getElementById(`shop-selected-variant-${productId}`);
+  if (hiddenInput) hiddenInput.value = variantId;
+
+  // Update stock / qty input
+  const qtyInput = document.getElementById(`qty-${productId}`);
+  if (qtyInput) { qtyInput.max = stock; qtyInput.value = 1; }
+  const maxBadge = document.getElementById(`shop-max-stock-${productId}`);
+  if (maxBadge) maxBadge.textContent = 'Max: ' + stock;
+
+  // Update add-to-cart button state & data
+  const addBtn = document.getElementById(`shop-add-btn-${productId}`);
+  if (addBtn) {
+    addBtn.disabled = stock <= 0;
+    addBtn.dataset.finalPrice = price;
+    addBtn.dataset.basePrice = price;
+    addBtn.dataset.stock = stock;
+  }
+}
+
+// Shop wrapper for add-to-cart (reads variant if selected)
+function shopAddToCart(productId) {
+  const btn = document.getElementById(`shop-add-btn-${productId}`);
+  const hasVariants = btn && btn.dataset.hasVariants === 'true';
+  const variantInput = document.getElementById(`shop-selected-variant-${productId}`);
+  const variantId = hasVariants && variantInput ? variantInput.value : null;
+
+  const finalPrice = btn ? parseFloat(btn.dataset.finalPrice) : 0;
+  const basePrice  = btn ? parseFloat(btn.dataset.basePrice)  : finalPrice;
+  const stock      = btn ? parseInt(btn.dataset.stock)        : 0;
+  const gstRate    = btn ? parseFloat(btn.dataset.gstRate)    : 0;
+  const name       = btn ? btn.dataset.productName : '';
+
+  addToCart(productId, name, finalPrice, stock, basePrice, gstRate, variantId);
+}
+
 // Quantity controls - matching admin booking design
 function decreaseQty(productId) {
   const qtyInput = document.getElementById(`qty-${productId}`);
@@ -1025,10 +1112,11 @@ function validateQty(productId, maxStock) {
 }
 
 // Enhanced Add to Cart functionality with proper cart management
-function addToCart(productId, productName, finalPrice, maxStock, basePrice, gstRate) {
+function addToCart(productId, productName, finalPrice, maxStock, basePrice, gstRate, variantId) {
   const qtyInput = document.getElementById(`qty-${productId}`);
   const quantity = parseInt(qtyInput.value);
-  const button = document.querySelector(`button[onclick*="addToCart(${productId}"]`);
+  const button = document.getElementById(`shop-add-btn-${productId}`) || document.querySelector(`button[onclick*="addToCart(${productId}"]`);
+  const cartKey = variantId ? `${productId}_v${variantId}` : String(productId);
 
   if (quantity <= 0) {
     alert('Please enter a valid quantity');
@@ -1041,33 +1129,30 @@ function addToCart(productId, productName, finalPrice, maxStock, basePrice, gstR
   }
 
   // Button loading state
-  const originalContent = button.innerHTML;
-  button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
-  button.disabled = true;
+  const originalContent = button ? button.innerHTML : '';
+  if (button) { button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...'; button.disabled = true; }
 
   // Simulate API call delay for better UX
   setTimeout(() => {
     // FIXED: Ensure cart is properly loaded and cleaned
     cart = getCleanCart();
 
-    // Check if product already exists in cart
-    const existingIndex = cart.findIndex(item => item.id == productId);
+    // Check if product (+ variant) already exists in cart
+    const existingIndex = cart.findIndex(item => item.cartKey == cartKey);
 
     if (existingIndex > -1) {
-      // FIXED: Instead of adding to existing quantity, set the new quantity
-      // This prevents accumulation from "removed" items
       cart[existingIndex].quantity = quantity;
 
       if (cart[existingIndex].quantity > maxStock) {
         cart[existingIndex].quantity = maxStock;
         alert(`Quantity adjusted to maximum available stock: ${maxStock}`);
       }
-
-      console.log(`Updated existing item ${productId}: quantity = ${cart[existingIndex].quantity}`);
     } else {
       // Add new item
       cart.push({
+        cartKey: cartKey,
         id: productId,
+        variantId: variantId || null,
         name: productName,
         price: finalPrice,
         basePrice: basePrice,
@@ -1075,8 +1160,6 @@ function addToCart(productId, productName, finalPrice, maxStock, basePrice, gstR
         quantity: quantity,
         maxStock: maxStock
       });
-
-      console.log(`Added new item ${productId}: quantity = ${quantity}`);
     }
 
     // Save to localStorage
@@ -1087,8 +1170,7 @@ function addToCart(productId, productName, finalPrice, maxStock, basePrice, gstR
     alert(`${productName} added to cart successfully!`);
 
     // Reset button and quantity
-    button.innerHTML = originalContent;
-    button.disabled = false;
+    if (button) { button.innerHTML = originalContent; button.disabled = false; }
     qtyInput.value = 1;
   }, 500);
 }
