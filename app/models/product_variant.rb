@@ -13,6 +13,7 @@ class ProductVariant < ApplicationRecord
   scope :in_stock, -> { where('available_stock > 0') }
 
   before_save :calculate_discount_amount
+  before_save :calculate_gst_fields
   before_save :ensure_single_default
 
   def label
@@ -25,6 +26,19 @@ class ProductVariant < ApplicationRecord
     else
       selling_price
     end
+  end
+
+  def effective_gst_percentage
+    gst_percentage.presence || product&.gst_percentage || 0
+  end
+
+  def computed_gst_amount
+    return 0 unless effective_gst_percentage > 0
+    (effective_price * effective_gst_percentage / 100.0).round(2)
+  end
+
+  def price_with_gst
+    (effective_price + computed_gst_amount).round(2)
   end
 
   def in_stock?
@@ -41,6 +55,18 @@ class ProductVariant < ApplicationRecord
       (selling_price * discount_value / 100.0).round(2)
     else
       [discount_value, selling_price].min.round(2)
+    end
+  end
+
+  def calculate_gst_fields
+    pct = gst_percentage.presence&.to_f || product&.gst_percentage.to_f
+    if pct && pct > 0 && selling_price.present?
+      base = effective_price
+      self.gst_amount = (base * pct / 100.0).round(2)
+      self.final_price_with_gst = (base + gst_amount).round(2)
+    else
+      self.gst_amount = 0
+      self.final_price_with_gst = effective_price
     end
   end
 

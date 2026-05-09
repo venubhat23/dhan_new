@@ -305,21 +305,26 @@ class Booking < ApplicationRecord
   end
 
   def payment_method_display
-    # Get the raw value from database
-    raw_value = read_attribute('payment_method')
-    return 'Unknown' if raw_value.blank?
+    raw_value = self.class.connection.select_value("SELECT payment_method FROM bookings WHERE id = #{id}")
+    return 'Cash on Delivery' if raw_value.blank?
 
-    # Handle both string keys and numeric values since there's a mismatch
     case raw_value.to_s
-    when 'cash', '0' then 'Cash'
-    when 'card', '1' then 'Card'
-    when 'upi', '2' then 'UPI'
+    when 'cash', '0'          then 'Cash'
+    when 'card', '1'          then 'Card'
+    when 'upi', '2'           then 'UPI'
     when 'bank_transfer', '3' then 'Bank Transfer'
-    when 'online', '4' then 'Online'
-    when 'cod', '5' then 'COD'
-    when 'cashfree', '6' then 'Online Payment'
-    else raw_value.to_s.humanize
+    when 'online', '4'        then 'Online'
+    when 'cod', '5'           then 'Cash on Delivery'
+    when 'cashfree', '6'      then 'Online Payment'
+    when 'cloudflare', '7'    then 'Online Payment'
+    else 'Cash on Delivery'
     end
+  end
+
+  def payment_method_label
+    raw_value = self.class.connection.select_value("SELECT payment_method FROM bookings WHERE id = #{id}").to_s
+    # Online payment methods: card=1, upi=2, bank_transfer=3, online=4, cashfree=6, cloudflare=7
+    %w[card 1 upi 2 bank_transfer 3 online 4 cashfree 6 cloudflare 7].include?(raw_value) ? 'Online Payment' : 'Cash on Delivery'
   end
 
   def payment_status_display

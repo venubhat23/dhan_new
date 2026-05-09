@@ -848,9 +848,12 @@
                 <th>Unit</th>
                 <th>Buying ₹</th>
                 <th>Selling ₹</th>
-                <th>Discount?</th>
+                <th>Disc?</th>
                 <th>Type</th>
-                <th>Value</th>
+                <th>Disc Val</th>
+                <th>GST %</th>
+                <th>GST ₹</th>
+                <th>Final ₹</th>
                 <th>Stock</th>
                 <th>Default</th>
                 <th></th>
@@ -859,25 +862,41 @@
             <tbody id="variants_body">
               <% if @product.product_variants.any? %>
                 <%= form.fields_for :product_variants, @product.product_variants.ordered do |vf| %>
+                  <% v_gst = vf.object.gst_percentage.presence&.to_f || @product.gst_percentage.to_f %>
+                  <% v_eff_price = vf.object.effective_price.to_f %>
+                  <% v_gst_amt = v_gst > 0 ? (v_eff_price * v_gst / 100.0).round(2) : 0 %>
+                  <% v_final = (v_eff_price + v_gst_amt).round(2) %>
                   <tr class="variant-row">
-                    <td><%= vf.number_field :weight, class: "form-control form-control-sm", step: 0.001, min: 0.001, placeholder: "1.000", style: "width:80px" %></td>
+                    <td><%= vf.number_field :weight, class: "form-control form-control-sm variant-weight", step: 0.001, min: 0.001, placeholder: "1.000", style: "width:80px" %></td>
                     <td>
                       <%= vf.select :unit, options_for_select(Product::UNIT_TYPES, vf.object.unit), {}, { class: "form-select form-select-sm", style: "width:90px" } %>
                     </td>
-                    <td><%= vf.number_field :buying_price, class: "form-control form-control-sm", step: 0.01, min: 0, placeholder: "0.00", style: "width:85px" %></td>
-                    <td><%= vf.number_field :selling_price, class: "form-control form-control-sm", step: 0.01, min: 0, placeholder: "0.00", required: true, style: "width:85px" %></td>
+                    <td><%= vf.number_field :buying_price, class: "form-control form-control-sm", step: 0.01, min: 0, placeholder: "0.00", style: "width:75px" %></td>
+                    <td><%= vf.number_field :selling_price, class: "form-control form-control-sm variant-selling-price", step: 0.01, min: 0, placeholder: "0.00", required: true, style: "width:75px" %></td>
                     <td class="text-center"><%= vf.check_box :discount_enabled, class: "form-check-input variant-discount-toggle" %></td>
                     <td>
                       <div class="variant-discount-fields" style="<%= vf.object.discount_enabled? ? '' : 'display:none;' %>">
-                        <%= vf.select :discount_type, options_for_select([['%', 'percentage'], ['₹', 'fixed']], vf.object.discount_type), { include_blank: '-' }, { class: "form-select form-select-sm", style: "width:65px" } %>
+                        <%= vf.select :discount_type, options_for_select([['%', 'percentage'], ['₹', 'fixed']], vf.object.discount_type), { include_blank: '-' }, { class: "form-select form-select-sm variant-discount-type", style: "width:65px" } %>
                       </div>
                     </td>
                     <td>
                       <div class="variant-discount-fields" style="<%= vf.object.discount_enabled? ? '' : 'display:none;' %>">
-                        <%= vf.number_field :discount_value, class: "form-control form-control-sm", step: 0.01, min: 0, placeholder: "0", style: "width:75px" %>
+                        <%= vf.number_field :discount_value, class: "form-control form-control-sm variant-discount-value", step: 0.01, min: 0, placeholder: "0", style: "width:70px" %>
                       </div>
                     </td>
-                    <td><%= vf.number_field :available_stock, class: "form-control form-control-sm", min: 0, placeholder: "0", style: "width:75px" %></td>
+                    <td>
+                      <%= vf.number_field :gst_percentage, class: "form-control form-control-sm variant-gst-pct",
+                          step: 0.01, min: 0, max: 50, placeholder: (@product.gst_percentage || 0).to_s,
+                          value: vf.object.gst_percentage, style: "width:70px" %>
+                      <small class="text-muted" style="font-size:0.65rem">blank = product GST</small>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-info variant-gst-amt"><%= number_with_precision(v_gst_amt, precision: 2) %></span>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-success variant-final-price"><%= number_with_precision(v_final, precision: 2) %></span>
+                    </td>
+                    <td><%= vf.number_field :available_stock, class: "form-control form-control-sm", min: 0, placeholder: "0", style: "width:70px" %></td>
                     <td class="text-center"><%= vf.check_box :is_default, class: "form-check-input" %></td>
                     <td>
                       <%= vf.hidden_field :_destroy, class: "destroy-field", value: "0" %>
@@ -905,12 +924,12 @@
               <% end %>
             </select>
           </td>
-          <td><input type="number" name="product[product_variants_attributes][NEW_IDX][buying_price]" class="form-control form-control-sm" step="0.01" min="0" placeholder="0.00" style="width:85px"></td>
-          <td><input type="number" name="product[product_variants_attributes][NEW_IDX][selling_price]" class="form-control form-control-sm" step="0.01" min="0" placeholder="0.00" required style="width:85px"></td>
+          <td><input type="number" name="product[product_variants_attributes][NEW_IDX][buying_price]" class="form-control form-control-sm" step="0.01" min="0" placeholder="0.00" style="width:75px"></td>
+          <td><input type="number" name="product[product_variants_attributes][NEW_IDX][selling_price]" class="form-control form-control-sm variant-selling-price" step="0.01" min="0" placeholder="0.00" required style="width:75px"></td>
           <td class="text-center"><input type="checkbox" name="product[product_variants_attributes][NEW_IDX][discount_enabled]" value="1" class="form-check-input variant-discount-toggle"></td>
           <td>
             <div class="variant-discount-fields" style="display:none">
-              <select name="product[product_variants_attributes][NEW_IDX][discount_type]" class="form-select form-select-sm" style="width:65px">
+              <select name="product[product_variants_attributes][NEW_IDX][discount_type]" class="form-select form-select-sm variant-discount-type" style="width:65px">
                 <option value="">-</option>
                 <option value="percentage">%</option>
                 <option value="fixed">₹</option>
@@ -919,10 +938,16 @@
           </td>
           <td>
             <div class="variant-discount-fields" style="display:none">
-              <input type="number" name="product[product_variants_attributes][NEW_IDX][discount_value]" class="form-control form-control-sm" step="0.01" min="0" placeholder="0" style="width:75px">
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][discount_value]" class="form-control form-control-sm variant-discount-value" step="0.01" min="0" placeholder="0" style="width:70px">
             </div>
           </td>
-          <td><input type="number" name="product[product_variants_attributes][NEW_IDX][available_stock]" class="form-control form-control-sm" min="0" placeholder="0" style="width:75px"></td>
+          <td>
+            <input type="number" name="product[product_variants_attributes][NEW_IDX][gst_percentage]" class="form-control form-control-sm variant-gst-pct" step="0.01" min="0" max="50" placeholder="<%= @product.gst_percentage || 0 %>" style="width:70px">
+            <small class="text-muted" style="font-size:0.65rem">blank=prod GST</small>
+          </td>
+          <td class="text-center"><span class="badge bg-info variant-gst-amt">0.00</span></td>
+          <td class="text-center"><span class="badge bg-success variant-final-price">0.00</span></td>
+          <td><input type="number" name="product[product_variants_attributes][NEW_IDX][available_stock]" class="form-control form-control-sm" min="0" placeholder="0" style="width:70px"></td>
           <td class="text-center"><input type="checkbox" name="product[product_variants_attributes][NEW_IDX][is_default]" value="1" class="form-check-input"></td>
           <td>
             <input type="hidden" name="product[product_variants_attributes][NEW_IDX][_destroy]" class="destroy-field" value="0">
@@ -2651,12 +2676,46 @@ function copyImageUrl(imageUrl) {
     bindVariantRowEvents(tbody.lastElementChild);
   });
 
+  const productGstPct = parseFloat('<%= @product.gst_percentage || 0 %>') || 0;
+
+  function recalcVariantRow(row) {
+    const sellingPrice = parseFloat(row.querySelector('.variant-selling-price')?.value) || 0;
+    const discountEnabled = row.querySelector('.variant-discount-toggle')?.checked;
+    const discountType = row.querySelector('.variant-discount-type')?.value || '';
+    const discountValue = parseFloat(row.querySelector('.variant-discount-value')?.value) || 0;
+    const gstPctInput = parseFloat(row.querySelector('.variant-gst-pct')?.value);
+    const gstPct = isNaN(gstPctInput) ? productGstPct : gstPctInput;
+
+    let effectivePrice = sellingPrice;
+    if (discountEnabled && discountValue > 0) {
+      if (discountType === 'percentage') {
+        effectivePrice = sellingPrice - (sellingPrice * discountValue / 100);
+      } else if (discountType === 'fixed') {
+        effectivePrice = sellingPrice - discountValue;
+      }
+      effectivePrice = Math.max(0, effectivePrice);
+    }
+
+    const gstAmt = gstPct > 0 ? parseFloat((effectivePrice * gstPct / 100).toFixed(2)) : 0;
+    const finalPrice = parseFloat((effectivePrice + gstAmt).toFixed(2));
+
+    const gstBadge = row.querySelector('.variant-gst-amt');
+    const finalBadge = row.querySelector('.variant-final-price');
+    if (gstBadge) gstBadge.textContent = gstAmt.toFixed(2);
+    if (finalBadge) finalBadge.textContent = finalPrice.toFixed(2);
+  }
+
   function bindVariantRowEvents(row) {
     row.querySelector('.variant-discount-toggle')?.addEventListener('change', function() {
       row.querySelectorAll('.variant-discount-fields').forEach(el => {
         el.style.display = this.checked ? '' : 'none';
       });
+      recalcVariantRow(row);
     });
+    row.querySelector('.variant-selling-price')?.addEventListener('input', () => recalcVariantRow(row));
+    row.querySelector('.variant-gst-pct')?.addEventListener('input', () => recalcVariantRow(row));
+    row.querySelector('.variant-discount-type')?.addEventListener('change', () => recalcVariantRow(row));
+    row.querySelector('.variant-discount-value')?.addEventListener('input', () => recalcVariantRow(row));
     row.querySelector('.remove-variant-row')?.addEventListener('click', function() {
       const destroyField = row.querySelector('.destroy-field');
       if (destroyField && row.querySelector('input[name*="[id]"]')) {
@@ -2666,6 +2725,7 @@ function copyImageUrl(imageUrl) {
         row.remove();
       }
     });
+    recalcVariantRow(row);
   }
 
   document.querySelectorAll('#variants_body .variant-row').forEach(bindVariantRowEvents);

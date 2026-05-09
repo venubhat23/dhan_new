@@ -609,7 +609,8 @@ class Admin::ProductsController < Admin::ApplicationController
       product_variants_attributes: [
         :id, :weight, :unit, :buying_price, :selling_price,
         :discount_enabled, :discount_type, :discount_value, :discount_amount,
-        :available_stock, :is_default, :display_order, :_destroy
+        :available_stock, :is_default, :display_order,
+        :gst_percentage, :gst_amount, :final_price_with_gst, :_destroy
       ],
       delivery_rules_attributes: [
         :id, :rule_type, :location_data, :is_excluded, :delivery_days, :delivery_charge, :_destroy,

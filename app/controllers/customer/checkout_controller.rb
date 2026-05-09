@@ -311,13 +311,17 @@ class Customer::CheckoutController < Customer::BaseController
 
     Rails.logger.info "Creating booking with cart items: #{@cart[:items].inspect}"
 
+    # Normalise payment method from form to valid enum key
+    raw_pm = params[:payment_method].to_s.strip
+    payment_method_key = %w[card upi bank_transfer online cashfree cloudflare].include?(raw_pm) ? raw_pm : 'cod'
+
     # Create booking with minimal attributes first (like admin controller)
     booking_attributes = {
       customer: current_customer,
       booking_number: generate_booking_number,
       booking_date: Time.current,
       status: 'confirmed',
-      payment_method: params[:payment_method] || 'cod',
+      payment_method: payment_method_key,
       customer_name: current_customer.full_name || current_customer.first_name,
       customer_email: current_customer.email,
       customer_phone: current_customer.mobile,
@@ -367,6 +371,9 @@ class Customer::CheckoutController < Customer::BaseController
       # Set payment status
       booking.payment_status = :unpaid
       booking.save!
+
+      # Force payment_method to DB directly — bypasses integer-enum/string-column Rails quirk
+      booking.update_column(:payment_method, payment_method_key)
 
       Rails.logger.info "Booking created successfully: #{booking.booking_number}"
       Rails.logger.info "Booking totals - Subtotal: #{booking.subtotal}, Tax: #{booking.tax_amount}, Total: #{booking.total_amount}"

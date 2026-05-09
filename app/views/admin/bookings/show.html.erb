@@ -166,11 +166,7 @@
           </div>
           <div class="col-md-6">
             <strong class="text-muted d-block">Payment Method</strong>
-            <%
-              raw_pm = @booking.read_attribute('payment_method').to_s
-              payment_label = %w[cash 0 cod 5].include?(raw_pm) ? 'Cash on Delivery' : 'Online Payment'
-            %>
-            <%= payment_label %>
+            <%= @booking.payment_method_label %>
           </div>
           <div class="col-md-6">
             <strong class="text-muted d-block">Created By</strong>

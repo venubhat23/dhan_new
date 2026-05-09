@@ -55,11 +55,7 @@
           <div class="col-md-6">
             <strong class="text-muted d-block">Payment Method</strong>
             <div class="d-flex align-items-center gap-2 mt-1">
-              <%
-                raw_pm = @booking.read_attribute('payment_method').to_s
-                payment_label = %w[cash 0 cod 5].include?(raw_pm) ? 'Cash on Delivery' : 'Online Payment'
-              %>
-              <span><%= payment_label %></span>
+              <span><%= @booking.payment_method_label %></span>
               <% if @booking.payment_status == 'paid' %>
                 <span class="badge bg-success">
                   <i class="bi bi-check-circle me-1"></i>Paid
