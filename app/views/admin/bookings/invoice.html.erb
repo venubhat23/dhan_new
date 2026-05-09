@@ -20,6 +20,29 @@
         background-color: white;
         padding: 15px;
         border: 1px solid #ddd;
+        position: relative;
+      }
+
+      .paid-watermark {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-35deg);
+        font-size: 100px;
+        font-weight: 900;
+        color: rgba(40, 167, 69, 0.12);
+        border: 12px solid rgba(40, 167, 69, 0.12);
+        border-radius: 10px;
+        padding: 10px 30px;
+        letter-spacing: 10px;
+        pointer-events: none;
+        z-index: 0;
+        user-select: none;
+        white-space: nowrap;
+      }
+
+      @media print {
+        .paid-watermark { color: rgba(40,167,69,0.10); border-color: rgba(40,167,69,0.10); }
       }
 
       /* Header section */
@@ -639,6 +662,10 @@
     %>
 
     <div class="invoice-container">
+      <% if @booking.payment_status_paid? %>
+        <div class="paid-watermark">PAID</div>
+      <% end %>
+
       <!-- Tax label and original recipient -->
       <div class="tax-label-container">
         <span class="tax-label"><%= has_gst ? 'TAX INVOICE' : 'BILL OF SUPPLY' %></span>
