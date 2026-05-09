@@ -49,7 +49,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     per_page = params[:per_page]&.to_i || 20
     per_page = [per_page, 50].min
 
-    @products = Product.active.in_stock
+    @products = Product.active.in_stock.includes(:product_variants, :category)
 
     # Apply filters
     @products = @products.where(category_id: params[:category_id]) if params[:category_id].present?
@@ -107,7 +107,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     per_page = params[:per_page]&.to_i || 20
     per_page = [per_page, 50].min
 
-    @products = Product.active.in_stock.where(category_id: @category.id)
+    @products = Product.active.in_stock.includes(:product_variants, :category).where(category_id: @category.id)
 
     @products = @products.where('price >= ?', params[:min_price]) if params[:min_price].present?
     @products = @products.where('price <= ?', params[:max_price]) if params[:max_price].present?
@@ -629,7 +629,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     per_page = [per_page, 50].min
 
     begin
-      @products = Product.active.in_stock.search(query)
+      @products = Product.active.in_stock.includes(:product_variants, :category).search(query)
 
       # Apply additional filters
       @products = @products.where(category_id: params[:category_id]) if params[:category_id].present?
@@ -709,6 +709,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
 
     begin
       @products = Product.active.in_stock
+                          .includes(:product_variants, :category)
                           .order(created_at: :desc)
                           .limit(limit)
 
@@ -786,7 +787,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
 
   # GET /api/v1/mobile/ecommerce/products/:id
   def product_details
-    @product = Product.active.includes(:category, :product_reviews, image_attachment: :blob, additional_images_attachments: :blob).find(params[:id])
+    @product = Product.active.includes(:category, :product_reviews, :product_variants, image_attachment: :blob, additional_images_attachments: :blob).find(params[:id])
 
     # Get related products from same category
     related_products = Product.active.in_stock
@@ -1593,7 +1594,10 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
   end
 
   def format_product_data(product)
-    {
+    has_variants = product.has_multiple_quantities? && product.product_variants.any?
+    default_variant = has_variants ? (product.product_variants.find(&:is_default?) || product.product_variants.min_by(&:weight)) : nil
+
+    base = {
       id: product.id,
       name: product.name,
       description: product.description,
@@ -1635,8 +1639,39 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       is_low_stock: product.low_stock?,
       stock_status: product.stock_status,
       created_at: product.created_at,
-      updated_at: product.updated_at
+      updated_at: product.updated_at,
+
+      # Multi-quantity variant fields
+      has_multiple_quantities: has_variants,
+      display_price: has_variants && default_variant ? default_variant.effective_price.to_f : product.display_price.to_f,
+      default_variant_id: default_variant&.id,
+      variants: has_variants ? product.product_variants.sort_by(&:weight).map { |v|
+        gst_pct = v.gst_percentage.presence&.to_f || product.gst_percentage.to_f || 0
+        eff = v.effective_price.to_f
+        gst_amt = gst_pct > 0 ? (eff * gst_pct / 100.0).round(2) : 0
+        {
+          id: v.id,
+          label: v.label,
+          weight: v.weight.to_f,
+          unit: v.unit,
+          buying_price: v.buying_price.to_f,
+          selling_price: v.selling_price.to_f,
+          discount_enabled: v.discount_enabled,
+          discount_type: v.discount_type,
+          discount_value: v.discount_value&.to_f,
+          discount_amount: v.discount_amount&.to_f,
+          effective_price: eff,
+          gst_percentage: gst_pct,
+          gst_amount: gst_amt,
+          price_after_discount: eff,
+          available_stock: v.available_stock,
+          is_default: v.is_default,
+          is_in_stock: v.available_stock > 0
+        }
+      } : []
     }
+
+    base
   end
 
   def format_booking_data(booking, basic: false)

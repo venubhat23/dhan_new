@@ -55,13 +55,13 @@ class Product < ApplicationRecord
 
   validates :name, presence: true
   validates :sku, presence: true, uniqueness: { case_sensitive: false }
-  validates :price, presence: true, numericality: { greater_than: 0 }
+  validates :price, presence: true, numericality: { greater_than: 0 }, unless: :has_multiple_quantities?
   validates :discount_price, numericality: { greater_than_or_equal_to: 0 }, allow_blank: true
-  validates :stock, presence: true, numericality: { greater_than_or_equal_to: 0 }
+  validates :stock, presence: true, numericality: { greater_than_or_equal_to: 0 }, unless: :has_multiple_quantities?
   validates :status, presence: true
   validates :product_type, presence: true, inclusion: { in: PRODUCT_TYPES.map(&:last) }
   validates :weight, numericality: { greater_than: 0 }, allow_blank: true
-  validates :buying_price, numericality: { greater_than: 0 }, allow_blank: true
+  validates :buying_price, numericality: { greater_than: 0 }, allow_blank: true, unless: :has_multiple_quantities?
   validates :unit_type, presence: true, inclusion: { in: UNIT_TYPES.map(&:last) }
   # validates :minimum_stock_alert, numericality: { greater_than: 0 }, allow_blank: true
   # validates :default_selling_price, numericality: { greater_than: 0 }, allow_blank: true
@@ -71,8 +71,8 @@ class Product < ApplicationRecord
   validates :occasional_start_date, presence: true, if: :requires_occasional_dates?
   validates :occasional_end_date, presence: true, if: :requires_occasional_dates?
 
-  # GST validations
-  validates :gst_percentage, presence: true, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 50 }, if: :gst_enabled?
+  # GST validations (skipped entirely when multi-qty is on — each variant has its own GST)
+  validates :gst_percentage, presence: true, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 50 }, if: -> { gst_enabled? && !has_multiple_quantities? }
   validates :cgst_percentage, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 25 }, allow_blank: true
   validates :sgst_percentage, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 25 }, allow_blank: true
   validates :igst_percentage, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 50 }, allow_blank: true
@@ -85,7 +85,8 @@ class Product < ApplicationRecord
   validate :discount_price_validation
   validate :discount_value_validation
   validate :occasional_dates_validation
-  validate :gst_rates_validation
+  validate :gst_rates_validation, unless: :has_multiple_quantities?
+  validate :variants_required_when_multi_qty, if: :has_multiple_quantities?
 
   accepts_nested_attributes_for :product_variants, allow_destroy: true, reject_if: ->(attrs) { attrs['weight'].blank? || attrs['selling_price'].blank? }
   accepts_nested_attributes_for :delivery_rules, allow_destroy: true, reject_if: :all_blank
@@ -119,6 +120,7 @@ class Product < ApplicationRecord
 
   before_validation :generate_sku, if: -> { sku.blank? }
   before_validation :set_default_status, if: :new_record?
+  before_validation :sync_price_from_variants, if: :has_multiple_quantities?
   before_save :process_delivery_rules_location_data
   before_save :calculate_discount_fields
   before_save :update_price_tracking
@@ -1115,6 +1117,22 @@ class Product < ApplicationRecord
   def valid_pincode_format?(pincode)
     return false if pincode.blank?
     pincode.to_s.strip.match?(/\A\d{6}\z/)
+  end
+
+  def variants_required_when_multi_qty
+    active_variants = product_variants.reject { |v| v.marked_for_destruction? }
+    if active_variants.empty?
+      errors.add(:base, "Add at least one variant when 'Product has multiple quantity options' is enabled")
+    end
+  end
+
+  def sync_price_from_variants
+    # Keep product.price in sync with default variant so all other code that
+    # reads product.price continues to work (invoices, bookings, etc.)
+    all_variants = product_variants.reject { |v| v.marked_for_destruction? }
+    return if all_variants.empty?
+    default_v = all_variants.find(&:is_default) || all_variants.min_by { |v| v.weight.to_f }
+    self.price = default_v.selling_price if default_v&.selling_price.present?
   end
 
   def generate_sku

@@ -2724,14 +2724,28 @@ function copyImageUrl(imageUrl) {
   const productGstSection = document.getElementById('product_gst_section');
 
   function toggleVariantMode() {
-    if (multiQtyToggle && multiQtyToggle.checked) {
-      if (variantsSection) variantsSection.style.display = '';
-      if (singlePricingSection) singlePricingSection.style.display = 'none';
-      if (productGstSection) productGstSection.style.display = 'none';
-    } else {
-      if (variantsSection) variantsSection.style.display = 'none';
-      if (singlePricingSection) singlePricingSection.style.display = '';
-      if (productGstSection) productGstSection.style.display = '';
+    const multiOn = multiQtyToggle && multiQtyToggle.checked;
+
+    if (variantsSection) {
+      variantsSection.style.display = multiOn ? '' : 'none';
+      // Disable variant inputs when section is hidden so browser skips required validation
+      variantsSection.querySelectorAll('input, select, textarea').forEach(el => {
+        el.disabled = !multiOn;
+      });
+    }
+    if (productGstSection) {
+      productGstSection.style.display = multiOn ? 'none' : '';
+      productGstSection.querySelectorAll('input, select, textarea').forEach(el => {
+        el.disabled = multiOn;
+      });
+    }
+
+    if (singlePricingSection) {
+      singlePricingSection.style.display = multiOn ? 'none' : '';
+      // Disable hidden required fields so browser validation skips them
+      singlePricingSection.querySelectorAll('input, select, textarea').forEach(el => {
+        el.disabled = multiOn;
+      });
     }
   }
 
