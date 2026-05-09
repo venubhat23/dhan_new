@@ -49,7 +49,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     per_page = params[:per_page]&.to_i || 20
     per_page = [per_page, 50].min
 
-    @products = Product.active.in_stock.includes(:product_variants, :category)
+    @products = Product.active.available_for_sale.includes(:product_variants, :category)
 
     # Apply filters
     @products = @products.where(category_id: params[:category_id]) if params[:category_id].present?
@@ -107,7 +107,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     per_page = params[:per_page]&.to_i || 20
     per_page = [per_page, 50].min
 
-    @products = Product.active.in_stock.includes(:product_variants, :category).where(category_id: @category.id)
+    @products = Product.active.available_for_sale.includes(:product_variants, :category).where(category_id: @category.id)
 
     @products = @products.where('price >= ?', params[:min_price]) if params[:min_price].present?
     @products = @products.where('price <= ?', params[:max_price]) if params[:max_price].present?
@@ -629,7 +629,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     per_page = [per_page, 50].min
 
     begin
-      @products = Product.active.in_stock.includes(:product_variants, :category).search(query)
+      @products = Product.active.available_for_sale.includes(:product_variants, :category).search(query)
 
       # Apply additional filters
       @products = @products.where(category_id: params[:category_id]) if params[:category_id].present?
@@ -708,7 +708,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     limit = [limit, 10].min # Maximum 10 products
 
     begin
-      @products = Product.active.in_stock
+      @products = Product.active.available_for_sale
                           .includes(:product_variants, :category)
                           .order(created_at: :desc)
                           .limit(limit)

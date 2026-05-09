@@ -102,6 +102,19 @@ class Product < ApplicationRecord
       .group('products.id')
       .having('SUM(stock_batches.quantity_remaining) > 0')
   }
+  # For the mobile/customer API: multi-qty products use variant stock, not stock_batches
+  scope :available_for_sale, -> {
+    batch_stock_ids = joins(:stock_batches)
+                        .where(stock_batches: { status: 'active' }, has_multiple_quantities: false)
+                        .group('products.id')
+                        .having('SUM(stock_batches.quantity_remaining) > 0')
+                        .select('products.id')
+    variant_stock_ids = joins(:product_variants)
+                          .where(has_multiple_quantities: true)
+                          .where('product_variants.available_stock > 0')
+                          .select('DISTINCT products.id')
+    where(id: batch_stock_ids).or(where(id: variant_stock_ids))
+  }
   scope :out_of_stock, -> {
     left_joins(:stock_batches)
       .group('products.id')
