@@ -148,7 +148,7 @@
               </td>
               <td class="align-middle text-center">
                 <span class="badge bg-primary-subtle text-primary">
-                  <%= item.quantity %> <%= item.product.unit || 'pcs' %>
+                  <%= item.quantity %> <%= item.product&.unit_type || 'pcs' %>
                 </span>
               </td>
               <td class="align-middle text-end">
