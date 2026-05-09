@@ -61,7 +61,7 @@ class Affiliate < ApplicationRecord
     password = generate_secure_password
     affiliate_role = Role.find_by(name: 'affiliate')
 
-    user = User.create!(
+    create_user!(
       first_name: first_name,
       last_name: last_name,
       email: email,
@@ -73,7 +73,6 @@ class Affiliate < ApplicationRecord
       status: true
     )
 
-    # Store the auto-generated password for display
     update_column(:auto_generated_password, password)
   end
 

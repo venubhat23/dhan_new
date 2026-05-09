@@ -108,59 +108,64 @@
         <% end %>
       </div>
       <div class="card-body">
-        <% if @affiliate.user %>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <strong class="text-muted d-block">Username (Email)</strong>
-              <div class="d-flex align-items-center">
-                <span class="me-2"><%= @affiliate.user.email %></span>
-                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= @affiliate.user.email %>')">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <strong class="text-muted d-block">Username</strong>
+            <div class="d-flex align-items-center gap-2">
+              <code class="bg-light px-2 py-1 rounded fs-6">
+                <%= @affiliate.username.present? ? @affiliate.username : (@affiliate.user&.email || '-') %>
+              </code>
+              <% login_username = @affiliate.username.presence || @affiliate.user&.email %>
+              <% if login_username.present? %>
+                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= login_username %>')" title="Copy username">
                   <i class="bi bi-copy"></i>
                 </button>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <strong class="text-muted d-block">Password</strong>
-              <div class="d-flex align-items-center">
-                <span class="me-2 font-monospace">
-                  <% if @affiliate.auto_generated_password.present? %>
-                    <%= @affiliate.auto_generated_password %>
-                  <% else %>
-                    <span class="text-muted">Set by affiliate</span>
-                  <% end %>
-                </span>
-                <% if @affiliate.auto_generated_password.present? %>
-                  <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= @affiliate.auto_generated_password %>')">
-                    <i class="bi bi-copy"></i>
-                  </button>
-                <% end %>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <strong class="text-muted d-block">User Type</strong>
-              <span class="badge bg-purple"><%= @affiliate.user.user_type.titleize %></span>
-            </div>
-            <div class="col-md-6">
-              <strong class="text-muted d-block">Role</strong>
-              <span class="badge bg-info"><%= @affiliate.user.role&.name&.titleize || 'No Role' %></span>
-            </div>
-            <div class="col-12">
-              <div class="alert alert-info mb-0">
-                <i class="bi bi-info-circle me-2"></i>
-                <strong>Affiliate Portal URL:</strong>
-                <a href="<%= request.base_url %>/affiliate/login" target="_blank" class="alert-link">
-                  <%= request.base_url %>/affiliate/login
-                </a>
-              </div>
+              <% end %>
             </div>
           </div>
-        <% else %>
-          <div class="alert alert-warning mb-0">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            <strong>No User Account:</strong> This affiliate doesn't have login credentials.
-            Please contact system administrator.
+          <div class="col-md-6">
+            <strong class="text-muted d-block">Password</strong>
+            <div class="d-flex align-items-center gap-2">
+              <% if @affiliate.auto_generated_password.present? %>
+                <code class="bg-light px-2 py-1 rounded fs-6 font-monospace" id="passwordDisplay">
+                  <%= @affiliate.auto_generated_password %>
+                </code>
+                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= @affiliate.auto_generated_password %>')" title="Copy password">
+                  <i class="bi bi-copy"></i>
+                </button>
+              <% else %>
+                <span class="text-muted fst-italic">Not stored — use Reset Password to generate a new one</span>
+              <% end %>
+            </div>
           </div>
-        <% end %>
+          <div class="col-md-6">
+            <strong class="text-muted d-block">Login Email</strong>
+            <div class="d-flex align-items-center gap-2">
+              <span><%= @affiliate.email %></span>
+              <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= @affiliate.email %>')" title="Copy email">
+                <i class="bi bi-copy"></i>
+              </button>
+            </div>
+          </div>
+          <% if @affiliate.user %>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">Account Status</strong>
+              <span class="badge bg-<%= @affiliate.user.status? ? 'success' : 'danger' %>">
+                <i class="bi bi-<%= @affiliate.user.status? ? 'check' : 'x' %>-circle me-1"></i>
+                <%= @affiliate.user.status? ? 'Active' : 'Inactive' %>
+              </span>
+            </div>
+          <% end %>
+          <div class="col-12">
+            <div class="alert alert-info mb-0">
+              <i class="bi bi-info-circle me-2"></i>
+              <strong>Affiliate Portal URL:</strong>
+              <a href="<%= request.base_url %>/affiliate/login" target="_blank" class="alert-link">
+                <%= request.base_url %>/affiliate/login
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

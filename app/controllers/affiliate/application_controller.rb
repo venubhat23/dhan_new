@@ -14,7 +14,12 @@ class Affiliate::ApplicationController < ApplicationController
 
   def set_current_affiliate
     if current_user&.user_type == 'affiliate'
-      @current_affiliate = current_user.authenticatable
+      @current_affiliate = current_user.authenticatable || Affiliate.find_by(email: current_user.email)
+
+      # Repair missing polymorphic link for legacy records
+      if @current_affiliate && current_user.authenticatable.nil?
+        current_user.update_columns(authenticatable_type: 'Affiliate', authenticatable_id: @current_affiliate.id)
+      end
     end
   end
 
