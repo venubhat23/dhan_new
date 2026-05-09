@@ -166,8 +166,11 @@ class Product < ApplicationRecord
   end
 
   def available_quantity
-    # Use batch system for accurate stock tracking
-    total_batch_stock
+    if has_multiple_quantities?
+      product_variants.sum(:available_stock).to_f
+    else
+      total_batch_stock
+    end
   end
 
   def available_stock
@@ -635,7 +638,16 @@ class Product < ApplicationRecord
     unit_type || 'units'
   end
 
-  def can_fulfill_order?(requested_quantity)
+  def can_fulfill_order?(requested_quantity, variant_id: nil)
+    if has_multiple_quantities?
+      if variant_id.present?
+        variant = product_variants.find_by(id: variant_id)
+        return variant ? variant.available_stock.to_f >= requested_quantity : false
+      else
+        # No specific variant given — allow if any variant has enough stock
+        return product_variants.any? { |v| v.available_stock.to_f >= requested_quantity }
+      end
+    end
     total_batch_stock >= requested_quantity
   end
 

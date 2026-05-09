@@ -764,7 +764,14 @@ class Admin::BookingsController < Admin::ApplicationController
       next unless item.product_id.present? && item.quantity.present? && item.quantity > 0
 
       product = Product.find(item.product_id)
-      available_stock = product.total_batch_stock
+
+      # For variant products, check the specific variant's available_stock
+      if product.has_multiple_quantities? && item.product_variant_id.present?
+        variant = ProductVariant.find_by(id: item.product_variant_id)
+        available_stock = variant ? variant.available_stock.to_f : 0.0
+      else
+        available_stock = product.total_batch_stock
+      end
 
       # For updates, add back the current item's quantity if it exists
       if is_update && item.persisted? && item.quantity_changed?

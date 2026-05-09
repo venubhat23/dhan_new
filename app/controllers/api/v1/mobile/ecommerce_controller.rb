@@ -165,7 +165,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     booking_params = params.require(:booking).permit(
       :customer_id, :customer_name, :customer_email, :customer_phone, :delivery_address,
       :payment_method, :notes, :pincode, :latitude, :longitude,
-      booking_items_attributes: [:product_id, :quantity, :price]
+      booking_items_attributes: [:product_id, :product_variant_id, :quantity, :price]
     )
 
     # Validate required fields
@@ -219,44 +219,37 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
 
     booking_params[:booking_items_attributes]&.each do |item_params|
       product_id = item_params[:product_id]
-      quantity = item_params[:quantity].to_i
+      variant_id = item_params[:product_variant_id]
+      quantity = item_params[:quantity].to_f
 
       begin
         product = Product.active.find(product_id)
 
-        # Check stock availability
-        if product.stock < quantity
+        # Check stock availability — use variant stock for multi-quantity products
+        if product.has_multiple_quantities? && variant_id.present?
+          variant = ProductVariant.find_by(id: variant_id)
+          avail = variant ? variant.available_stock.to_f : 0.0
+        else
+          avail = product.available_quantity
+        end
+
+        if avail < quantity
           unavailable_products << {
             product_id: product.id,
             product_name: product.name,
             requested_quantity: quantity,
-            available_stock: product.stock,
+            available_stock: avail,
             reason: 'Insufficient stock'
           }
           next
         end
-
-        # Check delivery availability if pincode provided
-        # if pincode.present?
-        #   delivery_info = product.delivery_info_for(pincode)
-        #   unless delivery_info[:deliverable]
-        #     unavailable_products << {
-        #       product_id: product.id,
-        #       product_name: product.name,
-        #       requested_quantity: quantity,
-        #       available_stock: product.stock,
-        #       reason: 'Delivery not available to this pincode'
-        #     }
-        #     next
-        #   end
-        # end
 
         # Product is available
         available_products << {
           product_id: product.id,
           product_name: product.name,
           requested_quantity: quantity,
-          available_stock: product.stock,
+          available_stock: avail,
           price: product.selling_price,
           delivery_charge: pincode.present? ? product.delivery_info_for(pincode)[:delivery_charge] : 0
         }
@@ -328,8 +321,13 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
         # Update product stock
         @booking.booking_items.each do |item|
           product = item.product
-          new_stock = product.stock - item.quantity
-          product.update!(stock: new_stock)
+          if product.has_multiple_quantities? && item.product_variant_id.present?
+            variant = ProductVariant.find_by(id: item.product_variant_id)
+            variant&.update!(available_stock: [variant.available_stock - item.quantity, 0].max)
+          else
+            new_stock = [product.stock - item.quantity, 0].max
+            product.update!(stock: new_stock)
+          end
         end
 
         booking_response_data = format_booking_data(@booking).merge({
@@ -1382,7 +1380,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     booking_params = params.require(:booking).permit(
       :customer_id, :customer_name, :customer_email, :customer_phone,
       :delivery_address, :payment_method, :pincode, :latitude, :longitude, :notes,
-      booking_items_attributes: [:product_id, :quantity, :price]
+      booking_items_attributes: [:product_id, :product_variant_id, :quantity, :price]
     )
 
     # Resolve customer: prefer customer_id param, fall back to authenticated user
@@ -1395,6 +1393,31 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
 
     cart_items = booking_params[:booking_items_attributes]
     return json_response({ success: false, message: 'Cart is empty' }, :bad_request) if cart_items.blank?
+
+    # Validate stock before creating booking
+    stock_errors = []
+    cart_items.each do |item|
+      product_id  = item[:product_id] || item['product_id']
+      variant_id  = item[:product_variant_id] || item['product_variant_id']
+      quantity    = (item[:quantity] || item['quantity']).to_f
+      product     = Product.find_by(id: product_id)
+      next unless product
+
+      if product.has_multiple_quantities? && variant_id.present?
+        variant = ProductVariant.find_by(id: variant_id)
+        avail = variant ? variant.available_stock.to_f : 0.0
+      else
+        avail = product.available_quantity
+      end
+
+      if quantity > avail
+        stock_errors << "#{product.name}: Only #{avail} units available, but #{quantity} requested"
+      end
+    end
+
+    if stock_errors.any?
+      return json_response({ success: false, message: stock_errors.join('; ') }, :unprocessable_entity)
+    end
 
     payment_method = booking_params[:payment_method].presence || 'cod'
     booking = nil
@@ -1416,10 +1439,11 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
 
       total_amount = 0
       cart_items.each do |item|
-        product = Product.find(item[:product_id] || item['product_id'])
-        quantity = (item[:quantity] || item['quantity']).to_f
-        price = (item[:price] || item['price']).to_f
-        booking.booking_items.build(product: product, quantity: quantity, price: price)
+        product    = Product.find(item[:product_id] || item['product_id'])
+        variant_id = item[:product_variant_id] || item['product_variant_id']
+        quantity   = (item[:quantity] || item['quantity']).to_f
+        price      = (item[:price] || item['price']).to_f
+        booking.booking_items.build(product: product, product_variant_id: variant_id, quantity: quantity, price: price)
         total_amount += price * quantity
       end
 
