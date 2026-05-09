@@ -1,0 +1,140 @@
+<% content_for :title, "Referral Analytics" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Referral Analytics</h2>
+    <p class="text-muted mb-0">Performance overview for the selected period</p>
+  </div>
+  <div>
+    <%= link_to admin_referrals_path, class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-arrow-left me-1"></i>Back to Referrals
+    <% end %>
+  </div>
+</div>
+
+<!-- Date Range Filter -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <%= form_with url: analytics_admin_referrals_path, method: :get, local: true do |f| %>
+      <div class="d-flex gap-2 align-items-center">
+        <label class="fw-medium me-2">Date Range:</label>
+        <%= f.select :date_range, [
+          ['Last 7 Days', '7_days'],
+          ['Last 30 Days', '30_days'],
+          ['Last 90 Days', '90_days'],
+          ['Last Year', '1_year']
+        ], { selected: @date_range }, class: "form-select w-auto" %>
+        <%= f.submit "Apply", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row mb-4">
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <h3 class="text-primary mb-1"><%= @referrals_data[:total_in_period] %></h3>
+        <small class="text-muted">Total Referrals</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <h3 class="text-info mb-1"><%= @referrals_data[:customer_referrals_in_period] %></h3>
+        <small class="text-muted">Customer Referrals</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <h3 class="text-warning mb-1"><%= @referrals_data[:affiliate_referrals_in_period] %></h3>
+        <small class="text-muted">Affiliate Referrals</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <h3 class="text-success mb-1"><%= @referrals_data[:conversions_in_period] %></h3>
+        <small class="text-muted">
+          Conversions
+          <span class="d-block text-muted" style="font-size:0.75rem;">
+            <%= number_with_precision(@referrals_data[:conversion_rate_in_period], precision: 1) %>% rate
+          </span>
+        </small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <!-- Top Customer Referrers -->
+  <div class="col-md-6 mb-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0">
+        <h5 class="mb-0">Top Customer Referrers</h5>
+      </div>
+      <div class="card-body p-0">
+        <% if @top_customer_referrers.any? %>
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="bg-light">
+                <tr>
+                  <th class="border-0">Customer</th>
+                  <th class="border-0 text-end">Referrals</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @top_customer_referrers.each do |(id, first_name, last_name), count| %>
+                  <tr>
+                    <td><%= "#{first_name} #{last_name}".strip.presence || 'Unknown' %></td>
+                    <td class="text-end"><span class="badge bg-primary"><%= count %></span></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <div class="text-center py-4 text-muted">No customer referrals in this period.</div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Affiliate Referrers -->
+  <div class="col-md-6 mb-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0">
+        <h5 class="mb-0">Top Affiliate Referrers</h5>
+      </div>
+      <div class="card-body p-0">
+        <% if @top_affiliate_referrers.any? %>
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="bg-light">
+                <tr>
+                  <th class="border-0">Affiliate</th>
+                  <th class="border-0 text-end">Referrals</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @top_affiliate_referrers.each do |(id, first_name, last_name), count| %>
+                  <tr>
+                    <td><%= "#{first_name} #{last_name}".strip.presence || 'Unknown' %></td>
+                    <td class="text-end"><span class="badge bg-warning text-dark"><%= count %></span></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <div class="text-center py-4 text-muted">No affiliate referrals in this period.</div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

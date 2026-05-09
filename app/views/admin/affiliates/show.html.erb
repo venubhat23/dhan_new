@@ -373,8 +373,8 @@
                       </span>
                     </td>
                     <td>
-                      <% if referral.referred_customer %>
-                        <%= link_to "View Customer", admin_customer_path(referral.referred_customer), class: "btn btn-sm btn-outline-primary" %>
+                      <% if referral.customer %>
+                        <%= link_to "View Customer", admin_customer_path(referral.customer), class: "btn btn-sm btn-outline-primary" %>
                       <% else %>
                         <small class="text-muted">Not registered</small>
                       <% end %>

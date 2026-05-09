@@ -1,0 +1,146 @@
+<% content_for :page_title, "Referral Details" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Referral Details</h2>
+    <p class="text-muted mb-0"><%= @referral.referred_name %></p>
+  </div>
+  <div>
+    <%= link_to affiliate_referral_history_path, class: "btn btn-outline-secondary" do %>
+      <i class="fas fa-arrow-left me-1"></i>
+      Back to Referrals
+    <% end %>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h5 class="mb-0">Referral Information</h5>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4 text-muted">Name</dt>
+          <dd class="col-sm-8"><%= @referral.referred_name.presence || '-' %></dd>
+
+          <dt class="col-sm-4 text-muted">Mobile</dt>
+          <dd class="col-sm-8"><%= @referral.referred_mobile.presence || '-' %></dd>
+
+          <dt class="col-sm-4 text-muted">Email</dt>
+          <dd class="col-sm-8"><%= @referral.referred_email.presence || '-' %></dd>
+
+          <dt class="col-sm-4 text-muted">Referral Date</dt>
+          <dd class="col-sm-8"><%= @referral.referral_date&.strftime('%B %d, %Y') || '-' %></dd>
+
+          <dt class="col-sm-4 text-muted">Status</dt>
+          <dd class="col-sm-8">
+            <span class="badge bg-<%= @referral.status_badge_class %>">
+              <%= @referral.status_display %>
+            </span>
+          </dd>
+
+          <% if @referral.customer.present? %>
+            <dt class="col-sm-4 text-muted">Linked Customer</dt>
+            <dd class="col-sm-8">
+              <span class="text-success">
+                <i class="fas fa-link me-1"></i>
+                <%= @referral.customer.display_name %>
+              </span>
+            </dd>
+          <% end %>
+
+          <% if @referral.converted_at.present? %>
+            <dt class="col-sm-4 text-muted">Converted On</dt>
+            <dd class="col-sm-8"><%= @referral.converted_at.strftime('%B %d, %Y') %></dd>
+          <% end %>
+
+          <% if @referral.notes.present? %>
+            <dt class="col-sm-4 text-muted">Notes</dt>
+            <dd class="col-sm-8"><%= @referral.notes %></dd>
+          <% end %>
+        </dl>
+      </div>
+    </div>
+
+    <% if @referral.status != 'converted' %>
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">Update Notes</h5>
+        </div>
+        <div class="card-body">
+          <%= form_with url: affiliate_referral_path(@referral), method: :patch do |f| %>
+            <div class="mb-3">
+              <%= f.text_area :notes, value: @referral.notes, class: "form-control", rows: 3, placeholder: "Add notes about this referral..." %>
+            </div>
+            <%= f.submit "Save Notes", class: "btn btn-primary" %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h5 class="mb-0">Actions</h5>
+      </div>
+      <div class="card-body d-grid gap-2">
+        <% if @referral.status == 'pending' %>
+          <%= button_to mark_registered_affiliate_referral_path(@referral), method: :patch,
+              class: "btn btn-info",
+              data: { confirm: "Mark this referral as registered?" } do %>
+            <i class="fas fa-user-check me-1"></i>
+            Mark as Registered
+          <% end %>
+        <% end %>
+
+        <% if @referral.status == 'registered' %>
+          <%= button_to mark_converted_affiliate_referral_path(@referral), method: :patch,
+              class: "btn btn-success",
+              data: { confirm: "Mark this referral as converted?" } do %>
+            <i class="fas fa-trophy me-1"></i>
+            Mark as Converted
+          <% end %>
+        <% end %>
+
+        <% if @referral.status == 'pending' %>
+          <%= button_to affiliate_referral_path(@referral), method: :delete,
+              class: "btn btn-outline-danger",
+              data: { confirm: "Are you sure you want to delete this referral?" } do %>
+            <i class="fas fa-trash me-1"></i>
+            Delete Referral
+          <% end %>
+        <% end %>
+
+        <%= link_to affiliate_referral_history_path, class: "btn btn-outline-secondary" do %>
+          <i class="fas fa-list me-1"></i>
+          All Referrals
+        <% end %>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0 text-primary">
+          <i class="fas fa-info-circle me-2"></i>
+          Status Guide
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-2">
+          <span class="badge bg-warning me-2">Pending</span>
+          <small>Waiting for registration</small>
+        </div>
+        <div class="d-flex align-items-center mb-2">
+          <span class="badge bg-info me-2">Registered</span>
+          <small>Person has signed up</small>
+        </div>
+        <div class="d-flex align-items-center">
+          <span class="badge bg-success me-2">Converted</span>
+          <small>Became a customer</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
