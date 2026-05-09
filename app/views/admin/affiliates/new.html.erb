@@ -287,7 +287,7 @@
         <div class="col-md-6">
           <div class="mb-3">
             <%= form.label :auto_generated_password, "Password", class: "form-label fw-semibold" %>
-            <input type="text" class="form-control" placeholder="Password will be auto-generated" readonly>
+            <input type="text" class="form-control" placeholder="Password will be auto-generated" id="password_preview_field" readonly>
             <small class="text-muted">Password format: First 4 letters (uppercase) + '@' + current year</small>
           </div>
         </div>
@@ -338,6 +338,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const lastNameInput = document.getElementById('affiliate_last_name');
   const accountHolderInput = document.getElementById('affiliate_account_holder_name');
   const usernameField = document.getElementById('username_field');
+  const passwordPreviewField = document.getElementById('password_preview_field');
 
   function updateAccountHolderName() {
     if (accountHolderInput && accountHolderInput.value === '') {
@@ -362,9 +363,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  function generatePassword() {
+    const firstName = firstNameInput ? firstNameInput.value.replace(/[^a-zA-Z]/g, '') : '';
+    if (passwordPreviewField) {
+      if (firstName) {
+        const namePart = firstName.substring(0, 4).toUpperCase().padEnd(4, 'X');
+        const year = new Date().getFullYear();
+        passwordPreviewField.value = `${namePart}@${year}`;
+      } else {
+        passwordPreviewField.value = '';
+        passwordPreviewField.placeholder = 'Password will be auto-generated';
+      }
+    }
+  }
+
   if (firstNameInput) {
     firstNameInput.addEventListener('blur', updateAccountHolderName);
-    firstNameInput.addEventListener('input', generateUsername);
+    firstNameInput.addEventListener('input', function() {
+      generateUsername();
+      generatePassword();
+    });
   }
 
   if (lastNameInput) {

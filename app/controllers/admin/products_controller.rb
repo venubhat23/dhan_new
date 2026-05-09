@@ -439,7 +439,7 @@ class Admin::ProductsController < Admin::ApplicationController
   end
 
   def set_product
-    @product = Product.find(params[:id])
+    @product = Product.includes(:product_variants).find(params[:id])
   end
 
   def calculate_market_stats
