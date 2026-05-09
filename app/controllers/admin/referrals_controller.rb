@@ -161,7 +161,7 @@ class Admin::ReferralsController < ApplicationController
                                     .count
 
     @top_affiliate_referrers = Affiliate.joins(:referrals)
-                                      .group('sub_agents.id', 'sub_agents.name')
+                                      .group('affiliates.id', 'affiliates.name')
                                       .order('COUNT(referrals.id) DESC')
                                       .limit(10)
                                       .count

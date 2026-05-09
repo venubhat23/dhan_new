@@ -359,11 +359,11 @@
               <tbody>
                 <% @affiliate.referrals.order(created_at: :desc).limit(5).each do |referral| %>
                   <tr>
-                    <td><%= referral.customer_name || referral.referred_customer&.display_name || '-' %></td>
+                    <td><%= referral.referred_name || referral.customer&.display_name || '-' %></td>
                     <td>
                       <small>
-                        <%= referral.customer_email || referral.referred_customer&.email || '-' %><br>
-                        <%= referral.customer_mobile || referral.referred_customer&.mobile || '-' %>
+                        <%= referral.referred_email || referral.customer&.email || '-' %><br>
+                        <%= referral.referred_mobile || referral.customer&.mobile || '-' %>
                       </small>
                     </td>
                     <td><%= referral.created_at.strftime("%b %d, %Y") %></td>
