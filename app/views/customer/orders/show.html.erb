@@ -54,7 +54,18 @@
           </div>
           <div class="col-md-6">
             <strong class="text-muted d-block">Payment Method</strong>
-            <%= @booking.payment_method&.humanize || 'Cash on Delivery' %>
+            <div class="d-flex align-items-center gap-2 mt-1">
+              <span><%= @booking.payment_method_display %></span>
+              <% if @booking.payment_status == 'paid' %>
+                <span class="badge bg-success">
+                  <i class="bi bi-check-circle me-1"></i>Paid
+                </span>
+              <% elsif @booking.payment_status == 'partially_paid' %>
+                <span class="badge bg-warning text-dark">
+                  <i class="bi bi-clock me-1"></i>Partially Paid
+                </span>
+              <% end %>
+            </div>
           </div>
           <% if @booking.invoice_generated? %>
             <div class="col-md-6">
