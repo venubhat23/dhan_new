@@ -165,14 +165,26 @@
             </span>
           </div>
           <div class="col-12">
-            <div class="alert alert-info mb-0">
-              <i class="bi bi-info-circle me-2"></i>
-              <strong>Login URL:</strong>
-              <a href="<%= request.base_url %>/franchise/login" target="_blank" class="alert-link">
-                <%= request.base_url %>/franchise/login
-              </a>
+            <div class="alert alert-info mb-0 d-flex justify-content-between align-items-center">
+              <div>
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Login URL:</strong>
+                <a href="<%= request.base_url %>/franchise/login" target="_blank" class="alert-link">
+                  <%= request.base_url %>/franchise/login
+                </a>
+              </div>
+              <button class="btn btn-sm btn-outline-primary ms-2" onclick="copyToClipboard('<%= request.base_url %>/franchise/login')" title="Copy Login URL">
+                <i class="bi bi-copy"></i>
+              </button>
             </div>
           </div>
+          <% if @franchise.auto_generated_password.present? %>
+          <div class="col-12">
+            <button class="btn btn-success w-100" onclick="copyAllCredentials('<%= @franchise.user.email %>', '<%= @franchise.auto_generated_password %>', '<%= request.base_url %>/franchise/login')">
+              <i class="bi bi-clipboard-check me-2"></i>Copy All Credentials
+            </button>
+          </div>
+          <% end %>
         </div>
       </div>
       <% else %>
@@ -552,6 +564,11 @@
 </style>
 
 <script>
+function copyAllCredentials(email, password, loginUrl) {
+  const text = `Login URL: ${loginUrl}\nUsername: ${email}\nPassword: ${password}`;
+  copyToClipboard(text);
+}
+
 function copyToClipboard(text) {
   if (navigator.clipboard && window.isSecureContext) {
     // Use modern clipboard API

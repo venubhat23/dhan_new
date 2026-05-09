@@ -41,14 +41,17 @@ class Franchise::SessionsController < ApplicationController
           session[:user_id] = user.id
           redirect_to franchise_dashboard_path, notice: 'Successfully logged in!'
         else
+          @franchise = Franchise.new
           flash.now[:alert] = 'Your franchise account is inactive. Please contact administrator.'
           render :new
         end
       else
+        @franchise = Franchise.new
         flash.now[:alert] = 'Access denied. This login is for franchise users only.'
         render :new
       end
     else
+      @franchise = Franchise.new
       flash.now[:alert] = 'Invalid email or password'
       render :new
     end
