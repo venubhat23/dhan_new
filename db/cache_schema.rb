@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_09_130000) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_10_120001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -444,6 +444,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_09_130000) do
     t.datetime "updated_at", null: false
     t.index ["customer_id"], name: "index_device_tokens_on_customer_id"
     t.index ["delivery_person_id"], name: "index_device_tokens_on_delivery_person_id"
+  end
+
+  create_table "expenses", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.bigint "created_by_id", null: false
+    t.string "title", null: false
+    t.text "description"
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.string "category", null: false
+    t.date "expense_date", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category"], name: "index_expenses_on_category"
+    t.index ["created_by_id"], name: "index_expenses_on_created_by_id"
+    t.index ["store_id", "expense_date"], name: "index_expenses_on_store_id_and_expense_date"
+    t.index ["store_id"], name: "index_expenses_on_store_id"
   end
 
   create_table "franchises", force: :cascade do |t|
@@ -1081,6 +1097,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_09_130000) do
     t.string "gst_no"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "store_admin_user_id"
+    t.string "admin_plain_password"
+    t.integer "auto_transfer_threshold", default: 10
+    t.boolean "is_main_inventory", default: false
+    t.index ["store_admin_user_id"], name: "index_stores_on_store_admin_user_id"
   end
 
   create_table "sub_agents", force: :cascade do |t|
@@ -1252,7 +1273,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_09_130000) do
     t.string "original_password"
     t.string "authenticatable_type"
     t.bigint "authenticatable_id"
+    t.integer "assigned_store_id"
+    t.text "store_permissions"
+    t.datetime "last_store_access"
     t.index ["aadhar_no"], name: "index_users_on_aadhar_no", unique: true
+    t.index ["assigned_store_id"], name: "index_users_on_assigned_store_id"
     t.index ["authenticatable_type", "authenticatable_id"], name: "index_users_on_authenticatable"
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["deleted_at"], name: "index_users_on_deleted_at"
@@ -1377,6 +1402,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_09_130000) do
   add_foreign_key "delivery_rules", "products"
   add_foreign_key "device_tokens", "customers"
   add_foreign_key "device_tokens", "delivery_people"
+  add_foreign_key "expenses", "stores"
+  add_foreign_key "expenses", "users", column: "created_by_id"
   add_foreign_key "franchises", "users"
   add_foreign_key "invoice_items", "invoices"
   add_foreign_key "invoice_items", "milk_delivery_tasks"
