@@ -1702,6 +1702,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
   end
 
   def format_booking_data(booking, basic: false)
+    delivery_charge = booking.shipping_charges.to_f
     base_data = {
       id: booking.id,
       booking_number: booking.booking_number,
@@ -1712,6 +1713,8 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       subtotal: booking.subtotal.to_f,
       tax_amount: booking.tax_amount.to_f,
       discount_amount: booking.discount_amount&.to_f || 0,
+      delivery_charge: delivery_charge,
+      delivery_charge_label: delivery_charge > 0 ? "₹#{delivery_charge}" : 'Free',
       total_amount: booking.total_amount.to_f,
       customer_name: booking.customer_name,
       customer_email: booking.customer_email,

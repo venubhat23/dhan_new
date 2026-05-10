@@ -370,13 +370,21 @@
           </div>
         <% end %>
 
-        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
           <span class="text-muted">Tax (<%= tax_display %>%):</span>
           <span class="fw-medium">₹<%= number_with_delimiter(total_tax_amount.round(2)) %></span>
         </div>
 
+        <% delivery_charge = @booking.shipping_charges.to_f %>
+        <% if delivery_charge > 0 %>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted"><i class="bi bi-truck me-1"></i>Delivery Charge:</span>
+            <span class="fw-medium text-info">₹<%= number_with_delimiter(delivery_charge) %></span>
+          </div>
+        <% end %>
+
         <% if @booking.discount_amount.present? && @booking.discount_amount.to_f > 0 %>
-          <% original_total = total_base_amount + total_tax_amount %>
+          <% original_total = total_base_amount + total_tax_amount + delivery_charge %>
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="text-muted">Original Total:</span>
             <span class="fw-medium text-muted"><s>₹<%= number_with_delimiter(original_total.round(2)) %></s></span>
@@ -388,7 +396,7 @@
         <% else %>
           <div class="d-flex justify-content-between align-items-center mb-3">
             <span class="fw-bold fs-5">Total:</span>
-            <span class="fw-bold fs-5 text-primary">₹<%= number_with_delimiter((total_base_amount + total_tax_amount).round(2)) %></span>
+            <span class="fw-bold fs-5 text-primary">₹<%= number_with_delimiter((total_base_amount + total_tax_amount + delivery_charge).round(2)) %></span>
           </div>
         <% end %>
 
