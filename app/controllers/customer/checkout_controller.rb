@@ -195,6 +195,15 @@ class Customer::CheckoutController < Customer::BaseController
           @booking.calculate_totals
           @booking.save!
 
+          # Apply delivery charge from pincode — isolated to customer portal only
+          delivery_charge = params[:delivery_charge].to_f
+          if delivery_charge > 0
+            @booking.update_columns(
+              shipping_charges: delivery_charge,
+              total_amount: @booking.total_amount + delivery_charge
+            )
+          end
+
           Rails.logger.info "Booking created successfully: #{@booking.booking_number}"
           Rails.logger.info "Total amount: ₹#{@booking.total_amount}"
           Rails.logger.info "Payment method: #{params[:payment_method]}"
@@ -209,7 +218,7 @@ class Customer::CheckoutController < Customer::BaseController
               message: 'Order placed successfully! Pay on delivery.',
               booking_number: @booking.booking_number,
               booking_id: @booking.id,
-              total_amount: @booking.total_amount,
+              total_amount: @booking.reload.total_amount,
               payment_method: 'cod',
               redirect_url: customer_orders_path
             }

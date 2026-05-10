@@ -469,7 +469,18 @@
           <% end %>
         </li>
         <% end %>
-        <%# Stores link hidden %>
+        <!-- Stores -->
+        <li class="nav-item">
+          <%= link_to admin_stores_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/stores')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-purple">
+                <i class="bi bi-shop"></i>
+              </div>
+            </div>
+            <span class="nav-text">Stores</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
       </ul>
     </div>
 

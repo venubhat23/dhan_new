@@ -9,7 +9,7 @@ class Customer::ShopController < Customer::BaseController
     # Simple query without complex SQL to avoid syntax errors
     @products = Product.active
                       .includes(:category, :stock_batches, :product_reviews, :product_variants)
-                      .order(:display_order, :name)
+                      .by_stock_availability
 
     # Apply search filter if present
     if params[:search].present?
@@ -59,7 +59,7 @@ class Customer::ShopController < Customer::BaseController
     when 'newest'
       @products = @products.order(created_at: :desc)
     else
-      @products = @products.order(:display_order, :name)
+      @products = @products.by_stock_availability
     end
 
     @products = @products.page(params[:page]).per(12)
@@ -79,6 +79,33 @@ class Customer::ShopController < Customer::BaseController
     unless @booking
       flash[:error] = 'Order not found.'
       redirect_to customer_shop_path and return
+    end
+  end
+
+  def check_delivery_pincode
+    pincode = params[:pincode].to_s.strip
+    if pincode.blank? || !pincode.match?(/\A\d{6}\z/)
+      return render json: { success: false, message: 'Please enter a valid 6-digit pincode' }
+    end
+
+    charge_record = DeliveryCharge.for_pincode(pincode)
+    if charge_record
+      render json: {
+        success: true,
+        deliverable: true,
+        delivery_charge: charge_record.charge_amount.to_f,
+        area: charge_record.area,
+        message: charge_record.charge_amount.to_f > 0 ?
+          "Delivery charge: ₹#{charge_record.charge_amount}" :
+          'Free delivery available'
+      }
+    else
+      render json: {
+        success: true,
+        deliverable: false,
+        delivery_charge: 0,
+        message: 'Delivery not available to this pincode'
+      }
     end
   end
 

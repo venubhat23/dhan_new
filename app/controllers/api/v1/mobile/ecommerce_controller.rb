@@ -73,7 +73,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
         scope = scope.joins(:product_reviews).group('products.id')
                      .order('AVG(product_reviews.rating) DESC NULLS LAST')
       else
-        scope = scope.order(:name)
+        scope = scope.by_stock_availability
       end
 
       count_result = scope.count
@@ -652,7 +652,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
                              .group('products.id')
                              .order('AVG(product_reviews.rating) DESC NULLS LAST')
       else
-        @products = @products.order(:name)
+        @products = @products.by_stock_availability
       end
 
       count_result = @products.count

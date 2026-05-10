@@ -123,6 +123,7 @@ class Product < ApplicationRecord
   scope :by_category, ->(category_id) { where(category_id: category_id) }
   scope :search, ->(query) { where('name ILIKE ?', "%#{query}%") }
   scope :recent, -> { order(created_at: :desc) }
+  scope :by_stock_availability, -> { order(Arel.sql("CASE WHEN stock > 0 THEN 0 ELSE 1 END ASC, display_order ASC NULLS LAST, name ASC")) }
   scope :occasional, -> { where(is_occasional_product: true) }
   scope :regular, -> { where(is_occasional_product: false) }
   scope :occasional_active_now, -> { occasional.where('occasional_start_date <= ? AND occasional_end_date >= ?', Time.current, Time.current) }

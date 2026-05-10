@@ -213,6 +213,18 @@
                 </div>
               </div>
             </div>
+
+            <!-- Pincode Delivery Check (mandatory for home delivery) -->
+            <div class="mt-4 p-3 border rounded-3 bg-light" id="pincodeCheckSection">
+              <h6 class="mb-2"><i class="bi bi-geo-alt me-1"></i>Check Delivery Availability <span class="text-danger">*</span></h6>
+              <div class="input-group">
+                <input type="text" class="form-control" id="deliveryPincode" placeholder="Enter 6-digit pincode" maxlength="6" pattern="\d{6}" inputmode="numeric" oninput="pincodeValidated=false;validatedDeliveryCharge=0;document.getElementById('pincodeResult').style.display='none';">
+                <button class="btn btn-outline-primary" type="button" id="checkPincodeBtn" onclick="checkDeliveryPincode()">
+                  <i class="bi bi-search me-1"></i>Check
+                </button>
+              </div>
+              <div id="pincodeResult" class="mt-2" style="display:none;"></div>
+            </div>
           </div>
         </div>
 
@@ -336,6 +348,8 @@ function getCleanCart() {
 let selectedPaymentMethod = 'cashfree'; // Default to online payment
 let selectedDeliveryMethod = 'pickup';
 let orderTotal = 0;
+let validatedDeliveryCharge = 0;   // set after pincode check
+let pincodeValidated = false;      // must be true before checkout (home delivery only)
 
 // Initialize Cashfree SDK
 let cashfree;
@@ -658,6 +672,11 @@ function updateOrderSummary(cart) {
 
   orderItemsContainer.innerHTML = itemsHtml;
 
+  // Include delivery charge from pincode validation
+  const deliveryCharge = (selectedDeliveryMethod === 'home') ? validatedDeliveryCharge : 0;
+  const grandTotal = subtotal + deliveryCharge;
+  const deliveryDisplay = deliveryCharge > 0 ? `₹${deliveryCharge.toFixed(2)}` : 'Free';
+
   // Update summary with proper GST breakdown
   const summaryHtml = `
     <div class="d-flex justify-content-between">
@@ -670,12 +689,12 @@ function updateOrderSummary(cart) {
     </div>
     <div class="d-flex justify-content-between">
       <span>Delivery:</span>
-      <span id="orderDelivery">Free</span>
+      <span id="orderDelivery" class="${deliveryCharge > 0 ? 'text-dark fw-medium' : 'text-success'}">${deliveryDisplay}</span>
     </div>
     <hr>
     <div class="d-flex justify-content-between fs-5">
       <strong>Total:</strong>
-      <strong>₹${subtotal.toFixed(2)}</strong>
+      <strong>₹${grandTotal.toFixed(2)}</strong>
     </div>
   `;
 
@@ -696,7 +715,7 @@ function updateOrderSummary(cart) {
   // Add the new summary
   existingItemsDiv.insertAdjacentHTML('afterend', summaryHtml);
 
-  orderTotal = subtotal;
+  orderTotal = grandTotal;
 
   // Update pay button text
   updatePayButtonText();
@@ -780,6 +799,10 @@ function selectDeliveryMethod(method) {
   if (method === 'pickup') {
     pickupSection.style.display = 'block';
     homeDeliverySection.style.display = 'none';
+    // Reset pincode state when switching to pickup
+    pincodeValidated = false;
+    validatedDeliveryCharge = 0;
+    updateOrderSummary(getCleanCart());
   } else {
     pickupSection.style.display = 'none';
     homeDeliverySection.style.display = 'block';
@@ -831,6 +854,59 @@ function showAddAddressForm() {
 
 function hideAddAddressForm() {
   document.getElementById('newAddressForm').style.display = 'none';
+}
+
+async function checkDeliveryPincode() {
+  const input = document.getElementById('deliveryPincode');
+  const resultDiv = document.getElementById('pincodeResult');
+  const btn = document.getElementById('checkPincodeBtn');
+  const pincode = input.value.trim();
+
+  if (!/^\d{6}$/.test(pincode)) {
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle me-1"></i>Please enter a valid 6-digit pincode</span>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Checking...';
+  resultDiv.style.display = 'none';
+
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const response = await fetch(`/customer/shop/check_delivery_pincode?pincode=${pincode}`, {
+      headers: { 'X-CSRF-Token': csrfToken }
+    });
+    const data = await response.json();
+
+    resultDiv.style.display = 'block';
+
+    if (!data.deliverable) {
+      // Delivery not available — block checkout
+      resultDiv.innerHTML = `<div class="alert alert-danger py-2 mb-0"><i class="bi bi-x-circle me-1"></i><strong>Delivery not available</strong> to pincode ${pincode}. Please use a different address.</div>`;
+      validatedDeliveryCharge = 0;
+      pincodeValidated = false;
+    } else {
+      validatedDeliveryCharge = data.delivery_charge || 0;
+      pincodeValidated = true;
+
+      if (validatedDeliveryCharge > 0) {
+        resultDiv.innerHTML = `<div class="alert alert-success py-2 mb-0"><i class="bi bi-check-circle me-1"></i><strong>Delivery available</strong>${data.area ? ' to ' + data.area : ''}. Delivery charge: <strong>₹${validatedDeliveryCharge.toFixed(2)}</strong></div>`;
+      } else {
+        resultDiv.innerHTML = `<div class="alert alert-success py-2 mb-0"><i class="bi bi-check-circle me-1"></i><strong>Free delivery</strong>${data.area ? ' to ' + data.area : ''} available!</div>`;
+      }
+
+      // Refresh order summary to reflect delivery charge
+      updateOrderSummary(getCleanCart());
+    }
+  } catch (err) {
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Could not check pincode. Please try again.</span>';
+    pincodeValidated = false;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-search me-1"></i>Check';
+  }
 }
 
 function saveNewAddress() {
@@ -991,9 +1067,16 @@ async function processPayment() {
       restoreButtonState(payBtn, originalContent);
       return;
     }
+    if (!pincodeValidated) {
+      alert('Please enter your pincode and check delivery availability before proceeding.');
+      restoreButtonState(payBtn, originalContent);
+      return;
+    }
     deliveryInfo = {
       type: 'home',
-      address: selectedAddress.value
+      address: selectedAddress.value,
+      pincode: document.getElementById('deliveryPincode').value.trim(),
+      delivery_charge: validatedDeliveryCharge
     };
   }
 
@@ -1143,6 +1226,8 @@ async function processCashfreePayment(cart, deliveryInfo) {
         delivery_address: getSelectedDeliveryInfo(deliveryInfo),
         delivery_method: deliveryInfo.type,
         delivery_store: deliveryInfo.type === 'pickup' ? getSelectedPickupLocation(deliveryInfo.location) : null,
+        pincode: deliveryInfo.pincode || null,
+        delivery_charge: deliveryInfo.delivery_charge || 0,
         payment_method: 'cashfree'
       })
     });
@@ -1253,6 +1338,8 @@ async function processCODOrder(cart, deliveryInfo) {
         delivery_address: getSelectedDeliveryInfo(deliveryInfo),
         delivery_method: deliveryInfo.type,
         delivery_store: deliveryInfo.type === 'pickup' ? getSelectedPickupLocation(deliveryInfo.location) : null,
+        pincode: deliveryInfo.pincode || null,
+        delivery_charge: deliveryInfo.delivery_charge || 0,
         payment_method: 'cod'
       })
     });

@@ -79,7 +79,7 @@ class Franchise::BookingsController < Franchise::BaseController
                           (SELECT quantity_purchased FROM stock_batches sb2 WHERE sb2.product_id = products.id ORDER BY sb2.batch_date ASC, sb2.created_at ASC LIMIT 1) as initial_stock_value"
                        )
                        .group("products.id")
-                       .order(:name)
+                       .order(Arel.sql("CASE WHEN COALESCE(SUM(stock_batches.quantity_remaining), 0) > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
 
     @customers = Customer.select(:id, :first_name, :middle_name, :last_name, :email, :mobile)
                         .order(:first_name, :last_name)

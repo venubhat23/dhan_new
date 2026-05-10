@@ -1072,6 +1072,7 @@ Rails.application.routes.draw do
     get 'shop/product/:id', to: 'shop#product', as: :shop_product
     post 'shop/create_booking', to: 'shop#create_booking', as: :create_booking_shop
     post 'shop/cart_order', to: 'shop#cart_order', as: :cart_order_shop
+    get 'shop/check_delivery_pincode', to: 'shop#check_delivery_pincode', as: :check_delivery_pincode_shop
 
     # Offers
     get 'offers', to: 'offers#index'
