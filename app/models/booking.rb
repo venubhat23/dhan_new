@@ -66,8 +66,7 @@ class Booking < ApplicationRecord
 
   def bust_mobile_customer_cache
     cid = customer_id || customer&.id
-    return unless cid
-    Rails.cache.delete("mobile_api/customer_bookings/#{cid}")
+    MobileApiCache.bust_booking!(cid)
   end
 
   scope :recent, -> { order(created_at: :desc) }

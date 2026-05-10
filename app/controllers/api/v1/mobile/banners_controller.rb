@@ -3,16 +3,8 @@ class Api::V1::Mobile::BannersController < Api::V1::Mobile::BaseController
   # Returns active banners for mobile app
   def index
     begin
-      location = params[:location] || 'home'
-
-      unless Banner.display_locations.keys.include?(location)
-        return render_error("Invalid location. Valid options: #{Banner.display_locations.keys.join(', ')}")
-      end
-
-      banner_data = Rails.cache.fetch(MobileApiCache.banners_key(location), expires_in: MobileApiCache::BANNER_TTL) do
-        Banner.active.current.by_location(location).ordered
-              .includes([banner_image_attachment: :blob])
-              .map do |banner|
+      banner_data = Rails.cache.fetch(MobileApiCache.banners_key('all'), expires_in: MobileApiCache::BANNER_TTL) do
+        Banner.active.current.ordered.includes([banner_image_attachment: :blob]).map do |banner|
                 {
                   id: banner.id,
                   title: banner.title,

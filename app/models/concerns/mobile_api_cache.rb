@@ -38,8 +38,16 @@ module MobileApiCache
   end
 
   def self.bust_banners!(location = nil)
-    locations = location ? [location.to_s] : %w[home dashboard login sidebar]
+    # Always bust 'all' (used when no location param is given) plus the specific location
+    locations = location ? [location.to_s, 'all'] : %w[home dashboard login sidebar all]
     locations.each { |loc| Rails.cache.write("#{BANNER_V_KEY}/#{loc}", SecureRandom.hex(4)) }
+  end
+
+  def self.bust_booking!(customer_id = nil)
+    # Bust product/stock cache since booking reduces stock via update_column (bypasses callbacks)
+    bust_products!
+    # Bust customer-specific booking cache
+    Rails.cache.delete("mobile_api/customer_bookings/#{customer_id}") if customer_id
   end
 
   # --- Cache key helpers ---
