@@ -16,6 +16,8 @@ class ProductVariant < ApplicationRecord
   before_save :calculate_gst_fields
   before_save :ensure_single_default
 
+  after_create :create_initial_stock_records, if: -> { available_stock.present? && available_stock > 0 }
+
   def label
     "#{weight.to_f.to_s.sub(/\.0$/, '')} #{unit}"
   end
@@ -74,5 +76,39 @@ class ProductVariant < ApplicationRecord
     if is_default? && is_default_changed?
       product.product_variants.where.not(id: id).update_all(is_default: false)
     end
+  end
+
+  def create_initial_stock_records
+    variant_label = "#{weight.to_f.to_s.sub(/\.0$/, '')} #{unit}"
+
+    product.stock_movements.create!(
+      reference_type: 'adjustment',
+      reference_id: nil,
+      movement_type: 'added',
+      quantity: available_stock,
+      stock_before: 0,
+      stock_after: available_stock,
+      notes: "Initial stock for variant #{variant_label} when product was created"
+    )
+
+    default_vendor = Vendor.find_or_create_by(name: 'System Default') do |v|
+      v.email   = 'system@default.com'
+      v.phone   = '0000000000'
+      v.address = 'System Generated'
+      v.payment_type = 'Cash'
+      v.status  = true
+    end
+
+    product.stock_batches.create!(
+      vendor: default_vendor,
+      quantity_purchased: available_stock,
+      quantity_remaining: available_stock,
+      purchase_price: buying_price.presence || selling_price || 0,
+      selling_price: selling_price,
+      batch_date: Date.current,
+      status: 'active'
+    )
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error "Failed to create initial stock records for ProductVariant #{id}: #{e.message}"
   end
 end
