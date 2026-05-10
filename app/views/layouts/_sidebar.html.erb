@@ -481,6 +481,23 @@
             <div class="nav-indicator"></div>
           <% end %>
         </li>
+
+        <!-- Stock Transfers -->
+        <li class="nav-item">
+          <%= link_to admin_stock_transfers_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/stock_transfers')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-purple">
+                <i class="bi bi-arrow-left-right"></i>
+              </div>
+            </div>
+            <span class="nav-text">Stock Transfers</span>
+            <% pending = StockTransfer.pending.count rescue 0 %>
+            <% if pending > 0 %>
+              <span class="badge bg-warning ms-auto"><%= pending %></span>
+            <% end %>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
       </ul>
     </div>
 

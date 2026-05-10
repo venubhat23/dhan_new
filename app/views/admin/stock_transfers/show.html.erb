@@ -1,0 +1,85 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h5 class="fw-bold mb-0"><i class="bi bi-arrow-left-right me-2"></i>Transfer Request</h5>
+  <%= link_to admin_stock_transfers_path, class: "btn btn-outline-secondary btn-sm" do %>
+    <i class="bi bi-arrow-left me-1"></i>Back
+  <% end %>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-8">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-body px-4 py-3">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing:0.5px;">Product</div>
+            <div class="fw-bold"><%= @transfer.product&.name %></div>
+            <div class="text-muted small"><%= @transfer.product&.sku %></div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing:0.5px;">Quantity</div>
+            <div class="fw-bold fs-5"><%= @transfer.quantity %> <span class="text-muted fw-normal small"><%= @transfer.product&.unit_type %></span></div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing:0.5px;">From</div>
+            <div class="fw-semibold"><%= @transfer.from_store_name %></div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing:0.5px;">To</div>
+            <div class="fw-semibold"><%= @transfer.to_store&.name %></div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing:0.5px;">Status</div>
+            <% case @transfer.status
+               when 'pending' %><span class="badge bg-warning-subtle text-warning px-3 py-2">Pending</span>
+            <% when 'completed' %><span class="badge bg-success-subtle text-success px-3 py-2">Completed</span>
+            <% when 'rejected' %><span class="badge bg-danger-subtle text-danger px-3 py-2">Rejected</span>
+            <% end %>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing:0.5px;">Requested By</div>
+            <div class="fw-semibold"><%= @transfer.requested_by&.first_name %> <%= @transfer.requested_by&.last_name %></div>
+            <div class="text-muted small"><%= @transfer.created_at.strftime('%d %b %Y, %H:%M') %></div>
+          </div>
+          <% if @transfer.notes.present? %>
+          <div class="col-12 mb-3">
+            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing:0.5px;">Notes</div>
+            <div><%= @transfer.notes %></div>
+          </div>
+          <% end %>
+          <% if @transfer.rejection_reason.present? %>
+          <div class="col-12 mb-3">
+            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing:0.5px;">Rejection Reason</div>
+            <div class="text-danger"><%= @transfer.rejection_reason %></div>
+          </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <% if @transfer.status == 'pending' %>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-header bg-white py-3 px-4">
+        <h6 class="mb-0 fw-semibold">Actions</h6>
+      </div>
+      <div class="card-body px-4 py-3 d-grid gap-2">
+        <%= link_to approve_admin_stock_transfer_path(@transfer),
+            data: { turbo_method: :patch, turbo_confirm: "Approve this transfer?" },
+            class: "btn btn-success" do %>
+          <i class="bi bi-check-lg me-1"></i>Approve Transfer
+        <% end %>
+
+        <form action="<%= reject_admin_stock_transfer_path(@transfer) %>" method="post">
+          <%= hidden_field_tag :_method, 'patch' %>
+          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <input type="text" name="rejection_reason" class="form-control form-control-sm mb-2" placeholder="Rejection reason (optional)">
+          <button type="submit" class="btn btn-outline-danger w-100">
+            <i class="bi bi-x-lg me-1"></i>Reject Transfer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <% end %>
+</div>

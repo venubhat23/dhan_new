@@ -171,6 +171,24 @@
       <div class="icon-bg"><i class="bi bi-receipt"></i></div>
       <span class="nav-text">Expenses</span>
     <% end %>
+
+    <% if current_user.can_manage_inventory? %>
+      <div class="nav-section-title">
+        <i class="fas fa-boxes me-2"></i>Inventory
+      </div>
+
+      <%= link_to store_admin_inventory_index_path,
+          class: "nav-link-modern #{'active' if controller_name == 'inventory'}" do %>
+        <div class="icon-bg"><i class="bi bi-boxes"></i></div>
+        <span class="nav-text">Stock Levels</span>
+      <% end %>
+
+      <%= link_to store_admin_stock_transfers_path,
+          class: "nav-link-modern #{'active' if controller_name == 'stock_transfers'}" do %>
+        <div class="icon-bg"><i class="bi bi-arrow-left-right"></i></div>
+        <span class="nav-text">Stock Transfers</span>
+      <% end %>
+    <% end %>
   </div>
 
   <div class="sidebar-footer">

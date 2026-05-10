@@ -494,7 +494,7 @@
           </div>
           <%= link_to toggle_status_admin_store_path(@store),
               data: { turbo_method: :patch },
-              class: "btn btn-sm <%= @store.status ? 'btn-status-active' : 'btn-status-inactive' %>",
+              class: "btn btn-sm #{@store.status ? 'btn-status-active' : 'btn-status-inactive'}",
               style: "border-radius:8px; font-size:0.8rem;" do %>
             <% if @store.status %>
               <i class="bi bi-check-circle-fill me-1"></i>Active

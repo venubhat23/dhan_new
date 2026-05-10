@@ -1,0 +1,61 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h5 class="fw-bold mb-1"><i class="bi bi-arrow-left-right me-2" style="color:#1C7C54;"></i>Stock Transfers</h5>
+    <small class="text-muted"><%= @current_store.name %></small>
+  </div>
+  <%= link_to new_store_admin_stock_transfer_path, class: "btn btn-sm fw-semibold", style: "background:linear-gradient(135deg,#1C7C54,#10b981);color:white;border-radius:8px;" do %>
+    <i class="bi bi-plus-lg me-1"></i>Request Transfer
+  <% end %>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+  <div class="card-body p-0">
+    <% if @transfers.any? %>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead style="background:#f8fafc; font-size:0.8rem;">
+            <tr>
+              <th class="px-4 py-3">Product</th>
+              <th>From</th>
+              <th>Qty</th>
+              <th>Status</th>
+              <th>Requested By</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @transfers.each do |t| %>
+              <tr style="font-size:0.85rem;">
+                <td class="px-4 py-3"><strong><%= t.product&.name %></strong></td>
+                <td class="text-muted"><%= t.from_store_name %></td>
+                <td class="fw-semibold"><%= t.quantity %></td>
+                <td>
+                  <% case t.status
+                     when 'pending' %>
+                    <span class="badge bg-warning-subtle text-warning">Pending</span>
+                  <% when 'completed' %>
+                    <span class="badge bg-success-subtle text-success">Completed</span>
+                  <% when 'rejected' %>
+                    <span class="badge bg-danger-subtle text-danger">Rejected</span>
+                  <% else %>
+                    <span class="badge bg-secondary-subtle text-secondary"><%= t.status&.capitalize %></span>
+                  <% end %>
+                </td>
+                <td class="text-muted"><%= t.requested_by&.first_name %></td>
+                <td class="text-muted small"><%= t.created_at.strftime('%d %b %Y') %></td>
+              </tr>
+              <% if t.rejection_reason.present? %>
+                <tr><td colspan="6" class="px-4 py-1 text-danger small"><i class="bi bi-x-circle me-1"></i><%= t.rejection_reason %></td></tr>
+              <% end %>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="text-center py-5">
+        <i class="bi bi-arrow-left-right text-muted" style="font-size:2.5rem;"></i>
+        <p class="text-muted mt-2 mb-0">No transfer requests yet.</p>
+      </div>
+    <% end %>
+  </div>
+</div>

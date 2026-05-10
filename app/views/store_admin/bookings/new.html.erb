@@ -1,73 +1,277 @@
 <%- content_for :title, "New Booking - #{@current_store.name}" %>
 
+<style>
+.product-search-result { cursor:pointer; padding:0.6rem 1rem; border-bottom:1px solid #f0f0f0; transition:background 0.15s; }
+.product-search-result:hover { background:#f0fdf4; }
+.product-search-result:last-child { border-bottom:none; }
+.cart-item { background:#f9fafb; border-radius:10px; padding:0.75rem 1rem; margin-bottom:0.5rem; position:relative; }
+.cart-remove { position:absolute; top:0.5rem; right:0.5rem; background:none; border:none; color:#9ca3af; cursor:pointer; font-size:1.1rem; }
+.cart-remove:hover { color:#dc3545; }
+.store-stock-badge { font-size:0.7rem; padding:0.2rem 0.5rem; border-radius:20px; }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h4 class="mb-1">New Booking</h4>
-    <small class="text-muted">Create a new booking for <%= @current_store.name %></small>
+    <h5 class="mb-1 fw-bold">New Booking</h5>
+    <small class="text-muted">Create a booking for <%= @current_store.name %></small>
   </div>
-  <%= link_to store_admin_bookings_path, class: "btn btn-outline-secondary" do %>
-    <i class="bi bi-arrow-left me-2"></i>Back to Bookings
+  <%= link_to store_admin_bookings_path, class: "btn btn-outline-secondary btn-sm" do %>
+    <i class="bi bi-arrow-left me-1"></i>Back
   <% end %>
 </div>
 
-<div class="card border-0 shadow-sm">
-  <div class="card-body">
-    <%= form_with model: [:store_admin, @booking], local: true do |f| %>
-      <% if @booking.errors.any? %>
-        <div class="alert alert-danger">
-          <ul class="mb-0">
-            <% @booking.errors.full_messages.each do |msg| %>
-              <li><%= msg %></li>
-            <% end %>
-          </ul>
-        </div>
-      <% end %>
+<%= form_with model: [:store_admin, @booking], local: true, id: "booking_form" do |f| %>
+  <% if @booking.errors.any? %>
+    <div class="alert alert-danger mb-3">
+      <ul class="mb-0"><% @booking.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul>
+    </div>
+  <% end %>
 
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label">Customer</label>
-          <%= f.collection_select :customer_id,
-              (@customers || []),
-              :id,
-              :full_name,
-              { include_blank: "-- Walk-in Customer --" },
-              { class: "form-select" } %>
+  <div class="row g-4">
+    <!-- Left: Product selection -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm mb-4" style="border-radius:14px;">
+        <div class="card-header bg-white py-3 px-4">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-bag me-2 text-muted"></i>Add Products</h6>
         </div>
+        <div class="card-body px-4 py-3">
+          <!-- Product search -->
+          <div class="position-relative mb-3">
+            <input type="text" id="product_search" class="form-control" placeholder="Search product by name..." autocomplete="off">
+            <div id="search_results" class="card border shadow-sm position-absolute w-100" style="top:100%; z-index:1000; display:none; border-radius:10px; overflow:hidden; max-height:300px; overflow-y:auto;"></div>
+          </div>
 
-        <div class="col-md-3">
-          <label class="form-label">Payment Method</label>
-          <%= f.select :payment_method,
-              options_for_select([['Cash', 'cash'], ['UPI', 'upi'], ['Card', 'card'], ['Bank Transfer', 'bank_transfer']], @booking.payment_method),
-              { include_blank: "Select Method" },
-              { class: "form-select" } %>
+          <!-- Cart items -->
+          <div id="cart_items"></div>
+          <div id="cart_empty" class="text-center py-4 text-muted small">
+            <i class="bi bi-bag" style="font-size:2rem; opacity:0.3;"></i>
+            <p class="mt-2 mb-0">Search and add products above</p>
+          </div>
+
+          <!-- Hidden fields container -->
+          <div id="booking_items_fields"></div>
         </div>
+      </div>
 
-        <div class="col-md-3">
-          <label class="form-label">Payment Status</label>
-          <%= f.select :payment_status,
-              options_for_select([['Unpaid', 'unpaid'], ['Paid', 'paid']], @booking.payment_status || 'unpaid'),
-              {},
-              { class: "form-select" } %>
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Discount Amount</label>
-          <div class="input-group">
-            <span class="input-group-text">₹</span>
-            <%= f.number_field :discount_amount, value: @booking.discount_amount || 0, class: "form-control", step: 0.01, min: 0 %>
+      <!-- Totals -->
+      <div class="card border-0 shadow-sm" style="border-radius:14px;">
+        <div class="card-body px-4 py-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Subtotal</span>
+            <span id="subtotal_display" class="fw-semibold">₹0</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Discount</span>
+            <span class="text-danger" id="discount_display">- ₹0</span>
+          </div>
+          <hr class="my-2">
+          <div class="d-flex justify-content-between">
+            <span class="fw-bold">Total</span>
+            <span class="fw-bold fs-5" style="color:#1C7C54;" id="total_display">₹0</span>
           </div>
         </div>
+      </div>
+    </div>
 
-        <div class="col-12">
-          <label class="form-label">Notes</label>
-          <%= f.text_area :notes, class: "form-control", rows: 2, placeholder: "Optional notes..." %>
+    <!-- Right: Booking details -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm" style="border-radius:14px;">
+        <div class="card-header bg-white py-3 px-4">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-person me-2 text-muted"></i>Order Details</h6>
+        </div>
+        <div class="card-body px-4 py-3">
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Customer</label>
+            <%= f.collection_select :customer_id, (@customers || []), :id, :full_name,
+                { include_blank: "Walk-in Customer" }, { class: "form-select form-select-sm" } %>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Payment Method</label>
+            <%= f.select :payment_method,
+                options_for_select([['Cash', 'cash'], ['UPI', 'upi'], ['Card', 'card']], 'cash'),
+                {}, { class: "form-select form-select-sm" } %>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Payment Status</label>
+            <%= f.select :payment_status,
+                options_for_select([['Paid', 'paid'], ['Unpaid', 'unpaid']], 'paid'),
+                {}, { class: "form-select form-select-sm" } %>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Discount (₹)</label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">₹</span>
+              <%= f.number_field :discount_amount, value: 0, class: "form-control", step: 0.01, min: 0, id: "discount_input",
+                  oninput: "updateTotal()" %>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Notes</label>
+            <%= f.text_area :notes, class: "form-control form-control-sm", rows: 2, placeholder: "Optional notes..." %>
+          </div>
+
+          <div class="d-grid gap-2 mt-4">
+            <button type="submit" class="btn fw-semibold" id="submit_btn"
+                style="background:linear-gradient(135deg,#1C7C54,#10b981);color:white;border-radius:10px;">
+              <i class="bi bi-check-lg me-1"></i>Create Booking
+            </button>
+          </div>
         </div>
       </div>
-
-      <div class="mt-4 d-flex gap-2">
-        <%= f.submit "Create Booking", class: "btn btn-primary" %>
-        <%= link_to "Cancel", store_admin_bookings_path, class: "btn btn-outline-secondary" %>
-      </div>
-    <% end %>
+    </div>
   </div>
-</div>
+<% end %>
+
+<script>
+let cartItems = [];
+let itemIndex = 0;
+
+// Product search
+let searchTimeout;
+document.getElementById('product_search').addEventListener('input', function() {
+  clearTimeout(searchTimeout);
+  const q = this.value.trim();
+  if (q.length < 2) { document.getElementById('search_results').style.display = 'none'; return; }
+  searchTimeout = setTimeout(() => searchProducts(q), 300);
+});
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#product_search') && !e.target.closest('#search_results')) {
+    document.getElementById('search_results').style.display = 'none';
+  }
+});
+
+function searchProducts(q) {
+  fetch(`<%= search_products_store_admin_bookings_path %>.json?q=${encodeURIComponent(q)}`)
+    .then(r => r.json()).then(products => {
+      const box = document.getElementById('search_results');
+      if (!products.length) { box.innerHTML = '<div class="p-3 text-muted small text-center">No products found</div>'; box.style.display = 'block'; return; }
+      box.innerHTML = products.map(p => `
+        <div class="product-search-result" onclick="addToCart(${JSON.stringify(p).replace(/"/g, '&quot;')})">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <span class="fw-semibold small">${p.name}</span>
+              <span class="text-muted ms-2" style="font-size:0.75rem;">${p.sku}</span>
+            </div>
+            <div class="text-end">
+              <span class="fw-bold" style="color:#1C7C54;">₹${p.price}</span>
+              <span class="store-stock-badge ms-2 ${p.store_stock > 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">
+                ${p.store_stock > 0 ? p.store_stock + ' in store' : 'No store stock'}
+              </span>
+            </div>
+          </div>
+          ${p.has_variants ? '<div class="text-muted mt-1" style="font-size:0.72rem;">Has variants — will prompt for selection</div>' : ''}
+        </div>`).join('');
+      box.style.display = 'block';
+    });
+}
+
+function addToCart(product) {
+  document.getElementById('search_results').style.display = 'none';
+  document.getElementById('product_search').value = '';
+
+  if (product.has_variants && product.variants.length > 0) {
+    const variantHtml = product.variants.map(v =>
+      `<option value="${v.id}" data-price="${v.price}">${v.label} — ₹${v.price} (stock: ${v.stock})</option>`
+    ).join('');
+    const variantId = prompt(`Select variant for ${product.name}:\n` + product.variants.map((v,i) => `${i+1}. ${v.label} — ₹${v.price}`).join('\n') + '\n\nEnter number:');
+    if (!variantId) return;
+    const idx = parseInt(variantId) - 1;
+    if (idx < 0 || idx >= product.variants.length) return;
+    const variant = product.variants[idx];
+    addCartItem({ id: product.id, name: `${product.name} (${variant.label})`, price: variant.price, variant_id: variant.id, store_stock: variant.stock });
+  } else {
+    addCartItem({ id: product.id, name: product.name, price: product.price, variant_id: null, store_stock: product.store_stock });
+  }
+}
+
+function addCartItem(item) {
+  const idx = itemIndex++;
+  cartItems.push({ ...item, index: idx, quantity: 1 });
+  renderCart();
+}
+
+function removeCartItem(idx) {
+  cartItems = cartItems.filter(i => i.index !== idx);
+  renderCart();
+}
+
+function updateQty(idx, qty) {
+  const item = cartItems.find(i => i.index === idx);
+  if (item) { item.quantity = parseFloat(qty) || 1; }
+  updateTotal();
+  renderHiddenFields();
+}
+
+function renderCart() {
+  const container = document.getElementById('cart_items');
+  const empty = document.getElementById('cart_empty');
+  const fields = document.getElementById('booking_items_fields');
+
+  if (!cartItems.length) { container.innerHTML = ''; empty.style.display = 'block'; fields.innerHTML = ''; updateTotal(); return; }
+  empty.style.display = 'none';
+
+  container.innerHTML = cartItems.map(item => `
+    <div class="cart-item">
+      <button class="cart-remove" type="button" onclick="removeCartItem(${item.index})"><i class="bi bi-x"></i></button>
+      <div class="d-flex align-items-center gap-3">
+        <div class="flex-grow-1">
+          <div class="fw-semibold small">${item.name}</div>
+          <div class="text-muted" style="font-size:0.75rem;">
+            ₹${item.price} each
+            ${item.store_stock > 0 ? `<span class="store-stock-badge bg-success-subtle text-success ms-1">${item.store_stock} in store</span>` : '<span class="store-stock-badge bg-danger-subtle text-danger ms-1">No store stock</span>'}
+          </div>
+        </div>
+        <div style="width:90px;">
+          <input type="number" value="${item.quantity}" min="0.01" step="0.01"
+                 class="form-control form-control-sm text-center"
+                 onchange="updateQty(${item.index}, this.value)">
+        </div>
+        <div style="width:80px; text-align:right;" class="fw-semibold" id="item_total_${item.index}">
+          ₹${(item.price * item.quantity).toFixed(0)}
+        </div>
+      </div>
+    </div>`).join('');
+
+  renderHiddenFields();
+  updateTotal();
+}
+
+function renderHiddenFields() {
+  const fields = document.getElementById('booking_items_fields');
+  fields.innerHTML = cartItems.map((item, i) => `
+    <input type="hidden" name="booking[booking_items_attributes][${i}][product_id]" value="${item.id}">
+    <input type="hidden" name="booking[booking_items_attributes][${i}][quantity]" value="${item.quantity}">
+    <input type="hidden" name="booking[booking_items_attributes][${i}][price]" value="${item.price}">
+    ${item.variant_id ? `<input type="hidden" name="booking[booking_items_attributes][${i}][product_variant_id]" value="${item.variant_id}">` : ''}
+  `).join('');
+}
+
+function updateTotal() {
+  const subtotal = cartItems.reduce((s, i) => s + (i.price * i.quantity), 0);
+  const discount = parseFloat(document.getElementById('discount_input')?.value || 0);
+  const total = Math.max(0, subtotal - discount);
+
+  document.getElementById('subtotal_display').textContent = '₹' + subtotal.toFixed(0);
+  document.getElementById('discount_display').textContent = '- ₹' + discount.toFixed(0);
+  document.getElementById('total_display').textContent = '₹' + total.toFixed(0);
+
+  // update individual totals
+  cartItems.forEach(item => {
+    const el = document.getElementById('item_total_' + item.index);
+    if (el) el.textContent = '₹' + (item.price * item.quantity).toFixed(0);
+  });
+}
+
+// Prevent submit if no items
+document.getElementById('booking_form').addEventListener('submit', function(e) {
+  if (!cartItems.length) {
+    e.preventDefault();
+    alert('Please add at least one product to the booking.');
+  }
+});
+</script>

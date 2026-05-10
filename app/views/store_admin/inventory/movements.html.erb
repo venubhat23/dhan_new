@@ -1,0 +1,85 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h5 class="fw-bold mb-1"><i class="bi bi-clock-history me-2" style="color:#1C7C54;"></i>Stock Movements</h5>
+    <small class="text-muted"><%= @current_store.name %></small>
+  </div>
+  <%= link_to store_admin_inventory_index_path, class: "btn btn-outline-secondary btn-sm" do %>
+    <i class="bi bi-arrow-left me-1"></i>Back to Inventory
+  <% end %>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
+  <div class="card-body py-3 px-4">
+    <%= form_tag movements_store_admin_inventory_index_path, method: :get, class: "row g-2 align-items-end" do %>
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold">Product</label>
+        <%= select_tag :product_id,
+            options_from_collection_for_select(@products_in_store, :id, :name, params[:product_id]),
+            include_blank: "All Products", class: "form-select form-select-sm" %>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold">From Date</label>
+        <input type="date" name="date_from" value="<%= params[:date_from] %>" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold">To Date</label>
+        <input type="date" name="date_to" value="<%= params[:date_to] %>" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-sm w-100" style="background:#1C7C54;color:white;border-radius:8px;">Filter</button>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+  <div class="card-body p-0">
+    <% if @movements.any? %>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead style="background:#f8fafc; font-size:0.8rem;">
+            <tr>
+              <th class="px-4 py-3">Product</th>
+              <th>Type</th>
+              <th>Qty Change</th>
+              <th>Stock Before</th>
+              <th>Stock After</th>
+              <th>Reference</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @movements.each do |m| %>
+              <tr style="font-size:0.85rem;">
+                <td class="px-4 py-3"><strong><%= m.product&.name || '—' %></strong></td>
+                <td>
+                  <% case m.movement_type
+                     when 'added' %>
+                    <span class="badge bg-success-subtle text-success">Added</span>
+                  <% when 'consumed' %>
+                    <span class="badge bg-danger-subtle text-danger">Consumed</span>
+                  <% else %>
+                    <span class="badge bg-secondary-subtle text-secondary"><%= m.movement_type&.capitalize %></span>
+                  <% end %>
+                </td>
+                <td class="<%= m.movement_type == 'consumed' ? 'text-danger' : 'text-success' %> fw-semibold">
+                  <%= m.movement_type == 'consumed' ? '-' : '+' %><%= m.quantity %>
+                </td>
+                <td><%= m.stock_before %></td>
+                <td><%= m.stock_after %></td>
+                <td class="text-muted small"><%= m.reference_type&.humanize %></td>
+                <td class="text-muted small"><%= m.created_at.strftime('%d %b, %H:%M') %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="text-center py-5">
+        <i class="bi bi-clock-history text-muted" style="font-size:2.5rem;"></i>
+        <p class="text-muted mt-2 mb-0">No stock movements found.</p>
+      </div>
+    <% end %>
+  </div>
+</div>

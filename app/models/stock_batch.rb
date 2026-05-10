@@ -2,6 +2,7 @@ class StockBatch < ApplicationRecord
   belongs_to :product
   belongs_to :vendor
   belongs_to :vendor_purchase, optional: true
+  belongs_to :store, optional: true
   has_many :sale_items, dependent: :restrict_with_error
 
   validates :quantity_purchased, presence: true, numericality: { greater_than: 0 }
@@ -14,6 +15,9 @@ class StockBatch < ApplicationRecord
   scope :exhausted, -> { where(status: 'exhausted') }
   scope :expired, -> { where(status: 'expired') }
   scope :by_fifo, -> { order(:batch_date, :created_at) }
+  scope :for_store, ->(store_id) { where(store_id: store_id) }
+  scope :central, -> { where(store_id: nil) }
+  scope :for_store_or_central, ->(store_id) { where(store_id: [store_id, nil]) }
 
   before_save :update_status
   after_update :mark_as_exhausted_if_needed
@@ -81,14 +85,17 @@ class StockBatch < ApplicationRecord
     end
   end
 
-  def self.available_for_product(product_id)
-    where(product_id: product_id)
-      .active
-      .by_fifo
+  def self.available_for_product(product_id, store_id: nil)
+    scope = where(product_id: product_id).active.by_fifo
+    store_id.present? ? scope.where(store_id: store_id) : scope.where(store_id: nil)
   end
 
-  def self.fifo_allocation(product_id, requested_quantity)
-    batches = available_for_product(product_id)
+  def self.total_available(product_id, store_id: nil)
+    available_for_product(product_id, store_id: store_id).sum(:quantity_remaining)
+  end
+
+  def self.fifo_allocation(product_id, requested_quantity, store_id: nil)
+    batches = available_for_product(product_id, store_id: store_id)
     allocation = []
     remaining_needed = requested_quantity
 

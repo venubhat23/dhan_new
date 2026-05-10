@@ -7,6 +7,9 @@ class Store < ApplicationRecord
   belongs_to :store_admin_user, class_name: 'User', foreign_key: 'store_admin_user_id', optional: true
   has_many :store_staff, class_name: 'User', foreign_key: 'assigned_store_id', dependent: :nullify
   has_many :expenses, dependent: :destroy
+  has_many :stock_batches, foreign_key: :store_id, dependent: :nullify
+  has_many :stock_transfers_received, class_name: 'StockTransfer', foreign_key: :to_store_id, dependent: :destroy
+  has_many :stock_transfers_sent, class_name: 'StockTransfer', foreign_key: :from_store_id, dependent: :destroy
 
   # Virtual attributes for store creation form
   attr_accessor :admin_username, :admin_email, :admin_password, :admin_first_name, :admin_last_name, :admin_mobile
@@ -79,29 +82,55 @@ class Store < ApplicationRecord
   end
 
   def store_inventory_summary
+    batches = stock_batches.where(status: 'active').where('quantity_remaining > 0')
+    products_with_stock = batches.select(:product_id).distinct.count
+    total_value = batches.sum('quantity_remaining * selling_price')
+    threshold = auto_transfer_threshold || 10
+    low_stock = batches.group(:product_id)
+                       .having('SUM(quantity_remaining) <= ?', threshold)
+                       .count.size
     {
-      total_products: 0,
-      total_stock_value: 0,
-      low_stock_count: 0,
-      pending_incoming_transfers: 0,
-      pending_outgoing_transfers: 0,
+      total_products: products_with_stock,
+      total_stock_value: total_value.to_f.round(2),
+      low_stock_count: low_stock,
+      pending_incoming_transfers: stock_transfers_received.where(status: 'pending').count,
+      pending_outgoing_transfers: stock_transfers_sent.where(status: 'pending').count,
       recent_bookings_count: bookings.where(created_at: 1.week.ago..Time.current).count
     }
   end
 
-  def low_stock_products(_threshold = nil)
-    []
+  def low_stock_products(threshold = nil)
+    threshold ||= auto_transfer_threshold || 10
+    product_ids = stock_batches.where(status: 'active')
+                               .group(:product_id)
+                               .having('SUM(quantity_remaining) <= ?', threshold)
+                               .pluck(:product_id)
+    Product.where(id: product_ids)
   end
 
   def store_products_with_inventory
-    Product.none
+    product_ids = stock_batches.where(status: 'active')
+                               .where('quantity_remaining > 0')
+                               .pluck(:product_id).uniq
+    Product.where(id: product_ids).active
+  end
+
+  def available_stock_for(product_id)
+    stock_batches.where(product_id: product_id, status: 'active')
+                 .sum(:quantity_remaining)
+  end
+
+  def self.main_inventory
+    find_by(is_main_inventory: true)
   end
 
   def create_store_admin_user!
     sidebar_permissions = {
       'dashboard' => { 'view' => true },
       'bookings' => { 'view' => true, 'create' => true, 'update' => true },
-      'expenses' => { 'view' => true, 'create' => true, 'update' => true, 'delete' => true }
+      'expenses' => { 'view' => true, 'create' => true, 'update' => true, 'delete' => true },
+      'inventory' => { 'view' => true, 'create' => true, 'update' => true },
+      'stock_transfers' => { 'view' => true, 'create' => true }
     }
 
     user = User.create!(
@@ -115,10 +144,10 @@ class Store < ApplicationRecord
       assigned_store_id: id,
       sidebar_permissions: sidebar_permissions.to_json,
       store_permissions: {
-        'can_manage_inventory' => false,
+        'can_manage_inventory' => true,
         'can_create_bookings' => true,
         'can_view_reports' => true,
-        'can_request_transfers' => false
+        'can_request_transfers' => true
       }.to_json,
       status: true,
       is_active: true,

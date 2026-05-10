@@ -7,8 +7,20 @@ Rails.application.routes.draw do
         patch :update_status
         patch :cancel
       end
+      collection do
+        get :search_products
+      end
     end
     resources :expenses
+    resources :inventory, only: [:index, :new, :create] do
+      collection do
+        get :movements
+        get :search_products
+        get :adjust
+        patch :update_adjustment
+      end
+    end
+    resources :stock_transfers, only: [:index, :new, :create]
   end
 
   # Vendor invoice public view
@@ -332,6 +344,14 @@ Rails.application.routes.draw do
         get :assign_admin
         patch :update_admin
         get :view_as_store_admin
+      end
+    end
+
+    # Stock transfer management (admin approves/rejects)
+    resources :stock_transfers, only: [:index, :show] do
+      member do
+        patch :approve
+        patch :reject
       end
     end
 

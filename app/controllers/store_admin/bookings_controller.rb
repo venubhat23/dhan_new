@@ -31,6 +31,27 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
   def new
     @booking = @current_store.bookings.build
     @customers = Customer.order(:first_name) rescue []
+    @store_products = @current_store.store_products_with_inventory.includes(:product_variants).by_stock_availability
+  end
+
+  def search_products
+    q = params[:q].to_s.strip
+    products = Product.active.where('name ILIKE ?', "%#{q}%").limit(15)
+    render json: products.map { |p|
+      store_stock = @current_store.available_stock_for(p.id)
+      {
+        id: p.id,
+        name: p.name,
+        sku: p.sku,
+        price: p.price.to_f,
+        store_stock: store_stock.to_f,
+        unit_type: p.unit_type,
+        has_variants: p.has_multiple_quantities?,
+        variants: p.has_multiple_quantities? ? p.product_variants.order(:display_order, :weight).map { |v|
+          { id: v.id, label: "#{v.weight} #{v.unit}", price: v.selling_price.to_f, stock: v.available_stock.to_f }
+        } : []
+      }
+    }
   end
 
   def create
@@ -85,7 +106,7 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
   def booking_params
     params.require(:booking).permit(
       :customer_id, :notes, :payment_method, :payment_status, :discount_amount, :status,
-      booking_items_attributes: [:id, :product_id, :quantity, :price, :_destroy]
+      booking_items_attributes: [:id, :product_id, :product_variant_id, :quantity, :price, :_destroy]
     )
   end
 

@@ -2,26 +2,26 @@ class InventoryService
   class InsufficientStockError < StandardError; end
   class AllocationError < StandardError; end
 
-  def self.allocate_stock(product_id, requested_quantity)
-    new.allocate_stock(product_id, requested_quantity)
+  def self.allocate_stock(product_id, requested_quantity, store_id: nil)
+    new.allocate_stock(product_id, requested_quantity, store_id: store_id)
   end
 
   def self.reduce_stock(allocations)
     new.reduce_stock(allocations)
   end
 
-  def self.check_availability(product_id, requested_quantity)
-    new.check_availability(product_id, requested_quantity)
+  def self.check_availability(product_id, requested_quantity, store_id: nil)
+    new.check_availability(product_id, requested_quantity, store_id: store_id)
   end
 
-  def allocate_stock(product_id, requested_quantity)
-    product = Product.find(product_id)
+  def allocate_stock(product_id, requested_quantity, store_id: nil)
+    Product.find(product_id)
 
-    # Get FIFO allocation from the StockBatch model
-    allocation_result = StockBatch.fifo_allocation(product_id, requested_quantity)
+    allocation_result = StockBatch.fifo_allocation(product_id, requested_quantity, store_id: store_id)
 
     unless allocation_result[:fulfilled]
-      raise InsufficientStockError, "Insufficient stock. Available: #{total_available_stock(product_id)}, Requested: #{requested_quantity}, Shortage: #{allocation_result[:shortage]}"
+      available = total_available_stock(product_id, store_id: store_id)
+      raise InsufficientStockError, "Insufficient stock. Available: #{available}, Requested: #{requested_quantity}, Shortage: #{allocation_result[:shortage]}"
     end
 
     allocation_result[:allocation]
@@ -53,8 +53,8 @@ class InventoryService
     raise AllocationError, "Failed to reduce stock: #{e.message}"
   end
 
-  def check_availability(product_id, requested_quantity)
-    available_stock = total_available_stock(product_id)
+  def check_availability(product_id, requested_quantity, store_id: nil)
+    available_stock = total_available_stock(product_id, store_id: store_id)
 
     {
       available: available_stock >= requested_quantity,
@@ -82,14 +82,12 @@ class InventoryService
     sale_items
   end
 
-  # Helper method to get FIFO batches for a product
-  def get_fifo_batches(product_id)
-    StockBatch.available_for_product(product_id)
+  def get_fifo_batches(product_id, store_id: nil)
+    StockBatch.available_for_product(product_id, store_id: store_id)
   end
 
-  # Get total available stock for a product
-  def total_available_stock(product_id)
-    get_fifo_batches(product_id).sum(:quantity_remaining)
+  def total_available_stock(product_id, store_id: nil)
+    get_fifo_batches(product_id, store_id: store_id).sum(:quantity_remaining)
   end
 
   # Get stock summary for a product

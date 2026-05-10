@@ -1,0 +1,110 @@
+<style>
+.inv-hero { background: linear-gradient(135deg,#1C7C54,#10b981); border-radius:14px; padding:1.5rem 2rem; color:white; margin-bottom:1.5rem; }
+.inv-stat { background:white; border-radius:12px; padding:1rem 1.25rem; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.stock-badge { font-size:0.75rem; padding:0.25rem 0.6rem; border-radius:20px; font-weight:600; }
+.stock-ok { background:#d1fae5; color:#065f46; }
+.stock-low { background:#fef3c7; color:#92400e; }
+.stock-zero { background:#fee2e2; color:#991b1b; }
+.product-row { border-bottom:1px solid #f3f4f6; padding:0.85rem 0; }
+.product-row:last-child { border-bottom:none; }
+</style>
+
+<div class="inv-hero">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div>
+      <h4 class="fw-bold mb-1"><i class="bi bi-boxes me-2"></i>Inventory</h4>
+      <p class="mb-0 opacity-75 small"><%= @current_store.name %> — Stock levels</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <%= link_to new_store_admin_inventory_path, class: "btn btn-light btn-sm fw-semibold", style: "color:#1C7C54;" do %>
+        <i class="bi bi-plus-lg me-1"></i>Receive Stock
+      <% end %>
+      <%= link_to movements_store_admin_inventory_index_path, class: "btn btn-sm", style: "background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);" do %>
+        <i class="bi bi-clock-history me-1"></i>Movements
+      <% end %>
+      <%= link_to new_store_admin_stock_transfer_path, class: "btn btn-sm", style: "background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);" do %>
+        <i class="bi bi-arrow-left-right me-1"></i>Request Transfer
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="inv-stat text-center">
+      <div class="fw-bold fs-4 text-primary"><%= @summary[:total_products] %></div>
+      <div class="text-muted small">Products in Stock</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="inv-stat text-center">
+      <div class="fw-bold fs-4 text-success">₹<%= number_with_delimiter(@summary[:total_stock_value].to_i) %></div>
+      <div class="text-muted small">Stock Value</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="inv-stat text-center">
+      <div class="fw-bold fs-4 text-warning"><%= @summary[:low_stock_count] %></div>
+      <div class="text-muted small">Low Stock Items</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="inv-stat text-center">
+      <div class="fw-bold fs-4 text-info"><%= @summary[:pending_incoming_transfers] %></div>
+      <div class="text-muted small">Pending Transfers</div>
+    </div>
+  </div>
+</div>
+
+<!-- Inventory Table -->
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+  <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+    <h6 class="mb-0 fw-semibold"><i class="bi bi-list-ul me-2 text-muted"></i>Product Stock</h6>
+    <span class="badge bg-secondary-subtle text-secondary"><%= @inventory.count %> products</span>
+  </div>
+  <div class="card-body px-4 py-2">
+    <% if @inventory.any? %>
+      <% @inventory.each do |product, batches| %>
+        <% total_qty = batches.sum(&:quantity_remaining) %>
+        <% is_low = @low_stock_product_ids.include?(product.id) %>
+        <div class="product-row d-flex align-items-center gap-3">
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2">
+              <span class="fw-semibold small"><%= product.name %></span>
+              <% if is_low %>
+                <span class="stock-badge stock-low"><i class="bi bi-exclamation-triangle me-1"></i>Low Stock</span>
+              <% end %>
+            </div>
+            <div class="text-muted" style="font-size:0.78rem;"><%= product.sku %> &bull; <%= batches.count %> batch<%= batches.count == 1 ? '' : 'es' %></div>
+          </div>
+          <div class="text-end">
+            <div class="fw-bold" style="font-size:1.1rem; color:<%= total_qty > 0 ? '#1C7C54' : '#dc3545' %>;">
+              <%= total_qty %> <span class="text-muted fw-normal" style="font-size:0.8rem;"><%= product.unit_type %></span>
+            </div>
+            <div class="text-muted" style="font-size:0.75rem;">₹<%= number_with_precision(batches.first&.selling_price || 0, precision: 0) %></div>
+          </div>
+          <div class="d-flex gap-1">
+            <%= link_to adjust_store_admin_inventory_index_path(product_id: product.id),
+                class: "btn btn-sm btn-outline-secondary", style: "border-radius:8px; font-size:0.75rem;" do %>
+              <i class="bi bi-pencil"></i>
+            <% end %>
+            <%= link_to new_store_admin_inventory_path(product_id: product.id),
+                class: "btn btn-sm", style: "border-radius:8px; font-size:0.75rem; background:#d1fae5; color:#065f46; border:none;" do %>
+              <i class="bi bi-plus"></i>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="text-center py-5">
+        <i class="bi bi-box-seam text-muted" style="font-size:3rem;"></i>
+        <h6 class="mt-3 fw-semibold">No stock in this store yet</h6>
+        <p class="text-muted small mb-3">Receive stock or request a transfer from central inventory.</p>
+        <%= link_to new_store_admin_inventory_path, class: "btn btn-sm", style: "background:linear-gradient(135deg,#1C7C54,#10b981);color:white;border-radius:8px;" do %>
+          <i class="bi bi-plus-lg me-1"></i>Receive Stock
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

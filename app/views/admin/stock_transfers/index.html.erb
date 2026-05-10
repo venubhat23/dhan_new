@@ -1,0 +1,97 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1 fw-bold"><i class="bi bi-arrow-left-right me-2"></i>Stock Transfer Requests</h4>
+    <small class="text-muted"><%= @pending_count %> pending approval</small>
+  </div>
+</div>
+
+<!-- Status Tabs -->
+<ul class="nav nav-pills mb-4 gap-1">
+  <%= link_to admin_stock_transfers_path, class: "nav-link #{'active' if params[:status].blank?}", style: "border-radius:8px;" do %>All<% end %>
+  <%= link_to admin_stock_transfers_path(status: 'pending'), class: "nav-link #{'active' if params[:status] == 'pending'}", style: "border-radius:8px;" do %>Pending <span class="badge bg-warning ms-1"><%= @pending_count %></span><% end %>
+  <%= link_to admin_stock_transfers_path(status: 'completed'), class: "nav-link #{'active' if params[:status] == 'completed'}", style: "border-radius:8px;" do %>Completed<% end %>
+  <%= link_to admin_stock_transfers_path(status: 'rejected'), class: "nav-link #{'active' if params[:status] == 'rejected'}", style: "border-radius:8px;" do %>Rejected<% end %>
+</ul>
+
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+  <div class="card-body p-0">
+    <% if @transfers.any? %>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead style="background:#f8fafc; font-size:0.8rem;">
+            <tr>
+              <th class="px-4 py-3">Product</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Qty</th>
+              <th>Status</th>
+              <th>Requested By</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @transfers.each do |t| %>
+              <tr style="font-size:0.85rem;">
+                <td class="px-4 py-3"><strong><%= t.product&.name %></strong></td>
+                <td class="text-muted"><%= t.from_store_name %></td>
+                <td class="text-muted"><%= t.to_store&.name %></td>
+                <td class="fw-semibold"><%= t.quantity %></td>
+                <td>
+                  <% case t.status
+                     when 'pending' %>
+                    <span class="badge bg-warning-subtle text-warning">Pending</span>
+                  <% when 'completed' %>
+                    <span class="badge bg-success-subtle text-success">Completed</span>
+                  <% when 'rejected' %>
+                    <span class="badge bg-danger-subtle text-danger">Rejected</span>
+                  <% else %>
+                    <span class="badge bg-secondary-subtle text-secondary"><%= t.status&.capitalize %></span>
+                  <% end %>
+                </td>
+                <td class="text-muted"><%= t.requested_by&.first_name %> <%= t.requested_by&.last_name %></td>
+                <td class="text-muted small"><%= t.created_at.strftime('%d %b %Y') %></td>
+                <td>
+                  <% if t.status == 'pending' %>
+                    <div class="d-flex gap-1">
+                      <%= link_to approve_admin_stock_transfer_path(t), data: { turbo_method: :patch, turbo_confirm: "Approve transfer of #{t.quantity} #{t.product&.name}?" },
+                          class: "btn btn-sm btn-success", style: "border-radius:6px; font-size:0.75rem;" do %>
+                        <i class="bi bi-check-lg"></i> Approve
+                      <% end %>
+                      <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius:6px; font-size:0.75rem;"
+                              onclick="rejectTransfer(<%= t.id %>)">
+                        <i class="bi bi-x-lg"></i> Reject
+                      </button>
+                    </div>
+                    <!-- Reject form (hidden) -->
+                    <form id="reject_form_<%= t.id %>" action="<%= reject_admin_stock_transfer_path(t) %>" method="post" style="display:none; margin-top:0.5rem;">
+                      <%= hidden_field_tag :_method, 'patch' %>
+                      <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+                      <input type="text" name="rejection_reason" placeholder="Reason (optional)" class="form-control form-control-sm mb-1">
+                      <button type="submit" class="btn btn-danger btn-sm" style="border-radius:6px; font-size:0.75rem;">Confirm Reject</button>
+                    </form>
+                  <% end %>
+                </td>
+              </tr>
+              <% if t.notes.present? %>
+                <tr><td colspan="8" class="px-4 py-1 text-muted small"><i class="bi bi-chat me-1"></i><%= t.notes %></td></tr>
+              <% end %>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="text-center py-5">
+        <i class="bi bi-arrow-left-right text-muted" style="font-size:2.5rem;"></i>
+        <p class="text-muted mt-2 mb-0">No transfer requests found.</p>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+function rejectTransfer(id) {
+  const form = document.getElementById('reject_form_' + id);
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+</script>

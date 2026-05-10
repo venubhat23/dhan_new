@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_10_120001) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_11_100002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1059,7 +1059,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_10_120001) do
     t.string "status"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "store_id"
+    t.index ["product_id", "store_id"], name: "index_stock_batches_on_product_id_and_store_id"
     t.index ["product_id"], name: "index_stock_batches_on_product_id"
+    t.index ["store_id"], name: "index_stock_batches_on_store_id"
     t.index ["vendor_id"], name: "index_stock_batches_on_vendor_id"
     t.index ["vendor_purchase_id"], name: "index_stock_batches_on_vendor_purchase_id"
   end
@@ -1081,6 +1084,28 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_10_120001) do
     t.index ["product_id"], name: "idx_stock_movements_product_id"
     t.index ["product_id"], name: "index_stock_movements_on_product_id"
     t.index ["reference_type", "reference_id"], name: "idx_stock_movements_ref_type_id"
+  end
+
+  create_table "stock_transfers", force: :cascade do |t|
+    t.bigint "from_store_id"
+    t.bigint "to_store_id", null: false
+    t.bigint "product_id", null: false
+    t.bigint "requested_by_id", null: false
+    t.bigint "approved_by_id"
+    t.decimal "quantity", precision: 10, scale: 2, null: false
+    t.string "status", default: "pending", null: false
+    t.text "notes"
+    t.text "rejection_reason"
+    t.datetime "approved_at"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["approved_by_id"], name: "index_stock_transfers_on_approved_by_id"
+    t.index ["from_store_id"], name: "index_stock_transfers_on_from_store_id"
+    t.index ["product_id"], name: "index_stock_transfers_on_product_id"
+    t.index ["requested_by_id"], name: "index_stock_transfers_on_requested_by_id"
+    t.index ["status"], name: "index_stock_transfers_on_status"
+    t.index ["to_store_id"], name: "index_stock_transfers_on_to_store_id"
   end
 
   create_table "stores", force: :cascade do |t|
@@ -1439,9 +1464,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_10_120001) do
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "stock_batches", "products"
+  add_foreign_key "stock_batches", "stores"
   add_foreign_key "stock_batches", "vendor_purchases"
   add_foreign_key "stock_batches", "vendors"
   add_foreign_key "stock_movements", "products"
+  add_foreign_key "stock_transfers", "products"
+  add_foreign_key "stock_transfers", "stores", column: "from_store_id"
+  add_foreign_key "stock_transfers", "stores", column: "to_store_id"
+  add_foreign_key "stock_transfers", "users", column: "approved_by_id"
+  add_foreign_key "stock_transfers", "users", column: "requested_by_id"
   add_foreign_key "subscription_templates", "customers"
   add_foreign_key "subscription_templates", "delivery_people"
   add_foreign_key "subscription_templates", "products"

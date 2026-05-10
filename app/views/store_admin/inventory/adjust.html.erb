@@ -1,0 +1,42 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h5 class="fw-bold mb-1">Adjust Stock</h5>
+    <small class="text-muted"><%= @product.name %> — Current: <%= @current_stock %> <%= @product.unit_type %></small>
+  </div>
+  <%= link_to store_admin_inventory_index_path, class: "btn btn-outline-secondary btn-sm" do %>
+    <i class="bi bi-arrow-left me-1"></i>Back
+  <% end %>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius:14px; max-width:480px;">
+  <div class="card-body p-4">
+    <div class="alert alert-info mb-3" style="border-radius:10px; font-size:0.85rem;">
+      Current stock in <strong><%= @current_store.name %></strong>: <strong><%= @current_stock %> <%= @product.unit_type %></strong>
+    </div>
+
+    <%= form_tag update_adjustment_store_admin_inventory_index_path, method: :patch do %>
+      <%= hidden_field_tag :product_id, @product.id %>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Adjustment <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <input type="number" name="adjustment" class="form-control" step="0.01" required placeholder="e.g. +10 to add, -5 to remove">
+          <span class="input-group-text"><%= @product.unit_type %></span>
+        </div>
+        <small class="text-muted">Use positive number to add stock, negative to remove.</small>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Reason</label>
+        <input type="text" name="reason" class="form-control" placeholder="e.g. Damaged goods, Stock count correction">
+      </div>
+
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn fw-semibold" style="background:linear-gradient(135deg,#1C7C54,#10b981);color:white;border-radius:8px;padding:0.5rem 1.5rem;">
+          Apply Adjustment
+        </button>
+        <%= link_to "Cancel", store_admin_inventory_index_path, class: "btn btn-outline-secondary", style: "border-radius:8px;" %>
+      </div>
+    <% end %>
+  </div>
+</div>
