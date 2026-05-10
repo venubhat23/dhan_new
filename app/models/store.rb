@@ -12,13 +12,15 @@ class Store < ApplicationRecord
   attr_accessor :admin_username, :admin_email, :admin_password, :admin_first_name, :admin_last_name, :admin_mobile
   attr_accessor :create_admin_user
 
+  before_validation :normalize_contact_mobile
+
   # Validations
   validates :name, presence: true, uniqueness: true, length: { maximum: 100 }
   validates :address, presence: true, length: { maximum: 500 }
   validates :city, presence: true, length: { maximum: 50 }
   validates :state, presence: true, length: { maximum: 50 }
   validates :pincode, presence: true, format: { with: /\A\d{6}\z/, message: "should be 6 digits" }
-  validates :contact_mobile, presence: true, format: { with: /\A[6-9]\d{9}\z/, message: "should be a valid Indian mobile number" }
+  validates :contact_mobile, presence: true, format: { with: /\A[7-9]\d{9}\z/, message: "should be a valid 10-digit Indian mobile number starting with 7, 8, or 9" }
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
   validates :contact_person, presence: true, length: { maximum: 100 }
   validates :description, length: { maximum: 1000 }, allow_blank: true
@@ -128,6 +130,14 @@ class Store < ApplicationRecord
   end
 
   private
+
+  def normalize_contact_mobile
+    return if contact_mobile.blank?
+    # Strip +91, 0, spaces, dashes, parentheses — keep last 10 digits
+    digits = contact_mobile.to_s.gsub(/\D/, '')
+    digits = digits.last(10) if digits.length > 10
+    self.contact_mobile = digits
+  end
 
   def validate_admin_details
     return unless create_admin_user
