@@ -132,6 +132,39 @@ class Customer::CartsController < Customer::BaseController
     redirect_to customer_cart_path, notice: 'Cart cleared!'
   end
 
+  def verify_stock
+    cart_items = params[:cart_items] || []
+    out_of_stock = []
+    insufficient_stock = []
+
+    cart_items.each do |item_data|
+      product = Product.active.find_by(id: item_data[:id])
+
+      if product.nil?
+        out_of_stock << { id: item_data[:id], name: item_data[:name].to_s }
+        next
+      end
+
+      quantity = item_data[:quantity].to_f
+      available = product.available_quantity.to_f
+
+      if available <= 0
+        out_of_stock << { id: product.id, name: product.name, available: 0 }
+      elsif quantity > available
+        insufficient_stock << { id: product.id, name: product.name, requested: quantity.to_i, available: available.to_i }
+      end
+    end
+
+    render json: {
+      success: true,
+      out_of_stock: out_of_stock,
+      insufficient_stock: insufficient_stock,
+      has_issues: out_of_stock.any? || insufficient_stock.any?
+    }
+  rescue => e
+    render json: { success: false, error: e.message }, status: :internal_server_error
+  end
+
   private
 
   def initialize_cart

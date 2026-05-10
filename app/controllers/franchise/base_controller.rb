@@ -27,7 +27,7 @@ class Franchise::BaseController < ApplicationController
   def current_franchise
     if session[:franchise_id] && session[:user_id]
       @current_user ||= User.find_by(id: session[:user_id])
-      @current_franchise ||= @current_user&.authenticatable if @current_user&.franchise?
+      @current_franchise ||= @current_user&.franchise if @current_user&.franchise?
     end
   end
 

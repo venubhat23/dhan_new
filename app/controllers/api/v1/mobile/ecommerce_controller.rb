@@ -300,6 +300,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
         @booking.user = nil # Mobile bookings don't have associated admin users
         @booking.booking_date = Time.current
         @booking.status = 'ordered_and_delivery_pending'
+        @booking.booked_by = 'mobile_api'
 
         Rails.logger.info "Booking created with customer_id: #{@booking.customer_id}"
         Rails.logger.info "Booking valid? #{@booking.valid?}"

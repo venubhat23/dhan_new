@@ -497,10 +497,9 @@ document.addEventListener('DOMContentLoaded', function() {
   PaymentSystem.init();
 });
 
-function showCheckout() {
+async function showCheckout() {
   console.log('🛒 showCheckout() called - Cashfree Modal System');
 
-  // FIXED: Get cart items with proper cleanup
   const cart = getCleanCart();
 
   if (cart.length === 0) {
@@ -508,26 +507,85 @@ function showCheckout() {
     return;
   }
 
+  // Show inline checking indicator on whatever button triggered this
+  const triggerBtn = document.activeElement;
+  const originalBtnHtml = triggerBtn && triggerBtn.tagName === 'BUTTON' ? triggerBtn.innerHTML : null;
+  if (originalBtnHtml) {
+    triggerBtn.disabled = true;
+    triggerBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Checking availability...';
+  }
+
+  try {
+    // Real-time stock check from server
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    const cartPayload = cart.map(item => ({ id: item.id, name: item.name, quantity: item.quantity }));
+
+    const response = await fetch('/customer/cart/verify_stock', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken ? csrfToken.getAttribute('content') : ''
+      },
+      body: JSON.stringify({ cart_items: cartPayload })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.has_issues) {
+        const outOfStockNames = data.out_of_stock.map(i => i.name);
+        const insufficientMsgs = data.insufficient_stock.map(i =>
+          `${i.name} (only ${i.available} available, you have ${i.requested} in cart)`
+        );
+        if (originalBtnHtml) {
+          triggerBtn.disabled = false;
+          triggerBtn.innerHTML = originalBtnHtml;
+        }
+        showStockErrorModal(outOfStockNames, insufficientMsgs);
+        return;
+      }
+    } else {
+      // Server check failed — fall back to client-side validation using maxStock
+      const outOfStockItems = [];
+      const insufficientStockItems = [];
+      cart.forEach(item => {
+        const maxStock = item.maxStock !== undefined ? item.maxStock : item.stock;
+        if (maxStock !== undefined) {
+          if (maxStock <= 0) outOfStockItems.push(item.name);
+          else if (item.quantity > maxStock)
+            insufficientStockItems.push(`${item.name} (only ${maxStock} available, you have ${item.quantity} in cart)`);
+        }
+      });
+      if (outOfStockItems.length > 0 || insufficientStockItems.length > 0) {
+        if (originalBtnHtml) {
+          triggerBtn.disabled = false;
+          triggerBtn.innerHTML = originalBtnHtml;
+        }
+        showStockErrorModal(outOfStockItems, insufficientStockItems);
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('Stock check request failed, proceeding with client-side check:', err);
+  }
+
+  if (originalBtnHtml) {
+    triggerBtn.disabled = false;
+    triggerBtn.innerHTML = originalBtnHtml;
+  }
+
   // Hide any competing checkout views from customer layout
   const checkoutView = document.getElementById('checkout-view');
   if (checkoutView) {
     checkoutView.style.display = 'none';
-    console.log('🔒 Hidden competing checkout view');
   }
 
-  // Hide any cart sidebar views
   const cartSidebar = document.getElementById('cart-sidebar');
   if (cartSidebar) {
     cartSidebar.style.display = 'none';
-    console.log('🔒 Hidden cart sidebar');
   }
 
-  // Populate order summary
   updateOrderSummary(cart);
 
-  console.log('💳 Showing Cashfree checkout modal...');
-
-  // Show the modal
   const modalElement = document.getElementById('checkoutModal');
   if (!modalElement) {
     console.error('❌ checkoutModal element not found!');
@@ -943,6 +1001,33 @@ async function processPayment() {
     alert('Your cart is empty');
     restoreButtonState(payBtn, originalContent);
     return;
+  }
+
+  // Real-time stock re-check before payment
+  try {
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const stockResponse = await fetch('/customer/cart/verify_stock', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfMeta ? csrfMeta.getAttribute('content') : ''
+      },
+      body: JSON.stringify({ cart_items: cart.map(i => ({ id: i.id, name: i.name, quantity: i.quantity })) })
+    });
+    if (stockResponse.ok) {
+      const stockData = await stockResponse.json();
+      if (stockData.has_issues) {
+        restoreButtonState(payBtn, originalContent);
+        const outOfStockNames = stockData.out_of_stock.map(i => i.name);
+        const insufficientMsgs = stockData.insufficient_stock.map(i =>
+          `${i.name} (only ${i.available} available, you have ${i.requested} in cart)`
+        );
+        showStockErrorModal(outOfStockNames, insufficientMsgs);
+        return;
+      }
+    }
+  } catch (stockErr) {
+    console.warn('Stock re-check failed, proceeding:', stockErr);
   }
 
   // Hide payment method selection and show processing state
@@ -1816,4 +1901,112 @@ window.addEventListener('unhandledrejection', function(event) {
 });
 
 console.log('💰 Cashfree Payment System Loaded Successfully');
+
+function showStockErrorModal(outOfStockItems, insufficientStockItems) {
+  // Remove any existing stock error modal
+  const existing = document.getElementById('stockErrorModal');
+  if (existing) existing.remove();
+
+  let bodyHtml = '';
+
+  if (outOfStockItems.length > 0) {
+    bodyHtml += `
+      <div class="mb-3">
+        <h6 class="text-danger mb-2"><i class="bi bi-x-circle-fill me-2"></i>Out of Stock</h6>
+        <ul class="list-group list-group-flush">
+          ${outOfStockItems.map(name => `
+            <li class="list-group-item d-flex align-items-center gap-2 px-0">
+              <span class="badge bg-danger rounded-pill"><i class="bi bi-dash-circle"></i></span>
+              <span>${name}</span>
+              <span class="ms-auto badge bg-danger-subtle text-danger border border-danger" style="font-size:0.75rem;">Out of Stock</span>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  if (insufficientStockItems.length > 0) {
+    bodyHtml += `
+      <div class="mb-3">
+        <h6 class="text-warning mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>Quantity Exceeds Stock</h6>
+        <ul class="list-group list-group-flush">
+          ${insufficientStockItems.map(msg => `
+            <li class="list-group-item d-flex align-items-start gap-2 px-0">
+              <span class="badge bg-warning text-dark rounded-pill mt-1"><i class="bi bi-arrow-down-circle"></i></span>
+              <span class="small">${msg}</span>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  const modalHtml = `
+    <div class="modal fade" id="stockErrorModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header bg-danger bg-opacity-10 border-0">
+            <div class="d-flex align-items-center gap-2">
+              <div style="width:40px;height:40px;background:#dc3545;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                <i class="bi bi-cart-x-fill text-white fs-5"></i>
+              </div>
+              <div>
+                <h5 class="modal-title mb-0 text-danger">Cannot Proceed</h5>
+                <small class="text-muted">Some products in your cart are unavailable</small>
+              </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body py-3">
+            ${bodyHtml}
+            <div class="alert alert-warning mb-0 mt-2" style="font-size:0.875rem;">
+              <i class="bi bi-exclamation-circle-fill me-2"></i>
+              <strong>Some items in your cart are out of stock or unavailable.</strong><br>
+              Please remove or unselect these items and choose available products before proceeding to checkout.
+            </div>
+          </div>
+          <div class="modal-footer border-0 pt-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+              <i class="bi bi-x me-1"></i>Close
+            </button>
+            <button type="button" class="btn btn-danger" data-bs-dismiss="modal" onclick="removeUnavailableItems(${JSON.stringify(outOfStockItems)})">
+              <i class="bi bi-trash me-1"></i>Remove Unavailable Items
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modal = new bootstrap.Modal(document.getElementById('stockErrorModal'));
+  modal.show();
+
+  // Cleanup on close
+  document.getElementById('stockErrorModal').addEventListener('hidden.bs.modal', function() {
+    this.remove();
+  });
+}
+
+function removeUnavailableItems(outOfStockNames) {
+  try {
+    let cart = getCleanCart();
+    cart = cart.filter(item => !outOfStockNames.includes(item.name));
+    localStorage.setItem('customerCart', JSON.stringify(cart));
+
+    // Refresh cart UI if function exists
+    if (typeof updateCartDisplay === 'function') updateCartDisplay();
+    if (typeof renderCart === 'function') renderCart();
+
+    // Update cart count badge if present
+    const badge = document.querySelector('[data-cart-count], #cartCount, .cart-count');
+    if (badge) badge.textContent = cart.reduce((sum, i) => sum + i.quantity, 0);
+
+    // Reload page to reflect updated cart
+    window.location.reload();
+  } catch (e) {
+    console.error('Error removing unavailable items:', e);
+  }
+}
 </script>

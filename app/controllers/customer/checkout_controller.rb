@@ -141,7 +141,8 @@ class Customer::CheckoutController < Customer::BaseController
           customer_name: params[:customer_name] || current_customer.display_name,
           customer_email: params[:customer_email] || current_customer.email,
           customer_phone: params[:customer_phone] || current_customer.mobile,
-          delivery_address: params[:delivery_address]
+          delivery_address: params[:delivery_address],
+          booked_by: 'customer'
         }
 
         # Add delivery store if provided (for delivery only at shop feature)

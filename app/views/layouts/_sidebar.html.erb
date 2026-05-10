@@ -469,20 +469,7 @@
           <% end %>
         </li>
         <% end %>
-        <!-- Stores -->
-        <% if current_user.has_sidebar_permission?('stores') %>
-        <li class="nav-item">
-          <%= link_to admin_stores_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/stores')}" do %>
-            <div class="nav-icon-modern">
-              <div class="icon-bg gradient-orange">
-                <i class="bi bi-shop"></i>
-              </div>
-            </div>
-            <span class="nav-text">Stores</span>
-            <div class="nav-indicator"></div>
-          <% end %>
-        </li>
-        <% end %>
+        <%# Stores link hidden %>
       </ul>
     </div>
 

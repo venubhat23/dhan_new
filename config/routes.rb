@@ -996,6 +996,7 @@ Rails.application.routes.draw do
         patch :update_item
         delete :remove_item
         delete :clear
+        post :verify_stock
       end
     end
 

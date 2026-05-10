@@ -364,6 +364,19 @@
                           </span>
                         </div>
                       <% end %>
+                      <% if booking.booked_by == 'mobile_api' %>
+                        <div class="mt-1">
+                          <span class="badge bg-purple-subtle text-purple border border-purple-subtle" style="background-color: rgba(111,66,193,0.1) !important; color: #6f42c1 !important; border-color: rgba(111,66,193,0.3) !important;">
+                            <i class="bi bi-phone me-1"></i>Mobile App
+                          </span>
+                        </div>
+                      <% elsif booking.booked_by == 'customer' %>
+                        <div class="mt-1">
+                          <span class="badge bg-teal-subtle text-teal border border-teal-subtle" style="background-color: rgba(32,201,151,0.1) !important; color: #198754 !important; border-color: rgba(32,201,151,0.3) !important;">
+                            <i class="bi bi-globe me-1"></i>Customer Website
+                          </span>
+                        </div>
+                      <% end %>
                     </div>
                   </div>
                 </td>

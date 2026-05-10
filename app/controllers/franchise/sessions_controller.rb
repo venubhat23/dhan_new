@@ -33,10 +33,10 @@ class Franchise::SessionsController < ApplicationController
 
     if user&.valid_password?(franchise_params[:password])
       if user.franchise? && user.active?
-        # Check if franchise is active
+        # Check if franchise record exists and is active
         franchise = user.franchise
-        if franchise.nil? || franchise.active?
-          session[:franchise_id] = franchise&.id
+        if franchise&.active?
+          session[:franchise_id] = franchise.id
           session[:franchise_type] = 'franchise'
           session[:user_id] = user.id
           redirect_to franchise_dashboard_path, notice: 'Successfully logged in!'
@@ -85,7 +85,7 @@ class Franchise::SessionsController < ApplicationController
   def current_franchise
     if session[:franchise_id] && session[:user_id]
       @current_user ||= User.find_by(id: session[:user_id])
-      @current_franchise ||= @current_user&.authenticatable if @current_user&.franchise?
+      @current_franchise ||= @current_user&.franchise if @current_user&.franchise?
     end
   end
 end
