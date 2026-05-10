@@ -4,6 +4,13 @@ class Store < ApplicationRecord
 
   # Associations
   has_many :bookings, dependent: :restrict_with_error
+  belongs_to :store_admin_user, class_name: 'User', foreign_key: 'store_admin_user_id', optional: true
+  has_many :store_staff, class_name: 'User', foreign_key: 'assigned_store_id', dependent: :nullify
+  has_many :expenses, dependent: :destroy
+
+  # Virtual attributes for store creation form
+  attr_accessor :admin_username, :admin_email, :admin_password, :admin_first_name, :admin_last_name, :admin_mobile
+  attr_accessor :create_admin_user
 
   # Validations
   validates :name, presence: true, uniqueness: true, length: { maximum: 100 }
@@ -18,6 +25,9 @@ class Store < ApplicationRecord
 
   # Custom validation for maximum stores limit
   validate :check_maximum_stores_limit, on: :create
+  validate :validate_admin_details, if: :create_admin_user
+
+  after_create :create_store_admin_user!, if: :create_admin_user
 
   # Scopes
   scope :active, -> { where(status: true) }
@@ -56,7 +66,84 @@ class Store < ApplicationRecord
     bookings.count == 0
   end
 
+  def has_store_admin?
+    store_admin_user.present?
+  end
+
+  def daily_sales_summary(date = Date.current)
+    bookings.where(created_at: date.beginning_of_day..date.end_of_day)
+            .where.not(status: ['cancelled', 'returned'])
+            .sum(:total_amount)
+  end
+
+  def store_inventory_summary
+    {
+      total_products: 0,
+      total_stock_value: 0,
+      low_stock_count: 0,
+      pending_incoming_transfers: 0,
+      pending_outgoing_transfers: 0,
+      recent_bookings_count: bookings.where(created_at: 1.week.ago..Time.current).count
+    }
+  end
+
+  def low_stock_products(_threshold = nil)
+    []
+  end
+
+  def store_products_with_inventory
+    Product.none
+  end
+
+  def create_store_admin_user!
+    sidebar_permissions = {
+      'dashboard' => { 'view' => true },
+      'bookings' => { 'view' => true, 'create' => true, 'update' => true },
+      'expenses' => { 'view' => true, 'create' => true, 'update' => true, 'delete' => true }
+    }
+
+    user = User.create!(
+      first_name: admin_first_name,
+      last_name: admin_last_name,
+      email: admin_email,
+      mobile: admin_mobile,
+      password: admin_password,
+      password_confirmation: admin_password,
+      user_type: 'store_admin',
+      assigned_store_id: id,
+      sidebar_permissions: sidebar_permissions.to_json,
+      store_permissions: {
+        'can_manage_inventory' => false,
+        'can_create_bookings' => true,
+        'can_view_reports' => true,
+        'can_request_transfers' => false
+      }.to_json,
+      status: true,
+      is_active: true,
+      is_verified: true
+    )
+
+    update!(store_admin_user: user, admin_plain_password: admin_password)
+    user
+  end
+
   private
+
+  def validate_admin_details
+    return unless create_admin_user
+    errors.add(:admin_first_name, "can't be blank") if admin_first_name.blank?
+    errors.add(:admin_last_name, "can't be blank") if admin_last_name.blank?
+    errors.add(:admin_email, "can't be blank") if admin_email.blank?
+    errors.add(:admin_mobile, "can't be blank") if admin_mobile.blank?
+    errors.add(:admin_password, "can't be blank") if admin_password.blank?
+    errors.add(:admin_password, "must be at least 6 characters") if admin_password.present? && admin_password.length < 6
+    if admin_email.present? && User.exists?(email: admin_email)
+      errors.add(:admin_email, "already exists")
+    end
+    if admin_mobile.present? && User.exists?(mobile: admin_mobile)
+      errors.add(:admin_mobile, "already exists")
+    end
+  end
 
   def check_maximum_stores_limit
     if Store.count >= MAX_STORES_LIMIT

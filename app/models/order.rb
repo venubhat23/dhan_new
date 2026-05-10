@@ -44,6 +44,14 @@ class Order < ApplicationRecord
   scope :today, -> { where(created_at: Date.current.all_day) }
   scope :active, -> { where.not(status: [statuses[:cancelled], statuses[:returned]]) }
 
+  after_commit :bust_mobile_customer_cache
+
+  def bust_mobile_customer_cache
+    cid = customer_id || customer&.id
+    return unless cid
+    Rails.cache.delete("mobile_api/customer_orders/#{cid}")
+  end
+
   # Status management methods
   def can_cancel?
     %w[draft ordered_and_delivery_pending confirmed processing].include?(status)

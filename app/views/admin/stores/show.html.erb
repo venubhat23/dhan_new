@@ -1,2 +1,98 @@
-<h1>Admin::Stores#show</h1>
-<p>Find me in app/views/admin/stores/show.html.erb</p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1"><%= @store.name %></h4>
+    <small class="text-muted"><%= @store.full_address %></small>
+  </div>
+  <div class="d-flex gap-2">
+    <%= link_to edit_admin_store_path(@store), class: "btn btn-outline-primary btn-sm" do %>
+      <i class="bi bi-pencil me-2"></i>Edit Store
+    <% end %>
+    <%= link_to admin_stores_path, class: "btn btn-outline-secondary btn-sm" do %>
+      <i class="bi bi-arrow-left me-2"></i>All Stores
+    <% end %>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6 mb-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0">
+        <h6 class="mb-0"><i class="bi bi-building me-2"></i>Store Information</h6>
+      </div>
+      <div class="card-body">
+        <table class="table table-borderless table-sm">
+          <tr><td class="text-muted">Name:</td><td><strong><%= @store.name %></strong></td></tr>
+          <tr><td class="text-muted">Status:</td><td>
+            <% if @store.status %>
+              <span class="badge bg-success">Active</span>
+            <% else %>
+              <span class="badge bg-danger">Inactive</span>
+            <% end %>
+          </td></tr>
+          <tr><td class="text-muted">Contact Person:</td><td><%= @store.contact_person %></td></tr>
+          <tr><td class="text-muted">Mobile:</td><td><%= @store.contact_mobile %></td></tr>
+          <tr><td class="text-muted">Email:</td><td><%= @store.email.presence || 'N/A' %></td></tr>
+          <tr><td class="text-muted">Address:</td><td><%= @store.full_address %></td></tr>
+          <tr><td class="text-muted">GST No:</td><td><%= @store.gst_no.presence || 'N/A' %></td></tr>
+          <tr><td class="text-muted">Bookings:</td><td><%= @bookings_count %></td></tr>
+        </table>
+        <% if @store.description.present? %>
+          <p class="text-muted small"><%= @store.description %></p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6 mb-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="bi bi-person-badge me-2"></i>Store Admin Login</h6>
+        <%= link_to assign_admin_admin_store_path(@store), class: "btn btn-outline-primary btn-sm" do %>
+          <i class="bi bi-person-plus me-1"></i><%= @store.has_store_admin? ? 'Update Admin' : 'Assign Admin' %>
+        <% end %>
+      </div>
+      <div class="card-body">
+        <% if @store.has_store_admin? %>
+          <% admin = @store.store_admin_user %>
+          <div class="d-flex align-items-center mb-3">
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; font-size: 1.2rem;">
+              <%= admin.first_name.first.upcase %>
+            </div>
+            <div>
+              <h6 class="mb-0"><%= admin.first_name %> <%= admin.last_name %></h6>
+              <small class="text-muted"><%= admin.email %></small>
+            </div>
+          </div>
+          <table class="table table-borderless table-sm">
+            <tr><td class="text-muted">Mobile:</td><td><%= admin.mobile %></td></tr>
+            <tr><td class="text-muted">Status:</td><td>
+              <span class="badge <%= admin.status ? 'bg-success' : 'bg-danger' %>">
+                <%= admin.status ? 'Active' : 'Inactive' %>
+              </span>
+            </td></tr>
+            <% if @store.admin_plain_password.present? %>
+              <tr>
+                <td class="text-muted">Password:</td>
+                <td>
+                  <span class="badge bg-warning text-dark"><%= @store.admin_plain_password %></span>
+                  <small class="text-muted ms-1">(save this)</small>
+                </td>
+              </tr>
+            <% end %>
+          </table>
+          <div class="mt-3">
+            <%= link_to view_as_store_admin_admin_store_path(@store), class: "btn btn-outline-info btn-sm" do %>
+              <i class="bi bi-eye me-2"></i>View Store Dashboard
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-4 text-muted">
+            <i class="bi bi-person-x fs-1 mb-2"></i>
+            <p class="mb-2">No admin login assigned yet</p>
+            <small>Assign a store admin so the store owner can log in and manage their bookings.</small>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

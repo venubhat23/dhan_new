@@ -121,7 +121,7 @@ class Product < ApplicationRecord
       .having('COALESCE(SUM(CASE WHEN stock_batches.status = ? THEN stock_batches.quantity_remaining ELSE 0 END), 0) = 0', 'active')
   }
   scope :by_category, ->(category_id) { where(category_id: category_id) }
-  scope :search, ->(query) { where('name ILIKE ? OR description ILIKE ? OR sku ILIKE ?', "%#{query}%", "%#{query}%", "%#{query}%") }
+  scope :search, ->(query) { where('name ILIKE ?', "%#{query}%") }
   scope :recent, -> { order(created_at: :desc) }
   scope :occasional, -> { where(is_occasional_product: true) }
   scope :regular, -> { where(is_occasional_product: false) }
@@ -140,6 +140,11 @@ class Product < ApplicationRecord
   after_create :create_initial_stock_movement, if: -> { stock.present? && stock > 0 }
   after_create :create_initial_stock_batch, if: -> { stock.present? && stock > 0 }
   after_update :update_stock_batch, if: -> { saved_change_to_stock? && stock.present? }
+  after_commit :bust_mobile_api_cache
+
+  def bust_mobile_api_cache
+    MobileApiCache.bust_products!
+  end
 
   def in_stock?
     cached_total_batch_stock > 0

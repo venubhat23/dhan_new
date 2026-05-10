@@ -1,4 +1,16 @@
 Rails.application.routes.draw do
+  # Store Admin namespace — separate login area for store owners/managers
+  namespace :store_admin do
+    root 'dashboard#index'
+    resources :bookings do
+      member do
+        patch :update_status
+        patch :cancel
+      end
+    end
+    resources :expenses
+  end
+
   # Vendor invoice public view
   get '/vendor_invoice/:token', to: 'vendor_invoices#public_view', as: 'vendor_invoice_public'
   # Product Reviews
@@ -317,6 +329,9 @@ Rails.application.routes.draw do
     resources :stores do
       member do
         patch :toggle_status
+        get :assign_admin
+        patch :update_admin
+        get :view_as_store_admin
       end
     end
 

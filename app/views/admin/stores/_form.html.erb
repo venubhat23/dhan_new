@@ -61,6 +61,50 @@
     <%= form.text_area :description, class: "form-control", rows: 3, placeholder: "Enter store description (optional)" %>
   </div>
 
+  <% if store.new_record? %>
+    <hr class="my-4">
+    <h6 class="mb-3 fw-bold"><i class="bi bi-person-badge me-2"></i>Store Admin Login (Optional)</h6>
+    <p class="text-muted small mb-3">Create a separate login account for the store owner/manager. They will only see and manage this store.</p>
+
+    <div class="mb-3">
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="create_admin_user_check" name="store[create_admin_user]" value="1"
+               onchange="document.getElementById('admin-fields').style.display = this.checked ? 'block' : 'none'">
+        <label class="form-check-label" for="create_admin_user_check">Create store admin login</label>
+      </div>
+    </div>
+
+    <div id="admin-fields" style="display: none;" class="border rounded p-3 bg-light">
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">First Name</label>
+          <input type="text" name="store[admin_first_name]" class="form-control" placeholder="Admin first name">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Last Name</label>
+          <input type="text" name="store[admin_last_name]" class="form-control" placeholder="Admin last name">
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Email</label>
+          <input type="email" name="store[admin_email]" class="form-control" placeholder="admin@store.com">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Mobile</label>
+          <input type="text" name="store[admin_mobile]" class="form-control" placeholder="10-digit mobile">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <label class="form-label">Password</label>
+          <input type="text" name="store[admin_password]" class="form-control" placeholder="Min 6 characters">
+          <div class="form-text text-muted">Note the password — it will be shown once after creation.</div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
   <div class="pt-4">
     <%= form.submit store.new_record? ? "Create Store" : "Update Store", class: "btn btn-primary me-2" %>
     <%= link_to "Cancel", admin_stores_path, class: "btn btn-label-secondary" %>

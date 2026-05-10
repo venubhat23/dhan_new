@@ -5,32 +5,28 @@ class Api::V1::Mobile::BannersController < Api::V1::Mobile::BaseController
     begin
       location = params[:location] || 'home'
 
-      # Validate location parameter
       unless Banner.display_locations.keys.include?(location)
         return render_error("Invalid location. Valid options: #{Banner.display_locations.keys.join(', ')}")
       end
 
-      # Fetch active banners for the specified location
-      banners = Banner.active
-                      .current
-                      .by_location(location)
-                      .ordered
-                      .includes([banner_image_attachment: :blob])
-
-      banner_data = banners.map do |banner|
-        {
-          id: banner.id,
-          title: banner.title,
-          description: banner.description,
-          redirect_link: banner.redirect_link,
-          display_location: banner.display_location,
-          display_order: banner.display_order,
-          image_url: banner.main_image_url,
-          display_start_date: banner.display_start_date.strftime('%Y-%m-%d'),
-          display_end_date: banner.display_end_date.strftime('%Y-%m-%d'),
-          is_active: banner.active?,
-          created_at: banner.created_at.strftime('%Y-%m-%d %H:%M:%S')
-        }
+      banner_data = Rails.cache.fetch(MobileApiCache.banners_key(location), expires_in: MobileApiCache::BANNER_TTL) do
+        Banner.active.current.by_location(location).ordered
+              .includes([banner_image_attachment: :blob])
+              .map do |banner|
+                {
+                  id: banner.id,
+                  title: banner.title,
+                  description: banner.description,
+                  redirect_link: banner.redirect_link,
+                  display_location: banner.display_location,
+                  display_order: banner.display_order,
+                  image_url: banner.main_image_url,
+                  display_start_date: banner.display_start_date.strftime('%Y-%m-%d'),
+                  display_end_date: banner.display_end_date.strftime('%Y-%m-%d'),
+                  is_active: banner.active?,
+                  created_at: banner.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                }
+              end
       end
 
       render_success({ banners: banner_data, total_count: banner_data.length }, "Banners fetched successfully")

@@ -50,6 +50,10 @@ class User < ApplicationRecord
   belongs_to :user_role, optional: true
   belongs_to :authenticatable, polymorphic: true, optional: true
   has_one :franchise, dependent: :destroy
+
+  # Store associations
+  belongs_to :assigned_store, class_name: 'Store', foreign_key: 'assigned_store_id', optional: true
+  has_one :managed_store, class_name: 'Store', foreign_key: 'store_admin_user_id'
   has_many_attached :profile_images
   has_many_attached :documents
   has_many :uploaded_documents, as: :documentable, class_name: 'Document', dependent: :destroy
@@ -59,11 +63,11 @@ class User < ApplicationRecord
   validates :last_name, presence: true
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :mobile, presence: true, uniqueness: true
-  validates :user_type, presence: true, inclusion: { in: ['admin', 'agent', 'sub_agent', 'customer', 'franchise', 'affiliate', 'delivery_person'] }
+  validates :user_type, presence: true, inclusion: { in: ['admin', 'agent', 'sub_agent', 'customer', 'franchise', 'affiliate', 'delivery_person', 'store_admin'] }
   # Note: role validation can be added later when roles are set up
 
   # Enums
-  enum :user_type, { admin: 'admin', agent: 'agent', sub_agent: 'sub_agent', customer: 'customer', franchise: 'franchise', affiliate: 'affiliate', delivery_person: 'delivery_person' }
+  enum :user_type, { admin: 'admin', agent: 'agent', sub_agent: 'sub_agent', customer: 'customer', franchise: 'franchise', affiliate: 'affiliate', delivery_person: 'delivery_person', store_admin: 'store_admin' }
 
   # Callbacks
   after_update :role_changed_callback
@@ -234,8 +238,45 @@ class User < ApplicationRecord
     user_type == 'delivery_person'
   end
 
+  def store_admin?
+    user_type == 'store_admin'
+  end
+
   def super_admin?
     has_role?('super_admin')
+  end
+
+  # Store permission methods
+  def store_permissions_hash
+    return {} if store_permissions.blank?
+    parsed = store_permissions.is_a?(String) ? JSON.parse(store_permissions) : store_permissions
+    parsed.is_a?(Hash) ? parsed : {}
+  rescue JSON::ParserError
+    {}
+  end
+
+  def can_manage_inventory?
+    store_permissions_hash['can_manage_inventory'] == true
+  end
+
+  def can_create_bookings?
+    store_permissions_hash.fetch('can_create_bookings', true) != false
+  end
+
+  def can_view_reports?
+    store_permissions_hash.fetch('can_view_reports', true) != false
+  end
+
+  def can_request_transfers?
+    store_permissions_hash['can_request_transfers'] == true
+  end
+
+  def primary_store
+    assigned_store || managed_store
+  end
+
+  def update_store_access_log!
+    update_column(:last_store_access, Time.current)
   end
 
   # Clear abilities cache when role changes

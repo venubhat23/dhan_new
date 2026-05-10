@@ -5,17 +5,17 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
 
   # GET /api/v1/mobile/ecommerce/categories
   def categories
-    @categories = Category.active.ordered.includes(:products)
-
-    categories_data = @categories.map do |category|
-      {
-        id: category.id,
-        name: category.name,
-        description: category.description,
-        image_url: category.image.attached? ? url_for(category.image) : nil,
-        products_count: category.products_count,
-        display_order: category.display_order
-      }
+    categories_data = Rails.cache.fetch(MobileApiCache.categories_key, expires_in: MobileApiCache::CATEGORY_TTL) do
+      Category.active.ordered.includes(:products).map do |category|
+        {
+          id: category.id,
+          name: category.name,
+          description: category.description,
+          image_url: category.image.attached? ? url_for(category.image) : nil,
+          products_count: category.products.size,
+          display_order: category.display_order
+        }
+      end
     end
 
     render json: {
@@ -49,44 +49,50 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     per_page = params[:per_page]&.to_i || 20
     per_page = [per_page, 50].min
 
-    @products = Product.active.available_for_sale.includes(:product_variants, :category)
+    cache_params = {
+      page: page, per_page: per_page,
+      category_id: params[:category_id], min_price: params[:min_price],
+      max_price: params[:max_price], search: params[:search], sort_by: params[:sort_by]
+    }
+    cache_key = MobileApiCache.products_key(cache_params)
 
-    # Apply filters
-    @products = @products.where(category_id: params[:category_id]) if params[:category_id].present?
-    @products = @products.where('price >= ?', params[:min_price]) if params[:min_price].present?
-    @products = @products.where('price <= ?', params[:max_price]) if params[:max_price].present?
-    @products = @products.search(params[:search]) if params[:search].present?
+    result = Rails.cache.fetch(cache_key, expires_in: MobileApiCache::PRODUCT_TTL) do
+      scope = Product.active.available_for_sale.includes(:product_variants, :category)
 
-    # Apply sorting
-    case params[:sort_by]
-    when 'price_low' then @products = @products.order(:price)
-    when 'price_high' then @products = @products.order(price: :desc)
-    when 'name' then @products = @products.order(:name)
-    when 'newest' then @products = @products.recent
-    when 'rating'
-      @products = @products.joins(:product_reviews)
-                           .group('products.id')
-                           .order('AVG(product_reviews.rating) DESC NULLS LAST')
-    else
-      @products = @products.order(:name)
+      scope = scope.where(category_id: params[:category_id]) if params[:category_id].present?
+      scope = scope.where('price >= ?', params[:min_price]) if params[:min_price].present?
+      scope = scope.where('price <= ?', params[:max_price]) if params[:max_price].present?
+      scope = scope.search(params[:search]) if params[:search].present?
+
+      case params[:sort_by]
+      when 'price_low'  then scope = scope.order(:price)
+      when 'price_high' then scope = scope.order(price: :desc)
+      when 'name'       then scope = scope.order(:name)
+      when 'newest'     then scope = scope.recent
+      when 'rating'
+        scope = scope.joins(:product_reviews).group('products.id')
+                     .order('AVG(product_reviews.rating) DESC NULLS LAST')
+      else
+        scope = scope.order(:name)
+      end
+
+      count_result = scope.count
+      total_count = count_result.is_a?(Hash) ? count_result.size : count_result
+      products = scope.offset((page - 1) * per_page).limit(per_page)
+
+      { products_data: products.map { |p| format_product_data(p) }, total_count: total_count }
     end
-
-    count_result = @products.count
-    total_count = count_result.is_a?(Hash) ? count_result.size : count_result
-    @products = @products.offset((page - 1) * per_page).limit(per_page)
-
-    products_data = @products.map { |product| format_product_data(product) }
 
     json_response({
       success: true,
       data: {
-        products: products_data,
+        products: result[:products_data],
         pagination: {
           current_page: page,
           per_page: per_page,
-          total_count: total_count,
-          total_pages: (total_count.to_f / per_page).ceil,
-          has_next_page: page < (total_count.to_f / per_page).ceil,
+          total_count: result[:total_count],
+          total_pages: (result[:total_count].to_f / per_page).ceil,
+          has_next_page: page < (result[:total_count].to_f / per_page).ceil,
           has_prev_page: page > 1
         },
         applied_filters: {
@@ -702,17 +708,17 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
 
   # GET /api/v1/mobile/ecommerce/featured_products
   def featured_products
-    # Get top 5 most recent products that came to market (based on created_at)
     limit = params[:limit]&.to_i || 5
-    limit = [limit, 10].min # Maximum 10 products
+    limit = [limit, 10].min
 
     begin
-      @products = Product.active.available_for_sale
-                          .includes(:product_variants, :category)
-                          .order(created_at: :desc)
-                          .limit(limit)
-
-      products_data = @products.map { |product| format_product_data(product) }
+      products_data = Rails.cache.fetch(MobileApiCache.featured_products_key(limit), expires_in: MobileApiCache::PRODUCT_TTL) do
+        Product.active.available_for_sale
+               .includes(:product_variants, :category)
+               .order(created_at: :desc)
+               .limit(limit)
+               .map { |product| format_product_data(product) }
+      end
 
       json_response({
         success: true,
@@ -732,98 +738,85 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
         success: false,
         message: 'Unable to retrieve featured products',
         error: e.message,
-        data: {
-          products: [],
-          total_count: 0,
-          limit: limit
-        }
+        data: { products: [], total_count: 0, limit: limit }
       }, :internal_server_error)
     end
   end
 
   # GET /api/v1/mobile/ecommerce/filters
   def filters
-    # Get available filter options
-    categories = Category.active.root_categories.pluck(:id, :name)
+    filter_data = Rails.cache.fetch(MobileApiCache.filters_key, expires_in: MobileApiCache::FILTER_TTL) do
+      categories = Category.active.ordered.pluck(:id, :name)
+      min_price = Product.active.minimum(:price) || 0
+      max_price = Product.active.maximum(:price) || 10000
+      brands = Product.active.distinct.where.not(brand: [nil, '']).pluck(:brand) rescue []
 
-    # Get price range
-    price_stats = Product.active.in_stock
-    min_price = price_stats.minimum(:price) || 0
-    max_price = price_stats.maximum(:price) || 10000
-
-    # Get available brands/companies (if you have a brand field)
-    brands = Product.active.distinct.where.not(brand: [nil, '']).pluck(:brand) rescue []
-
-    filter_data = {
-      categories: categories.map { |id, name| { id: id, name: name } },
-      price_range: {
-        min: min_price.to_f,
-        max: max_price.to_f,
-        suggested_ranges: [
-          { label: 'Under ₹500', min: 0, max: 500 },
-          { label: '₹500 - ₹1000', min: 500, max: 1000 },
-          { label: '₹1000 - ₹5000', min: 1000, max: 5000 },
-          { label: '₹5000 - ₹10000', min: 5000, max: 10000 },
-          { label: 'Above ₹10000', min: 10000, max: nil }
+      {
+        categories: categories.map { |id, name| { id: id, name: name } },
+        price_range: {
+          min: min_price.to_f,
+          max: max_price.to_f,
+          suggested_ranges: [
+            { label: 'Under ₹500', min: 0, max: 500 },
+            { label: '₹500 - ₹1000', min: 500, max: 1000 },
+            { label: '₹1000 - ₹5000', min: 1000, max: 5000 },
+            { label: '₹5000 - ₹10000', min: 5000, max: 10000 },
+            { label: 'Above ₹10000', min: 10000, max: nil }
+          ]
+        },
+        brands: brands,
+        sort_options: [
+          { key: 'newest', label: 'Newest First' },
+          { key: 'price_low', label: 'Price: Low to High' },
+          { key: 'price_high', label: 'Price: High to Low' },
+          { key: 'name', label: 'Name A-Z' },
+          { key: 'rating', label: 'Highest Rated' }
         ]
-      },
-      brands: brands,
-      sort_options: [
-        { key: 'newest', label: 'Newest First' },
-        { key: 'price_low', label: 'Price: Low to High' },
-        { key: 'price_high', label: 'Price: High to Low' },
-        { key: 'name', label: 'Name A-Z' },
-        { key: 'rating', label: 'Highest Rated' }
-      ]
-    }
+      }
+    end
 
-    json_response({
-      success: true,
-      data: filter_data,
-      message: 'Filter options retrieved successfully'
-    })
+    json_response({ success: true, data: filter_data, message: 'Filter options retrieved successfully' })
   end
 
   # GET /api/v1/mobile/ecommerce/products/:id
   def product_details
-    @product = Product.active.includes(:category, :product_reviews, :product_variants, image_attachment: :blob, additional_images_attachments: :blob).find(params[:id])
+    begin
+      product_data = Rails.cache.fetch(MobileApiCache.product_detail_key(params[:id]), expires_in: MobileApiCache::PRODUCT_TTL) do
+        product = Product.active.includes(:category, :product_reviews, :product_variants, image_attachment: :blob, additional_images_attachments: :blob).find(params[:id])
 
-    # Get related products from same category
-    related_products = Product.active.in_stock
-                              .where(category_id: @product.category_id)
-                              .where.not(id: @product.id)
-                              .limit(5)
+        related_products = Product.active.in_stock
+                                  .where(category_id: product.category_id)
+                                  .where.not(id: product.id)
+                                  .includes(:product_variants, :category)
+                                  .limit(5)
 
-    # Get recent reviews
-    recent_reviews = @product.product_reviews.approved.recent.limit(10).includes(:customer)
+        recent_reviews = product.product_reviews.approved.recent.limit(10).includes(:customer)
 
-    product_data = format_product_data(@product).merge({
-      related_products: related_products.map { |p| format_product_data(p) },
-      reviews: recent_reviews.map do |review|
-        {
-          id: review.id,
-          rating: review.rating,
-          comment: review.comment,
-          reviewer_name: review.reviewer_name || review.customer&.display_name,
-          verified_purchase: review.verified_purchase?,
-          helpful_count: review.helpful_count || 0,
-          created_at: review.created_at
-        }
-      end,
-      delivery_info: {
-        available_locations: ['All India'], # You can customize this
-        estimated_delivery: '3-5 business days',
-        shipping_charges: 'Free shipping above ₹500'
-      }
-    })
+        format_product_data(product).merge({
+          related_products: related_products.map { |p| format_product_data(p) },
+          reviews: recent_reviews.map do |review|
+            {
+              id: review.id,
+              rating: review.rating,
+              comment: review.comment,
+              reviewer_name: review.reviewer_name || review.customer&.display_name,
+              verified_purchase: review.verified_purchase?,
+              helpful_count: review.helpful_count || 0,
+              created_at: review.created_at
+            }
+          end,
+          delivery_info: {
+            available_locations: ['All India'],
+            estimated_delivery: '3-5 business days',
+            shipping_charges: 'Free shipping above ₹500'
+          }
+        })
+      end
 
-    json_response({
-      success: true,
-      data: product_data,
-      message: 'Product details retrieved successfully'
-    })
-  rescue ActiveRecord::RecordNotFound
-    json_response({ success: false, message: 'Product not found' }, :not_found)
+      json_response({ success: true, data: product_data, message: 'Product details retrieved successfully' })
+    rescue ActiveRecord::RecordNotFound
+      json_response({ success: false, message: 'Product not found' }, :not_found)
+    end
   end
 
   # POST /api/v1/mobile/ecommerce/products/:id/check_delivery
@@ -1073,35 +1066,28 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
   def banners
     location = params[:location] || 'home'
 
-    @banners = Banner.active
-                    .current
-                    .by_location(location)
-                    .ordered
-
-    banners_data = @banners.map do |banner|
-      {
-        id: banner.id,
-        title: banner.title,
-        description: banner.description,
-        image_url: banner.main_image_url,
-        thumbnail_url: banner.cloudinary_thumbnail_url,
-        redirect_link: banner.redirect_link,
-        display_location: banner.display_location,
-        display_order: banner.display_order,
-        display_start_date: banner.display_start_date,
-        display_end_date: banner.display_end_date,
-        is_active: banner.active?,
-        has_image: banner.has_image?
-      }
+    banners_data = Rails.cache.fetch(MobileApiCache.banners_key(location), expires_in: MobileApiCache::BANNER_TTL) do
+      Banner.active.current.by_location(location).ordered.map do |banner|
+        {
+          id: banner.id,
+          title: banner.title,
+          description: banner.description,
+          image_url: banner.main_image_url,
+          thumbnail_url: banner.cloudinary_thumbnail_url,
+          redirect_link: banner.redirect_link,
+          display_location: banner.display_location,
+          display_order: banner.display_order,
+          display_start_date: banner.display_start_date,
+          display_end_date: banner.display_end_date,
+          is_active: banner.active?,
+          has_image: banner.has_image?
+        }
+      end
     end
 
     render json: {
       success: true,
-      data: {
-        banners: banners_data,
-        total_count: banners_data.length,
-        location: location
-      },
+      data: { banners: banners_data, total_count: banners_data.length, location: location },
       message: 'Banners retrieved successfully'
     }
   end
@@ -1833,37 +1819,43 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     pincode_str = pincode.to_s
     return { valid: false, error: 'Pincode must be 6 digits' } unless pincode_str.match?(/\A\d{6}\z/)
 
-    begin
-      require 'net/http'
-      require 'json'
+    cached = Rails.cache.read(MobileApiCache.pincode_key(pincode_str))
+    return cached if cached
 
-      uri = URI("https://api.postalpincode.in/pincode/#{pincode}")
-      response = Net::HTTP.get_response(uri)
+    result = fetch_pincode_from_api(pincode_str)
+    # Only cache successful lookups so failures retry next time
+    Rails.cache.write(MobileApiCache.pincode_key(pincode_str), result, expires_in: MobileApiCache::PINCODE_TTL) if result[:valid]
+    result
+  end
 
-      if response.code == '200'
-        data = JSON.parse(response.body)
+  def fetch_pincode_from_api(pincode_str)
+    require 'net/http'
 
-        if data.is_a?(Array) && data.first && data.first['Status'] == 'Success'
-          post_office_data = data.first['PostOffice']
-          if post_office_data && post_office_data.any?
-            first_office = post_office_data.first
-            return {
-              valid: true,
-              pincode: pincode,
-              district: first_office['District'],
-              state: first_office['State'],
-              country: first_office['Country'],
-              post_offices: post_office_data.map { |po| po['Name'] },
-              serviceable: true # You can add your own logic here
-            }
-          end
+    uri = URI("https://api.postalpincode.in/pincode/#{pincode_str}")
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.open_timeout = 5
+    http.read_timeout = 5
+    response = http.get(uri.path)
+
+    if response.code == '200'
+      data = JSON.parse(response.body)
+      if data.is_a?(Array) && data.first && data.first['Status'] == 'Success'
+        offices = data.first['PostOffice']
+        if offices&.any?
+          first = offices.first
+          return {
+            valid: true, pincode: pincode_str,
+            district: first['District'], state: first['State'], country: first['Country'],
+            post_offices: offices.map { |po| po['Name'] }, serviceable: true
+          }
         end
       end
-
-      { valid: false, error: 'Invalid pincode or area not serviceable', pincode: pincode }
-    rescue => e
-      { valid: false, error: 'Unable to validate pincode at this time', details: e.message }
     end
+
+    { valid: false, error: 'Invalid pincode or area not serviceable', pincode: pincode_str }
+  rescue => e
+    { valid: false, error: 'Unable to validate pincode at this time', details: e.message }
   end
 
   def map_frequency_to_pattern(frequency)

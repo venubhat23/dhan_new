@@ -1,0 +1,185 @@
+<%- content_for :title, "Bookings - #{@current_store.name}" %>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="card-title mb-0">Store Bookings - <%= @current_store.name %></h4>
+        <%= link_to "New Booking", new_store_admin_booking_path, class: "btn btn-primary" %>
+      </div>
+
+      <div class="card-body">
+        <!-- Booking Summary Cards -->
+        <div class="row mb-4">
+          <div class="col-md-3">
+            <div class="card border-0 shadow-sm" style="background: #0d6efd !important; color: white !important; min-height: 120px !important;">
+              <div class="card-body" style="background: transparent !important; padding: 1.5rem !important;">
+                <div class="d-flex justify-content-between align-items-center" style="display: flex !important;">
+                  <div>
+                    <h5 class="card-title mb-1" style="color: white !important; font-weight: 600 !important; font-size: 1rem !important;">Total Bookings</h5>
+                    <h3 class="mb-0" style="color: white !important; font-weight: 700 !important; font-size: 2rem !important;"><%= @summary[:total_bookings] %></h3>
+                  </div>
+                  <i class="bi bi-calendar-check fs-1" style="color: rgba(255,255,255,0.5) !important; font-size: 3rem !important;"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card border-0 shadow-sm" style="background: #ffc107 !important; color: #212529 !important; min-height: 120px !important;">
+              <div class="card-body" style="background: transparent !important; padding: 1.5rem !important;">
+                <div class="d-flex justify-content-between align-items-center" style="display: flex !important;">
+                  <div>
+                    <h5 class="card-title mb-1" style="color: #212529 !important; font-weight: 600 !important; font-size: 1rem !important;">Pending</h5>
+                    <h3 class="mb-0" style="color: #212529 !important; font-weight: 700 !important; font-size: 2rem !important;"><%= @summary[:pending_bookings] %></h3>
+                  </div>
+                  <i class="bi bi-hourglass-split fs-1" style="color: rgba(33,37,41,0.5) !important; font-size: 3rem !important;"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card border-0 shadow-sm" style="background: #0dcaf0 !important; color: white !important; min-height: 120px !important;">
+              <div class="card-body" style="background: transparent !important; padding: 1.5rem !important;">
+                <div class="d-flex justify-content-between align-items-center" style="display: flex !important;">
+                  <div>
+                    <h5 class="card-title mb-1" style="color: white !important; font-weight: 600 !important; font-size: 1rem !important;">Processing</h5>
+                    <h3 class="mb-0" style="color: white !important; font-weight: 700 !important; font-size: 2rem !important;"><%= @summary[:processing_bookings] %></h3>
+                  </div>
+                  <i class="bi bi-gear fs-1" style="color: rgba(255,255,255,0.5) !important; font-size: 3rem !important;"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card border-0 shadow-sm" style="background: #198754 !important; color: white !important; min-height: 120px !important;">
+              <div class="card-body" style="background: transparent !important; padding: 1.5rem !important;">
+                <div class="d-flex justify-content-between align-items-center" style="display: flex !important;">
+                  <div>
+                    <h5 class="card-title mb-1" style="color: white !important; font-weight: 600 !important; font-size: 1rem !important;">Completed</h5>
+                    <h3 class="mb-0" style="color: white !important; font-weight: 700 !important; font-size: 2rem !important;"><%= @summary[:completed_bookings] %></h3>
+                  </div>
+                  <i class="bi bi-check-circle fs-1" style="color: rgba(255,255,255,0.5) !important; font-size: 3rem !important;"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <%= form_with url: store_admin_bookings_path, method: :get, local: true, class: "mb-3" do |form| %>
+          <div class="row">
+            <div class="col-md-3">
+              <%= form.text_field :search, value: params[:search], placeholder: "Search bookings...", class: "form-control" %>
+            </div>
+            <div class="col-md-3">
+              <%= form.select :status,
+                  options_for_select([["All Statuses", ""]] + (Booking.statuses.keys rescue []).map { |s| [s.humanize, s] }, params[:status]),
+                  {}, { class: "form-select" } %>
+            </div>
+            <div class="col-md-2">
+              <%= form.date_field :date_from, value: params[:date_from], class: "form-control" %>
+            </div>
+            <div class="col-md-2">
+              <%= form.date_field :date_to, value: params[:date_to], class: "form-control" %>
+            </div>
+            <div class="col-md-2">
+              <%= form.submit "Filter", class: "btn btn-outline-primary w-100" %>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Bookings Table -->
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Booking #</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th>Total Amount</th>
+                <th>Payment</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @bookings.each do |booking| %>
+                <tr>
+                  <td><strong><%= booking.booking_number || "##{booking.id}" %></strong></td>
+                  <td>
+                    <% if booking.customer %>
+                      <%= booking.customer.full_name rescue "#{booking.customer.first_name} #{booking.customer.last_name}" %><br>
+                      <small class="text-muted"><%= booking.customer.mobile %></small>
+                    <% else %>
+                      <span class="text-muted">Walk-in Customer</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% booking.booking_items.each do |item| %>
+                      <small class="d-block"><%= item.product&.name %> (×<%= item.quantity %>)</small>
+                    <% end %>
+                  </td>
+                  <td><strong>₹<%= number_with_precision(booking.total_amount || 0, precision: 2) %></strong></td>
+                  <td>
+                    <% if booking.payment_status == 'paid' %>
+                      <span class="badge bg-success">Paid</span>
+                    <% else %>
+                      <span class="badge bg-warning text-dark">Unpaid</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% case booking.status %>
+                    <% when 'draft', 'ordered_and_delivery_pending' %>
+                      <span class="badge bg-warning text-dark"><%= booking.status.humanize %></span>
+                    <% when 'confirmed', 'processing', 'packed' %>
+                      <span class="badge bg-info"><%= booking.status.humanize %></span>
+                    <% when 'shipped', 'out_for_delivery' %>
+                      <span class="badge bg-primary"><%= booking.status.humanize %></span>
+                    <% when 'delivered', 'completed' %>
+                      <span class="badge bg-success"><%= booking.status.humanize %></span>
+                    <% when 'cancelled', 'returned' %>
+                      <span class="badge bg-danger"><%= booking.status.humanize %></span>
+                    <% else %>
+                      <span class="badge bg-secondary"><%= booking.status&.humanize || 'Unknown' %></span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <%= booking.created_at.strftime("%d %b %Y") %><br>
+                    <small class="text-muted"><%= booking.created_at.strftime("%I:%M %p") %></small>
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <%= link_to "View", store_admin_booking_path(booking), class: "btn btn-outline-primary" %>
+                      <% if ['draft', 'confirmed'].include?(booking.status) %>
+                        <%= link_to "Edit", edit_store_admin_booking_path(booking), class: "btn btn-outline-secondary" %>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+
+              <% if @bookings.empty? %>
+                <tr>
+                  <td colspan="8" class="text-center py-4">
+                    <div class="text-muted">
+                      <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                      <h5>No bookings found</h5>
+                      <%= link_to "Create First Booking", new_store_admin_booking_path, class: "btn btn-primary" %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+        <% if @bookings.respond_to?(:current_page) %>
+          <div class="d-flex justify-content-center mt-3">
+            <%= paginate @bookings %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

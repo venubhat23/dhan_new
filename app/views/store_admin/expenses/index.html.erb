@@ -1,0 +1,156 @@
+<% content_for :page_title, "Expenses" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1">Store Expenses</h4>
+    <small class="text-muted">Manage and track your store expenses</small>
+  </div>
+  <%= link_to new_store_admin_expense_path, class: "btn btn-primary" do %>
+    <i class="bi bi-plus-circle me-2"></i>Add Expense
+  <% end %>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-4 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #3b82f6 !important;">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="card-title mb-2" style="color: #2d3748; font-weight: 600;">Total Expenses</h6>
+          <div style="color: #1a202c; font-weight: 800; font-size: 1.8rem;">₹<%= number_with_delimiter(@total_expenses.to_f.round(0)) %></div>
+          <small class="text-muted">all time spending</small>
+        </div>
+        <i class="bi bi-receipt" style="color: rgba(45,55,72,0.2); font-size: 3rem;"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #06b6d4 !important;">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="card-title mb-2" style="color: #2d3748; font-weight: 600;">This Month</h6>
+          <div style="color: #1a202c; font-weight: 800; font-size: 1.8rem;">₹<%= number_with_delimiter(@monthly_expenses.to_f.round(0)) %></div>
+          <small class="text-muted">current month spending</small>
+        </div>
+        <i class="bi bi-calendar-month" style="color: rgba(45,55,72,0.2); font-size: 3rem;"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #10b981 !important;">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="card-title mb-2" style="color: #2d3748; font-weight: 600;">Categories</h6>
+          <div style="color: #1a202c; font-weight: 800; font-size: 1.8rem;"><%= @category_breakdown.keys.count %></div>
+          <small class="text-muted">expense categories</small>
+        </div>
+        <i class="bi bi-tags" style="color: rgba(45,55,72,0.2); font-size: 3rem;"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <%= form_tag store_admin_expenses_path, method: :get, local: true, class: "row g-3 align-items-end" do %>
+      <div class="col-md-3">
+        <label class="form-label small">Start Date</label>
+        <%= date_field_tag :start_date, params[:start_date], class: "form-control form-control-sm" %>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">End Date</label>
+        <%= date_field_tag :end_date, params[:end_date], class: "form-control form-control-sm" %>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Category</label>
+        <%= select_tag :category,
+            options_for_select([["All Categories", ""]] + (defined?(Expense::CATEGORIES) ? Expense::CATEGORIES.map { |cat| [cat, cat] } : []), params[:category]),
+            class: "form-select form-select-sm" %>
+      </div>
+      <div class="col-md-3">
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i>Filter</button>
+          <%= link_to store_admin_expenses_path, class: "btn btn-outline-secondary btn-sm" do %>
+            <i class="bi bi-x me-1"></i>Clear
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- Expenses List -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-0">
+    <h6 class="mb-0"><i class="bi bi-list me-2"></i>Expense Records</h6>
+  </div>
+  <div class="card-body p-0">
+    <% if @expenses.any? %>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Date</th>
+              <th>Title</th>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>Created By</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @expenses.each do |expense| %>
+              <tr>
+                <td>
+                  <strong><%= expense.expense_date.strftime('%d %b %Y') %></strong>
+                  <div class="small text-muted"><%= time_ago_in_words(expense.created_at) %> ago</div>
+                </td>
+                <td>
+                  <strong><%= expense.title %></strong>
+                  <% if expense.description.present? %>
+                    <div class="small text-muted"><%= truncate(expense.description, length: 50) %></div>
+                  <% end %>
+                </td>
+                <td>
+                  <span class="badge bg-light text-dark"><%= expense.category %></span>
+                </td>
+                <td>
+                  <strong class="text-primary">₹<%= number_with_delimiter(expense.amount.to_f.round(2)) %></strong>
+                </td>
+                <td>
+                  <small class="text-muted">
+                    <i class="bi bi-person me-1"></i>
+                    <%= expense.created_by&.first_name %> <%= expense.created_by&.last_name %>
+                  </small>
+                </td>
+                <td>
+                  <div class="btn-group" role="group">
+                    <%= link_to store_admin_expense_path(expense), class: "btn btn-sm btn-outline-primary" do %>
+                      <i class="bi bi-eye"></i>
+                    <% end %>
+                    <%= link_to edit_store_admin_expense_path(expense), class: "btn btn-sm btn-outline-secondary" do %>
+                      <i class="bi bi-pencil"></i>
+                    <% end %>
+                    <%= link_to store_admin_expense_path(expense),
+                        data: { confirm: "Delete this expense?", turbo_method: :delete },
+                        class: "btn btn-sm btn-outline-danger" do %>
+                      <i class="bi bi-trash"></i>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="text-center py-5">
+        <i class="bi bi-receipt fs-1 text-muted mb-3"></i>
+        <h5 class="text-muted">No Expenses Found</h5>
+        <%= link_to "Add First Expense", new_store_admin_expense_path, class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  </div>
+</div>

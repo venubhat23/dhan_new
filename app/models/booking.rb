@@ -62,6 +62,13 @@ class Booking < ApplicationRecord
   before_validation :calculate_final_amount_after_discount
   after_validation :ensure_total_amount_present
   after_update :allocate_inventory, if: :saved_change_to_status?
+  after_commit :bust_mobile_customer_cache
+
+  def bust_mobile_customer_cache
+    cid = customer_id || customer&.id
+    return unless cid
+    Rails.cache.delete("mobile_api/customer_bookings/#{cid}")
+  end
 
   scope :recent, -> { order(created_at: :desc) }
   scope :today, -> { where(created_at: Date.current.all_day) }

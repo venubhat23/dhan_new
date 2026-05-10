@@ -1,0 +1,37 @@
+<% content_for :page_title, "Expense Details" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">Expense Details</h4>
+  <div class="d-flex gap-2">
+    <%= link_to edit_store_admin_expense_path(@expense), class: "btn btn-outline-primary btn-sm" do %>
+      <i class="bi bi-pencil me-2"></i>Edit
+    <% end %>
+    <%= link_to store_admin_expenses_path, class: "btn btn-outline-secondary btn-sm" do %>
+      <i class="bi bi-arrow-left me-2"></i>Back
+    <% end %>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <table class="table table-borderless">
+      <tr><td class="text-muted fw-semibold" style="width: 200px;">Title:</td><td><strong><%= @expense.title %></strong></td></tr>
+      <tr><td class="text-muted fw-semibold">Category:</td><td><span class="badge bg-light text-dark"><%= @expense.category %></span></td></tr>
+      <tr><td class="text-muted fw-semibold">Amount:</td><td><strong class="text-primary fs-5">₹<%= number_with_delimiter(@expense.amount.to_f.round(2)) %></strong></td></tr>
+      <tr><td class="text-muted fw-semibold">Date:</td><td><%= @expense.expense_date.strftime('%d %B %Y') %></td></tr>
+      <tr><td class="text-muted fw-semibold">Created By:</td><td><%= @expense.created_by&.first_name %> <%= @expense.created_by&.last_name %></td></tr>
+      <tr><td class="text-muted fw-semibold">Recorded At:</td><td><%= @expense.created_at.strftime('%d %b %Y at %I:%M %p') %></td></tr>
+      <% if @expense.description.present? %>
+        <tr><td class="text-muted fw-semibold">Description:</td><td><%= simple_format(@expense.description) %></td></tr>
+      <% end %>
+    </table>
+
+    <div class="mt-3">
+      <%= link_to store_admin_expense_path(@expense),
+          data: { confirm: "Delete this expense?", turbo_method: :delete },
+          class: "btn btn-outline-danger btn-sm" do %>
+        <i class="bi bi-trash me-2"></i>Delete Expense
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,65 @@
+<% content_for :page_title, "Edit Expense" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1">Edit Expense</h4>
+    <small class="text-muted"><%= @expense.title %></small>
+  </div>
+  <%= link_to store_admin_expense_path(@expense), class: "btn btn-outline-secondary" do %>
+    <i class="bi bi-arrow-left me-2"></i>Back
+  <% end %>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <%= form_with model: [:store_admin, @expense], local: true do |f| %>
+      <% if @expense.errors.any? %>
+        <div class="alert alert-danger">
+          <ul class="mb-0">
+            <% @expense.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Title <span class="text-danger">*</span></label>
+          <%= f.text_field :title, class: "form-control", required: true %>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Category <span class="text-danger">*</span></label>
+          <%= f.select :category,
+              options_for_select((defined?(Expense::CATEGORIES) ? Expense::CATEGORIES.map { |cat| [cat, cat] } : [['General', 'General'], ['Rent', 'Rent'], ['Salary', 'Salary'], ['Utilities', 'Utilities'], ['Inventory', 'Inventory'], ['Marketing', 'Marketing'], ['Other', 'Other']]), @expense.category),
+              { prompt: "Select a category" },
+              { class: "form-select", required: true } %>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Amount <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text">₹</span>
+            <%= f.number_field :amount, class: "form-control", step: 0.01, min: 0.01, required: true %>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Expense Date <span class="text-danger">*</span></label>
+          <%= f.date_field :expense_date, class: "form-control", required: true %>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">Description</label>
+          <%= f.text_area :description, class: "form-control", rows: 4 %>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mt-4">
+        <%= f.submit "Update Expense", class: "btn btn-primary" %>
+        <%= link_to "Cancel", store_admin_expense_path(@expense), class: "btn btn-outline-secondary" %>
+      </div>
+    <% end %>
+  </div>
+</div>

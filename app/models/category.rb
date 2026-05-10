@@ -8,6 +8,11 @@ class Category < ApplicationRecord
 
   # Store image URL as backup when image is attached
   after_commit :backup_image_url, if: :saved_change_to_id?
+  after_commit :bust_mobile_api_cache
+
+  def bust_mobile_api_cache
+    MobileApiCache.bust_categories!
+  end
 
   scope :active, -> { where(status: true) }
   scope :inactive, -> { where(status: false) }

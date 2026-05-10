@@ -17,6 +17,11 @@ class ProductVariant < ApplicationRecord
   before_save :ensure_single_default
 
   after_create :create_initial_stock_records, if: -> { available_stock.present? && available_stock > 0 }
+  after_commit :bust_mobile_product_cache
+
+  def bust_mobile_product_cache
+    MobileApiCache.bust_products!
+  end
 
   def label
     "#{weight.to_f.to_s.sub(/\.0$/, '')} #{unit}"

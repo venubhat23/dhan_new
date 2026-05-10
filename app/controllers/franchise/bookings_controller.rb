@@ -355,6 +355,7 @@ class Franchise::BookingsController < Franchise::BaseController
 
   def set_booking
     @booking = Booking.where(franchise_id: current_franchise.id)
+                     .or(Booking.where(booked_by: 'customer'))
                      .find(params[:id])
   rescue ActiveRecord::RecordNotFound
     redirect_to franchise_bookings_path, alert: 'Booking not found'

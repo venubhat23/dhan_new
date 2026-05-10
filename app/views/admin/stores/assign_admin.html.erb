@@ -1,0 +1,85 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1"><%= @store.has_store_admin? ? 'Update' : 'Assign' %> Store Admin</h4>
+    <small class="text-muted"><%= @store.name %></small>
+  </div>
+  <%= link_to admin_store_path(@store), class: "btn btn-outline-secondary btn-sm" do %>
+    <i class="bi bi-arrow-left me-2"></i>Back to Store
+  <% end %>
+</div>
+
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0">
+        <h6 class="mb-0"><i class="bi bi-person-badge me-2"></i>
+          <%= @store.has_store_admin? ? 'Update Admin Details' : 'Create Store Admin Login' %>
+        </h6>
+      </div>
+      <div class="card-body">
+        <% if @store.has_store_admin? %>
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            Updating admin for <strong><%= @store.store_admin_user.email %></strong>.
+            Leave password blank to keep existing password.
+          </div>
+        <% end %>
+
+        <%= form_tag update_admin_admin_store_path(@store), method: :patch do %>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">First Name <span class="text-danger">*</span></label>
+              <input type="text" name="admin_first_name" class="form-control" required
+                     value="<%= @store.store_admin_user&.first_name %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Last Name <span class="text-danger">*</span></label>
+              <input type="text" name="admin_last_name" class="form-control" required
+                     value="<%= @store.store_admin_user&.last_name %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email <span class="text-danger">*</span></label>
+              <input type="email" name="admin_email" class="form-control" required
+                     value="<%= @store.store_admin_user&.email %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Mobile <span class="text-danger">*</span></label>
+              <input type="text" name="admin_mobile" class="form-control" placeholder="10-digit mobile" required
+                     value="<%= @store.store_admin_user&.mobile %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Password <%= @store.has_store_admin? ? '(leave blank to keep)' : '<span class="text-danger">*</span>'.html_safe %></label>
+              <input type="text" name="admin_password" class="form-control" placeholder="Min 6 characters"
+                     <%= 'required' unless @store.has_store_admin? %>>
+              <div class="form-text">Password will be shown on the store page after saving.</div>
+            </div>
+          </div>
+
+          <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-circle me-2"></i><%= @store.has_store_admin? ? 'Update Admin' : 'Create Admin Login' %>
+            </button>
+            <%= link_to admin_store_path(@store), class: "btn btn-outline-secondary" do %>Cancel<% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0">
+        <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>How it works</h6>
+      </div>
+      <div class="card-body">
+        <ul class="list-unstyled small">
+          <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>The store admin can log in with their email and password</li>
+          <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>They will be redirected to the store dashboard automatically</li>
+          <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>They can only see and manage bookings for <strong><%= @store.name %></strong></li>
+          <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>They can track expenses for their store</li>
+          <li class="mb-2"><i class="bi bi-info-circle text-info me-2"></i>Store login URL: <code>/users/sign_in</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

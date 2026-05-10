@@ -14,6 +14,12 @@ class Banner < ApplicationRecord
   # Custom validation for date range
   validate :end_date_after_start_date
 
+  after_commit :bust_mobile_banner_cache
+
+  def bust_mobile_banner_cache
+    MobileApiCache.bust_banners!(display_location)
+  end
+
   # Scopes
   scope :active, -> { where(status: true) }
   scope :inactive, -> { where(status: false) }

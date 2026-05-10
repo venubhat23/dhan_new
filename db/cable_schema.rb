@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_09_130000) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_10_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1081,6 +1081,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_09_130000) do
     t.string "gst_no"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "store_admin_user_id"
+    t.string "admin_plain_password"
+    t.integer "auto_transfer_threshold", default: 10
+    t.boolean "is_main_inventory", default: false
+    t.index ["store_admin_user_id"], name: "index_stores_on_store_admin_user_id"
   end
 
   create_table "sub_agents", force: :cascade do |t|
@@ -1252,7 +1257,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_09_130000) do
     t.string "original_password"
     t.string "authenticatable_type"
     t.bigint "authenticatable_id"
+    t.integer "assigned_store_id"
+    t.text "store_permissions"
+    t.datetime "last_store_access"
     t.index ["aadhar_no"], name: "index_users_on_aadhar_no", unique: true
+    t.index ["assigned_store_id"], name: "index_users_on_assigned_store_id"
     t.index ["authenticatable_type", "authenticatable_id"], name: "index_users_on_authenticatable"
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["deleted_at"], name: "index_users_on_deleted_at"
