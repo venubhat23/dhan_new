@@ -1407,7 +1407,12 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     end
 
     payment_method = booking_params[:payment_method].presence || 'cod'
+    pincode  = booking_params[:pincode]
     booking = nil
+
+    # Look up delivery charge for this pincode
+    delivery_charge_amount = DeliveryCharge.charge_for_pincode(pincode.to_s) if pincode.present?
+    delivery_charge_amount = delivery_charge_amount.to_f
 
     ActiveRecord::Base.transaction do
       booking = Booking.new(
@@ -1421,7 +1426,8 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
         delivery_address: booking_params[:delivery_address],
         notes: booking_params[:notes],
         payment_status: :unpaid,
-        status: payment_method == 'cod' ? 'confirmed' : 'draft'
+        status: payment_method == 'cod' ? 'confirmed' : 'draft',
+        booked_by: 'mobile_api'
       )
 
       total_amount = 0
@@ -1440,8 +1446,16 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       booking.calculate_totals
       booking.save!
 
+      # Apply delivery charge directly after calculate_totals so it isn't stripped by the callback.
+      # update_columns bypasses before_validation, keeping this change isolated to mobile/customer orders.
+      if delivery_charge_amount > 0
+        booking.update_columns(
+          shipping_charges: delivery_charge_amount,
+          total_amount: booking.total_amount + delivery_charge_amount
+        )
+      end
+
       # Save location data to customer if provided
-      pincode  = booking_params[:pincode]
       latitude = booking_params[:latitude]
       longitude = booking_params[:longitude]
       if latitude.present? || longitude.present?
@@ -1458,6 +1472,8 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
         message: 'Order placed successfully! Pay on delivery.',
         booking_number: booking.booking_number,
         booking_id: booking.id,
+        subtotal: booking.subtotal.to_f,
+        delivery_charge: booking.shipping_charges.to_f,
         total_amount: booking.total_amount.to_f,
         payment_method: 'cod'
       })
