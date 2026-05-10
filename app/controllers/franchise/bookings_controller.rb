@@ -2,11 +2,30 @@ class Franchise::BookingsController < Franchise::BaseController
   before_action :set_booking, only: [:show, :edit, :update, :destroy, :generate_invoice, :invoice, :convert_to_order, :update_status, :cancel_order, :mark_delivered, :mark_completed, :manage_stage, :update_stage]
 
   def index
-    # Start with base query for statistics (before filtering)
-    @all_bookings = Booking.where(franchise_id: current_franchise.id).includes(:customer, :user, :booking_items, :store)
+    # Franchise-created bookings
+    franchise_bookings = Booking.where(franchise_id: current_franchise.id)
+    # Online orders placed by customers through the shop
+    online_orders = Booking.where(booked_by: 'customer')
 
-    # Apply filters
-    @bookings = @all_bookings.recent
+    # Combined base query for statistics
+    @all_bookings = Booking.where(
+      franchise_id: current_franchise.id
+    ).or(
+      Booking.where(booked_by: 'customer')
+    ).includes(:customer, :user, :booking_items, :store)
+
+    # Source filter: 'franchise' = only franchise-created, 'online' = only customer orders, default = all
+    @source_filter = params[:source].presence || 'all'
+    base_scope = case @source_filter
+                 when 'franchise'
+                   franchise_bookings
+                 when 'online'
+                   online_orders
+                 else
+                   @all_bookings
+                 end
+
+    @bookings = base_scope.recent
 
     if params[:search].present?
       @bookings = @bookings.where(
@@ -27,16 +46,15 @@ class Franchise::BookingsController < Franchise::BaseController
       @bookings = @bookings.where(customer_id: params[:customer_id])
     end
 
-    # Get pagination settings from system settings
     @per_page = SystemSetting.default_pagination_per_page
-
-    # Paginate the filtered results
     @bookings = @bookings.page(params[:page]).per(@per_page)
 
-    # Use all_bookings for statistics cards to show complete picture
     @bookings_for_stats = @all_bookings
 
-    # Load customers for filter dropdown
+    # Counts for source tabs
+    @franchise_bookings_count = franchise_bookings.count
+    @online_orders_count = online_orders.count
+
     @customers = Customer.select(:id, :first_name, :middle_name, :last_name, :email, :mobile)
                         .order(:first_name, :last_name)
   end
