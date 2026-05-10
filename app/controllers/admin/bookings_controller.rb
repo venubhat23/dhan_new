@@ -38,6 +38,10 @@ class Admin::BookingsController < Admin::ApplicationController
       @bookings = @bookings.where(is_b2b: true)
     end
 
+    if params[:booked_by].present? && params[:booked_by].strip != ''
+      @bookings = @bookings.where(booked_by: params[:booked_by])
+    end
+
     # Get pagination settings from system settings
     @per_page = SystemSetting.default_pagination_per_page
 

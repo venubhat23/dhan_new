@@ -86,6 +86,33 @@
 .franchise-booking:hover {
   background-color: #d1ecf1 !important;
 }
+
+/* Booking source badges */
+.source-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.source-mobile {
+  background-color: rgba(111,66,193,0.1);
+  color: #6f42c1;
+  border: 1px solid rgba(111,66,193,0.3);
+}
+.source-customer {
+  background-color: rgba(13,110,253,0.1);
+  color: #0d6efd;
+  border: 1px solid rgba(13,110,253,0.3);
+}
+.source-franchise {
+  background-color: rgba(13,202,240,0.12);
+  color: #0a7a96;
+  border: 1px solid rgba(13,202,240,0.35);
+}
+.source-store {
+  background-color: rgba(108,117,125,0.1);
+  color: #495057;
+  border: 1px solid rgba(108,117,125,0.3);
+}
 </style>
 
 
@@ -303,18 +330,40 @@
             </div>
           </div>
 
+          <!-- Booked By Filter -->
+          <div class="col-lg-3 col-md-4 col-sm-6">
+            <div class="filter-group">
+              <label class="form-label text-muted mb-1 small fw-semibold">
+                <i class="bi bi-tag me-1"></i>Booked Via
+              </label>
+              <%= form.select :booked_by,
+                  options_for_select([
+                    ['All Sources', ''],
+                    ['Customer Website', 'customer'],
+                    ['Mobile App', 'mobile_api'],
+                    ['Franchise', 'franchise'],
+                    ['Store', 'admin']
+                  ], params[:booked_by]),
+                  {},
+                  {
+                    class: "form-select form-select-sm shadow-sm",
+                    onchange: "this.form.submit();"
+                  } %>
+            </div>
+          </div>
+
           <!-- Filter Actions -->
           <div class="col-lg-1 col-md-12">
             <div class="filter-actions d-flex gap-2 flex-wrap justify-content-end">
               <%= form.submit "Apply", class: "btn btn-primary btn-sm px-3 shadow-sm d-none" %>
-              <% if params[:search].present? || params[:status].present? || params[:customer_id].present? || params[:b2b].present? %>
+              <% if params[:search].present? || params[:status].present? || params[:customer_id].present? || params[:b2b].present? || params[:booked_by].present? %>
                 <%= link_to admin_bookings_path, class: "btn btn-outline-secondary btn-sm px-3 shadow-sm", title: "Clear all filters" do %>
                   <i class="bi bi-arrow-clockwise me-1"></i>Reset
                 <% end %>
               <% end %>
               <div class="filter-status small text-muted align-self-center">
                 <%= pluralize(@bookings.respond_to?(:total_count) ? @bookings.total_count : @bookings.count, 'result') %>
-                <% if params[:search].present? || params[:status].present? || params[:customer_id].present? || params[:b2b].present? %>
+                <% if params[:search].present? || params[:status].present? || params[:customer_id].present? || params[:b2b].present? || params[:booked_by].present? %>
                   <span class="text-primary">(filtered)</span>
                 <% end %>
               </div>
@@ -364,19 +413,27 @@
                           </span>
                         </div>
                       <% end %>
-                      <% if booking.booked_by == 'mobile_api' %>
-                        <div class="mt-1">
-                          <span class="badge bg-purple-subtle text-purple border border-purple-subtle" style="background-color: rgba(111,66,193,0.1) !important; color: #6f42c1 !important; border-color: rgba(111,66,193,0.3) !important;">
+                      <%# Booking source label %>
+                      <div class="mt-1">
+                        <% case booking.booked_by
+                           when 'mobile_api' %>
+                          <span class="badge source-badge source-mobile">
                             <i class="bi bi-phone me-1"></i>Mobile App
                           </span>
-                        </div>
-                      <% elsif booking.booked_by == 'customer' %>
-                        <div class="mt-1">
-                          <span class="badge bg-teal-subtle text-teal border border-teal-subtle" style="background-color: rgba(32,201,151,0.1) !important; color: #198754 !important; border-color: rgba(32,201,151,0.3) !important;">
+                        <% when 'customer' %>
+                          <span class="badge source-badge source-customer">
                             <i class="bi bi-globe me-1"></i>Customer Website
                           </span>
-                        </div>
-                      <% end %>
+                        <% when 'franchise' %>
+                          <span class="badge source-badge source-franchise">
+                            <i class="bi bi-shop me-1"></i>Franchise
+                          </span>
+                        <% else %>
+                          <span class="badge source-badge source-store">
+                            <i class="bi bi-person-gear me-1"></i>Store
+                          </span>
+                        <% end %>
+                      </div>
                     </div>
                   </div>
                 </td>

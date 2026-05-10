@@ -345,10 +345,10 @@ class Franchise::BookingsController < Franchise::BaseController
   def booking_params
     params.require(:booking).permit(
       :customer_id, :booking_date, :status, :notes, :customer_name, :customer_email,
-      :customer_phone, :customer_address, :delivery_date, :delivery_time,
-      :payment_method, :payment_status, :discount_amount, :store_id, :booked_by,
+      :customer_phone, :customer_address, :delivery_address, :delivery_date, :delivery_time,
+      :payment_method, :payment_status, :cash_received, :change_amount, :discount_amount, :store_id, :booked_by,
       booking_items_attributes: [
-        :id, :product_id, :quantity, :unit_price, :subtotal, :_destroy
+        :id, :product_id, :quantity, :price, :unit_price, :subtotal, :_destroy
       ]
     )
   end
