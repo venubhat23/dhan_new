@@ -1,4 +1,4 @@
-class Admin::StockTransfersController < Admin::BaseController
+class Admin::StockTransfersController < Admin::ApplicationController
   before_action :set_transfer, only: [:show, :approve, :reject]
 
   def index
