@@ -1,116 +1,100 @@
+<style>
+.st-card { cursor:pointer; border:2px solid transparent; transition:all 0.18s; border-radius:10px; }
+.st-card:hover { border-color:#1C7C54; box-shadow:0 4px 16px rgba(28,124,84,0.12); transform:translateY(-2px); }
+.st-card.selected { border-color:#1C7C54; background:#f0fdf4; }
+.st-cart-row { background:#f8fafc; border-radius:8px; padding:0.6rem 0.8rem; margin-bottom:0.4rem; }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <h5 class="fw-bold mb-1"><i class="bi bi-arrow-left-right me-2" style="color:#1C7C54;"></i>Request Stock Transfer</h5>
-    <small class="text-muted">Select a product and enter transfer details for <%= @current_store.name %></small>
+    <small class="text-muted">Select products and submit a transfer request for <%= @current_store.name %></small>
   </div>
   <%= link_to store_admin_stock_transfers_path, class: "btn btn-outline-secondary btn-sm" do %>
     <i class="bi bi-arrow-left me-1"></i>Back
   <% end %>
 </div>
 
-<%# Search and Filters %>
+<%# Search & Filters %>
 <div class="card border-0 shadow-sm mb-3">
   <div class="card-body py-2">
     <div class="row g-2 align-items-center">
       <div class="col-md-5">
-        <input type="text" class="form-control form-control-sm" placeholder="Search products by name or SKU..." id="stProductSearch" oninput="stFilterProducts()">
+        <input type="text" class="form-control form-control-sm" placeholder="Search products by name or SKU..." id="stSearch" oninput="stFilter()">
       </div>
       <div class="col-md-3">
-        <select class="form-select form-select-sm" id="stCategoryFilter" onchange="stFilterProducts()">
+        <select class="form-select form-select-sm" id="stCatFilter" onchange="stFilter()">
           <option value="">All Categories</option>
           <% @products.map(&:category).compact.uniq.each do |cat| %>
             <option value="<%= cat.id %>"><%= cat.name %></option>
           <% end %>
         </select>
       </div>
-      <div class="col-md-4">
-        <div class="d-flex gap-2 align-items-center">
-          <small class="text-muted">Filter:</small>
-          <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn btn-outline-primary btn-sm active" id="stAllBtn" onclick="stFilterStock('all')">All</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="stInStockBtn" onclick="stFilterStock('instock')">In Stock</button>
-          </div>
+      <div class="col-auto d-flex gap-2 align-items-center">
+        <small class="text-muted">Filter:</small>
+        <div class="btn-group btn-group-sm">
+          <button type="button" class="btn btn-outline-primary active" id="stAllBtn" onclick="stStockFilter('all')">All</button>
+          <button type="button" class="btn btn-outline-primary" id="stInStockBtn" onclick="stStockFilter('instock')">In Stock</button>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<%# Product Cards Grid %>
-<div class="card border-0 shadow-sm" style="margin-bottom: 160px;">
+<%# Product Grid %>
+<div class="card border-0 shadow-sm" style="margin-bottom:220px;">
   <div class="card-body pt-3">
     <% if @products.any? %>
-      <div class="row g-3" id="stProductGrid">
+      <div class="row g-3" id="stGrid">
         <% @products.each do |product| %>
-          <% current_stock = product.cached_total_batch_stock %>
-          <div class="col-md-4 col-lg-3 st-product-item"
-               data-product-id="<%= product.id %>"
-               data-category="<%= product.category_id %>"
-               data-stock="<%= current_stock %>"
+          <% stock = product.cached_total_batch_stock %>
+          <div class="col-md-4 col-lg-3 st-item"
+               data-id="<%= product.id %>"
                data-name="<%= product.name.downcase %>"
-               data-sku="<%= product.sku.downcase %>">
-            <div class="card h-100 border-2 shadow-sm st-product-card"
-                 id="st-card-<%= product.id %>"
-                 onclick="stSelectProduct(<%= product.id %>, '<%= j(product.name) %>', '<%= j(product.sku) %>', <%= current_stock %>)"
-                 style="cursor:pointer; border-color: transparent; transition: all 0.2s;">
+               data-sku="<%= product.sku.to_s.downcase %>"
+               data-category="<%= product.category_id %>"
+               data-stock="<%= stock %>">
+            <div class="card h-100 st-card" id="st-card-<%= product.id %>"
+                 onclick="stToggle(<%= product.id %>, '<%= j(product.name) %>', '<%= j(product.sku) %>', <%= stock %>)">
 
-              <%# Product Image %>
               <div class="position-relative">
                 <% if product.images_attached? && product.images.any? %>
-                  <%= image_tag product.images.first, class: "card-img-top", style: "height: 160px; object-fit: cover; border-radius: 8px 8px 0 0;" %>
+                  <%= image_tag product.images.first, class: "card-img-top", style: "height:160px;object-fit:cover;border-radius:8px 8px 0 0;" %>
                 <% else %>
-                  <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 160px; border-radius: 8px 8px 0 0;">
+                  <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height:160px;border-radius:8px 8px 0 0;">
                     <i class="bi bi-box-seam fs-1 text-muted"></i>
                   </div>
                 <% end %>
 
-                <%# Stock Badge %>
-                <% if product.out_of_stock? %>
-                  <span class="position-absolute top-0 end-0 badge bg-danger m-2">
-                    <i class="bi bi-x-circle me-1"></i>Out of Stock
-                  </span>
-                <% elsif product.low_stock? %>
-                  <span class="position-absolute top-0 end-0 badge bg-warning text-dark m-2">
-                    <i class="bi bi-exclamation-triangle me-1"></i>Low (<%= current_stock.to_i %>)
-                  </span>
+                <% if stock <= 0 %>
+                  <span class="position-absolute top-0 end-0 badge bg-danger m-2"><i class="bi bi-x-circle me-1"></i>Out of Stock</span>
+                <% elsif stock <= 5 %>
+                  <span class="position-absolute top-0 end-0 badge bg-warning text-dark m-2"><i class="bi bi-exclamation-triangle me-1"></i>Low (<%= stock.to_i %>)</span>
                 <% else %>
-                  <span class="position-absolute top-0 end-0 badge bg-success m-2">
-                    <i class="bi bi-check-circle me-1"></i><%= current_stock.to_i %> in stock
-                  </span>
+                  <span class="position-absolute top-0 end-0 badge bg-success m-2"><i class="bi bi-check-circle me-1"></i><%= stock.to_i %> in stock</span>
                 <% end %>
 
-                <%# Selected Checkmark %>
-                <div class="position-absolute top-0 start-0 m-2 st-selected-check d-none" id="st-check-<%= product.id %>">
-                  <span class="badge rounded-circle p-2" style="background:#1C7C54;">
-                    <i class="bi bi-check-lg text-white"></i>
-                  </span>
+                <div class="position-absolute top-0 start-0 m-2 d-none" id="st-check-<%= product.id %>">
+                  <span class="badge rounded-circle p-2" style="background:#1C7C54;"><i class="bi bi-check-lg text-white"></i></span>
                 </div>
               </div>
 
-              <%# Card Body %>
               <div class="card-body d-flex flex-column p-3">
                 <small class="text-muted mb-1"><%= product.category&.name || 'No Category' %></small>
-                <h6 class="card-title mb-1 fw-semibold" style="font-size:0.9rem; min-height:36px;"><%= product.name %></h6>
+                <h6 class="fw-semibold mb-1" style="font-size:0.88rem;min-height:36px;"><%= product.name %></h6>
                 <small class="text-muted mb-3">SKU: <%= product.sku %></small>
-
                 <div class="mt-auto">
-                  <% if product.out_of_stock? %>
-                    <button class="btn btn-sm btn-outline-secondary w-100" disabled>
-                      <i class="bi bi-x-circle me-1"></i>Unavailable
-                    </button>
-                  <% else %>
-                    <button class="btn btn-sm w-100 fw-semibold st-select-btn" id="st-btn-<%= product.id %>"
-                            style="background:linear-gradient(135deg,#1C7C54,#10b981);color:white;border:none;border-radius:6px;">
-                      <i class="bi bi-plus-circle me-1"></i>Select
-                    </button>
-                  <% end %>
+                  <button type="button" class="btn btn-sm w-100 fw-semibold st-btn" id="st-btn-<%= product.id %>"
+                          style="background:linear-gradient(135deg,#1C7C54,#10b981);color:white;border:none;border-radius:6px;"
+                          <%= 'disabled' if stock <= 0 %>>
+                    <i class="bi bi-plus-circle me-1"></i>Add to Request
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         <% end %>
       </div>
-
       <div id="stNoResults" class="text-center py-5 d-none">
         <i class="bi bi-search fs-1 text-muted mb-2"></i>
         <p class="text-muted">No products match your search.</p>
@@ -124,28 +108,31 @@
   </div>
 </div>
 
-<%# Sticky Transfer Details Panel %>
-<div id="stTransferPanel" class="position-fixed bottom-0 start-0 w-100 d-none" style="z-index:1040; box-shadow: 0 -4px 20px rgba(0,0,0,0.15);">
+<%# Sticky Cart Panel %>
+<div id="stPanel" class="d-none position-fixed bottom-0 start-0 w-100" style="z-index:1040;box-shadow:0 -4px 20px rgba(0,0,0,0.15);max-height:50vh;overflow-y:auto;">
   <div class="bg-white border-top">
     <div class="container-fluid px-4 py-3">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="d-flex align-items-center gap-3">
-          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;background:linear-gradient(135deg,#1C7C54,#10b981);">
-            <i class="bi bi-box-seam text-white"></i>
-          </div>
-          <div>
-            <div class="fw-bold" id="stPanelProductName">—</div>
-            <small class="text-muted">SKU: <span id="stPanelProductSku">—</span> &bull; Available: <span id="stPanelStock">—</span></small>
-          </div>
+
+      <%# Panel Header %>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="fw-bold">
+          <i class="bi bi-cart3 me-2" style="color:#1C7C54;"></i>
+          Transfer Request — <span id="stItemCount">0</span> product(s) selected
         </div>
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="stClearSelection()">
-          <i class="bi bi-x me-1"></i>Change Product
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="stClearAll()">
+          <i class="bi bi-x me-1"></i>Clear All
         </button>
       </div>
 
-      <%= form_tag store_admin_stock_transfers_path, method: :post, id: "stTransferForm" do %>
-        <input type="hidden" name="product_id" id="stProductId">
-        <div class="row g-3 align-items-end">
+      <%= form_tag store_admin_stock_transfers_path, method: :post, id: "stForm" do %>
+
+        <%# Cart rows (populated by JS) %>
+        <div id="stCartRows" class="mb-3"></div>
+        <%# Hidden fields container %>
+        <div id="stHiddenFields"></div>
+
+        <%# Shared fields + Submit %>
+        <div class="row g-3 align-items-end pt-2 border-top">
           <div class="col-md-3">
             <label class="form-label fw-semibold small mb-1">Transfer From</label>
             <select name="from_store_id" class="form-select form-select-sm">
@@ -155,132 +142,148 @@
               <% end %>
             </select>
           </div>
-          <div class="col-md-2">
-            <label class="form-label fw-semibold small mb-1">Quantity <span class="text-danger">*</span></label>
-            <div class="input-group input-group-sm">
-              <button class="btn btn-outline-secondary" type="button" onclick="stDecQty()" style="border-radius:6px 0 0 6px;">
-                <i class="bi bi-dash"></i>
-              </button>
-              <input type="number" name="quantity" id="stQtyInput" class="form-control text-center fw-bold" value="1" min="0.01" step="0.01" required>
-              <button class="btn btn-outline-secondary" type="button" onclick="stIncQty()" style="border-radius:0 6px 6px 0;">
-                <i class="bi bi-plus"></i>
-              </button>
-            </div>
+          <div class="col-md-5">
+            <label class="form-label fw-semibold small mb-1">Notes (optional)</label>
+            <input type="text" name="notes" class="form-control form-control-sm" placeholder="Reason for this transfer request...">
           </div>
           <div class="col-md-4">
-            <label class="form-label fw-semibold small mb-1">Notes</label>
-            <input type="text" name="notes" class="form-control form-control-sm" placeholder="Reason for request...">
-          </div>
-          <div class="col-md-3 d-flex gap-2">
-            <button type="submit" class="btn fw-semibold flex-fill" style="background:linear-gradient(135deg,#1C7C54,#10b981);color:white;border-radius:8px;">
-              <i class="bi bi-send me-1"></i>Submit Request
+            <button type="submit" class="btn w-100 fw-semibold" style="background:linear-gradient(135deg,#1C7C54,#10b981);color:white;border-radius:8px;">
+              <i class="bi bi-send me-1"></i>Submit Transfer Request (<span id="stSubmitCount">0</span>)
             </button>
           </div>
         </div>
+
       <% end %>
     </div>
   </div>
 </div>
 
 <script>
-  let stCurrentStock = 0;
-  let stStockFilter = 'all';
+let stCart = []; // [{id, name, sku, stock, qty}]
+let stStockMode = 'all';
 
-  function stSelectProduct(id, name, sku, stock) {
-    // Clear previous selection
-    document.querySelectorAll('.st-product-card').forEach(c => {
-      c.style.borderColor = 'transparent';
-      c.style.background = '';
-    });
-    document.querySelectorAll('.st-selected-check').forEach(c => c.classList.add('d-none'));
-    document.querySelectorAll('.st-select-btn').forEach(b => {
-      b.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Select';
-      b.style.background = 'linear-gradient(135deg,#1C7C54,#10b981)';
-    });
-
-    // Highlight selected
-    const card = document.getElementById('st-card-' + id);
-    card.style.borderColor = '#1C7C54';
-    card.style.background = '#f0fdf4';
-    document.getElementById('st-check-' + id).classList.remove('d-none');
-
-    const btn = document.getElementById('st-btn-' + id);
-    if (btn) {
-      btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Selected';
-      btn.style.background = 'linear-gradient(135deg,#0f5e3e,#059669)';
-    }
-
-    // Update panel
-    stCurrentStock = stock;
-    document.getElementById('stProductId').value = id;
-    document.getElementById('stPanelProductName').textContent = name;
-    document.getElementById('stPanelProductSku').textContent = sku;
-    document.getElementById('stPanelStock').textContent = Math.floor(stock);
-    document.getElementById('stQtyInput').max = stock;
-    document.getElementById('stQtyInput').value = 1;
-    document.getElementById('stTransferPanel').classList.remove('d-none');
-
-    // Scroll card into view
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+function stToggle(id, name, sku, stock) {
+  if (stock <= 0) return;
+  const idx = stCart.findIndex(i => i.id === id);
+  if (idx >= 0) {
+    stCart.splice(idx, 1);
+    stSetCardState(id, false);
+  } else {
+    stCart.push({ id, name, sku, stock, qty: 1 });
+    stSetCardState(id, true);
   }
+  stRender();
+}
 
-  function stClearSelection() {
-    document.querySelectorAll('.st-product-card').forEach(c => {
-      c.style.borderColor = 'transparent';
-      c.style.background = '';
-    });
-    document.querySelectorAll('.st-selected-check').forEach(c => c.classList.add('d-none'));
-    document.querySelectorAll('.st-select-btn').forEach(b => {
-      b.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Select';
-      b.style.background = 'linear-gradient(135deg,#1C7C54,#10b981)';
-    });
-    document.getElementById('stProductId').value = '';
-    document.getElementById('stTransferPanel').classList.add('d-none');
+function stSetCardState(id, selected) {
+  const card = document.getElementById('st-card-' + id);
+  const check = document.getElementById('st-check-' + id);
+  const btn = document.getElementById('st-btn-' + id);
+  if (selected) {
+    card.classList.add('selected');
+    check.classList.remove('d-none');
+    if (btn) { btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Added'; btn.style.background = 'linear-gradient(135deg,#0f5e3e,#059669)'; }
+  } else {
+    card.classList.remove('selected');
+    check.classList.add('d-none');
+    if (btn) { btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Add to Request'; btn.style.background = 'linear-gradient(135deg,#1C7C54,#10b981)'; }
   }
+}
 
-  function stIncQty() {
-    const input = document.getElementById('stQtyInput');
-    const val = parseFloat(input.value) || 0;
-    const max = stCurrentStock;
-    if (val + 1 <= max) input.value = (val + 1).toFixed(2).replace(/\.00$/, '');
-  }
+function stRender() {
+  const panel = document.getElementById('stPanel');
+  const rows  = document.getElementById('stCartRows');
+  const hidden = document.getElementById('stHiddenFields');
+  const count = stCart.length;
 
-  function stDecQty() {
-    const input = document.getElementById('stQtyInput');
-    const val = parseFloat(input.value) || 1;
-    if (val - 1 >= 0.01) input.value = (val - 1).toFixed(2).replace(/\.00$/, '');
-  }
+  document.getElementById('stItemCount').textContent = count;
+  document.getElementById('stSubmitCount').textContent = count;
 
-  function stFilterProducts() {
-    const search = document.getElementById('stProductSearch').value.toLowerCase();
-    const cat = document.getElementById('stCategoryFilter').value;
-    let visible = 0;
+  if (count === 0) { panel.classList.add('d-none'); return; }
+  panel.classList.remove('d-none');
 
-    document.querySelectorAll('.st-product-item').forEach(item => {
-      const name = item.dataset.name || '';
-      const sku = item.dataset.sku || '';
-      const itemCat = item.dataset.category || '';
-      const stock = parseFloat(item.dataset.stock) || 0;
+  rows.innerHTML = stCart.map((item, i) => `
+    <div class="st-cart-row d-flex align-items-center gap-3">
+      <div class="flex-grow-1">
+        <div class="fw-semibold small">${item.name}</div>
+        <small class="text-muted">SKU: ${item.sku} &bull; Available: ${Math.floor(item.stock)}</small>
+      </div>
+      <div style="width:120px;">
+        <div class="input-group input-group-sm">
+          <button class="btn btn-outline-secondary" type="button" onclick="stDec(${item.id})" style="border-radius:6px 0 0 6px;"><i class="bi bi-dash"></i></button>
+          <input type="number" class="form-control text-center fw-bold" id="st-qty-${item.id}"
+                 value="${item.qty}" min="1" step="1" max="${Math.floor(item.stock)}"
+                 onchange="stQtyChange(${item.id}, this.value)" style="max-width:54px;">
+          <button class="btn btn-outline-secondary" type="button" onclick="stInc(${item.id})" style="border-radius:0 6px 6px 0;"><i class="bi bi-plus"></i></button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-danger" onclick="stRemove(${item.id})" style="border-radius:6px;">
+        <i class="bi bi-trash"></i>
+      </button>
+    </div>
+  `).join('');
 
-      const matchSearch = !search || name.includes(search) || sku.includes(search);
-      const matchCat = !cat || itemCat === cat;
-      const matchStock = stStockFilter === 'all' || (stStockFilter === 'instock' && stock > 0);
+  hidden.innerHTML = stCart.map((item, i) => `
+    <input type="hidden" name="transfers[${i}][product_id]" value="${item.id}">
+    <input type="hidden" name="transfers[${i}][quantity]" value="${item.qty}">
+  `).join('');
+}
 
-      if (matchSearch && matchCat && matchStock) {
-        item.style.display = '';
-        visible++;
-      } else {
-        item.style.display = 'none';
-      }
-    });
+function stQtyChange(id, val) {
+  const item = stCart.find(i => i.id === id);
+  if (!item) return;
+  const v = Math.min(Math.max(1, parseInt(val) || 1), Math.floor(item.stock));
+  item.qty = v;
+  const input = document.getElementById('st-qty-' + id);
+  if (input) input.value = v;
+  stRender();
+}
 
-    document.getElementById('stNoResults').classList.toggle('d-none', visible > 0);
-  }
+function stInc(id) {
+  const item = stCart.find(i => i.id === id);
+  if (item && item.qty < Math.floor(item.stock)) { item.qty++; stRender(); }
+}
 
-  function stFilterStock(type) {
-    stStockFilter = type;
-    document.getElementById('stAllBtn').classList.toggle('active', type === 'all');
-    document.getElementById('stInStockBtn').classList.toggle('active', type === 'instock');
-    stFilterProducts();
-  }
+function stDec(id) {
+  const item = stCart.find(i => i.id === id);
+  if (item && item.qty > 1) { item.qty--; stRender(); }
+}
+
+function stRemove(id) {
+  stCart = stCart.filter(i => i.id !== id);
+  stSetCardState(id, false);
+  stRender();
+}
+
+function stClearAll() {
+  stCart.forEach(item => stSetCardState(item.id, false));
+  stCart = [];
+  stRender();
+}
+
+function stFilter() {
+  const q   = document.getElementById('stSearch').value.toLowerCase();
+  const cat = document.getElementById('stCatFilter').value;
+  let vis = 0;
+  document.querySelectorAll('.st-item').forEach(item => {
+    const matchQ = !q || item.dataset.name.includes(q) || item.dataset.sku.includes(q);
+    const matchC = !cat || item.dataset.category === cat;
+    const matchS = stStockMode === 'all' || parseFloat(item.dataset.stock) > 0;
+    const show = matchQ && matchC && matchS;
+    item.style.display = show ? '' : 'none';
+    if (show) vis++;
+  });
+  document.getElementById('stNoResults').classList.toggle('d-none', vis > 0);
+}
+
+function stStockFilter(mode) {
+  stStockMode = mode;
+  document.getElementById('stAllBtn').classList.toggle('active', mode === 'all');
+  document.getElementById('stInStockBtn').classList.toggle('active', mode === 'instock');
+  stFilter();
+}
+
+document.getElementById('stForm')?.addEventListener('submit', function(e) {
+  if (stCart.length === 0) { e.preventDefault(); alert('Please select at least one product.'); }
+});
 </script>
