@@ -17,6 +17,22 @@ class Admin::StoresController < Admin::ApplicationController
 
   def show
     @bookings_count = @store.bookings.count
+    @inventory_summary = @store.store_inventory_summary
+    @stock_items = @store.stock_batches
+                         .where(status: 'active')
+                         .where('quantity_remaining > 0')
+                         .includes(:product)
+                         .group_by(&:product)
+                         .map do |product, batches|
+                           {
+                             product: product,
+                             total_qty: batches.sum(&:quantity_remaining),
+                             batches_count: batches.size,
+                             min_price: batches.map(&:selling_price).min,
+                             max_price: batches.map(&:selling_price).max
+                           }
+                         end
+                         .sort_by { |item| item[:product].name }
   end
 
   def new

@@ -20,8 +20,9 @@ class StoreAdmin::StockTransfersController < StoreAdmin::ApplicationController
       redirect_to new_store_admin_stock_transfer_path and return
     end
 
-    errors   = []
-    created  = 0
+    errors        = []
+    created       = 0
+    transfer_group_id = SecureRandom.uuid
 
     transfers_params.each_value do |item|
       product_id = item[:product_id].to_i
@@ -32,14 +33,19 @@ class StoreAdmin::StockTransfersController < StoreAdmin::ApplicationController
       product = Product.find_by(id: product_id)
       next unless product
 
+      variant_id = item[:variant_id].to_i
+      variant    = variant_id > 0 ? ProductVariant.find_by(id: variant_id, product_id: product_id) : nil
+
       transfer = StockTransfer.new(
-        product:       product,
-        from_store_id: from_store_id,
-        to_store:      @current_store,
-        requested_by:  current_user,
-        quantity:      quantity,
-        notes:         notes,
-        status:        'pending'
+        product:            product,
+        product_variant:    variant,
+        from_store_id:      from_store_id,
+        to_store:           @current_store,
+        requested_by:       current_user,
+        quantity:           quantity,
+        notes:              notes,
+        status:             'pending',
+        transfer_group_id:  transfer_group_id
       )
 
       if transfer.save

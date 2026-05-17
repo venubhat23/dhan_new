@@ -13,6 +13,9 @@
           <div class="col-md-6 mb-3">
             <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing:0.5px;">Product</div>
             <div class="fw-bold"><%= @transfer.product&.name %></div>
+            <% if @transfer.product_variant %>
+              <span class="badge bg-primary-subtle text-primary mt-1"><%= @transfer.product_variant.label %></span>
+            <% end %>
             <div class="text-muted small"><%= @transfer.product&.sku %></div>
           </div>
           <div class="col-md-6 mb-3">

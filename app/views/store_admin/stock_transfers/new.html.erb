@@ -82,10 +82,21 @@
               <div class="card-body d-flex flex-column p-3">
                 <small class="text-muted mb-1"><%= product.category&.name || 'No Category' %></small>
                 <h6 class="fw-semibold mb-1" style="font-size:0.88rem;min-height:36px;"><%= product.name %></h6>
-                <small class="text-muted mb-3">SKU: <%= product.sku %></small>
+                <small class="text-muted mb-2">SKU: <%= product.sku %></small>
+                <% if product.has_multiple_quantities? && product.product_variants.any? %>
+                  <select class="form-select form-select-sm mb-2" id="st-variant-<%= product.id %>" onclick="event.stopPropagation()">
+                    <option value="">— Select variant —</option>
+                    <% product.product_variants.order(:display_order, :weight).each do |v| %>
+                      <option value="<%= v.id %>" data-label="<%= v.label %>" data-stock="<%= v.available_stock %>">
+                        <%= v.label %> (stock: <%= v.available_stock.to_i %>)
+                      </option>
+                    <% end %>
+                  </select>
+                <% end %>
                 <div class="mt-auto">
                   <button type="button" class="btn btn-sm w-100 fw-semibold st-btn" id="st-btn-<%= product.id %>"
                           style="background:linear-gradient(135deg,#1C7C54,#10b981);color:white;border:none;border-radius:6px;"
+                          onclick="event.stopPropagation(); stAddFromBtn(<%= product.id %>, '<%= j(product.name) %>', '<%= j(product.sku) %>', <%= stock %>, <%= product.has_multiple_quantities? %>)"
                           <%= 'disabled' if stock <= 0 %>>
                     <i class="bi bi-plus-circle me-1"></i>Add to Request
                   </button>
@@ -159,19 +170,50 @@
 </div>
 
 <script>
-let stCart = []; // [{id, name, sku, stock, qty}]
+// stCart items: { key, productId, variantId, name, sku, stock, qty }
+let stCart = [];
 let stStockMode = 'all';
 
+function stCartKey(productId, variantId) {
+  return variantId ? `${productId}-v${variantId}` : `${productId}`;
+}
+
+// Called when card area is clicked (for non-variant products only)
 function stToggle(id, name, sku, stock) {
+  const hasVariant = !!document.getElementById('st-variant-' + id);
+  if (hasVariant) return; // handled by stAddFromBtn
   if (stock <= 0) return;
-  const idx = stCart.findIndex(i => i.id === id);
+  const key = stCartKey(id, null);
+  const idx = stCart.findIndex(i => i.key === key);
   if (idx >= 0) {
     stCart.splice(idx, 1);
     stSetCardState(id, false);
   } else {
-    stCart.push({ id, name, sku, stock, qty: 1 });
+    stCart.push({ key, productId: id, variantId: null, variantLabel: null, name, sku, stock, qty: 1 });
     stSetCardState(id, true);
   }
+  stRender();
+}
+
+// Called by "Add to Request" button (handles both variant and non-variant)
+function stAddFromBtn(id, name, sku, stock, hasVariants) {
+  if (hasVariants) {
+    const sel = document.getElementById('st-variant-' + id);
+    if (!sel || !sel.value) { alert('Please select a variant first.'); return; }
+    const opt = sel.options[sel.selectedIndex];
+    const variantId    = parseInt(sel.value);
+    const variantLabel = opt.dataset.label;
+    const variantStock = parseFloat(opt.dataset.stock) || 0;
+    const key = stCartKey(id, variantId);
+    if (stCart.find(i => i.key === key)) { alert('This variant is already in the request.'); return; }
+    stCart.push({ key, productId: id, variantId, variantLabel, name, sku, stock: variantStock, qty: 1 });
+  } else {
+    if (stock <= 0) return;
+    const key = stCartKey(id, null);
+    if (stCart.find(i => i.key === key)) { stRemoveByKey(key); return; }
+    stCart.push({ key, productId: id, variantId: null, variantLabel: null, name, sku, stock, qty: 1 });
+  }
+  stSetCardState(id, true);
   stRender();
 }
 
@@ -179,7 +221,8 @@ function stSetCardState(id, selected) {
   const card = document.getElementById('st-card-' + id);
   const check = document.getElementById('st-check-' + id);
   const btn = document.getElementById('st-btn-' + id);
-  if (selected) {
+  const hasInCart = stCart.some(i => i.productId === id);
+  if (selected || hasInCart) {
     card.classList.add('selected');
     check.classList.remove('d-none');
     if (btn) { btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Added'; btn.style.background = 'linear-gradient(135deg,#0f5e3e,#059669)'; }
@@ -191,72 +234,72 @@ function stSetCardState(id, selected) {
 }
 
 function stRender() {
-  const panel = document.getElementById('stPanel');
-  const rows  = document.getElementById('stCartRows');
+  const panel  = document.getElementById('stPanel');
+  const rows   = document.getElementById('stCartRows');
   const hidden = document.getElementById('stHiddenFields');
-  const count = stCart.length;
-
+  const count  = stCart.length;
   document.getElementById('stItemCount').textContent = count;
   document.getElementById('stSubmitCount').textContent = count;
 
   if (count === 0) { panel.classList.add('d-none'); return; }
   panel.classList.remove('d-none');
 
-  rows.innerHTML = stCart.map((item, i) => `
+  rows.innerHTML = stCart.map((item) => `
     <div class="st-cart-row d-flex align-items-center gap-3">
       <div class="flex-grow-1">
-        <div class="fw-semibold small">${item.name}</div>
+        <div class="fw-semibold small">${item.name}${item.variantLabel ? ` <span class="badge bg-primary-subtle text-primary ms-1" style="font-size:0.7rem;">${item.variantLabel}</span>` : ''}</div>
         <small class="text-muted">SKU: ${item.sku} &bull; Available: ${Math.floor(item.stock)}</small>
       </div>
-      <div style="width:120px;">
+      <div style="width:130px;">
         <div class="input-group input-group-sm">
-          <button class="btn btn-outline-secondary" type="button" onclick="stDec(${item.id})" style="border-radius:6px 0 0 6px;"><i class="bi bi-dash"></i></button>
-          <input type="number" class="form-control text-center fw-bold" id="st-qty-${item.id}"
+          <button class="btn btn-outline-secondary" type="button" onclick="stDec('${item.key}')" style="border-radius:6px 0 0 6px;"><i class="bi bi-dash"></i></button>
+          <input type="number" class="form-control text-center fw-bold" id="st-qty-${item.key}"
                  value="${item.qty}" min="1" step="1" max="${Math.floor(item.stock)}"
-                 onchange="stQtyChange(${item.id}, this.value)" style="max-width:54px;">
-          <button class="btn btn-outline-secondary" type="button" onclick="stInc(${item.id})" style="border-radius:0 6px 6px 0;"><i class="bi bi-plus"></i></button>
+                 onchange="stQtyChange('${item.key}', this.value)" style="max-width:54px;">
+          <button class="btn btn-outline-secondary" type="button" onclick="stInc('${item.key}')" style="border-radius:0 6px 6px 0;"><i class="bi bi-plus"></i></button>
         </div>
       </div>
-      <button type="button" class="btn btn-sm btn-outline-danger" onclick="stRemove(${item.id})" style="border-radius:6px;">
+      <button type="button" class="btn btn-sm btn-outline-danger" onclick="stRemoveByKey('${item.key}')" style="border-radius:6px;">
         <i class="bi bi-trash"></i>
       </button>
     </div>
   `).join('');
 
   hidden.innerHTML = stCart.map((item, i) => `
-    <input type="hidden" name="transfers[${i}][product_id]" value="${item.id}">
+    <input type="hidden" name="transfers[${i}][product_id]" value="${item.productId}">
     <input type="hidden" name="transfers[${i}][quantity]" value="${item.qty}">
+    ${item.variantId ? `<input type="hidden" name="transfers[${i}][variant_id]" value="${item.variantId}">` : ''}
   `).join('');
 }
 
-function stQtyChange(id, val) {
-  const item = stCart.find(i => i.id === id);
+function stQtyChange(key, val) {
+  const item = stCart.find(i => i.key === key);
   if (!item) return;
-  const v = Math.min(Math.max(1, parseInt(val) || 1), Math.floor(item.stock));
-  item.qty = v;
-  const input = document.getElementById('st-qty-' + id);
-  if (input) input.value = v;
+  item.qty = Math.min(Math.max(1, parseInt(val) || 1), Math.floor(item.stock));
+  const input = document.getElementById('st-qty-' + key);
+  if (input) input.value = item.qty;
   stRender();
 }
 
-function stInc(id) {
-  const item = stCart.find(i => i.id === id);
+function stInc(key) {
+  const item = stCart.find(i => i.key === key);
   if (item && item.qty < Math.floor(item.stock)) { item.qty++; stRender(); }
 }
 
-function stDec(id) {
-  const item = stCart.find(i => i.id === id);
+function stDec(key) {
+  const item = stCart.find(i => i.key === key);
   if (item && item.qty > 1) { item.qty--; stRender(); }
 }
 
-function stRemove(id) {
-  stCart = stCart.filter(i => i.id !== id);
-  stSetCardState(id, false);
+function stRemoveByKey(key) {
+  const item = stCart.find(i => i.key === key);
+  if (item) stSetCardState(item.productId, false);
+  stCart = stCart.filter(i => i.key !== key);
   stRender();
 }
 
 function stClearAll() {
-  stCart.forEach(item => stSetCardState(item.id, false));
+  stCart.forEach(item => stSetCardState(item.productId, false));
   stCart = [];
   stRender();
 }

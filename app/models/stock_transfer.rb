@@ -2,6 +2,7 @@ class StockTransfer < ApplicationRecord
   belongs_to :from_store, class_name: 'Store', foreign_key: :from_store_id, optional: true
   belongs_to :to_store, class_name: 'Store', foreign_key: :to_store_id
   belongs_to :product
+  belongs_to :product_variant, optional: true
   belongs_to :requested_by, class_name: 'User', foreign_key: :requested_by_id
   belongs_to :approved_by, class_name: 'User', foreign_key: :approved_by_id, optional: true
 
@@ -16,6 +17,10 @@ class StockTransfer < ApplicationRecord
 
   def from_store_name
     from_store&.name || 'Central Inventory'
+  end
+
+  def product_display_name
+    product_variant ? "#{product.name} — #{product_variant.label}" : product.name
   end
 
   def approve!(approver)

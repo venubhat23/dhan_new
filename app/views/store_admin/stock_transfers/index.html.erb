@@ -26,7 +26,12 @@
           <tbody>
             <% @transfers.each do |t| %>
               <tr style="font-size:0.85rem;">
-                <td class="px-4 py-3"><strong><%= t.product&.name %></strong></td>
+                <td class="px-4 py-3">
+                  <strong><%= t.product&.name %></strong>
+                  <% if t.product_variant %>
+                    <div><span class="badge bg-primary-subtle text-primary" style="font-size:0.7rem;"><%= t.product_variant.label %></span></div>
+                  <% end %>
+                </td>
                 <td class="text-muted"><%= t.from_store_name %></td>
                 <td class="fw-semibold"><%= t.quantity %></td>
                 <td>

@@ -13,86 +13,192 @@
   <%= link_to admin_stock_transfers_path(status: 'rejected'), class: "nav-link #{'active' if params[:status] == 'rejected'}", style: "border-radius:8px;" do %>Rejected<% end %>
 </ul>
 
-<div class="card border-0 shadow-sm" style="border-radius:14px;">
-  <div class="card-body p-0">
-    <% if @transfers.any? %>
-      <div class="table-responsive">
-        <table class="table table-hover mb-0">
-          <thead style="background:#f8fafc; font-size:0.8rem;">
-            <tr>
-              <th class="px-4 py-3">Product</th>
-              <th>From</th>
-              <th>To</th>
-              <th>Qty</th>
-              <th>Status</th>
-              <th>Requested By</th>
-              <th>Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @transfers.each do |t| %>
-              <tr style="font-size:0.85rem;">
-                <td class="px-4 py-3"><strong><%= t.product&.name %></strong></td>
-                <td class="text-muted"><%= t.from_store_name %></td>
-                <td class="text-muted"><%= t.to_store&.name %></td>
-                <td class="fw-semibold"><%= t.quantity %></td>
-                <td>
-                  <% case t.status
-                     when 'pending' %>
-                    <span class="badge bg-warning-subtle text-warning">Pending</span>
-                  <% when 'completed' %>
-                    <span class="badge bg-success-subtle text-success">Completed</span>
-                  <% when 'rejected' %>
-                    <span class="badge bg-danger-subtle text-danger">Rejected</span>
-                  <% else %>
-                    <span class="badge bg-secondary-subtle text-secondary"><%= t.status&.capitalize %></span>
-                  <% end %>
-                </td>
-                <td class="text-muted"><%= t.requested_by&.first_name %> <%= t.requested_by&.last_name %></td>
-                <td class="text-muted small"><%= t.created_at.strftime('%d %b %Y') %></td>
-                <td>
-                  <% if t.status == 'pending' %>
-                    <div class="d-flex gap-1">
-                      <%= button_to approve_admin_stock_transfer_path(t), method: :patch,
-                          form: { data: { turbo_confirm: "Approve transfer of #{t.quantity} #{t.product&.name}?" } },
-                          class: "btn btn-sm btn-success", style: "border-radius:6px; font-size:0.75rem;" do %>
-                        <i class="bi bi-check-lg"></i> Approve
-                      <% end %>
-                      <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius:6px; font-size:0.75rem;"
-                              onclick="rejectTransfer(<%= t.id %>)">
-                        <i class="bi bi-x-lg"></i> Reject
-                      </button>
-                    </div>
-                    <!-- Reject form (hidden) -->
-                    <form id="reject_form_<%= t.id %>" action="<%= reject_admin_stock_transfer_path(t) %>" method="post" style="display:none; margin-top:0.5rem;">
-                      <%= hidden_field_tag :_method, 'patch' %>
-                      <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
-                      <input type="text" name="rejection_reason" placeholder="Reason (optional)" class="form-control form-control-sm mb-1">
-                      <button type="submit" class="btn btn-danger btn-sm" style="border-radius:6px; font-size:0.75rem;">Confirm Reject</button>
-                    </form>
-                  <% end %>
-                </td>
-              </tr>
-              <% if t.notes.present? %>
-                <tr><td colspan="8" class="px-4 py-1 text-muted small"><i class="bi bi-chat me-1"></i><%= t.notes %></td></tr>
+<% pending_groups = @groups.select { |g| g[:status] == 'pending' } %>
+
+<% if pending_groups.any? %>
+  <!-- Bulk Approve Bar -->
+  <form id="bulk_approve_form" action="<%= bulk_approve_admin_stock_transfers_path %>" method="post" class="mb-3">
+    <%= hidden_field_tag :_method, 'patch' %>
+    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+    <div class="d-flex align-items-center gap-2 p-3 bg-warning-subtle rounded" style="border:1px dashed #f0ad4e;">
+      <input type="checkbox" id="select_all_groups" class="form-check-input mt-0" style="cursor:pointer;">
+      <label for="select_all_groups" class="mb-0 text-warning-emphasis fw-semibold small">Select all pending requests</label>
+      <button type="submit" class="btn btn-warning btn-sm ms-auto" style="border-radius:6px;" onclick="return confirmBulk()">
+        <i class="bi bi-check2-all me-1"></i>Approve Selected
+      </button>
+    </div>
+  </form>
+<% end %>
+
+<% if @groups.any? %>
+  <div class="d-flex flex-column gap-3">
+    <% @groups.each do |group| %>
+      <% is_pending = group[:status] == 'pending' %>
+      <div class="card border-0 shadow-sm" style="border-radius:14px; <%= is_pending ? 'border-left:4px solid #f0ad4e !important;' : '' %>">
+        <!-- Group Header -->
+        <div class="card-header d-flex align-items-center gap-3 py-3 px-4" style="background:#f8fafc; border-radius:14px 14px 0 0;">
+          <% if is_pending %>
+            <input type="checkbox" name="group_ids[]" form="bulk_approve_form"
+                   value="<%= group[:group_id] %>"
+                   class="form-check-input group-checkbox mt-0" style="cursor:pointer;">
+          <% end %>
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <span class="fw-semibold"><%= group[:from_store] %> &rarr; <%= group[:to_store] %></span>
+              <% case group[:status]
+                 when 'pending' %>
+                <span class="badge bg-warning-subtle text-warning">Pending</span>
+              <% when 'completed' %>
+                <span class="badge bg-success-subtle text-success">Completed</span>
+              <% when 'rejected' %>
+                <span class="badge bg-danger-subtle text-danger">Rejected</span>
+              <% else %>
+                <span class="badge bg-secondary-subtle text-secondary"><%= group[:status]&.capitalize %></span>
               <% end %>
+              <span class="text-muted small">
+                <%= group[:transfers].size %> product<%= group[:transfers].size == 1 ? '' : 's' %>
+              </span>
+            </div>
+            <div class="text-muted small mt-1">
+              Requested by <strong><%= group[:requested_by]&.first_name %> <%= group[:requested_by]&.last_name %></strong>
+              on <%= group[:created_at].strftime('%d %b %Y, %I:%M %p') %>
+            </div>
+            <% if group[:notes].present? %>
+              <div class="text-muted small mt-1"><i class="bi bi-chat me-1"></i><%= group[:notes] %></div>
             <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <div class="text-center py-5">
-        <i class="bi bi-arrow-left-right text-muted" style="font-size:2.5rem;"></i>
-        <p class="text-muted mt-2 mb-0">No transfer requests found.</p>
+          </div>
+
+          <% if is_pending %>
+            <div class="d-flex gap-2 align-items-start flex-shrink-0">
+              <% if group[:transfers].size > 1 %>
+                <!-- Approve entire group -->
+                <form action="<%= approve_group_admin_stock_transfers_path %>" method="post"
+                      data-turbo-confirm="Approve all <%= group[:transfers].size %> products in this request?">
+                  <%= hidden_field_tag :_method, 'patch' %>
+                  <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+                  <%= hidden_field_tag :group_id, group[:group_id] %>
+                  <button type="submit" class="btn btn-success btn-sm" style="border-radius:6px; font-size:0.8rem;">
+                    <i class="bi bi-check2-all me-1"></i>Approve All
+                  </button>
+                </form>
+                <button type="button" class="btn btn-outline-danger btn-sm" style="border-radius:6px; font-size:0.8rem;"
+                        onclick="toggleGroupReject('<%= group[:group_id] %>')">
+                  <i class="bi bi-x-circle me-1"></i>Reject All
+                </button>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <!-- Reject All form (hidden) -->
+        <% if is_pending && group[:transfers].size > 1 %>
+          <div id="group_reject_<%= group[:group_id] %>" style="display:none;" class="px-4 py-2 bg-danger-subtle">
+            <form action="<%= reject_group_admin_stock_transfers_path %>" method="post" class="d-flex gap-2 align-items-center">
+              <%= hidden_field_tag :_method, 'patch' %>
+              <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+              <%= hidden_field_tag :group_id, group[:group_id] %>
+              <input type="text" name="rejection_reason" placeholder="Rejection reason (optional)" class="form-control form-control-sm" style="max-width:300px;">
+              <button type="submit" class="btn btn-danger btn-sm" style="border-radius:6px;">Confirm Reject All</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" style="border-radius:6px;"
+                      onclick="toggleGroupReject('<%= group[:group_id] %>')">Cancel</button>
+            </form>
+          </div>
+        <% end %>
+
+        <!-- Products Table -->
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0" style="font-size:0.85rem;">
+            <thead style="background:#fafbfc; font-size:0.78rem;">
+              <tr>
+                <th class="px-4 py-2">Product</th>
+                <th class="py-2">Qty</th>
+                <th class="py-2">Status</th>
+                <th class="py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% group[:transfers].each do |t| %>
+                <tr>
+                  <td class="px-4 py-2">
+                    <strong><%= t.product&.name %></strong>
+                    <% if t.product_variant %>
+                      <span class="badge bg-primary-subtle text-primary ms-1" style="font-size:0.7rem;"><%= t.product_variant.label %></span>
+                    <% end %>
+                  </td>
+                  <td class="py-2 fw-semibold"><%= t.quantity %></td>
+                  <td class="py-2">
+                    <% case t.status
+                       when 'pending' %>
+                      <span class="badge bg-warning-subtle text-warning">Pending</span>
+                    <% when 'completed' %>
+                      <span class="badge bg-success-subtle text-success">Completed</span>
+                    <% when 'rejected' %>
+                      <span class="badge bg-danger-subtle text-danger">Rejected</span>
+                    <% else %>
+                      <span class="badge bg-secondary-subtle text-secondary"><%= t.status&.capitalize %></span>
+                    <% end %>
+                    <% if t.rejection_reason.present? %>
+                      <div class="text-muted" style="font-size:0.72rem;"><%= t.rejection_reason %></div>
+                    <% end %>
+                  </td>
+                  <td class="py-2">
+                    <% if t.status == 'pending' %>
+                      <div class="d-flex gap-1">
+                        <%= button_to approve_admin_stock_transfer_path(t), method: :patch,
+                            form: { data: { turbo_confirm: "Approve #{t.quantity} × #{t.product&.name}?" } },
+                            class: "btn btn-sm btn-outline-success", style: "border-radius:6px; font-size:0.75rem;" do %>
+                          <i class="bi bi-check-lg"></i> Approve
+                        <% end %>
+                        <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius:6px; font-size:0.75rem;"
+                                onclick="rejectTransfer(<%= t.id %>)">
+                          <i class="bi bi-x-lg"></i> Reject
+                        </button>
+                      </div>
+                      <form id="reject_form_<%= t.id %>" action="<%= reject_admin_stock_transfer_path(t) %>" method="post" style="display:none; margin-top:0.4rem;">
+                        <%= hidden_field_tag :_method, 'patch' %>
+                        <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+                        <input type="text" name="rejection_reason" placeholder="Reason (optional)" class="form-control form-control-sm mb-1">
+                        <button type="submit" class="btn btn-danger btn-sm" style="border-radius:6px; font-size:0.75rem;">Confirm Reject</button>
+                      </form>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
       </div>
     <% end %>
   </div>
-</div>
+<% else %>
+  <div class="card border-0 shadow-sm text-center py-5" style="border-radius:14px;">
+    <i class="bi bi-arrow-left-right text-muted" style="font-size:2.5rem;"></i>
+    <p class="text-muted mt-2 mb-0">No transfer requests found.</p>
+  </div>
+<% end %>
 
 <script>
 function rejectTransfer(id) {
   const form = document.getElementById('reject_form_' + id);
   form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleGroupReject(groupId) {
+  const el = document.getElementById('group_reject_' + groupId);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// Select-all checkbox logic
+const selectAll = document.getElementById('select_all_groups');
+if (selectAll) {
+  selectAll.addEventListener('change', function() {
+    document.querySelectorAll('.group-checkbox').forEach(cb => cb.checked = this.checked);
+  });
+}
+
+function confirmBulk() {
+  const checked = document.querySelectorAll('.group-checkbox:checked').length;
+  if (checked === 0) { alert('Please select at least one request.'); return false; }
+  return confirm('Approve all selected ' + checked + ' request(s)?');
 }
 </script>

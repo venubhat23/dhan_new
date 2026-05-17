@@ -353,6 +353,11 @@ Rails.application.routes.draw do
         patch :approve
         patch :reject
       end
+      collection do
+        patch :approve_group
+        patch :reject_group
+        patch :bulk_approve
+      end
     end
 
     # Customer Format Management
