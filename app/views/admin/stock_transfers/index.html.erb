@@ -111,14 +111,16 @@
             <thead style="background:#fafbfc; font-size:0.78rem;">
               <tr>
                 <th class="px-4 py-2">Product</th>
-                <th class="py-2">Qty</th>
+                <th class="py-2">Requested</th>
+                <th class="py-2">Available</th>
                 <th class="py-2">Status</th>
                 <th class="py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               <% group[:transfers].each do |t| %>
-                <tr>
+                <% avail = group[:stock_cache][[t.product_id, t.from_store_id]].to_f %>
+                <tr class="<%= avail < t.quantity && t.status == 'pending' ? 'table-danger' : '' %>">
                   <td class="px-4 py-2">
                     <strong><%= t.product&.name %></strong>
                     <% if t.product_variant %>
@@ -126,6 +128,21 @@
                     <% end %>
                   </td>
                   <td class="py-2 fw-semibold"><%= t.quantity %></td>
+                  <td class="py-2">
+                    <% if t.status == 'pending' %>
+                      <% if avail > 0 %>
+                        <span class="text-success fw-semibold"><%= avail.to_i %></span>
+                        <% if avail < t.quantity %>
+                          <span class="badge bg-danger ms-1" style="font-size:0.68rem;">Low</span>
+                        <% end %>
+                      <% else %>
+                        <span class="text-danger fw-semibold">0</span>
+                        <span class="badge bg-danger ms-1" style="font-size:0.68rem;">No stock</span>
+                      <% end %>
+                    <% else %>
+                      <span class="text-muted">—</span>
+                    <% end %>
+                  </td>
                   <td class="py-2">
                     <% case t.status
                        when 'pending' %>

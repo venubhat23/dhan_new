@@ -6,8 +6,17 @@ class Admin::StockTransfersController < Admin::ApplicationController
     scope = scope.where(status: params[:status]) if params[:status].present?
     all_transfers = scope.order(created_at: :desc)
 
+    # Pre-compute available stock per (product_id, from_store_id) to avoid N+1
+    transfer_list = all_transfers.to_a
+    stock_cache = {}
+    transfer_list.each do |t|
+      key = [t.product_id, t.from_store_id]
+      stock_cache[key] ||= StockBatch.available_for_product(t.product_id, store_id: t.from_store_id)
+                                     .sum(:quantity_remaining)
+    end
+
     # Group by transfer_group_id; ungrouped transfers get their own single-item group
-    @groups = all_transfers.group_by { |t| t.transfer_group_id.presence || "single_#{t.id}" }
+    @groups = transfer_list.group_by { |t| t.transfer_group_id.presence || "single_#{t.id}" }
                            .map do |group_id, transfers|
       {
         group_id:     group_id,
@@ -17,7 +26,8 @@ class Admin::StockTransfersController < Admin::ApplicationController
         to_store:     transfers.first.to_store&.name,
         requested_by: transfers.first.requested_by,
         created_at:   transfers.first.created_at,
-        notes:        transfers.first.notes
+        notes:        transfers.first.notes,
+        stock_cache:  stock_cache
       }
     end
     @pending_count = StockTransfer.pending.count

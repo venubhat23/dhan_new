@@ -38,16 +38,25 @@ class StockTransfer < ApplicationRecord
         alloc[:batch].reduce_stock!(alloc[:quantity])
       end
 
+      # For variant transfers, update the variant's available_stock
+      if product_variant
+        new_stock = product_variant.available_stock - quantity
+        raise "Insufficient variant stock. Available: #{product_variant.available_stock}, Requested: #{quantity}" if new_stock < 0
+        product_variant.update_column(:available_stock, new_stock)
+      end
+
       # Create batch at destination store
       ref_batch = StockBatch.where(product_id: product_id).active.first
+      selling = product_variant&.selling_price || ref_batch&.selling_price || product.price || 0
+      buying  = product_variant&.buying_price  || ref_batch&.purchase_price || product.buying_price || 0
       StockBatch.create!(
         product: product,
         vendor: ref_batch&.vendor || product.stock_batches.first&.vendor,
         store_id: to_store_id,
         quantity_purchased: quantity,
         quantity_remaining: quantity,
-        purchase_price: ref_batch&.purchase_price || product.buying_price || 0,
-        selling_price: ref_batch&.selling_price || product.price || 0,
+        purchase_price: buying,
+        selling_price: selling,
         batch_date: Date.current,
         status: 'active'
       )
@@ -63,6 +72,11 @@ class StockTransfer < ApplicationRecord
   private
 
   def source_available_stock
-    StockBatch.available_for_product(product_id, store_id: from_store_id).sum(:quantity_remaining)
+    if product_variant && from_store_id.nil?
+      # Central inventory: use the variant's own available_stock as the authoritative count
+      product_variant.available_stock
+    else
+      StockBatch.available_for_product(product_id, store_id: from_store_id).sum(:quantity_remaining)
+    end
   end
 end
