@@ -65,6 +65,12 @@ class HealthInsurance < ApplicationRecord
   after_create :create_lead_record
 
   # Instance methods
+  def has_been_renewed?
+    self.class.where(customer_id: customer_id, policy_type: 'Renewal')
+              .where('policy_start_date > ?', policy_end_date)
+              .exists?
+  end
+
   def active?
     policy_end_date >= Date.current
   end
