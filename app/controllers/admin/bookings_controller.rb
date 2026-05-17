@@ -60,7 +60,7 @@ class Admin::BookingsController < Admin::ApplicationController
     @booking = Booking.new
     @booking.booking_items.build
 
-    # Eager load all necessary associations and precompute stock data
+    # Only count central/main inventory (store_id IS NULL) so transferred stock is not double-counted
     @products = Product.active
                        .includes(
                          :category,
@@ -69,12 +69,12 @@ class Admin::BookingsController < Admin::ApplicationController
                          image_attachment: :blob,
                          additional_images_attachments: :blob
                        )
-                       .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0")
+                       .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND stock_batches.store_id IS NULL")
                        .select(
                          "products.*,
                           COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock,
                           MIN(stock_batches.batch_date) as first_batch_date,
-                          (SELECT quantity_purchased FROM stock_batches sb2 WHERE sb2.product_id = products.id ORDER BY sb2.batch_date ASC, sb2.created_at ASC LIMIT 1) as initial_stock_value"
+                          (SELECT quantity_purchased FROM stock_batches sb2 WHERE sb2.product_id = products.id AND sb2.store_id IS NULL ORDER BY sb2.batch_date ASC, sb2.created_at ASC LIMIT 1) as initial_stock_value"
                        )
                        .group("products.id")
                        .order(Arel.sql("CASE WHEN COALESCE(SUM(stock_batches.quantity_remaining), 0) > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
@@ -769,12 +769,12 @@ class Admin::BookingsController < Admin::ApplicationController
 
       product = Product.find(item.product_id)
 
-      # For variant products, check the specific variant's available_stock
+      # Admin bookings sell from central inventory only (store_id IS NULL)
       if product.has_multiple_quantities? && item.product_variant_id.present?
         variant = ProductVariant.find_by(id: item.product_variant_id)
         available_stock = variant ? variant.available_stock.to_f : 0.0
       else
-        available_stock = product.total_batch_stock
+        available_stock = StockBatch.available_for_product(product.id, store_id: nil).sum(:quantity_remaining).to_f
       end
 
       # For updates, add back the current item's quantity if it exists
