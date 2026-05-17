@@ -54,7 +54,8 @@
                 <td>
                   <% if t.status == 'pending' %>
                     <div class="d-flex gap-1">
-                      <%= link_to approve_admin_stock_transfer_path(t), data: { turbo_method: :patch, turbo_confirm: "Approve transfer of #{t.quantity} #{t.product&.name}?" },
+                      <%= button_to approve_admin_stock_transfer_path(t), method: :patch,
+                          form: { data: { turbo_confirm: "Approve transfer of #{t.quantity} #{t.product&.name}?" } },
                           class: "btn btn-sm btn-success", style: "border-radius:6px; font-size:0.75rem;" do %>
                         <i class="bi bi-check-lg"></i> Approve
                       <% end %>

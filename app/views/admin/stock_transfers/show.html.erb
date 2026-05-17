@@ -64,9 +64,9 @@
         <h6 class="mb-0 fw-semibold">Actions</h6>
       </div>
       <div class="card-body px-4 py-3 d-grid gap-2">
-        <%= link_to approve_admin_stock_transfer_path(@transfer),
-            data: { turbo_method: :patch, turbo_confirm: "Approve this transfer?" },
-            class: "btn btn-success" do %>
+        <%= button_to approve_admin_stock_transfer_path(@transfer), method: :patch,
+            form: { data: { turbo_confirm: "Approve this transfer?" } },
+            class: "btn btn-success w-100" do %>
           <i class="bi bi-check-lg me-1"></i>Approve Transfer
         <% end %>
 

@@ -394,12 +394,27 @@
                           </span>
                         <% end %>
                       </div>
+                      <%# Store badge — shown when booking was created from a store login %>
+                      <% if booking.store.present? %>
+                        <div class="mt-1">
+                          <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:0.7rem;">
+                            <i class="bi bi-shop-window me-1"></i><%= booking.store.name %>
+                          </span>
+                        </div>
+                      <% end %>
                     </div>
                   </div>
                 </td>
                 <td class="align-middle">
                   <div>
-                    <h6 class="mb-0"><%= booking.customer&.display_name || booking.customer_name %></h6>
+                    <% customer_display = booking.customer&.display_name || booking.customer_name.presence %>
+                    <% if customer_display.present? %>
+                      <h6 class="mb-0"><%= customer_display %></h6>
+                    <% else %>
+                      <span class="badge bg-secondary-subtle text-secondary fw-semibold" style="font-size:0.78rem;">
+                        <i class="bi bi-person me-1"></i>Walk-in Customer
+                      </span>
+                    <% end %>
                     <% if booking.customer&.mobile || booking.customer_phone %>
                       <small class="text-muted d-block">
                         <i class="bi bi-telephone me-1"></i>

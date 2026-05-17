@@ -1,54 +1,286 @@
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <h5 class="fw-bold mb-1"><i class="bi bi-arrow-left-right me-2" style="color:#1C7C54;"></i>Request Stock Transfer</h5>
-    <small class="text-muted">Request stock for <%= @current_store.name %></small>
+    <small class="text-muted">Select a product and enter transfer details for <%= @current_store.name %></small>
   </div>
   <%= link_to store_admin_stock_transfers_path, class: "btn btn-outline-secondary btn-sm" do %>
     <i class="bi bi-arrow-left me-1"></i>Back
   <% end %>
 </div>
 
-<div class="card border-0 shadow-sm" style="border-radius:14px; max-width:560px;">
-  <div class="card-body p-4">
-    <%= form_tag store_admin_stock_transfers_path, method: :post do %>
-
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Product <span class="text-danger">*</span></label>
-        <select name="product_id" class="form-select" required>
-          <option value="">-- Select Product --</option>
-          <% @products.each do |p| %>
-            <option value="<%= p.id %>"><%= p.name %> (<%= p.sku %>)</option>
+<%# Search and Filters %>
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <input type="text" class="form-control form-control-sm" placeholder="Search products by name or SKU..." id="stProductSearch" oninput="stFilterProducts()">
+      </div>
+      <div class="col-md-3">
+        <select class="form-select form-select-sm" id="stCategoryFilter" onchange="stFilterProducts()">
+          <option value="">All Categories</option>
+          <% @products.map(&:category).compact.uniq.each do |cat| %>
+            <option value="<%= cat.id %>"><%= cat.name %></option>
           <% end %>
         </select>
       </div>
+      <div class="col-md-4">
+        <div class="d-flex gap-2 align-items-center">
+          <small class="text-muted">Filter:</small>
+          <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-primary btn-sm active" id="stAllBtn" onclick="stFilterStock('all')">All</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="stInStockBtn" onclick="stFilterStock('instock')">In Stock</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Transfer From</label>
-        <select name="from_store_id" class="form-select">
-          <option value="">Central Inventory (Main Stock)</option>
-          <% @stores.each do |s| %>
-            <option value="<%= s.id %>"><%= s.name %></option>
-          <% end %>
-        </select>
-        <small class="text-muted">Leave as "Central Inventory" to request from main stock.</small>
+<%# Product Cards Grid %>
+<div class="card border-0 shadow-sm" style="margin-bottom: 160px;">
+  <div class="card-body pt-3">
+    <% if @products.any? %>
+      <div class="row g-3" id="stProductGrid">
+        <% @products.each do |product| %>
+          <% current_stock = product.cached_total_batch_stock %>
+          <div class="col-md-4 col-lg-3 st-product-item"
+               data-product-id="<%= product.id %>"
+               data-category="<%= product.category_id %>"
+               data-stock="<%= current_stock %>"
+               data-name="<%= product.name.downcase %>"
+               data-sku="<%= product.sku.downcase %>">
+            <div class="card h-100 border-2 shadow-sm st-product-card"
+                 id="st-card-<%= product.id %>"
+                 onclick="stSelectProduct(<%= product.id %>, '<%= j(product.name) %>', '<%= j(product.sku) %>', <%= current_stock %>)"
+                 style="cursor:pointer; border-color: transparent; transition: all 0.2s;">
+
+              <%# Product Image %>
+              <div class="position-relative">
+                <% if product.images_attached? && product.images.any? %>
+                  <%= image_tag product.images.first, class: "card-img-top", style: "height: 160px; object-fit: cover; border-radius: 8px 8px 0 0;" %>
+                <% else %>
+                  <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 160px; border-radius: 8px 8px 0 0;">
+                    <i class="bi bi-box-seam fs-1 text-muted"></i>
+                  </div>
+                <% end %>
+
+                <%# Stock Badge %>
+                <% if product.out_of_stock? %>
+                  <span class="position-absolute top-0 end-0 badge bg-danger m-2">
+                    <i class="bi bi-x-circle me-1"></i>Out of Stock
+                  </span>
+                <% elsif product.low_stock? %>
+                  <span class="position-absolute top-0 end-0 badge bg-warning text-dark m-2">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Low (<%= current_stock.to_i %>)
+                  </span>
+                <% else %>
+                  <span class="position-absolute top-0 end-0 badge bg-success m-2">
+                    <i class="bi bi-check-circle me-1"></i><%= current_stock.to_i %> in stock
+                  </span>
+                <% end %>
+
+                <%# Selected Checkmark %>
+                <div class="position-absolute top-0 start-0 m-2 st-selected-check d-none" id="st-check-<%= product.id %>">
+                  <span class="badge rounded-circle p-2" style="background:#1C7C54;">
+                    <i class="bi bi-check-lg text-white"></i>
+                  </span>
+                </div>
+              </div>
+
+              <%# Card Body %>
+              <div class="card-body d-flex flex-column p-3">
+                <small class="text-muted mb-1"><%= product.category&.name || 'No Category' %></small>
+                <h6 class="card-title mb-1 fw-semibold" style="font-size:0.9rem; min-height:36px;"><%= product.name %></h6>
+                <small class="text-muted mb-3">SKU: <%= product.sku %></small>
+
+                <div class="mt-auto">
+                  <% if product.out_of_stock? %>
+                    <button class="btn btn-sm btn-outline-secondary w-100" disabled>
+                      <i class="bi bi-x-circle me-1"></i>Unavailable
+                    </button>
+                  <% else %>
+                    <button class="btn btn-sm w-100 fw-semibold st-select-btn" id="st-btn-<%= product.id %>"
+                            style="background:linear-gradient(135deg,#1C7C54,#10b981);color:white;border:none;border-radius:6px;">
+                      <i class="bi bi-plus-circle me-1"></i>Select
+                    </button>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
       </div>
 
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
-        <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required placeholder="e.g. 10">
+      <div id="stNoResults" class="text-center py-5 d-none">
+        <i class="bi bi-search fs-1 text-muted mb-2"></i>
+        <p class="text-muted">No products match your search.</p>
       </div>
-
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Notes</label>
-        <textarea name="notes" class="form-control" rows="2" placeholder="Reason for request..."></textarea>
-      </div>
-
-      <div class="d-flex gap-2 mt-4">
-        <button type="submit" class="btn fw-semibold" style="background:linear-gradient(135deg,#1C7C54,#10b981);color:white;border-radius:8px;padding:0.5rem 1.5rem;">
-          <i class="bi bi-send me-1"></i>Submit Request
-        </button>
-        <%= link_to "Cancel", store_admin_stock_transfers_path, class: "btn btn-outline-secondary", style: "border-radius:8px;" %>
+    <% else %>
+      <div class="text-center py-5">
+        <i class="bi bi-box-seam fs-1 text-muted mb-3"></i>
+        <h5 class="text-muted">No Products Available</h5>
       </div>
     <% end %>
   </div>
 </div>
+
+<%# Sticky Transfer Details Panel %>
+<div id="stTransferPanel" class="position-fixed bottom-0 start-0 w-100 d-none" style="z-index:1040; box-shadow: 0 -4px 20px rgba(0,0,0,0.15);">
+  <div class="bg-white border-top">
+    <div class="container-fluid px-4 py-3">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;background:linear-gradient(135deg,#1C7C54,#10b981);">
+            <i class="bi bi-box-seam text-white"></i>
+          </div>
+          <div>
+            <div class="fw-bold" id="stPanelProductName">—</div>
+            <small class="text-muted">SKU: <span id="stPanelProductSku">—</span> &bull; Available: <span id="stPanelStock">—</span></small>
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="stClearSelection()">
+          <i class="bi bi-x me-1"></i>Change Product
+        </button>
+      </div>
+
+      <%= form_tag store_admin_stock_transfers_path, method: :post, id: "stTransferForm" do %>
+        <input type="hidden" name="product_id" id="stProductId">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label fw-semibold small mb-1">Transfer From</label>
+            <select name="from_store_id" class="form-select form-select-sm">
+              <option value="">Central Inventory (Main Stock)</option>
+              <% @stores.each do |s| %>
+                <option value="<%= s.id %>"><%= s.name %></option>
+              <% end %>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold small mb-1">Quantity <span class="text-danger">*</span></label>
+            <div class="input-group input-group-sm">
+              <button class="btn btn-outline-secondary" type="button" onclick="stDecQty()" style="border-radius:6px 0 0 6px;">
+                <i class="bi bi-dash"></i>
+              </button>
+              <input type="number" name="quantity" id="stQtyInput" class="form-control text-center fw-bold" value="1" min="0.01" step="0.01" required>
+              <button class="btn btn-outline-secondary" type="button" onclick="stIncQty()" style="border-radius:0 6px 6px 0;">
+                <i class="bi bi-plus"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold small mb-1">Notes</label>
+            <input type="text" name="notes" class="form-control form-control-sm" placeholder="Reason for request...">
+          </div>
+          <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn fw-semibold flex-fill" style="background:linear-gradient(135deg,#1C7C54,#10b981);color:white;border-radius:8px;">
+              <i class="bi bi-send me-1"></i>Submit Request
+            </button>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<script>
+  let stCurrentStock = 0;
+  let stStockFilter = 'all';
+
+  function stSelectProduct(id, name, sku, stock) {
+    // Clear previous selection
+    document.querySelectorAll('.st-product-card').forEach(c => {
+      c.style.borderColor = 'transparent';
+      c.style.background = '';
+    });
+    document.querySelectorAll('.st-selected-check').forEach(c => c.classList.add('d-none'));
+    document.querySelectorAll('.st-select-btn').forEach(b => {
+      b.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Select';
+      b.style.background = 'linear-gradient(135deg,#1C7C54,#10b981)';
+    });
+
+    // Highlight selected
+    const card = document.getElementById('st-card-' + id);
+    card.style.borderColor = '#1C7C54';
+    card.style.background = '#f0fdf4';
+    document.getElementById('st-check-' + id).classList.remove('d-none');
+
+    const btn = document.getElementById('st-btn-' + id);
+    if (btn) {
+      btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Selected';
+      btn.style.background = 'linear-gradient(135deg,#0f5e3e,#059669)';
+    }
+
+    // Update panel
+    stCurrentStock = stock;
+    document.getElementById('stProductId').value = id;
+    document.getElementById('stPanelProductName').textContent = name;
+    document.getElementById('stPanelProductSku').textContent = sku;
+    document.getElementById('stPanelStock').textContent = Math.floor(stock);
+    document.getElementById('stQtyInput').max = stock;
+    document.getElementById('stQtyInput').value = 1;
+    document.getElementById('stTransferPanel').classList.remove('d-none');
+
+    // Scroll card into view
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function stClearSelection() {
+    document.querySelectorAll('.st-product-card').forEach(c => {
+      c.style.borderColor = 'transparent';
+      c.style.background = '';
+    });
+    document.querySelectorAll('.st-selected-check').forEach(c => c.classList.add('d-none'));
+    document.querySelectorAll('.st-select-btn').forEach(b => {
+      b.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Select';
+      b.style.background = 'linear-gradient(135deg,#1C7C54,#10b981)';
+    });
+    document.getElementById('stProductId').value = '';
+    document.getElementById('stTransferPanel').classList.add('d-none');
+  }
+
+  function stIncQty() {
+    const input = document.getElementById('stQtyInput');
+    const val = parseFloat(input.value) || 0;
+    const max = stCurrentStock;
+    if (val + 1 <= max) input.value = (val + 1).toFixed(2).replace(/\.00$/, '');
+  }
+
+  function stDecQty() {
+    const input = document.getElementById('stQtyInput');
+    const val = parseFloat(input.value) || 1;
+    if (val - 1 >= 0.01) input.value = (val - 1).toFixed(2).replace(/\.00$/, '');
+  }
+
+  function stFilterProducts() {
+    const search = document.getElementById('stProductSearch').value.toLowerCase();
+    const cat = document.getElementById('stCategoryFilter').value;
+    let visible = 0;
+
+    document.querySelectorAll('.st-product-item').forEach(item => {
+      const name = item.dataset.name || '';
+      const sku = item.dataset.sku || '';
+      const itemCat = item.dataset.category || '';
+      const stock = parseFloat(item.dataset.stock) || 0;
+
+      const matchSearch = !search || name.includes(search) || sku.includes(search);
+      const matchCat = !cat || itemCat === cat;
+      const matchStock = stStockFilter === 'all' || (stStockFilter === 'instock' && stock > 0);
+
+      if (matchSearch && matchCat && matchStock) {
+        item.style.display = '';
+        visible++;
+      } else {
+        item.style.display = 'none';
+      }
+    });
+
+    document.getElementById('stNoResults').classList.toggle('d-none', visible > 0);
+  }
+
+  function stFilterStock(type) {
+    stStockFilter = type;
+    document.getElementById('stAllBtn').classList.toggle('active', type === 'all');
+    document.getElementById('stInStockBtn').classList.toggle('active', type === 'instock');
+    stFilterProducts();
+  }
+</script>

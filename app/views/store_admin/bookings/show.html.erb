@@ -27,11 +27,14 @@
               <tr>
                 <td><strong>Status:</strong></td>
                 <td>
-                  <% case @booking.status %>
-                  <% when 'delivered', 'completed' %><span class="badge bg-success"><%= @booking.status.humanize %></span>
-                  <% when 'cancelled', 'returned' %><span class="badge bg-danger"><%= @booking.status.humanize %></span>
-                  <% when 'draft', 'ordered_and_delivery_pending' %><span class="badge bg-warning text-dark"><%= @booking.status.humanize %></span>
-                  <% else %><span class="badge bg-info"><%= @booking.status&.humanize || 'Unknown' %></span>
+                  <% if ['delivered', 'completed'].include?(@booking.status) %>
+                    <span class="badge bg-success"><%= @booking.status.humanize %></span>
+                  <% elsif ['cancelled', 'returned'].include?(@booking.status) %>
+                    <span class="badge bg-danger"><%= @booking.status.humanize %></span>
+                  <% elsif ['draft', 'ordered_and_delivery_pending'].include?(@booking.status) %>
+                    <span class="badge bg-warning text-dark"><%= @booking.status.humanize %></span>
+                  <% else %>
+                    <span class="badge bg-info"><%= @booking.status&.humanize || 'Unknown' %></span>
                   <% end %>
                 </td>
               </tr>

@@ -154,6 +154,7 @@ class Store < ApplicationRecord
       is_verified: true
     )
 
+    self.create_admin_user = false  # prevent validate_admin_details from re-running on this update
     update!(store_admin_user: user, admin_plain_password: admin_password)
     user
   end

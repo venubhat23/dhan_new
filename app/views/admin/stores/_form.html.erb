@@ -75,34 +75,66 @@
     </div>
 
     <div id="admin-fields" style="display: none;" class="border rounded p-3 bg-light">
+      <div class="mb-3">
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="autoGenerateAdminCredentials()">
+          <i class="bi bi-magic me-1"></i> Auto-generate Credentials
+        </button>
+        <span class="text-muted small ms-2">Fill all fields automatically with system-generated values</span>
+      </div>
       <div class="row mb-3">
         <div class="col-md-6">
           <label class="form-label">First Name</label>
-          <input type="text" name="store[admin_first_name]" class="form-control" placeholder="Admin first name">
+          <input type="text" id="admin_first_name" name="store[admin_first_name]" class="form-control" placeholder="Admin first name">
         </div>
         <div class="col-md-6">
           <label class="form-label">Last Name</label>
-          <input type="text" name="store[admin_last_name]" class="form-control" placeholder="Admin last name">
+          <input type="text" id="admin_last_name" name="store[admin_last_name]" class="form-control" placeholder="Admin last name">
         </div>
       </div>
       <div class="row mb-3">
         <div class="col-md-6">
           <label class="form-label">Email</label>
-          <input type="email" name="store[admin_email]" class="form-control" placeholder="admin@store.com">
+          <input type="email" id="admin_email" name="store[admin_email]" class="form-control" placeholder="admin@store.com">
         </div>
         <div class="col-md-6">
           <label class="form-label">Mobile</label>
-          <input type="text" name="store[admin_mobile]" class="form-control" placeholder="10-digit mobile">
+          <input type="text" id="admin_mobile" name="store[admin_mobile]" class="form-control" placeholder="10-digit mobile">
         </div>
       </div>
       <div class="row">
         <div class="col-md-6">
           <label class="form-label">Password</label>
-          <input type="text" name="store[admin_password]" class="form-control" placeholder="Min 6 characters">
+          <input type="text" id="admin_password" name="store[admin_password]" class="form-control" placeholder="Min 6 characters">
           <div class="form-text text-muted">Note the password — it will be shown once after creation.</div>
         </div>
       </div>
     </div>
+
+    <script>
+      function autoGenerateAdminCredentials() {
+        var firstNames = ['Amit', 'Rahul', 'Suresh', 'Vikram', 'Ravi', 'Anand', 'Kiran', 'Deepak'];
+        var lastNames  = ['Kumar', 'Sharma', 'Verma', 'Singh', 'Patel', 'Nair', 'Reddy', 'Joshi'];
+        var rand = function(arr) { return arr[Math.floor(Math.random() * arr.length)]; };
+
+        var first    = rand(firstNames);
+        var last     = rand(lastNames);
+        var num      = Math.floor(1000 + Math.random() * 9000);
+        var storeName = (document.querySelector('[name="store[name]"]').value || 'store')
+                          .toLowerCase().replace(/\s+/g, '');
+        var email    = 'admin.' + storeName + num + '@store.local';
+        var prefixes = ['7', '8', '9'];
+        var mobile   = rand(prefixes) + String(Math.floor(100000000 + Math.random() * 900000000));
+        var chars    = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+        var password = '';
+        for (var i = 0; i < 8; i++) password += chars[Math.floor(Math.random() * chars.length)];
+
+        document.getElementById('admin_first_name').value = first;
+        document.getElementById('admin_last_name').value  = last;
+        document.getElementById('admin_email').value      = email;
+        document.getElementById('admin_mobile').value     = mobile;
+        document.getElementById('admin_password').value   = password;
+      }
+    </script>
   <% end %>
 
   <div class="pt-4">

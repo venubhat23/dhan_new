@@ -57,6 +57,7 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
   def create
     @booking = @current_store.bookings.build(booking_params)
     @booking.user = current_user if @booking.respond_to?(:user=)
+    @booking.status = 'completed'
 
     if @booking.save
       redirect_to store_admin_booking_path(@booking), notice: 'Booking created successfully.'
