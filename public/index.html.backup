@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marali Santhe - Fresh Organic Produce & Groceries</title>
+    <title>Dhanvantri Naturals - Fresh Organic Produce & Groceries</title>
     <script>
         window.location.href = '/users/sign_in';
     </script>
@@ -16,7 +16,7 @@
                 <!-- Logo -->
                 <div class="nav__logo">
                     <i class="fas fa-leaf"></i>
-                    <span>Marali Santhe</span>
+                    <span>Dhanvantri Naturals</span>
                 </div>
 
                 <!-- Navigation Menu -->
@@ -387,7 +387,7 @@
                             </div>
                             <p class="testimonial__text">
                                 "Amazing quality vegetables and fruits! Everything is so fresh and the delivery is always on time.
-                                My family loves the organic produce from Marali Santhe."
+                                My family loves the organic produce from Dhanvantri Naturals."
                             </p>
                             <div class="testimonial__author">
                                 <img src="https://images.unsplash.com/photo-1494790108755-2616b332746c?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Priya Sharma" class="testimonial__photo">
@@ -467,7 +467,7 @@
                 <div class="footer__section">
                     <div class="footer__logo">
                         <i class="fas fa-leaf"></i>
-                        <span>Marali Santhe</span>
+                        <span>Dhanvantri Naturals</span>
                     </div>
                     <p class="footer__description">
                         Connecting you with fresh, organic produce directly from local farmers.
@@ -545,7 +545,7 @@
             <!-- Footer Bottom -->
             <div class="footer__bottom">
                 <p class="footer__copyright">
-                    © 2024 Marali Santhe. All rights reserved. Made with ❤️ for farmers and customers.
+                    © 2024 Dhanvantri Naturals. All rights reserved. Made with ❤️ for farmers and customers.
                 </p>
             </div>
         </div>

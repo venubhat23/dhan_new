@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_18_200002) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_18_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -793,6 +793,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_200002) do
     t.decimal "gst_percentage", precision: 5, scale: 2
     t.decimal "gst_amount", precision: 10, scale: 2
     t.decimal "final_price_with_gst", precision: 10, scale: 2
+    t.boolean "is_active", default: true, null: false
+    t.index ["is_active"], name: "index_product_variants_on_is_active"
     t.index ["is_default"], name: "index_product_variants_on_is_default"
     t.index ["product_id", "weight", "unit"], name: "index_product_variants_uniqueness", unique: true
     t.index ["product_id"], name: "index_product_variants_on_product_id"

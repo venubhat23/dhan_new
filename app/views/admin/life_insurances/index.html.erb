@@ -78,7 +78,7 @@
   </div>
 </div>
 
-<!-- Tabs for Marali Santhe vs Non-Marali Santhe -->
+<!-- Tabs for Dhanvantri Naturals vs Non-Dhanvantri Naturals -->
 <div class="card border-0 shadow-sm mb-4">
   <div class="card-body p-0">
     <ul class="nav nav-tabs border-0" role="tablist">
@@ -87,7 +87,7 @@
             class: "nav-link #{'active' if @current_tab == 'dhanvantri'}",
             role: "tab" do %>
           <i class="bi bi-check-circle me-2"></i>
-          Marali Santhe Policies
+          Dhanvantri Naturals Policies
           <span class="badge bg-success ms-2"><%= @dhanvantri_count %></span>
         <% end %>
       </li>
@@ -96,7 +96,7 @@
             class: "nav-link #{'active' if @current_tab == 'non_dhanvantri'}",
             role: "tab" do %>
           <i class="bi bi-x-circle me-2"></i>
-          Non-Marali Santhe Policies
+          Non-Dhanvantri Naturals Policies
           <span class="badge bg-warning ms-2"><%= @non_dhanvantri_count %></span>
         <% end %>
       </li>
@@ -140,9 +140,9 @@
   <div class="card-header bg-transparent border-0">
     <h5 class="mb-0">
       <% if @current_tab == 'dhanvantri' %>
-        <i class="bi bi-check-circle text-success me-2"></i>Marali Santhe Life Insurance Policies
+        <i class="bi bi-check-circle text-success me-2"></i>Dhanvantri Naturals Life Insurance Policies
       <% else %>
-        <i class="bi bi-x-circle text-warning me-2"></i>Non-Marali Santhe Life Insurance Policies
+        <i class="bi bi-x-circle text-warning me-2"></i>Non-Dhanvantri Naturals Life Insurance Policies
       <% end %>
     </h5>
   </div>
@@ -279,10 +279,10 @@
       <div class="text-center py-5">
         <% if @current_tab == 'dhanvantri' %>
           <i class="bi bi-check-circle fs-1 text-success d-block mb-3"></i>
-          <h5 class="text-muted">No Marali Santhe life insurance policies found</h5>
+          <h5 class="text-muted">No Dhanvantri Naturals life insurance policies found</h5>
         <% else %>
           <i class="bi bi-x-circle fs-1 text-warning d-block mb-3"></i>
-          <h5 class="text-muted">No Non-Marali Santhe life insurance policies found</h5>
+          <h5 class="text-muted">No Non-Dhanvantri Naturals life insurance policies found</h5>
         <% end %>
         <p class="text-muted mb-3">
           <% if params[:search].present? || params[:status].present? || params[:payment_mode].present? %>
@@ -290,20 +290,20 @@
             <%= link_to "view all #{@current_tab} policies", admin_life_insurances_path(tab: @current_tab), class: "text-decoration-none" %>.
           <% else %>
             <% if @current_tab == 'dhanvantri' %>
-              Marali Santhe policies are created from the admin panel.
+              Dhanvantri Naturals policies are created from the admin panel.
             <% else %>
-              Non-Marali Santhe policies are added by customers or agents.
+              Non-Dhanvantri Naturals policies are added by customers or agents.
             <% end %>
           <% end %>
         </p>
         <% if @current_tab == 'dhanvantri' %>
           <%= link_to new_admin_life_insurance_path, class: "btn btn-primary" do %>
             <i class="bi bi-plus-lg me-1"></i>
-            Add Marali Santhe Life Policy
+            Add Dhanvantri Naturals Life Policy
           <% end %>
         <% else %>
           <div class="text-muted small">
-            Non-Marali Santhe policies are typically added through customer or agent portals.
+            Non-Dhanvantri Naturals policies are typically added through customer or agent portals.
           </div>
         <% end %>
       </div>

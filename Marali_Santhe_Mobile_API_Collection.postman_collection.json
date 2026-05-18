@@ -1,0 +1,858 @@
+{
+  "info": {
+    "name": "Marali Santhe - Mobile API",
+    "_postman_id": "marali-santhe-mobile-api-v2",
+    "description": "Complete mobile API collection for Marali Santhe ecommerce app.\n\n** SETUP INSTRUCTIONS **\n1. Import this collection into Postman\n2. The base_url is already set to https://maralisanthe.com\n3. Run folder '1. Auth' → 'Login' — the token is auto-saved\n4. All authenticated requests use {{token}} automatically\n5. booking_id and product_id are auto-saved from responses\n\n** PAYMENT TEST ORDER **\n1. Login\n2. Place Order - Cashfree\n3. Check Payment Status (should be pending)\n4. Verify Payment (after SDK payment)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url",   "value": "https://maralisanthe.com", "type": "string" },
+    { "key": "token",      "value": "", "type": "string" },
+    { "key": "booking_id", "value": "", "type": "string" },
+    { "key": "product_id", "value": "42", "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "1. Auth",
+      "item": [
+
+        {
+          "name": "Register Customer",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 200 or 201', function () {",
+                "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                "});",
+                "const res = pm.response.json();",
+                "pm.test('Registration success', function () { pm.expect(res.success).to.be.true; });",
+                "if (res.data) console.log('customer_id:', res.data.customer_id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","auth","register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Test\",\n  \"last_name\": \"Customer\",\n  \"email\": \"testcustomer@example.com\",\n  \"mobile\": \"9876543210\",\n  \"password\": \"password123\",\n  \"role\": \"customer\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Login  ← auto-saves token",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                "const res = pm.response.json();",
+                "pm.test('Login success', function () { pm.expect(res.success).to.be.true; });",
+                "if (res.data && res.data.token) {",
+                "  pm.collectionVariables.set('token', res.data.token);",
+                "  console.log('✅ Token saved');",
+                "  console.log('customer_id:', res.data.customer_id);",
+                "  console.log('username:', res.data.username);",
+                "} else {",
+                "  console.log('❌ No token — check credentials');",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","auth","login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testcustomer@example.com\",\n  \"password\": \"password123\"\n}"
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "2. Products  (No Auth Needed)",
+      "item": [
+
+        {
+          "name": "Get All Products",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                "const res = pm.response.json();",
+                "pm.test('Has products', function () { pm.expect(res.data.products).to.be.an('array'); });",
+                "const inStock = res.data.products.find(p => p.is_in_stock);",
+                "if (inStock) {",
+                "  pm.collectionVariables.set('product_id', inStock.id.toString());",
+                "  console.log('✅ product_id set to:', inStock.id, '-', inStock.name, '| Price: ₹' + inStock.selling_price);",
+                "}",
+                "console.log('Total products on page:', res.data.products.length);",
+                "console.log('Total products in DB:', res.data.pagination.total_count);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/products?page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","products"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "10" }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Get Products - Filter Oils (Category 14)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/products?category_id=14&sort_by=price_low",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","products"],
+              "query": [
+                { "key": "category_id", "value": "14" },
+                { "key": "sort_by", "value": "price_low" }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Get Products - Filter Grains & Millets (Category 15)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/products?category_id=15",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","products"],
+              "query": [{ "key": "category_id", "value": "15" }]
+            }
+          }
+        },
+
+        {
+          "name": "Get All Categories",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                "const res = pm.response.json();",
+                "pm.test('Has categories', function () { pm.expect(res.data).to.be.an('array'); });",
+                "res.data.forEach(c => console.log('ID:', c.id, '|', c.name, '| Products:', c.products_count));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","categories"]
+            }
+          }
+        },
+
+        {
+          "name": "Get Featured Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/featured_products?limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","featured_products"],
+              "query": [{ "key": "limit", "value": "5" }]
+            }
+          }
+        },
+
+        {
+          "name": "Search Products - ghee",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/search?query=ghee",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","search"],
+              "query": [{ "key": "query", "value": "ghee" }]
+            }
+          }
+        },
+
+        {
+          "name": "Search Products - rice",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/search?query=rice",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","search"],
+              "query": [{ "key": "query", "value": "rice" }]
+            }
+          }
+        },
+
+        {
+          "name": "Get Product Details  (uses saved product_id)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                "const res = pm.response.json();",
+                "pm.test('Has product data', function () { pm.expect(res.data).to.have.property('id'); });",
+                "console.log('Product:', res.data.name);",
+                "console.log('Price: ₹' + res.data.selling_price, '| Stock:', res.data.stock, '| In Stock:', res.data.is_in_stock);",
+                "console.log('GST:', res.data.gst_percentage + '%');",
+                "console.log('Related products:', res.data.related_products.length);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/products/{{product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","products","{{product_id}}"]
+            }
+          }
+        },
+
+        {
+          "name": "Get Filter Options",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/filters",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","filters"]
+            }
+          }
+        },
+
+        {
+          "name": "Get Banners - Home",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/banners?location=home",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","banners"],
+              "query": [{ "key": "location", "value": "home" }]
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "3. Delivery",
+      "item": [
+
+        {
+          "name": "Check Delivery - Pincode 560001 (Serviceable)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                "const res = pm.response.json();",
+                "console.log('Pincode:', res.data.pincode, '| Deliverable:', res.data.deliverable, '| Area:', res.data.area);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/check_delivery",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","check_delivery"]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"pincode\": \"560001\"\n}" }
+          }
+        },
+
+        {
+          "name": "Check Delivery - Pincode 999999 (Not Serviceable)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "const res = pm.response.json();",
+                "console.log('Deliverable:', res.data.deliverable, '— Expected: false');"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/check_delivery",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","check_delivery"]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"pincode\": \"999999\"\n}" }
+          }
+        },
+
+        {
+          "name": "Get Delivery Charges - 560002",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                "const res = pm.response.json();",
+                "console.log('Area:', res.data.area, '| Charge: ₹' + res.data.delivery_charge);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/delivery/charges",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","delivery","charges"]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"pincode\": \"560002\"\n}" }
+          }
+        },
+
+        {
+          "name": "Validate Delivery for Multiple Products",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/delivery/validate",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","delivery","validate"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pincode\": \"560001\",\n  \"product_ids\": [42, 46, 47]\n}"
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "4. Checkout & Payment  ← MAIN FLOW",
+      "item": [
+
+        {
+          "name": "Step 1 — Place Order COD",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                "const res = pm.response.json();",
+                "pm.test('Order placed', function () { pm.expect(res.success).to.be.true; });",
+                "pm.test('payment_method is cod', function () { pm.expect(res.payment_method).to.eql('cod'); });",
+                "if (res.booking_id) {",
+                "  pm.collectionVariables.set('booking_id', res.booking_id.toString());",
+                "  console.log('✅ COD Order created!');",
+                "  console.log('   booking_number:', res.booking_number);",
+                "  console.log('   booking_id:', res.booking_id, '← saved to {{booking_id}}');",
+                "  console.log('   total_amount: ₹' + res.total_amount);",
+                "  console.log('   message:', res.message);",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/checkout/cart_order",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","checkout","cart_order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cart_data\": [\n    {\n      \"id\": 42,\n      \"name\": \"COCONUT OIL [1LTR]\",\n      \"price\": 650,\n      \"quantity\": 1\n    },\n    {\n      \"id\": 46,\n      \"name\": \"RAJMUDI RICE [1KG]\",\n      \"price\": 130,\n      \"quantity\": 2\n    }\n  ],\n  \"customer_name\": \"Test Customer\",\n  \"customer_email\": \"testcustomer@example.com\",\n  \"customer_phone\": \"9876543210\",\n  \"delivery_address\": \"123 Main Street, MG Road, Bangalore - 560001\",\n  \"payment_method\": \"cod\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Step 1 — Place Order Cashfree (Online)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                "const res = pm.response.json();",
+                "pm.test('Cashfree order created', function () { pm.expect(res.success).to.be.true; });",
+                "pm.test('Has payment_session_id', function () { pm.expect(res.payment_session_id).to.be.a('string'); });",
+                "pm.test('redirect_to_payment is true', function () { pm.expect(res.redirect_to_payment).to.be.true; });",
+                "if (res.booking_id) {",
+                "  pm.collectionVariables.set('booking_id', res.booking_id.toString());",
+                "  console.log('✅ Cashfree Order created!');",
+                "  console.log('   booking_number:', res.booking_number);",
+                "  console.log('   booking_id:', res.booking_id, '← saved to {{booking_id}}');",
+                "  console.log('   cashfree_order_id:', res.cashfree_order_id);",
+                "  console.log('   payment_session_id:', res.payment_session_id);",
+                "  console.log('   total_amount: ₹' + res.total_amount);",
+                "  console.log('');",
+                "  console.log('📱 React Native next step:');",
+                "  console.log('   CashfreePGApiClient.checkout({ paymentSessionId: \"' + res.payment_session_id + '\", environment: \"PRODUCTION\" })');",
+                "  console.log('');",
+                "  console.log('📋 After SDK payment, run: Step 3 — Verify Payment');",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/checkout/cart_order",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","checkout","cart_order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cart_data\": [\n    {\n      \"id\": 54,\n      \"name\": \"DESI COW GHEE [500ML]\",\n      \"price\": 600,\n      \"quantity\": 1\n    }\n  ],\n  \"customer_name\": \"Test Customer\",\n  \"customer_email\": \"testcustomer@example.com\",\n  \"customer_phone\": \"9876543210\",\n  \"delivery_address\": \"123 Main Street, MG Road, Bangalore - 560001\",\n  \"payment_method\": \"cashfree\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Step 2 — Check Payment Status (Poll this)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                "const res = pm.response.json();",
+                "console.log('─────────────────────────────────');",
+                "console.log('Booking ID   :', res.data.booking_id);",
+                "console.log('Booking No   :', res.data.booking_number);",
+                "console.log('Order Status :', res.data.status);",
+                "console.log('Payment      :', res.data.payment_status, '| Method:', res.data.payment_method);",
+                "console.log('Is Paid      :', res.data.is_paid);",
+                "console.log('Is Pending   :', res.data.is_pending);",
+                "console.log('Amount       : ₹' + res.data.total_amount);",
+                "console.log('Cashfree ID  :', res.data.cashfree_order_id || 'N/A');",
+                "console.log('Payment ID   :', res.data.cashfree_payment_id || 'N/A (not yet paid)');",
+                "console.log('─────────────────────────────────');",
+                "if (res.data.is_paid) {",
+                "  console.log('✅ PAID — Order is confirmed!');",
+                "} else if (res.data.is_pending) {",
+                "  console.log('⏳ PENDING — Customer has not paid yet. Poll again.');",
+                "} else {",
+                "  console.log('❌ NOT PAID / failed');",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/bookings/{{booking_id}}/payment_status",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","bookings","{{booking_id}}","payment_status"]
+            }
+          }
+        },
+
+        {
+          "name": "Step 3 — Verify Payment (after Cashfree SDK returns)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                "const res = pm.response.json();",
+                "console.log('─────────────────────────────────');",
+                "console.log('Verification Result:', res.success ? '✅ PAID' : '❌ NOT PAID');",
+                "console.log('Booking:', res.data.booking_number, '| Status:', res.data.status);",
+                "console.log('Payment Status:', res.data.payment_status);",
+                "console.log('Is Paid:', res.data.is_paid);",
+                "if (res.data.payment_completed_at) {",
+                "  console.log('Paid at:', res.data.payment_completed_at);",
+                "}",
+                "console.log('─────────────────────────────────');"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/verify_payment",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","verify_payment"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking_id\": {{booking_id}}\n}"
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "5. Order History",
+      "item": [
+
+        {
+          "name": "Get All My Bookings",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                "const res = pm.response.json();",
+                "console.log('Total bookings:', res.data.pagination.total_count);",
+                "res.data.bookings.slice(0,5).forEach(b => {",
+                "  console.log('  #' + b.id, b.booking_number,",
+                "    '| status:', b.status,",
+                "    '| payment:', b.payment_status,",
+                "    '| ₹' + b.total_amount);",
+                "});"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/bookings?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","bookings"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Get Bookings - Confirmed Only",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/bookings?status=confirmed",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","bookings"],
+              "query": [{ "key": "status", "value": "confirmed" }]
+            }
+          }
+        },
+
+        {
+          "name": "Get Bookings - Draft (Unpaid Online Orders)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/bookings?status=draft",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","bookings"],
+              "query": [{ "key": "status", "value": "draft" }]
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "6. Customer Profile",
+      "item": [
+
+        {
+          "name": "Get My Profile",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                "const res = pm.response.json();",
+                "console.log('Name:', res.data.full_name);",
+                "console.log('Email:', res.data.email, '| Mobile:', res.data.mobile);",
+                "console.log('Total Orders:', res.data.statistics.total_orders);",
+                "console.log('Total Bookings:', res.data.statistics.total_bookings);",
+                "console.log('Total Spent: ₹' + res.data.statistics.total_spent);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","profile"]
+            }
+          }
+        },
+
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","profile"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Test\",\n  \"last_name\": \"Customer\",\n  \"mobile\": \"9876543210\",\n  \"address\": \"123 Main Street, Bangalore\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Save GPS Location",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/location/save",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","location","save"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946,\n  \"address\": \"MG Road, Bangalore, Karnataka\",\n  \"pincode\": \"560001\"\n}"
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "7. Error Cases",
+      "item": [
+
+        {
+          "name": "Login - Wrong Password  → 401",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 401', function () { pm.response.to.have.status(401); });",
+                "const res = pm.response.json();",
+                "pm.test('success is false', function () { pm.expect(res.success).to.be.false; });",
+                "console.log('✅ Correct error:', res.message);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","auth","login"]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"testcustomer@example.com\",\n  \"password\": \"WRONGPASSWORD\"\n}" }
+          }
+        },
+
+        {
+          "name": "Place Order - No Auth Token  → 401",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 401', function () { pm.response.to.have.status(401); });",
+                "console.log('✅ Correctly rejected — no token');"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/checkout/cart_order",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","checkout","cart_order"]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"cart_data\": [{\"id\": 42, \"price\": 650, \"quantity\": 1}],\n  \"payment_method\": \"cod\"\n}" }
+          }
+        },
+
+        {
+          "name": "Place Order - Empty Cart  → 400",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+                "const res = pm.response.json();",
+                "pm.test('success is false', function () { pm.expect(res.success).to.be.false; });",
+                "console.log('✅ Correct error:', res.message);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/checkout/cart_order",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","checkout","cart_order"]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"cart_data\": [],\n  \"payment_method\": \"cod\",\n  \"customer_name\": \"Test\",\n  \"customer_phone\": \"9876543210\",\n  \"delivery_address\": \"Bangalore\"\n}" }
+          }
+        },
+
+        {
+          "name": "Place Order - Invalid Product ID  → 422",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+                "const res = pm.response.json();",
+                "pm.test('success is false', function () { pm.expect(res.success).to.be.false; });",
+                "console.log('✅ Correct error:', res.message);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/checkout/cart_order",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","checkout","cart_order"]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"cart_data\": [{\"id\": 99999, \"name\": \"Ghost Product\", \"price\": 100, \"quantity\": 1}],\n  \"payment_method\": \"cod\",\n  \"customer_name\": \"Test\",\n  \"customer_phone\": \"9876543210\",\n  \"delivery_address\": \"Bangalore\"\n}" }
+          }
+        },
+
+        {
+          "name": "Verify Payment - Wrong Booking ID  → 404",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 404', function () { pm.response.to.have.status(404); });",
+                "console.log('✅ Correct error: Booking not found');"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/ecommerce/verify_payment",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","ecommerce","verify_payment"]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"booking_id\": 99999\n}" }
+          }
+        },
+
+        {
+          "name": "Register - Duplicate Email  → 409",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 409 Conflict', function () { pm.response.to.have.status(409); });",
+                "console.log('✅ Correct error: Email already exists');"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","mobile","auth","register"]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"first_name\": \"Test\",\n  \"last_name\": \"Customer\",\n  \"email\": \"testcustomer@example.com\",\n  \"mobile\": \"9876543211\",\n  \"password\": \"password123\",\n  \"role\": \"customer\"\n}" }
+          }
+        }
+
+      ]
+    }
+
+  ]
+}

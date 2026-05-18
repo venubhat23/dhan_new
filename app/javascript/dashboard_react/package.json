@@ -1,7 +1,7 @@
 {
   "name": "drwise-financial-dashboard",
   "version": "1.0.0",
-  "description": "Professional Financial Dashboard for Marali Santhe Admin",
+  "description": "Professional Financial Dashboard for Dhanvantri Naturals Admin",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

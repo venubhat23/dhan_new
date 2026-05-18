@@ -435,4 +435,4 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-console.log('Marali Santhe website initialized successfully! 🌱');
+console.log('Dhanvantri Naturals website initialized successfully! 🌱');

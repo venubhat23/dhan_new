@@ -1,0 +1,133 @@
+namespace :delivery do
+  desc "Seed all Bangalore pincodes into delivery_charges (skips existing)"
+  task seed_bangalore_pincodes: :environment do
+    pincodes = [
+      { pincode: "560001", area: "MG Road" },
+      { pincode: "560002", area: "Brigade Road" },
+      { pincode: "560003", area: "Malleshwaram" },
+      { pincode: "560004", area: "Rajajinagar" },
+      { pincode: "560005", area: "Basavanagudi" },
+      { pincode: "560006", area: "Sadashivanagar" },
+      { pincode: "560007", area: "Vidyaranyapura" },
+      { pincode: "560008", area: "Mathikere" },
+      { pincode: "560009", area: "Yeshwantpur" },
+      { pincode: "560010", area: "Rajajinagar Industrial Area" },
+      { pincode: "560011", area: "Vijayanagar" },
+      { pincode: "560012", area: "Nagarbhavi" },
+      { pincode: "560013", area: "Hebbal" },
+      { pincode: "560014", area: "Yelahanka" },
+      { pincode: "560015", area: "Peenya" },
+      { pincode: "560016", area: "Jalahalli" },
+      { pincode: "560017", area: "Kengeri" },
+      { pincode: "560018", area: "Mysore Road" },
+      { pincode: "560019", area: "Banashankari" },
+      { pincode: "560020", area: "Jayanagar" },
+      { pincode: "560021", area: "BTM Layout" },
+      { pincode: "560022", area: "Bommanahalli" },
+      { pincode: "560023", area: "Electronic City" },
+      { pincode: "560024", area: "Koramangala" },
+      { pincode: "560025", area: "Indiranagar" },
+      { pincode: "560026", area: "Domlur" },
+      { pincode: "560027", area: "Old Airport Road" },
+      { pincode: "560028", area: "Kodihalli" },
+      { pincode: "560029", area: "HAL" },
+      { pincode: "560030", area: "Marathahalli" },
+      { pincode: "560031", area: "Bellandur" },
+      { pincode: "560032", area: "Sarjapur Road" },
+      { pincode: "560033", area: "Whitefield" },
+      { pincode: "560034", area: "KR Puram" },
+      { pincode: "560035", area: "Old Madras Road" },
+      { pincode: "560036", area: "Hoodi" },
+      { pincode: "560037", area: "Banaswadi" },
+      { pincode: "560038", area: "Hennur" },
+      { pincode: "560039", area: "Lingarajapuram" },
+      { pincode: "560040", area: "RT Nagar" },
+      { pincode: "560041", area: "Hebbal Kempapura" },
+      { pincode: "560042", area: "Nagawara" },
+      { pincode: "560043", area: "HBR Layout" },
+      { pincode: "560044", area: "Kalyan Nagar" },
+      { pincode: "560045", area: "Kammanahalli" },
+      { pincode: "560046", area: "Frazer Town" },
+      { pincode: "560047", area: "Richmond Town" },
+      { pincode: "560048", area: "Koramangala 5th Block" },
+      { pincode: "560049", area: "Wilson Garden" },
+      { pincode: "560050", area: "Shivajinagar" },
+      { pincode: "560051", area: "Vasanth Nagar" },
+      { pincode: "560052", area: "Ulsoor" },
+      { pincode: "560053", area: "Langford Town" },
+      { pincode: "560054", area: "Lalbagh" },
+      { pincode: "560055", area: "Chamrajpet" },
+      { pincode: "560056", area: "Vijayanagar East" },
+      { pincode: "560057", area: "Girinagar" },
+      { pincode: "560058", area: "Padmanabhanagar" },
+      { pincode: "560059", area: "Uttarahalli" },
+      { pincode: "560060", area: "Banashankari 3rd Stage" },
+      { pincode: "560061", area: "Kanakapura Road" },
+      { pincode: "560062", area: "JP Nagar" },
+      { pincode: "560063", area: "Gottigere" },
+      { pincode: "560064", area: "Begur" },
+      { pincode: "560065", area: "Electronic City Phase 2" },
+      { pincode: "560066", area: "Bommasandra" },
+      { pincode: "560067", area: "Chandapura" },
+      { pincode: "560068", area: "Anekal" },
+      { pincode: "560069", area: "Sarjapur" },
+      { pincode: "560070", area: "Dommasandra" },
+      { pincode: "560071", area: "Budigere" },
+      { pincode: "560072", area: "Hosakote" },
+      { pincode: "560073", area: "Devanahalli" },
+      { pincode: "560074", area: "Yelahanka New Town" },
+      { pincode: "560075", area: "Jakkur" },
+      { pincode: "560076", area: "Kodigehalli" },
+      { pincode: "560077", area: "Sahakara Nagar" },
+      { pincode: "560078", area: "Thanisandra" },
+      { pincode: "560079", area: "Kothanur" },
+      { pincode: "560080", area: "Arekere" },
+      { pincode: "560081", area: "Carmelram" },
+      { pincode: "560082", area: "Halanayakanahalli" },
+      { pincode: "560083", area: "Hoskote" },
+      { pincode: "560084", area: "Varthur" },
+      { pincode: "560085", area: "Kadugodi" },
+      { pincode: "560086", area: "Mahadevapura" },
+      { pincode: "560087", area: "Doddanekundi" },
+      { pincode: "560088", area: "Ramamurthy Nagar" },
+      { pincode: "560089", area: "Lottegollahalli" },
+      { pincode: "560090", area: "Bhattarahalli" },
+      { pincode: "560091", area: "Nagarabhavi" },
+      { pincode: "560092", area: "Kengeri Satellite Town" },
+      { pincode: "560093", area: "Rajarajeshwari Nagar" },
+      { pincode: "560094", area: "Thubarahalli" },
+      { pincode: "560095", area: "Bidarahalli" },
+      { pincode: "560096", area: "Jigani" },
+      { pincode: "560097", area: "Attibele" },
+      { pincode: "560098", area: "Hebbagodi" },
+      { pincode: "560099", area: "Madiwala" },
+      { pincode: "560100", area: "Electronic City Phase 1" },
+      { pincode: "560103", area: "Harlur" },
+      { pincode: "560104", area: "Marathahalli Extension" },
+      { pincode: "560105", area: "Panathur" },
+      { pincode: "560106", area: "Vaderahalli" },
+      { pincode: "560107", area: "Ambalipura" },
+      { pincode: "560108", area: "Choodasandra" },
+      { pincode: "560109", area: "Kaggadasapura" },
+      { pincode: "560110", area: "Somasundarapalya" },
+    ]
+
+    created = 0
+    skipped = 0
+
+    pincodes.each do |entry|
+      record = DeliveryCharge.find_or_initialize_by(pincode: entry[:pincode])
+      if record.new_record?
+        record.area = entry[:area]
+        record.charge_amount = 50.0
+        record.is_active = true
+        record.save!
+        created += 1
+      else
+        skipped += 1
+      end
+    end
+
+    puts "Done: #{created} created, #{skipped} already existed (skipped)."
+  end
+end

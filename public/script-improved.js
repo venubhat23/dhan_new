@@ -737,5 +737,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    console.log('🌱 Marali Santhe website loaded successfully!');
+    console.log('🌱 Dhanvantri Naturals website loaded successfully!');
 });

@@ -121,7 +121,7 @@
         <div class="form-group">
           <%= form.label :paid_from, "Paid From", class: "form-label small text-muted" %>
           <%= form.select :paid_from,
-              options_for_select([['All Accounts', ''], ['Marali Santhe Account', 'Marali Santhe Account'], ['Personal Account', 'Personal Account']], params[:paid_from]),
+              options_for_select([['All Accounts', ''], ['Dhanvantri Naturals Account', 'Dhanvantri Naturals Account'], ['Personal Account', 'Personal Account']], params[:paid_from]),
               {},
               { class: "form-select", style: "min-width: 180px;" } %>
         </div>
@@ -199,7 +199,7 @@
                     <td class="py-3 border-0">
                       <% if note.paid_from.present? %>
                         <span class="badge bg-light text-dark border small fw-medium px-2 py-1 rounded-pill">
-                          <% if note.paid_from == 'Marali Santhe Account' %>
+                          <% if note.paid_from == 'Dhanvantri Naturals Account' %>
                             🏢 Farm Account
                           <% else %>
                             👤 Personal
