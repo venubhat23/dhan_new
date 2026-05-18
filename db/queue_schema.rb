@@ -496,3 +496,423 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_100001) do
     t.index ["pan_no"], name: "index_franchises_on_pan_no", unique: true
     t.index ["user_id"], name: "index_franchises_on_user_id"
   end
+
+  create_table "invoice_items", force: :cascade do |t|
+    t.bigint "invoice_id", null: false
+    t.bigint "milk_delivery_task_id"
+    t.text "description"
+    t.decimal "quantity"
+    t.decimal "unit_price"
+    t.decimal "total_amount"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "product_id"
+    t.index ["invoice_id"], name: "index_invoice_items_on_invoice_id"
+    t.index ["milk_delivery_task_id"], name: "index_invoice_items_on_milk_delivery_task_id"
+    t.index ["product_id"], name: "index_invoice_items_on_product_id"
+  end
+
+  create_table "invoices", force: :cascade do |t|
+    t.string "invoice_number"
+    t.string "payout_type"
+    t.integer "payout_id"
+    t.decimal "total_amount"
+    t.string "status"
+    t.date "invoice_date"
+    t.date "due_date"
+    t.datetime "paid_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "customer_id"
+    t.integer "payment_status"
+    t.string "share_token"
+    t.boolean "quick_invoice", default: false
+    t.decimal "paid_amount", precision: 10, scale: 2, default: "0.0"
+    t.index ["invoice_number"], name: "index_invoices_on_invoice_number", unique: true
+    t.index ["share_token"], name: "index_invoices_on_share_token", unique: true
+  end
+
+  create_table "leads", force: :cascade do |t|
+    t.string "name"
+    t.string "contact_number"
+    t.string "email"
+    t.string "current_stage"
+    t.string "lead_source"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "product_category"
+    t.string "product_subcategory"
+    t.string "customer_type"
+    t.integer "affiliate_id"
+    t.boolean "is_direct"
+    t.string "first_name"
+    t.string "last_name"
+    t.string "middle_name"
+    t.string "company_name"
+    t.string "gender"
+    t.string "marital_status"
+    t.string "pan_no"
+    t.string "gst_no"
+    t.decimal "height"
+    t.decimal "weight"
+    t.decimal "annual_income"
+    t.string "business_job"
+  end
+
+  create_table "milk_delivery_tasks", force: :cascade do |t|
+    t.bigint "subscription_id"
+    t.bigint "customer_id", null: false
+    t.bigint "product_id", null: false
+    t.decimal "quantity", precision: 10, scale: 2
+    t.string "unit"
+    t.date "delivery_date"
+    t.bigint "delivery_person_id"
+    t.string "status", default: "pending"
+    t.datetime "assigned_at"
+    t.datetime "completed_at"
+    t.text "delivery_notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "invoiced", default: false
+    t.datetime "invoiced_at"
+    t.index ["customer_id", "delivery_date"], name: "index_milk_delivery_tasks_on_customer_id_and_delivery_date"
+    t.index ["customer_id"], name: "index_milk_delivery_tasks_on_customer_id"
+    t.index ["delivery_date"], name: "index_milk_delivery_tasks_on_delivery_date"
+    t.index ["delivery_person_id", "delivery_date"], name: "idx_on_delivery_person_id_delivery_date_8b580f1b82"
+    t.index ["delivery_person_id"], name: "index_milk_delivery_tasks_on_delivery_person_id"
+    t.index ["product_id"], name: "index_milk_delivery_tasks_on_product_id"
+    t.index ["status"], name: "index_milk_delivery_tasks_on_status"
+    t.index ["subscription_id"], name: "index_milk_delivery_tasks_on_subscription_id"
+  end
+
+  create_table "milk_subscriptions", force: :cascade do |t|
+    t.bigint "customer_id", null: false
+    t.bigint "product_id", null: false
+    t.decimal "quantity", precision: 10, scale: 2
+    t.string "unit", default: "liter"
+    t.date "start_date"
+    t.date "end_date"
+    t.string "delivery_time", default: "morning"
+    t.string "delivery_pattern", default: "daily"
+    t.text "specific_dates"
+    t.decimal "total_amount", precision: 10, scale: 2
+    t.string "status", default: "active"
+    t.boolean "is_active", default: true
+    t.integer "created_by"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "delivery_person_id"
+    t.index ["customer_id"], name: "index_milk_subscriptions_on_customer_id"
+    t.index ["product_id"], name: "index_milk_subscriptions_on_product_id"
+    t.index ["start_date", "end_date"], name: "idx_milk_subscriptions_dates"
+    t.index ["status"], name: "idx_milk_subscriptions_status"
+  end
+
+  create_table "notes", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "paid_to", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.string "payment_method", null: false
+    t.string "reference_number"
+    t.text "description"
+    t.string "status", default: "pending"
+    t.date "note_date", default: -> { "CURRENT_DATE" }, null: false
+    t.bigint "created_by_user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "paid_from"
+    t.string "paid_to_category"
+    t.index ["created_by_user_id"], name: "index_notes_on_created_by_user_id"
+    t.index ["note_date"], name: "index_notes_on_note_date"
+    t.index ["payment_method"], name: "index_notes_on_payment_method"
+    t.index ["status"], name: "index_notes_on_status"
+  end
+
+  create_table "notifications", force: :cascade do |t|
+    t.bigint "customer_id", null: false
+    t.string "title"
+    t.text "message"
+    t.string "notification_type"
+    t.json "data"
+    t.boolean "read"
+    t.datetime "read_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_notifications_on_customer_id"
+  end
+
+  create_table "order_items", force: :cascade do |t|
+    t.integer "order_id"
+    t.integer "product_id"
+    t.integer "quantity"
+    t.decimal "price"
+    t.decimal "total"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "product_variant_id"
+    t.index ["product_variant_id"], name: "index_order_items_on_product_variant_id"
+  end
+
+  create_table "orders", force: :cascade do |t|
+    t.integer "customer_id"
+    t.integer "user_id"
+    t.string "order_number"
+    t.datetime "order_date"
+    t.string "status"
+    t.string "payment_method"
+    t.string "payment_status"
+    t.decimal "subtotal"
+    t.decimal "tax_amount"
+    t.decimal "discount_amount"
+    t.decimal "shipping_amount"
+    t.decimal "total_amount"
+    t.text "notes"
+    t.text "order_items"
+    t.string "customer_name"
+    t.string "customer_email"
+    t.string "customer_phone"
+    t.text "delivery_address"
+    t.string "tracking_number"
+    t.datetime "delivered_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "processing_notes"
+    t.integer "estimated_processing_time"
+    t.datetime "processing_started_at"
+    t.string "packed_by"
+    t.decimal "package_weight"
+    t.string "package_dimensions"
+    t.text "packing_notes"
+    t.datetime "packed_at"
+    t.string "shipping_carrier"
+    t.date "estimated_delivery_date"
+    t.decimal "shipping_cost"
+    t.text "shipping_notes"
+    t.datetime "shipped_at"
+    t.string "delivered_to"
+    t.string "delivery_location"
+    t.text "delivery_notes"
+    t.datetime "cancelled_at"
+    t.string "cancellation_reason"
+    t.string "refund_method"
+    t.decimal "refund_amount"
+    t.text "cancellation_notes"
+    t.boolean "invoice_generated", default: false
+    t.string "invoice_number"
+    t.decimal "cash_received", precision: 10, scale: 2
+    t.decimal "change_amount", precision: 10, scale: 2
+    t.string "order_stage", default: "draft"
+    t.datetime "booking_date"
+    t.integer "booking_id"
+    t.index ["booking_id"], name: "index_orders_on_booking_id"
+  end
+
+  create_table "pending_amounts", force: :cascade do |t|
+    t.bigint "customer_id", null: false
+    t.decimal "amount"
+    t.text "description"
+    t.date "pending_date"
+    t.integer "status"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_pending_amounts_on_customer_id"
+  end
+
+  create_table "permissions", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "resource"
+    t.string "action"
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_permissions_on_name", unique: true
+    t.index ["resource", "action"], name: "index_permissions_on_resource_and_action"
+  end
+
+  create_table "product_ratings", force: :cascade do |t|
+    t.bigint "product_id", null: false
+    t.bigint "customer_id"
+    t.bigint "user_id"
+    t.integer "rating", null: false
+    t.text "comment"
+    t.integer "status", default: 0
+    t.string "reviewer_name"
+    t.string "reviewer_email"
+    t.boolean "verified_purchase", default: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_product_ratings_on_customer_id"
+    t.index ["product_id", "rating"], name: "index_product_ratings_on_product_id_and_rating"
+    t.index ["product_id", "status"], name: "index_product_ratings_on_product_id_and_status"
+    t.index ["product_id"], name: "index_product_ratings_on_product_id"
+    t.index ["user_id"], name: "index_product_ratings_on_user_id"
+  end
+
+  create_table "product_reviews", force: :cascade do |t|
+    t.bigint "product_id", null: false
+    t.bigint "customer_id"
+    t.bigint "user_id"
+    t.integer "rating", null: false
+    t.text "comment"
+    t.string "reviewer_name"
+    t.string "reviewer_email"
+    t.integer "status", default: 0
+    t.boolean "verified_purchase", default: false
+    t.integer "helpful_count", default: 0
+    t.text "pros"
+    t.text "cons"
+    t.string "title"
+    t.json "images_data"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id", "product_id"], name: "index_product_reviews_on_customer_id_and_product_id", unique: true, where: "(customer_id IS NOT NULL)"
+    t.index ["customer_id"], name: "index_product_reviews_on_customer_id"
+    t.index ["product_id", "created_at"], name: "index_product_reviews_on_product_id_and_created_at"
+    t.index ["product_id", "rating"], name: "index_product_reviews_on_product_id_and_rating"
+    t.index ["product_id", "status"], name: "index_product_reviews_on_product_id_and_status"
+    t.index ["product_id"], name: "index_product_reviews_on_product_id"
+    t.index ["user_id"], name: "index_product_reviews_on_user_id"
+  end
+
+  create_table "product_variants", force: :cascade do |t|
+    t.bigint "product_id", null: false
+    t.decimal "weight", precision: 8, scale: 3, null: false
+    t.string "unit", default: "Kg", null: false
+    t.decimal "buying_price", precision: 10, scale: 2, default: "0.0"
+    t.decimal "selling_price", precision: 10, scale: 2, null: false
+    t.boolean "discount_enabled", default: false
+    t.string "discount_type"
+    t.decimal "discount_value", precision: 10, scale: 2
+    t.decimal "discount_amount", precision: 10, scale: 2
+    t.integer "available_stock", default: 0, null: false
+    t.boolean "is_default", default: false
+    t.integer "display_order", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "gst_percentage", precision: 5, scale: 2
+    t.decimal "gst_amount", precision: 10, scale: 2
+    t.decimal "final_price_with_gst", precision: 10, scale: 2
+    t.index ["is_default"], name: "index_product_variants_on_is_default"
+    t.index ["product_id", "weight", "unit"], name: "index_product_variants_uniqueness", unique: true
+    t.index ["product_id"], name: "index_product_variants_on_product_id"
+  end
+
+  create_table "products", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "description"
+    t.bigint "category_id", null: false
+    t.decimal "price", precision: 10, scale: 2, null: false
+    t.decimal "discount_price", precision: 10, scale: 2
+    t.integer "stock", default: 0
+    t.string "status", default: "active"
+    t.string "sku", null: false
+    t.decimal "weight", precision: 8, scale: 3
+    t.string "dimensions"
+    t.text "meta_title"
+    t.text "meta_description"
+    t.text "tags"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "discount_type"
+    t.decimal "discount_value", precision: 10, scale: 2
+    t.decimal "original_price", precision: 10, scale: 2
+    t.decimal "discount_amount", precision: 10, scale: 2
+    t.boolean "is_discounted", default: false
+    t.boolean "gst_enabled", default: false
+    t.decimal "gst_percentage", precision: 5, scale: 2
+    t.decimal "cgst_percentage", precision: 5, scale: 2
+    t.decimal "sgst_percentage", precision: 5, scale: 2
+    t.decimal "igst_percentage", precision: 5, scale: 2
+    t.decimal "gst_amount", precision: 10, scale: 2
+    t.decimal "cgst_amount", precision: 10, scale: 2
+    t.decimal "sgst_amount", precision: 10, scale: 2
+    t.decimal "igst_amount", precision: 10, scale: 2
+    t.decimal "final_amount_with_gst", precision: 10, scale: 2
+    t.decimal "buying_price", precision: 10, scale: 2
+    t.decimal "yesterday_price", precision: 10, scale: 2
+    t.decimal "today_price", precision: 10, scale: 2
+    t.decimal "price_change_percentage", precision: 5, scale: 2
+    t.datetime "last_price_update"
+    t.text "price_history"
+    t.boolean "is_occasional_product", default: false, null: false
+    t.datetime "occasional_start_date"
+    t.datetime "occasional_end_date"
+    t.text "occasional_description"
+    t.boolean "occasional_auto_hide", default: true, null: false
+    t.string "product_type", default: "Grocery"
+    t.string "occasional_schedule_type"
+    t.string "occasional_recurring_from_day"
+    t.time "occasional_recurring_from_time"
+    t.string "occasional_recurring_to_day"
+    t.time "occasional_recurring_to_time"
+    t.boolean "is_subscription_enabled", default: false
+    t.string "unit_type"
+    t.integer "minimum_stock_alert"
+    t.decimal "default_selling_price"
+    t.string "hsn_code"
+    t.string "image_url"
+    t.text "additional_images_urls"
+    t.integer "display_order"
+    t.decimal "base_price_excluding_gst"
+    t.string "r2_image_url"
+    t.text "r2_additional_images"
+    t.boolean "has_multiple_quantities", default: false, null: false
+    t.string "barcode"
+    t.index ["barcode"], name: "index_products_on_barcode", unique: true
+    t.index ["category_id"], name: "index_products_on_category_id"
+    t.index ["is_occasional_product", "occasional_start_date", "occasional_end_date"], name: "index_products_on_occasional_dates"
+    t.index ["is_occasional_product"], name: "index_products_on_is_occasional_product"
+    t.index ["is_subscription_enabled"], name: "index_products_on_is_subscription_enabled"
+    t.index ["last_price_update"], name: "index_products_on_last_price_update"
+    t.index ["name"], name: "index_products_on_name"
+    t.index ["product_type"], name: "index_products_on_product_type"
+    t.index ["sku"], name: "index_products_on_sku", unique: true
+    t.index ["status"], name: "index_products_on_status"
+  end
+
+  create_table "referrals", force: :cascade do |t|
+    t.bigint "affiliate_id"
+    t.string "referred_name"
+    t.string "referred_mobile"
+    t.string "referred_email"
+    t.date "referral_date"
+    t.string "status"
+    t.text "notes"
+    t.datetime "converted_at"
+    t.bigint "customer_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "referring_customer_id"
+    t.string "referral_source", default: "affiliate"
+    t.index ["affiliate_id"], name: "index_referrals_on_affiliate_id"
+    t.index ["customer_id"], name: "index_referrals_on_customer_id"
+    t.index ["referral_source"], name: "index_referrals_on_referral_source"
+    t.index ["referring_customer_id"], name: "index_referrals_on_referring_customer_id"
+  end
+
+  create_table "roles", force: :cascade do |t|
+    t.string "name"
+    t.text "description"
+    t.boolean "status"
+    t.text "permissions"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_roles_on_name", unique: true
+  end
+
+  create_table "sale_items", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.bigint "product_id", null: false
+    t.bigint "stock_batch_id", null: false
+    t.decimal "quantity"
+    t.decimal "selling_price"
+    t.decimal "purchase_price"
+    t.decimal "profit_amount"
+    t.decimal "line_total"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_sale_items_on_booking_id"
+    t.index ["product_id"], name: "index_sale_items_on_product_id"
+    t.index ["stock_batch_id"], name: "index_sale_items_on_stock_batch_id"
+  end
