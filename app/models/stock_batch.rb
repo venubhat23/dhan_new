@@ -21,6 +21,7 @@ class StockBatch < ApplicationRecord
 
   before_save :update_status
   after_update :mark_as_exhausted_if_needed
+  after_update :send_low_stock_alert_if_needed
 
   def batch_number
     "BATCH#{id.to_s.rjust(8, '0')}"
@@ -136,5 +137,30 @@ class StockBatch < ApplicationRecord
     if quantity_remaining <= 0 && status != 'exhausted'
       update_column(:status, 'exhausted')
     end
+  end
+
+  def send_low_stock_alert_if_needed
+    return unless saved_change_to_quantity_remaining?
+    return unless SystemSetting.low_stock_alert_enabled?
+
+    threshold = SystemSetting.low_stock_alert_threshold
+    prev_qty  = quantity_remaining_before_last_save.to_f
+    curr_qty  = quantity_remaining.to_f
+
+    return unless prev_qty > threshold && curr_qty <= threshold
+    return if curr_qty <= 0
+
+    email = SystemSetting.low_stock_alert_email
+    return if email.blank?
+
+    LowStockMailer.alert(
+      product:            product,
+      store:              store,
+      quantity_remaining: curr_qty,
+      threshold:          threshold,
+      recipient_email:    email
+    ).deliver_later
+  rescue StandardError => e
+    Rails.logger.error "LowStockMailer failed: #{e.message}"
   end
 end

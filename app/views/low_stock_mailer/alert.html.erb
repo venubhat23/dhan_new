@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f9fafb; margin: 0; padding: 0; }
+    .container { max-width: 520px; margin: 32px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, #ef4444, #f97316); padding: 28px 32px; color: white; }
+    .header h1 { margin: 0; font-size: 1.3rem; }
+    .header p { margin: 6px 0 0; opacity: 0.85; font-size: 0.9rem; }
+    .body { padding: 28px 32px; }
+    .stat-row { display: flex; gap: 16px; margin-bottom: 20px; }
+    .stat-box { flex: 1; background: #f9fafb; border-radius: 10px; padding: 16px; text-align: center; }
+    .stat-box .label { font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat-box .value { font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
+    .stat-box .value.danger { color: #ef4444; }
+    .stat-box .value.info { color: #6366f1; }
+    .btn { display: inline-block; background: linear-gradient(135deg, #1C7C54, #10b981); color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 16px; }
+    .footer { padding: 20px 32px; background: #f9fafb; border-top: 1px solid #f3f4f6; font-size: 0.8rem; color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚠️ Low Stock Alert</h1>
+      <p>A product has fallen below the minimum stock threshold.</p>
+    </div>
+    <div class="body">
+      <p style="color:#374151; margin-top:0;">Hi Admin,</p>
+      <p style="color:#374151;">The following product is running low and needs restocking:</p>
+
+      <table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #f3f4f6; border-radius:8px; overflow:hidden;">
+        <tr style="background:#f9fafb;">
+          <td style="padding:10px 14px; font-size:0.8rem; color:#9ca3af; text-transform:uppercase; letter-spacing:0.4px;">Product</td>
+          <td style="padding:10px 14px; font-weight:600; color:#111827;"><%= @product.name %></td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px; font-size:0.8rem; color:#9ca3af; text-transform:uppercase; letter-spacing:0.4px;">Store</td>
+          <td style="padding:10px 14px; font-weight:600; color:#111827;"><%= @store&.name || 'Main Inventory' %></td>
+        </tr>
+        <tr style="background:#f9fafb;">
+          <td style="padding:10px 14px; font-size:0.8rem; color:#9ca3af; text-transform:uppercase; letter-spacing:0.4px;">SKU</td>
+          <td style="padding:10px 14px; font-family:monospace; color:#6b7280;"><%= @product.sku %></td>
+        </tr>
+      </table>
+
+      <div class="stat-row">
+        <div class="stat-box">
+          <div class="label">Current Stock</div>
+          <div class="value danger"><%= @quantity_remaining %></div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Alert Threshold</div>
+          <div class="value info"><%= @threshold %></div>
+        </div>
+      </div>
+
+      <p style="color:#374151; background:#fef3c7; border-radius:8px; padding:14px; font-size:0.9rem; margin:0;">
+        <strong>Action required:</strong> Please initiate a stock transfer or vendor purchase to replenish this item before it runs out.
+      </p>
+    </div>
+    <div class="footer">
+      This is an automated alert from your store management system. Threshold can be changed in System Settings → Store Settings.
+    </div>
+  </div>
+</body>
+</html>

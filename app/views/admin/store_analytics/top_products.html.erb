@@ -1,0 +1,73 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1 fw-bold"><i class="bi bi-trophy me-2" style="color:#1C7C54;"></i>Top Products per Store</h2>
+    <p class="text-muted mb-0">Best-selling products by quantity and revenue</p>
+  </div>
+  <%= form_tag admin_store_analytics_top_products_path, method: :get, class: "d-flex align-items-center gap-2 flex-wrap" do %>
+    <%= select_tag :store_id,
+          options_for_select([['All Stores', '']] + @stores.map { |s| [s.name, s.id] }, @selected_store_id),
+          class: "form-select form-select-sm", style: "width:180px;" %>
+    <%= month_field_tag :month, @month.strftime('%Y-%m'), class: "form-control form-control-sm", style: "width:160px;" %>
+    <%= submit_tag "Apply", class: "btn btn-sm btn-success" %>
+  <% end %>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+  <div class="card-header bg-white py-3 px-4" style="border-radius:14px 14px 0 0;">
+    <h5 class="mb-0 fw-semibold">
+      <i class="bi bi-box-seam me-2" style="color:#1C7C54;"></i>
+      Top 20 Products — <%= @month.strftime('%B %Y') %>
+      <% if @selected_store_id.present? %>
+        <small class="text-muted fw-normal ms-1">(<%= Store.find_by(id: @selected_store_id)&.name %>)</small>
+      <% else %>
+        <small class="text-muted fw-normal ms-1">(All Stores)</small>
+      <% end %>
+    </h5>
+  </div>
+  <div class="card-body p-0">
+    <% if @top_products.any? %>
+      <% max_qty = @top_products.first.total_qty.to_f %>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0" style="font-size:0.875rem;">
+          <thead style="background:#f9fafb;">
+            <tr>
+              <th class="px-4 py-3 fw-semibold text-muted" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">#</th>
+              <th class="py-3 fw-semibold text-muted" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Product</th>
+              <th class="py-3 fw-semibold text-muted text-center" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Qty Sold</th>
+              <th class="py-3 fw-semibold text-muted text-end" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Revenue</th>
+              <th class="py-3 fw-semibold text-muted text-end pe-4" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Profit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @top_products.each_with_index do |item, idx| %>
+              <% pct = max_qty > 0 ? (item.total_qty.to_f / max_qty * 100).round : 0 %>
+              <tr>
+                <td class="px-4 py-3">
+                  <% if idx < 3 %>
+                    <span class="badge <%= ['bg-warning text-dark','bg-secondary','bg-danger-subtle text-danger'][idx] %> px-2">#<%= idx+1 %></span>
+                  <% else %>
+                    <span class="text-muted small">#<%= idx+1 %></span>
+                  <% end %>
+                </td>
+                <td class="py-3">
+                  <div class="fw-semibold"><%= item.product_name %></div>
+                  <div style="height:4px;background:#f3f4f6;border-radius:2px;margin-top:4px;width:140px;">
+                    <div style="width:<%= pct %>%;height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:2px;"></div>
+                  </div>
+                </td>
+                <td class="py-3 text-center fw-semibold"><%= number_with_precision(item.total_qty, precision: 0, delimiter: ',') %></td>
+                <td class="py-3 text-end text-success fw-semibold">₹<%= number_with_precision(item.total_revenue, precision: 0, delimiter: ',') %></td>
+                <td class="py-3 text-end pe-4 text-info fw-semibold">₹<%= number_with_precision(item.total_profit, precision: 0, delimiter: ',') %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="text-center py-5">
+        <i class="bi bi-box text-muted" style="font-size:2.5rem;"></i>
+        <p class="text-muted mt-3">No sales data for this period.</p>
+      </div>
+    <% end %>
+  </div>
+</div>

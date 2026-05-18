@@ -1,0 +1,109 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1 fw-bold"><i class="bi bi-percent me-2" style="color:#1C7C54;"></i>Store Commission / Revenue Share</h2>
+    <p class="text-muted mb-0">Revenue split between stores and company</p>
+  </div>
+  <%= form_tag admin_store_financials_commission_path, method: :get, class: "d-flex align-items-center gap-2" do %>
+    <%= month_field_tag :month, @month.strftime('%Y-%m'), class: "form-control form-control-sm", style: "width:160px;" %>
+    <%= submit_tag "Apply", class: "btn btn-sm btn-success" %>
+  <% end %>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-body p-3 d-flex align-items-center gap-3">
+        <div style="width:44px;height:44px;background:rgba(16,185,129,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">
+          <i class="bi bi-currency-rupee text-success"></i>
+        </div>
+        <div>
+          <div class="text-muted small">Total Revenue</div>
+          <div class="fw-bold fs-5 text-success">₹<%= number_with_precision(@total_revenue, precision: 0, delimiter: ',') %></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-body p-3 d-flex align-items-center gap-3">
+        <div style="width:44px;height:44px;background:rgba(99,102,241,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">
+          <i class="bi bi-shop text-primary"></i>
+        </div>
+        <div>
+          <div class="text-muted small">Store Payouts</div>
+          <div class="fw-bold fs-5 text-primary">₹<%= number_with_precision(@total_store_share, precision: 0, delimiter: ',') %></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-body p-3 d-flex align-items-center gap-3">
+        <div style="width:44px;height:44px;background:rgba(245,158,11,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">
+          <i class="bi bi-building text-warning"></i>
+        </div>
+        <div>
+          <div class="text-muted small">Company Retained</div>
+          <div class="fw-bold fs-5 text-warning">₹<%= number_with_precision(@total_company_share, precision: 0, delimiter: ',') %></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Per-Store Table -->
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+  <div class="card-header bg-white py-3 px-4" style="border-radius:14px 14px 0 0;">
+    <h5 class="mb-0 fw-semibold">
+      <i class="bi bi-table me-2" style="color:#1C7C54;"></i>Commission Breakdown — <%= @month.strftime('%B %Y') %>
+    </h5>
+    <small class="text-muted">Based on completed/delivered bookings. Set commission % on each store's edit page.</small>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:0.875rem;">
+        <thead style="background:#f9fafb;">
+          <tr>
+            <th class="px-4 py-3 fw-semibold text-muted" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Store</th>
+            <th class="py-3 fw-semibold text-muted text-end" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Revenue</th>
+            <th class="py-3 fw-semibold text-muted text-center" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Commission %</th>
+            <th class="py-3 fw-semibold text-muted text-end" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Store Share</th>
+            <th class="py-3 fw-semibold text-muted text-end pe-4" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Company Share</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @commission_data.sort_by { |d| -d[:revenue] }.each do |data| %>
+            <tr>
+              <td class="px-4 py-3">
+                <div class="fw-semibold">
+                  <%= link_to data[:store].name, admin_store_path(data[:store]), class: "text-dark text-decoration-none" %>
+                </div>
+                <% if data[:commission_pct] == 0 %>
+                  <small class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>No commission set</small>
+                <% end %>
+              </td>
+              <td class="py-3 text-end fw-semibold text-success">₹<%= number_with_precision(data[:revenue], precision: 0, delimiter: ',') %></td>
+              <td class="py-3 text-center">
+                <span class="badge <%= data[:commission_pct] > 0 ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' %> px-2">
+                  <%= data[:commission_pct] %>%
+                </span>
+              </td>
+              <td class="py-3 text-end text-primary fw-semibold">₹<%= number_with_precision(data[:store_share], precision: 0, delimiter: ',') %></td>
+              <td class="py-3 text-end pe-4 text-warning fw-semibold">₹<%= number_with_precision(data[:company_share], precision: 0, delimiter: ',') %></td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot style="background:#f9fafb;border-top:2px solid #e5e7eb;">
+          <tr>
+            <td class="px-4 py-3 fw-bold">Total</td>
+            <td class="py-3 text-end fw-bold text-success">₹<%= number_with_precision(@total_revenue, precision: 0, delimiter: ',') %></td>
+            <td></td>
+            <td class="py-3 text-end fw-bold text-primary">₹<%= number_with_precision(@total_store_share, precision: 0, delimiter: ',') %></td>
+            <td class="py-3 text-end pe-4 fw-bold text-warning">₹<%= number_with_precision(@total_company_share, precision: 0, delimiter: ',') %></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>

@@ -6,10 +6,10 @@ class Admin::BookingsController < Admin::ApplicationController
     # Start with base query for statistics (before filtering)
     @all_bookings = if current_user.franchise?
                      # Franchise users see only their own bookings
-                     Booking.where(user_id: current_user.id).includes(:customer, :user, :booking_items, :store)
+                     Booking.where(user_id: current_user.id).includes(:customer, :user, :booking_items, :store, :booking_invoices)
                    else
                      # Admin sees all bookings
-                     Booking.includes(:customer, :user, :booking_items, :store, :franchise)
+                     Booking.includes(:customer, :user, :booking_items, :store, :franchise, :booking_invoices)
                    end
 
     # Apply filters

@@ -73,6 +73,16 @@
   color: #4a148c;
 }
 
+/* WhatsApp icon */
+.action-icon.whatsapp {
+  background: #e8f8ee;
+  color: #25d366;
+}
+.action-icon.whatsapp:hover {
+  background: #25d366;
+  color: #ffffff;
+}
+
 .action-icon i {
   font-size: 14px;
 }
@@ -601,6 +611,17 @@
                           <%= link_to "#", class: "action-icon invoice", title: "Invoice Generated", onclick: "alert('Invoice generated but link not available')" do %>
                             <i class="bi bi-receipt-cutoff"></i>
                           <% end %>
+                        <% end %>
+                        <% bi = booking.booking_invoices.first %>
+                        <% if bi&.share_token.present? %>
+                          <% wa_url = public_invoice_url(token: bi.share_token) %>
+                          <% wa_text = "Invoice #{booking.display_invoice_number} — #{booking.customer_name} — View: #{wa_url}" %>
+                          <a href="https://wa.me/?text=<%= ERB::Util.url_encode(wa_text) %>"
+                             class="action-icon whatsapp"
+                             target="_blank"
+                             title="Share Invoice on WhatsApp">
+                            <i class="bi bi-whatsapp"></i>
+                          </a>
                         <% end %>
                       <% else %>
                         <%= link_to "#", class: "action-icon invoice", title: "Generate Invoice", onclick: "alert('Invoice not generated yet')" do %>

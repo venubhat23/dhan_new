@@ -1,0 +1,114 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1 fw-bold"><i class="bi bi-file-earmark-text me-2" style="color:#1C7C54;"></i>GST Report per Store</h2>
+    <p class="text-muted mb-0">Monthly CGST/SGST summary ready for filing</p>
+  </div>
+  <%= form_tag admin_store_financials_gst_report_path, method: :get, class: "d-flex align-items-center gap-2 flex-wrap" do %>
+    <%= select_tag :store_id,
+          options_for_select([['All Stores', '']] + @stores.map { |s| [s.name, s.id] }, @selected_store_id),
+          class: "form-select form-select-sm", style: "width:180px;" %>
+    <%= month_field_tag :month, @month.strftime('%Y-%m'), class: "form-control form-control-sm", style: "width:160px;" %>
+    <%= submit_tag "Apply", class: "btn btn-sm btn-success" %>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+      <i class="bi bi-printer me-1"></i>Print
+    </button>
+  <% end %>
+</div>
+
+<!-- Grand Totals -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-body p-3 text-center">
+        <div class="text-muted small">Total Revenue</div>
+        <div class="fw-bold fs-5 text-success">₹<%= number_with_precision(@grand_total[:revenue], precision: 2, delimiter: ',') %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-body p-3 text-center">
+        <div class="text-muted small">Total Tax Collected</div>
+        <div class="fw-bold fs-5 text-danger">₹<%= number_with_precision(@grand_total[:tax], precision: 2, delimiter: ',') %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-body p-3 text-center">
+        <div class="text-muted small">CGST</div>
+        <div class="fw-bold fs-5 text-primary">₹<%= number_with_precision(@grand_total[:cgst], precision: 2, delimiter: ',') %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-body p-3 text-center">
+        <div class="text-muted small">SGST</div>
+        <div class="fw-bold fs-5 text-warning">₹<%= number_with_precision(@grand_total[:sgst], precision: 2, delimiter: ',') %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GST Table -->
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+  <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center" style="border-radius:14px 14px 0 0;">
+    <h5 class="mb-0 fw-semibold">
+      <i class="bi bi-receipt me-2" style="color:#1C7C54;"></i>GST Summary — <%= @month.strftime('%B %Y') %>
+    </h5>
+    <span class="badge bg-info-subtle text-info px-3 py-2" style="font-size:0.8rem;">
+      <i class="bi bi-info-circle me-1"></i>CGST = SGST = Tax / 2
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:0.875rem;">
+        <thead style="background:#f9fafb;">
+          <tr>
+            <th class="px-4 py-3 fw-semibold text-muted" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Store</th>
+            <th class="py-3 fw-semibold text-muted text-center" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Bookings</th>
+            <th class="py-3 fw-semibold text-muted text-end" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Taxable Amount</th>
+            <th class="py-3 fw-semibold text-muted text-end" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">CGST</th>
+            <th class="py-3 fw-semibold text-muted text-end" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">SGST</th>
+            <th class="py-3 fw-semibold text-muted text-end" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Total Tax</th>
+            <th class="py-3 fw-semibold text-muted text-end pe-4" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Gross Revenue</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @gst_data.each do |data| %>
+            <tr>
+              <td class="px-4 py-3">
+                <div class="fw-semibold"><%= data[:store].name %></div>
+                <% if data[:store].gst_no.present? %>
+                  <small class="text-muted">GSTIN: <%= data[:store].gst_no %></small>
+                <% else %>
+                  <small class="text-muted fst-italic">No GSTIN</small>
+                <% end %>
+              </td>
+              <td class="py-3 text-center">
+                <span class="badge bg-secondary-subtle text-secondary"><%= data[:bookings_count] %></span>
+              </td>
+              <td class="py-3 text-end">₹<%= number_with_precision(data[:taxable_amount], precision: 2, delimiter: ',') %></td>
+              <td class="py-3 text-end text-primary fw-semibold">₹<%= number_with_precision(data[:cgst], precision: 2, delimiter: ',') %></td>
+              <td class="py-3 text-end text-warning fw-semibold">₹<%= number_with_precision(data[:sgst], precision: 2, delimiter: ',') %></td>
+              <td class="py-3 text-end text-danger fw-semibold">₹<%= number_with_precision(data[:total_tax], precision: 2, delimiter: ',') %></td>
+              <td class="py-3 text-end pe-4 fw-bold text-success">₹<%= number_with_precision(data[:total_revenue], precision: 2, delimiter: ',') %></td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot style="background:#f9fafb;border-top:2px solid #e5e7eb;">
+          <tr>
+            <td class="px-4 py-3 fw-bold">Total</td>
+            <td></td>
+            <td class="py-3 text-end fw-bold">₹<%= number_with_precision(@grand_total[:revenue] - @grand_total[:tax], precision: 2, delimiter: ',') %></td>
+            <td class="py-3 text-end fw-bold text-primary">₹<%= number_with_precision(@grand_total[:cgst], precision: 2, delimiter: ',') %></td>
+            <td class="py-3 text-end fw-bold text-warning">₹<%= number_with_precision(@grand_total[:sgst], precision: 2, delimiter: ',') %></td>
+            <td class="py-3 text-end fw-bold text-danger">₹<%= number_with_precision(@grand_total[:tax], precision: 2, delimiter: ',') %></td>
+            <td class="py-3 text-end pe-4 fw-bold text-success">₹<%= number_with_precision(@grand_total[:revenue], precision: 2, delimiter: ',') %></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>

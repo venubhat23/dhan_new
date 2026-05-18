@@ -35,6 +35,11 @@ class Admin::Settings::SystemController < Admin::Settings::BaseController
     # Get delivery only at shop settings
     @delivery_only_at_shop_enabled = SystemSetting.delivery_only_at_shop_enabled?
     @shop_addresses = SystemSetting.get_shop_addresses
+
+    # Get low stock alert settings
+    @low_stock_alert_enabled   = SystemSetting.low_stock_alert_enabled?
+    @low_stock_alert_threshold = SystemSetting.low_stock_alert_threshold
+    @low_stock_alert_email     = SystemSetting.low_stock_alert_email
   end
 
   def update
@@ -156,6 +161,21 @@ class Admin::Settings::SystemController < Admin::Settings::BaseController
         end
       rescue => e
         redirect_to admin_settings_system_path, alert: "Error updating Collect From Store settings: #{e.message}"
+        return
+      end
+    end
+
+    # Handle low stock alert settings update
+    if params[:low_stock_alert_update] == "true"
+      begin
+        SystemSetting.update_low_stock_settings(
+          low_stock_alert_enabled:   params[:low_stock_alert_enabled],
+          low_stock_alert_threshold: params[:low_stock_alert_threshold],
+          low_stock_alert_email:     params[:low_stock_alert_email]
+        )
+        success_messages << 'Low stock alert settings updated successfully!'
+      rescue => e
+        redirect_to admin_settings_system_path, alert: "Error updating low stock settings: #{e.message}"
         return
       end
     end

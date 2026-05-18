@@ -1,0 +1,116 @@
+<style>
+.heatmap-cell {
+  width: 28px; height: 28px;
+  border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; font-weight: 600;
+  cursor: default;
+  transition: transform 0.1s;
+}
+.heatmap-cell:hover { transform: scale(1.3); z-index: 10; position: relative; }
+.heatmap-label-hour { font-size: 0.65rem; color: #9ca3af; text-align: center; width: 28px; }
+.heatmap-label-day { font-size: 0.72rem; color: #6b7280; font-weight: 600; width: 36px; text-align: right; padding-right: 6px; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1 fw-bold"><i class="bi bi-grid-3x3 me-2" style="color:#1C7C54;"></i>Peak Hours Heatmap</h2>
+    <p class="text-muted mb-0">Booking activity by day & hour — last 3 months</p>
+  </div>
+  <%= form_tag admin_store_analytics_peak_hours_path, method: :get, class: "d-flex align-items-center gap-2" do %>
+    <%= select_tag :store_id,
+          options_for_select([['All Stores', '']] + @stores.map { |s| [s.name, s.id] }, @selected_store_id),
+          class: "form-select form-select-sm", style: "width:180px;" %>
+    <%= submit_tag "Apply", class: "btn btn-sm btn-success" %>
+  <% end %>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+  <div class="card-header bg-white py-3 px-4" style="border-radius:14px 14px 0 0;">
+    <h5 class="mb-0 fw-semibold">
+      <i class="bi bi-clock-history me-2" style="color:#1C7C54;"></i>Booking Heatmap
+      <small class="text-muted fw-normal ms-2" style="font-size:0.8rem;">Last 3 months</small>
+    </h5>
+    <div class="d-flex align-items-center gap-2 mt-2">
+      <span class="text-muted" style="font-size:0.75rem;">Low</span>
+      <% [0,25,50,75,100].each do |pct| %>
+        <div style="width:18px;height:18px;border-radius:3px;background:rgba(28,124,84,<%= pct / 100.0 + 0.05 %>);"></div>
+      <% end %>
+      <span class="text-muted" style="font-size:0.75rem;">High</span>
+    </div>
+  </div>
+  <div class="card-body" style="overflow-x:auto;">
+    <div style="display:inline-block; min-width:fit-content;">
+      <!-- Hour labels -->
+      <div class="d-flex align-items-center mb-1">
+        <div style="width:36px;"></div>
+        <% [0,3,6,9,12,15,18,21].each do |h| %>
+          <% skip = h > 0 ? 3 : 0 %>
+          <% skip.times do %>
+            <div class="heatmap-label-hour">&nbsp;</div>
+          <% end %>
+          <div class="heatmap-label-hour"><%= format('%02d', h) %></div>
+        <% end %>
+      </div>
+      <!-- Rows -->
+      <% @day_labels.each_with_index do |day, di| %>
+        <div class="d-flex align-items-center mb-1">
+          <div class="heatmap-label-day"><%= day %></div>
+          <% @heatmap[di].each_with_index do |count, hi| %>
+            <% intensity = @max_count > 0 ? count.to_f / @max_count : 0 %>
+            <% bg = count == 0 ? '#f3f4f6' : "rgba(28,124,84,#{0.15 + intensity * 0.85})" %>
+            <% text_col = intensity > 0.6 ? 'white' : '#374151' %>
+            <div class="heatmap-cell" style="background:<%= bg %>; color:<%= text_col %>; margin: 1px;"
+                 title="<%= day %> <%= format('%02d:00', hi) %> — <%= count %> bookings">
+              <%= count > 0 ? count : '' %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mt-3">
+  <% busiest = nil; busiest_count = 0
+     @day_labels.each_with_index do |day, di|
+       @heatmap[di].each_with_index do |cnt, hi|
+         if cnt > busiest_count
+           busiest_count = cnt
+           busiest = { day: day, hour: format('%02d:00', hi), count: cnt }
+         end
+       end
+     end %>
+  <% if busiest %>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm" style="border-radius:12px;">
+        <div class="card-body p-3 text-center">
+          <div class="text-muted small">Busiest Slot</div>
+          <div class="fw-bold fs-5" style="color:#1C7C54;"><%= busiest[:day] %> <%= busiest[:hour] %></div>
+          <div class="text-muted small"><%= busiest[:count] %> bookings</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm" style="border-radius:12px;">
+        <div class="card-body p-3 text-center">
+          <% busiest_day_idx = @heatmap.each_with_index.max_by { |row, _| row.sum }[1] %>
+          <div class="text-muted small">Busiest Day</div>
+          <div class="fw-bold fs-5" style="color:#6366f1;"><%= @day_labels[busiest_day_idx] %></div>
+          <div class="text-muted small"><%= @heatmap[busiest_day_idx].sum %> total bookings</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm" style="border-radius:12px;">
+        <div class="card-body p-3 text-center">
+          <% busiest_hour_idx = (0..23).max_by { |h| @heatmap.sum { |row| row[h] } } %>
+          <div class="text-muted small">Busiest Hour</div>
+          <div class="fw-bold fs-5 text-warning"><%= format('%02d:00', busiest_hour_idx) %></div>
+          <div class="text-muted small"><%= @heatmap.sum { |row| row[busiest_hour_idx] } %> total bookings</div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

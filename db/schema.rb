@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_18_100001) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_18_200002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1131,6 +1131,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_100001) do
     t.string "admin_plain_password"
     t.integer "auto_transfer_threshold", default: 10
     t.boolean "is_main_inventory", default: false
+    t.decimal "commission_percentage", precision: 5, scale: 2, default: "0.0"
     t.index ["store_admin_user_id"], name: "index_stores_on_store_admin_user_id"
   end
 
@@ -1222,6 +1223,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_100001) do
     t.boolean "collect_from_store_enabled"
     t.boolean "delivery_only_at_shop"
     t.text "shop_addresses"
+    t.boolean "low_stock_alert_enabled", default: false
+    t.integer "low_stock_alert_threshold", default: 10
+    t.string "low_stock_alert_email"
     t.index ["key"], name: "index_system_settings_on_key", unique: true
   end
 

@@ -501,6 +501,86 @@
       </ul>
     </div>
 
+    <!-- Store Analytics Section -->
+    <div class="nav-section">
+      <div class="nav-section-title">Store Analytics</div>
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <%= link_to admin_store_analytics_comparison_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/store_analytics/comparison')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-teal">
+                <i class="bi bi-bar-chart-line"></i>
+              </div>
+            </div>
+            <span class="nav-text">Comparison</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+        <li class="nav-item">
+          <%= link_to admin_store_analytics_top_products_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/store_analytics/top_products')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-purple">
+                <i class="bi bi-trophy"></i>
+              </div>
+            </div>
+            <span class="nav-text">Top Products</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+        <li class="nav-item">
+          <%= link_to admin_store_analytics_peak_hours_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/store_analytics/peak_hours')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-orange">
+                <i class="bi bi-grid-3x3"></i>
+              </div>
+            </div>
+            <span class="nav-text">Peak Hours</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Store Financials Section -->
+    <div class="nav-section">
+      <div class="nav-section-title">Store Financials</div>
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <%= link_to admin_store_financials_vendor_tracking_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/store_financials/vendor_tracking')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-red">
+                <i class="bi bi-truck"></i>
+              </div>
+            </div>
+            <span class="nav-text">Vendor Tracking</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+        <li class="nav-item">
+          <%= link_to admin_store_financials_commission_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/store_financials/commission')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-indigo">
+                <i class="bi bi-percent"></i>
+              </div>
+            </div>
+            <span class="nav-text">Commission</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+        <li class="nav-item">
+          <%= link_to admin_store_financials_gst_report_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/store_financials/gst_report')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-green">
+                <i class="bi bi-file-earmark-text"></i>
+              </div>
+            </div>
+            <span class="nav-text">GST Report</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+      </ul>
+    </div>
+
     <!-- Subscription Section -->
     <% if current_user.has_sidebar_permission?('customer_formats') || current_user.has_sidebar_permission?('subscriptions') || current_user.has_sidebar_permission?('invoices') || current_user.has_sidebar_permission?('notes') || current_user.has_sidebar_permission?('pending_amounts') || current_user.has_sidebar_permission?('invoice_check') %>
     <div class="nav-section">

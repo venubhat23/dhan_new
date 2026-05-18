@@ -744,6 +744,75 @@
       </div>
     </div>
 
+    <!-- Low Stock Alert Card -->
+    <div class="row mt-2">
+      <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-transparent border-0">
+            <h5 class="mb-0">
+              <i class="bi bi-bell me-2 text-warning"></i>
+              Low Stock Email Alerts
+            </h5>
+          </div>
+          <div class="card-body">
+            <%= form_with url: admin_settings_system_path, method: :patch, local: true do |form| %>
+              <%= form.hidden_field :low_stock_alert_update, value: "true" %>
+
+              <div class="row g-3">
+                <div class="col-md-12">
+                  <div class="form-check form-switch mb-2">
+                    <%= form.check_box :low_stock_alert_enabled,
+                          { checked: @low_stock_alert_enabled,
+                            class: "form-check-input",
+                            id: "low_stock_alert_enabled" },
+                          "1", "0" %>
+                    <label class="form-check-label" for="low_stock_alert_enabled">
+                      <strong>Enable Low Stock Email Alerts</strong>
+                    </label>
+                    <div class="form-text">Send an automatic email when any product's stock falls to or below the threshold.</div>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Alert Threshold (units)</label>
+                  <%= form.number_field :low_stock_alert_threshold,
+                        value: @low_stock_alert_threshold,
+                        min: 1, max: 999,
+                        class: "form-control",
+                        placeholder: "e.g. 10" %>
+                  <div class="form-text">Alert triggers when stock drops to or below this number.</div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Alert Email Address</label>
+                  <%= form.email_field :low_stock_alert_email,
+                        value: @low_stock_alert_email,
+                        class: "form-control",
+                        placeholder: "admin@yourstore.com" %>
+                  <div class="form-text">Alerts will be sent to this email.</div>
+                </div>
+
+                <div class="col-md-12">
+                  <div class="d-flex align-items-center gap-2">
+                    <%= form.submit "Save Alert Settings", class: "btn btn-warning fw-semibold" %>
+                    <% if @low_stock_alert_enabled %>
+                      <span class="badge bg-success-subtle text-success px-3 py-2">
+                        <i class="bi bi-check-circle me-1"></i>Alerts Active — threshold: <%= @low_stock_alert_threshold %> units
+                      </span>
+                    <% else %>
+                      <span class="badge bg-secondary-subtle text-secondary px-3 py-2">
+                        <i class="bi bi-bell-slash me-1"></i>Alerts Disabled
+                      </span>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div> <!-- End of Store Settings Tab -->
 
 </div> <!-- End of Tab Content -->

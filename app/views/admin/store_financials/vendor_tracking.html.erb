@@ -1,0 +1,74 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1 fw-bold"><i class="bi bi-truck me-2" style="color:#1C7C54;"></i>Vendor Payment Tracking</h2>
+    <p class="text-muted mb-0">Store-wise procurement cost from vendors</p>
+  </div>
+  <%= form_tag admin_store_financials_vendor_tracking_path, method: :get, class: "d-flex align-items-center gap-2" do %>
+    <%= select_tag :store_id,
+          options_for_select([['All Stores', '']] + @stores.map { |s| [s.name, s.id] }, @selected_store_id),
+          class: "form-select form-select-sm", style: "width:180px;" %>
+    <%= submit_tag "Apply", class: "btn btn-sm btn-success" %>
+  <% end %>
+</div>
+
+<% if @store_vendor_data.any? %>
+  <% @store_vendor_data.each do |data| %>
+    <div class="card border-0 shadow-sm mb-4" style="border-radius:14px;">
+      <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center" style="border-radius:14px 14px 0 0;">
+        <div class="d-flex align-items-center gap-2">
+          <div style="width:38px;height:38px;background:rgba(28,124,84,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+            <i class="bi bi-shop" style="color:#1C7C54;"></i>
+          </div>
+          <div>
+            <h5 class="mb-0 fw-semibold"><%= data[:store].name %></h5>
+            <small class="text-muted"><%= data[:vendors_count] %> vendor(s)</small>
+          </div>
+        </div>
+        <div class="text-end">
+          <div class="text-muted small">Total Procurement</div>
+          <div class="fw-bold text-danger fs-5">₹<%= number_with_precision(data[:total_procurement], precision: 0, delimiter: ',') %></div>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <% if data[:vendor_breakdown].any? %>
+          <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size:0.875rem;">
+              <thead style="background:#f9fafb;">
+                <tr>
+                  <th class="px-4 py-2 text-muted fw-semibold" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Vendor</th>
+                  <th class="py-2 text-muted fw-semibold text-center" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Batches</th>
+                  <th class="py-2 text-muted fw-semibold text-center" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Items Received</th>
+                  <th class="py-2 text-muted fw-semibold text-end pe-4" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Procurement Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% data[:vendor_breakdown].each do |vd| %>
+                  <% pct = data[:total_procurement] > 0 ? (vd[:total_cost] / data[:total_procurement] * 100).round(1) : 0 %>
+                  <tr>
+                    <td class="px-4 py-2">
+                      <div class="fw-semibold"><%= vd[:vendor].name %></div>
+                      <div style="height:4px;background:#f3f4f6;border-radius:2px;margin-top:4px;">
+                        <div style="width:<%= pct %>%;height:100%;background:linear-gradient(90deg,#ef4444,#f97316);border-radius:2px;"></div>
+                      </div>
+                      <small class="text-muted"><%= pct %>% of store procurement</small>
+                    </td>
+                    <td class="py-2 text-center"><span class="badge bg-secondary-subtle text-secondary"><%= vd[:batches_count] %></span></td>
+                    <td class="py-2 text-center fw-semibold"><%= number_with_precision(vd[:items_received], precision: 0) %></td>
+                    <td class="py-2 text-end pe-4 fw-semibold text-danger">₹<%= number_with_precision(vd[:total_cost], precision: 0, delimiter: ',') %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+<% else %>
+  <div class="card border-0 shadow-sm" style="border-radius:14px;">
+    <div class="card-body text-center py-5">
+      <i class="bi bi-truck text-muted" style="font-size:2.5rem;"></i>
+      <p class="text-muted mt-3">No vendor stock data found for stores. Stock batches need store assignment.</p>
+    </div>
+  </div>
+<% end %>

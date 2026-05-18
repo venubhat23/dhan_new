@@ -617,6 +617,16 @@ Rails.application.routes.draw do
       end
     end
 
+    # Store Analytics
+    get 'store_analytics/comparison', to: 'store_analytics#comparison', as: 'store_analytics_comparison'
+    get 'store_analytics/top_products', to: 'store_analytics#top_products', as: 'store_analytics_top_products'
+    get 'store_analytics/peak_hours', to: 'store_analytics#peak_hours', as: 'store_analytics_peak_hours'
+
+    # Store Financials
+    get 'store_financials/vendor_tracking', to: 'store_financials#vendor_tracking', as: 'store_financials_vendor_tracking'
+    get 'store_financials/commission', to: 'store_financials#commission', as: 'store_financials_commission'
+    get 'store_financials/gst_report', to: 'store_financials#gst_report', as: 'store_financials_gst_report'
+
     # Reports
     get 'reports/commission', to: 'reports#commission'
     get 'reports/expired_insurance', to: 'reports#expired_insurance'

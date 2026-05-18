@@ -241,4 +241,35 @@ class SystemSetting < ApplicationRecord
     return [] if shop_addresses.blank?
     JSON.parse(shop_addresses) rescue []
   end
+
+  # Low Stock Alert Methods
+
+  def self.low_stock_alert_enabled?
+    setting = find_by(key: 'system_config')
+    setting&.low_stock_alert_enabled || false
+  end
+
+  def self.low_stock_alert_threshold
+    setting = find_by(key: 'system_config')
+    setting&.low_stock_alert_threshold || 10
+  end
+
+  def self.low_stock_alert_email
+    setting = find_by(key: 'system_config')
+    setting&.low_stock_alert_email.presence || business_settings&.email
+  end
+
+  def self.update_low_stock_settings(params)
+    setting = find_or_create_by(key: 'system_config') do |s|
+      s.value = 'system configuration'
+      s.setting_type = 'configuration'
+      s.description = 'System configuration settings'
+    end
+    setting.update!(
+      low_stock_alert_enabled:   params[:low_stock_alert_enabled] == '1',
+      low_stock_alert_threshold: params[:low_stock_alert_threshold].to_i,
+      low_stock_alert_email:     params[:low_stock_alert_email]
+    )
+    setting
+  end
 end

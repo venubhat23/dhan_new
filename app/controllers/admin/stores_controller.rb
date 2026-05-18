@@ -167,6 +167,6 @@ class Admin::StoresController < Admin::ApplicationController
   def store_params
     params.require(:store).permit(:name, :description, :address, :city, :state,
                                    :pincode, :contact_person, :contact_mobile,
-                                   :email, :gst_no, :status)
+                                   :email, :gst_no, :status, :commission_percentage)
   end
 end

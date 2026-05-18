@@ -1,0 +1,113 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1 fw-bold"><i class="bi bi-bar-chart-line me-2" style="color:#1C7C54;"></i>Store Comparison</h2>
+    <p class="text-muted mb-0">Side-by-side performance across all stores</p>
+  </div>
+  <%= form_tag admin_store_analytics_comparison_path, method: :get, class: "d-flex align-items-center gap-2" do %>
+    <%= month_field_tag :month, @month.strftime('%Y-%m'), class: "form-control form-control-sm", style: "width:160px;" %>
+    <%= submit_tag "Apply", class: "btn btn-sm btn-success" %>
+  <% end %>
+</div>
+
+<!-- Totals Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm" style="border-radius:14px; border-left:4px solid #10b981 !important;">
+      <div class="card-body p-3">
+        <div class="text-muted small fw-medium">Total Revenue</div>
+        <div class="fw-bold fs-5 text-success">₹<%= number_with_precision(@totals[:revenue], precision: 0, delimiter: ',') %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-body p-3">
+        <div class="text-muted small fw-medium">Total Bookings</div>
+        <div class="fw-bold fs-5 text-primary"><%= @totals[:bookings_count] %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-body p-3">
+        <div class="text-muted small fw-medium">Total Expenses</div>
+        <div class="fw-bold fs-5 text-danger">₹<%= number_with_precision(@totals[:expenses_total], precision: 0, delimiter: ',') %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-body p-3">
+        <div class="text-muted small fw-medium">Net (All Stores)</div>
+        <div class="fw-bold fs-5 <%= @totals[:net] >= 0 ? 'text-success' : 'text-danger' %>">
+          ₹<%= number_with_precision(@totals[:net], precision: 0, delimiter: ',') %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Comparison Table -->
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+  <div class="card-header bg-white py-3 px-4 d-flex align-items-center" style="border-radius:14px 14px 0 0;">
+    <h5 class="mb-0 fw-semibold"><i class="bi bi-table me-2" style="color:#1C7C54;"></i>Store-wise Breakdown — <%= @month.strftime('%B %Y') %></h5>
+  </div>
+  <div class="card-body p-0">
+    <% if @store_data.any? %>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:0.875rem;">
+        <thead style="background:#f9fafb;">
+          <tr>
+            <th class="px-4 py-3 fw-semibold text-muted" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Store</th>
+            <th class="py-3 fw-semibold text-muted text-end" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Revenue</th>
+            <th class="py-3 fw-semibold text-muted text-center" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Bookings</th>
+            <th class="py-3 fw-semibold text-muted text-end" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Expenses</th>
+            <th class="py-3 fw-semibold text-muted text-end" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Stock Value</th>
+            <th class="py-3 fw-semibold text-muted text-end pe-4" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;">Net</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @store_data.sort_by { |d| -d[:revenue] }.each do |data| %>
+            <% max_rev = @store_data.map { |d| d[:revenue] }.max.to_f %>
+            <% pct = max_rev > 0 ? (data[:revenue] / max_rev * 100).round : 0 %>
+            <tr>
+              <td class="px-4 py-3">
+                <div class="fw-semibold"><%= link_to data[:store].name, admin_store_path(data[:store]), class: "text-dark text-decoration-none" %></div>
+                <div class="mt-1" style="height:4px;background:#f3f4f6;border-radius:2px;">
+                  <div style="width:<%= pct %>%;height:100%;background:linear-gradient(90deg,#1C7C54,#10b981);border-radius:2px;"></div>
+                </div>
+              </td>
+              <td class="py-3 text-end fw-semibold text-success">₹<%= number_with_precision(data[:revenue], precision: 0, delimiter: ',') %></td>
+              <td class="py-3 text-center">
+                <span class="badge bg-primary-subtle text-primary px-2"><%= data[:bookings_count] %></span>
+              </td>
+              <td class="py-3 text-end text-danger">₹<%= number_with_precision(data[:expenses_total], precision: 0, delimiter: ',') %></td>
+              <td class="py-3 text-end text-secondary">₹<%= number_with_precision(data[:stock_value], precision: 0, delimiter: ',') %></td>
+              <td class="py-3 text-end pe-4 fw-bold <%= data[:net] >= 0 ? 'text-success' : 'text-danger' %>">
+                ₹<%= number_with_precision(data[:net], precision: 0, delimiter: ',') %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot style="background:#f9fafb;border-top:2px solid #e5e7eb;">
+          <tr>
+            <td class="px-4 py-3 fw-bold">Total</td>
+            <td class="py-3 text-end fw-bold text-success">₹<%= number_with_precision(@totals[:revenue], precision: 0, delimiter: ',') %></td>
+            <td class="py-3 text-center fw-bold"><%= @totals[:bookings_count] %></td>
+            <td class="py-3 text-end fw-bold text-danger">₹<%= number_with_precision(@totals[:expenses_total], precision: 0, delimiter: ',') %></td>
+            <td class="py-3 text-end fw-bold">₹<%= number_with_precision(@totals[:stock_value], precision: 0, delimiter: ',') %></td>
+            <td class="py-3 text-end pe-4 fw-bold <%= @totals[:net] >= 0 ? 'text-success' : 'text-danger' %>">
+              ₹<%= number_with_precision(@totals[:net], precision: 0, delimiter: ',') %>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <% else %>
+      <div class="text-center py-5">
+        <i class="bi bi-shop text-muted" style="font-size:2.5rem;"></i>
+        <p class="text-muted mt-3">No stores found.</p>
+      </div>
+    <% end %>
+  </div>
+</div>
