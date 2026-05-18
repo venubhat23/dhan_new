@@ -6,16 +6,16 @@ default: &default
 development:
   primary:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://dhanva_2_user:s0PJMBrr7fUCAQUldxeoFWDQK0KKvn1B@dpg-d81sglg3kofs73c3jri0-a.oregon-postgres.render.com/dhanva_2' %>
   cable:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://dhanva_2_user:s0PJMBrr7fUCAQUldxeoFWDQK0KKvn1B@dpg-d81sglg3kofs73c3jri0-a.oregon-postgres.render.com/dhanva_2' %>
   queue:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://dhanva_2_user:s0PJMBrr7fUCAQUldxeoFWDQK0KKvn1B@dpg-d81sglg3kofs73c3jri0-a.oregon-postgres.render.com/dhanva_2' %>
   cache:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://dhanva_2_user:s0PJMBrr7fUCAQUldxeoFWDQK0KKvn1B@dpg-d81sglg3kofs73c3jri0-a.oregon-postgres.render.com/dhanva_2' %>
 
 test:
   primary:
@@ -34,14 +34,14 @@ test:
 production:
   primary:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://dhanva_2_user:s0PJMBrr7fUCAQUldxeoFWDQK0KKvn1B@dpg-d81sglg3kofs73c3jri0-a.oregon-postgres.render.com/dhanva_2' %>
   cable:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://dhanva_2_user:s0PJMBrr7fUCAQUldxeoFWDQK0KKvn1B@dpg-d81sglg3kofs73c3jri0-a.oregon-postgres.render.com/dhanva_2' %>
   queue:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://dhanva_2_user:s0PJMBrr7fUCAQUldxeoFWDQK0KKvn1B@dpg-d81sglg3kofs73c3jri0-a.oregon-postgres.render.com/dhanva_2' %>
   cache:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://marlai_santhe_002_user:P4SP9kfmdhOiqCjT5z8FGHTYmDkODaHm@dpg-d7f0kknaqgkc739uphc0-a.oregon-postgres.render.com:5432/marlai_santhe_002' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://dhanva_2_user:s0PJMBrr7fUCAQUldxeoFWDQK0KKvn1B@dpg-d81sglg3kofs73c3jri0-a.oregon-postgres.render.com/dhanva_2' %>
     
