@@ -24,6 +24,41 @@
   </div>
 </div>
 
+<%# Barcode Scanner Input %>
+<div class="card border-0 shadow-sm mb-3" id="barcodeScanSection">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-6">
+        <label class="form-label form-label-sm mb-1 text-muted fw-semibold"><i class="bi bi-qr-code-scan me-1"></i>Scan / Type Barcode</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+          <input type="text" class="form-control" id="barcodeInput" placeholder="Scan barcode or type barcode number and press Enter..." autocomplete="off" autofocus>
+          <button class="btn btn-outline-secondary d-none" type="button" id="cameraBtn" onclick="openBarcodeCamera()" title="Scan with camera">
+            <i class="bi bi-camera"></i>
+          </button>
+        </div>
+        <div id="barcodeFeedback" class="mt-1" style="min-height:18px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# Camera QR Scanner Modal %>
+<div class="modal fade" id="cameraModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bi bi-camera me-1"></i>Scan Barcode with Camera</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="stopCamera()"></button>
+      </div>
+      <div class="modal-body text-center p-2">
+        <div id="cameraReader" style="width:100%;"></div>
+        <small class="text-muted">Point camera at the product QR code</small>
+      </div>
+    </div>
+  </div>
+</div>
+
 <%# Search and Filters %>
 <div class="card border-0 shadow-sm mb-3" id="searchSection">
   <div class="card-body py-2">
@@ -1859,6 +1894,98 @@ function showBookingDateAlert(message, type, icon) {
   `;
 
   alertDiv.style.display = 'block';
+}
+
+// ---- Barcode / QR Scanner ----
+
+// Show camera button only on touch/mobile devices
+if (navigator.maxTouchPoints > 0) {
+  document.getElementById('cameraBtn').classList.remove('d-none');
+}
+
+const barcodeInput = document.getElementById('barcodeInput');
+const barcodeFeedback = document.getElementById('barcodeFeedback');
+
+barcodeInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const code = barcodeInput.value.trim();
+    if (code) lookupBarcode(code);
+  }
+});
+
+function lookupBarcode(code) {
+  barcodeFeedback.innerHTML = '<small class="text-secondary"><i class="bi bi-hourglass-split me-1"></i>Looking up...</small>';
+  fetch(`<%= admin_qr_codes_lookup_path %>?barcode=${encodeURIComponent(code)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.found) {
+        barcodeFeedback.innerHTML = `<small class="text-success fw-semibold"><i class="bi bi-check-circle me-1"></i>${data.name} added</small>`;
+        addProductToCart(data.id, data.name, data.price, data.unit_type);
+        barcodeInput.value = '';
+        barcodeInput.focus();
+      } else {
+        barcodeFeedback.innerHTML = `<small class="text-danger"><i class="bi bi-x-circle me-1"></i>${data.message}</small>`;
+        barcodeInput.select();
+      }
+    })
+    .catch(() => {
+      barcodeFeedback.innerHTML = '<small class="text-danger">Lookup failed. Try again.</small>';
+    });
+}
+
+function addProductToCart(productId, productName, price, unitType) {
+  // Find the product card by data-product-id
+  const card = document.querySelector(`[data-product-id="${productId}"]`);
+  if (card) {
+    // Click the "Add to Cart" button inside the card
+    const addBtn = card.querySelector('[onclick*="bookingAddToCart"]');
+    if (addBtn) {
+      addBtn.click();
+      return;
+    }
+    // Fallback: scroll and highlight
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.style.outline = '3px solid #198754';
+    setTimeout(() => card.style.outline = '', 2000);
+  }
+}
+
+// Camera scanner (html5-qrcode — loaded from CDN only when needed)
+let html5QrCode = null;
+
+function openBarcodeCamera() {
+  if (!window.Html5Qrcode) {
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+    script.onload = startCamera;
+    document.head.appendChild(script);
+  } else {
+    startCamera();
+  }
+}
+
+function startCamera() {
+  const modal = new bootstrap.Modal(document.getElementById('cameraModal'));
+  modal.show();
+  html5QrCode = new Html5Qrcode("cameraReader");
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    (decodedText) => {
+      stopCamera();
+      bootstrap.Modal.getInstance(document.getElementById('cameraModal')).hide();
+      barcodeInput.value = decodedText;
+      lookupBarcode(decodedText);
+    }
+  ).catch(err => console.error("Camera error:", err));
+}
+
+function stopCamera() {
+  if (html5QrCode) {
+    html5QrCode.stop().catch(() => {});
+    html5QrCode = null;
+  }
 }
 </script>
 

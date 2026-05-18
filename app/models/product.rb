@@ -91,6 +91,18 @@ class Product < ApplicationRecord
   accepts_nested_attributes_for :product_variants, allow_destroy: true, reject_if: ->(attrs) { attrs['weight'].blank? || attrs['selling_price'].blank? }
   accepts_nested_attributes_for :delivery_rules, allow_destroy: true, reject_if: :all_blank
 
+  after_create :generate_barcode
+
+  def qr_code_svg
+    RQRCode::QRCode.new(barcode).as_svg(
+      color: '000',
+      shape_rendering: 'crispEdges',
+      module_size: 4,
+      standalone: true,
+      use_path: true
+    )
+  end
+
   enum :status, { active: 'active', inactive: 'inactive', draft: 'draft' }
 
   scope :active, -> { where(status: :active) }
@@ -1143,6 +1155,10 @@ class Product < ApplicationRecord
   end
 
   private
+
+  def generate_barcode
+    update_column(:barcode, "PRD-#{id.to_s.rjust(6, '0')}")
+  end
 
   # Validate pincode format - must be exactly 6 digits
   def valid_pincode_format?(pincode)

@@ -18,6 +18,18 @@ class Admin::StoresController < Admin::ApplicationController
   def show
     @bookings_count = @store.bookings.count
     @inventory_summary = @store.store_inventory_summary
+
+    @expenses_this_month = @store.expenses.by_date_range(Date.current.beginning_of_month, Date.current.end_of_month)
+    @expenses_total_this_month = @expenses_this_month.sum(:amount)
+    @recent_expenses = @store.expenses.recent.limit(10).includes(:created_by)
+    @store_end_expenses_count = @store.expenses
+                                      .joins(:created_by)
+                                      .where(users: { user_type: 'store_admin' })
+                                      .count
+    @expenses_by_category = @store.expenses
+                                  .by_date_range(Date.current.beginning_of_month, Date.current.end_of_month)
+                                  .group(:category).sum(:amount)
+
     @stock_items = @store.stock_batches
                          .where(status: 'active')
                          .where('quantity_remaining > 0')

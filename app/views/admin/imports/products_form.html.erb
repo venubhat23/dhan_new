@@ -167,31 +167,34 @@
         </div>
         <div class="card-body">
           <div class="mb-3">
-            <h6 class="text-primary mb-2">Required Fields:</h6>
+            <h6 class="text-primary mb-2">Simple Products:</h6>
             <ul class="list-unstyled small">
-              <li><i class="fas fa-check text-success me-1"></i> Product Name</li>
-              <li><i class="fas fa-check text-success me-1"></i> Price</li>
-              <li><i class="fas fa-check text-success me-1"></i> Category ID</li>
-              <li><i class="fas fa-check text-success me-1"></i> Stock Quantity</li>
+              <li><i class="fas fa-check text-success me-1"></i> <strong>name</strong> — product name</li>
+              <li><i class="fas fa-check text-success me-1"></i> <strong>category_name</strong> — category (created if missing)</li>
+              <li><i class="fas fa-check text-success me-1"></i> <strong>price</strong> — selling price</li>
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> stock, buying_price, weight, unit_type</li>
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> gst_enabled, gst_percentage, hsn_code</li>
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> discount_type, discount_value, tags</li>
             </ul>
           </div>
 
           <div class="mb-3">
-            <h6 class="text-primary mb-2">Optional Fields:</h6>
+            <h6 class="text-primary mb-2">Variant Products (has_multiple_quantities = true):</h6>
+            <p class="small text-muted mb-1">One row per variant. Repeat the product name/SKU across rows.</p>
             <ul class="list-unstyled small">
-              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> SKU, Description, Dimensions</li>
-              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> Weight, Unit Type</li>
-              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> Buying Price, Discount Settings</li>
-              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> GST Configuration</li>
-              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> Subscription Settings</li>
-              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> Meta Tags for SEO</li>
-              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> Stock Alerts, Status</li>
+              <li><i class="fas fa-check text-success me-1"></i> <strong>variant_weight</strong> — e.g. 0.5, 1, 2</li>
+              <li><i class="fas fa-check text-success me-1"></i> <strong>variant_unit</strong> — Liter, Kg, etc.</li>
+              <li><i class="fas fa-check text-success me-1"></i> <strong>variant_selling_price</strong></li>
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> variant_buying_price, variant_stock</li>
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> variant_is_default (true for one row)</li>
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> variant_discount_enabled, variant_discount_type, variant_discount_value</li>
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> variant_gst_percentage, variant_display_order</li>
             </ul>
           </div>
 
           <div class="alert alert-warning small mb-0">
             <i class="fas fa-exclamation-triangle me-1"></i>
-            <strong>Note:</strong> Duplicate SKUs will be skipped. Category must exist before import.
+            <strong>Note:</strong> Rows with the same name or SKU are grouped as variants of the same product. Download the template for a working example.
           </div>
         </div>
       </div>
@@ -208,11 +211,11 @@
           <ul class="list-unstyled small mb-0">
             <li class="mb-2">
               <i class="fas fa-check-circle text-success me-2"></i>
-              Price and stock validation
+              Price / variant_selling_price validation
             </li>
             <li class="mb-2">
               <i class="fas fa-check-circle text-success me-2"></i>
-              Category existence check
+              Category auto-created if missing
             </li>
             <li class="mb-2">
               <i class="fas fa-check-circle text-success me-2"></i>
@@ -220,11 +223,15 @@
             </li>
             <li class="mb-2">
               <i class="fas fa-check-circle text-success me-2"></i>
-              SKU uniqueness check
+              SKU uniqueness &amp; auto-generation
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-check-circle text-success me-2"></i>
+              Variant grouping by name/SKU
             </li>
             <li class="mb-0">
               <i class="fas fa-check-circle text-success me-2"></i>
-              Status and enum validation
+              Status, unit, and product type validation
             </li>
           </ul>
         </div>

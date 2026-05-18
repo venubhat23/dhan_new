@@ -210,45 +210,87 @@ module ImportService
     def validate_product_row(row, row_number)
       errors_for_row = []
 
-      # Required fields
-      ['name', 'price'].each do |field|
-        if row[field].blank?
-          errors_for_row << "#{field} is required"
+      name = row['name*'] || row['name']
+      if name.blank?
+        errors_for_row << "name is required"
+      end
+
+      has_multiple = ['true', '1', 'yes'].include?((row['has_multiple_quantities'] || '').downcase)
+
+      if has_multiple
+        # Variant product validations
+        variant_weight = row['variant_weight']
+        variant_selling_price = row['variant_selling_price']
+
+        if variant_weight.blank?
+          errors_for_row << "variant_weight is required for variant products"
+        elsif !valid_decimal?(variant_weight)
+          errors_for_row << "Invalid variant_weight format"
+        end
+
+        if variant_selling_price.blank?
+          errors_for_row << "variant_selling_price is required for variant products"
+        elsif !valid_decimal?(variant_selling_price)
+          errors_for_row << "Invalid variant_selling_price format"
+        end
+
+        if row['variant_buying_price'].present? && !valid_decimal?(row['variant_buying_price'])
+          errors_for_row << "Invalid variant_buying_price format"
+        end
+
+        if row['variant_stock'].present? && !valid_integer?(row['variant_stock'])
+          errors_for_row << "Invalid variant_stock quantity"
+        end
+
+        if row['variant_discount_type'].present? && !['percentage', 'fixed'].include?(row['variant_discount_type'].downcase)
+          errors_for_row << "variant_discount_type must be 'percentage' or 'fixed'"
+        end
+
+        if row['variant_discount_value'].present? && !valid_decimal?(row['variant_discount_value'])
+          errors_for_row << "Invalid variant_discount_value format"
+        end
+
+        if row['variant_gst_percentage'].present? && !valid_decimal?(row['variant_gst_percentage'])
+          errors_for_row << "Invalid variant_gst_percentage"
+        end
+      else
+        # Simple product validations
+        price = row['price*'] || row['price']
+        if price.blank?
+          errors_for_row << "price is required for simple products"
+        elsif !valid_decimal?(price)
+          errors_for_row << "Invalid price format"
+        end
+
+        if row['stock'].present? && !valid_integer?(row['stock'])
+          errors_for_row << "Invalid stock quantity"
+        end
+
+        if row['discount_price'].present? && !valid_decimal?(row['discount_price'])
+          errors_for_row << "Invalid discount_price format"
+        end
+
+        if row['buying_price'].present? && !valid_decimal?(row['buying_price'])
+          errors_for_row << "Invalid buying_price format"
         end
       end
 
-      # Price validation
-      if row['price'].present? && !valid_decimal?(row['price'])
-        errors_for_row << "Invalid price format"
-      end
-
-      # Discount price validation
-      if row['discount_price'].present? && !valid_decimal?(row['discount_price'])
-        errors_for_row << "Invalid discount_price format"
-      end
-
-      # Stock validation
-      if row['stock'].present? && !valid_integer?(row['stock'])
-        errors_for_row << "Invalid stock quantity"
-      end
-
-      # Status validation
+      # Common validations
       if row['status'].present? && !['active', 'inactive'].include?(row['status'].downcase)
         errors_for_row << "Status must be 'active' or 'inactive'"
       end
 
-      # GST validation
-      if row['gst_enabled'].present? && !['true', 'false'].include?(row['gst_enabled'].downcase)
-        errors_for_row << "GST enabled must be 'true' or 'false'"
+      if row['gst_enabled'].present? && !['true', 'false', ''].include?(row['gst_enabled'].downcase)
+        errors_for_row << "gst_enabled must be 'true' or 'false'"
       end
 
       if row['gst_percentage'].present? && !valid_decimal?(row['gst_percentage'])
-        errors_for_row << "Invalid GST percentage"
+        errors_for_row << "Invalid gst_percentage"
       end
 
-      # Product type validation
-      if row['product_type'].present? && !['one_time', 'subscription'].include?(row['product_type'].downcase)
-        errors_for_row << "Product type must be 'one_time' or 'subscription'"
+      valid_product_types = Product::PRODUCT_TYPES.map(&:last).map(&:downcase)
+      if row['product_type'].present? && !valid_product_types.include?(row['product_type'].downcase)
+        errors_for_row << "product_type must be one of: #{Product::PRODUCT_TYPES.map(&:last).join(', ')}"
       end
 
       if errors_for_row.any?
@@ -415,7 +457,7 @@ module ImportService
          'emergency_contact_name', 'emergency_contact_mobile', 'joining_date', 'salary',
          'bank_name', 'account_no', 'ifsc_code', 'account_holder_name', 'delivery_areas']
       when 'products'
-        ['name', 'price', 'stock']  # Only the truly required fields
+        ['name']  # Minimum required; price for simple products, variant_weight/variant_selling_price for variant products
       when 'customer_subscriptions'
         ['first_name', 'mobile', 'product_id', 'quantity', 'unit', 'start_date', 'end_date']  # Required fields for subscription import
       when 'customer_daily_tasks'

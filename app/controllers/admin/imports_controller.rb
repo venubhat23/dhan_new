@@ -387,129 +387,97 @@ class Admin::ImportsController < Admin::ApplicationController
     format = params[:format] || 'csv'
 
     headers = [
-      # Required fields (marked with *)
-      'name*', 'price*', 'category_id*', 'stock*',
+      # --- Product-level fields (required) ---
+      'name*', 'category_name*',
 
-      # Basic information (optional)
-      'description', 'sku', 'status', 'weight', 'dimensions', 'unit_type',
-
-      # Pricing (optional)
-      'buying_price', 'original_price', 'default_selling_price',
-
-      # Discount settings (optional)
-      'is_discounted', 'discount_type', 'discount_value', 'discount_price', 'discount_amount',
-
-      # GST configuration (optional)
+      # --- Product-level fields (optional) ---
+      'description', 'sku', 'status', 'product_type',
       'gst_enabled', 'gst_percentage', 'hsn_code',
-      'cgst_percentage', 'sgst_percentage', 'igst_percentage',
+      'is_subscription_enabled', 'tags', 'minimum_stock_alert', 'display_order',
 
-      # Product types and features (optional)
-      'product_type', 'is_subscription_enabled', 'is_occasional_product',
+      # --- has_multiple_quantities flag ---
+      # Set to 'true' for variant products; each row with the same name/SKU becomes one variant.
+      # Set to 'false' (or leave blank) for simple single-price products.
+      'has_multiple_quantities',
 
-      # Occasional product settings (optional)
-      'occasional_start_date', 'occasional_end_date', 'occasional_description',
-      'occasional_auto_hide', 'occasional_schedule_type',
+      # --- Simple product columns (used when has_multiple_quantities = false) ---
+      'price', 'buying_price', 'stock', 'weight', 'unit_type', 'dimensions',
+      'discount_type', 'discount_value',
 
-      # Stock management (optional)
-      'minimum_stock_alert',
-
-      # SEO and marketing (optional)
-      'tags', 'meta_title', 'meta_description'
+      # --- Variant columns (used when has_multiple_quantities = true) ---
+      # Repeat rows with the same name/SKU, one row per variant.
+      'variant_weight', 'variant_unit',
+      'variant_selling_price', 'variant_buying_price', 'variant_stock',
+      'variant_is_default',
+      'variant_discount_enabled', 'variant_discount_type', 'variant_discount_value',
+      'variant_gst_percentage', 'variant_display_order'
     ]
 
-    # Generate unique sample data with timestamps to avoid conflicts
-    timestamp = Time.current.strftime("%Y%m%d%H%M")
+    ts = Time.current.strftime("%Y%m%d%H%M")
+
+    # Helper for blank variant columns
+    no_variant = ['', '', '', '', '', '', '', '', '', '', '']
+    # Helper for blank simple-product columns
+    no_simple   = ['', '', '', '', '', '', '', '']
 
     sample_data = [
+      # ---- Simple product 1 ----
       [
-        # Required fields
-        "Sample Fresh Milk #{timestamp}", '60.00', '1', '100',
-
-        # Basic information
-        'Pure cow milk delivered daily - sample product', '', 'active', '1.0', '1L bottle', 'Liter',
-
-        # Pricing
-        '45.00', '65.00', '60.00',
-
-        # Discount settings
-        'true', 'percentage', '8.0', '55.00', '5.00',
-
-        # GST configuration
-        'true', '5.0', '04011010',
-        '2.5', '2.5', '0.0',
-
-        # Product types
-        'Grocery', 'true', 'false',
-
-        # Occasional product settings
-        '', '', '',
-        'false', '',
-
-        # Stock management
-        '10',
-
-        # SEO and marketing
-        'fresh,organic,daily,milk', 'Fresh Daily Milk - Premium Quality', 'Premium quality fresh milk delivered to your doorstep daily'
+        "Tomatoes #{ts}", 'Vegetables',
+        'Fresh farm tomatoes', '', 'active', 'Grocery',
+        'false', '', '',
+        'false', 'fresh,vegetable', '10', '1',
+        'false',
+        '50.00', '35.00', '100', '1.0', 'Kg', '',
+        '', '',
+        *no_variant
       ],
+
+      # ---- Simple product 2 (GST enabled) ----
       [
-        # Required fields
-        "Sample Vegetable Bundle #{timestamp}", '150.00', '1', '50',
-
-        # Basic information
-        'Fresh organic vegetables bundle with seasonal variety - sample product', '', 'active', '1.0', '1kg bundle', 'Kg',
-
-        # Pricing
-        '120.00', '160.00', '150.00',
-
-        # Discount settings
-        'true', 'fixed', '10.0', '140.00', '10.00',
-
-        # GST configuration
-        'false', '0.0', '07019090',
-        '0.0', '0.0', '0.0',
-
-        # Product types
-        'Grocery', 'false', 'false',
-
-        # Occasional product settings
-        '', '', '',
-        'false', '',
-
-        # Stock management
-        '5',
-
-        # SEO and marketing
-        'organic,fresh,vegetables,bundle', 'Organic Vegetable Bundle - Farm Fresh', 'Farm fresh organic vegetables for healthy living'
+        "Whole Wheat Bread #{ts}", 'Bakery',
+        'Soft whole wheat loaf', '', 'active', 'Grocery',
+        'true', '5.0', '19059090',
+        'false', 'bread,bakery,wheat', '5', '2',
+        'false',
+        '45.00', '30.00', '50', '0.4', 'Kg', '',
+        'percentage', '10.0',
+        *no_variant
       ],
+
+      # ---- Variant product — 3 variants (0.5L, 1L, 2L) ----
+      # Row 1: product info + first variant
       [
-        # Required fields
-        "Sample Special Sweets #{timestamp}", '300.00', '1', '25',
-
-        # Basic information
-        'Traditional sweets for festivals and special occasions - sample product', '', 'active', '0.5', '500g box', 'Box',
-
-        # Pricing
-        '200.00', '350.00', '300.00',
-
-        # Discount settings
-        'true', 'percentage', '15.0', '255.00', '45.00',
-
-        # GST configuration
-        'true', '5.0', '17049010',
-        '2.5', '2.5', '0.0',
-
-        # Product types
-        'Grocery', 'false', 'true',
-
-        # Occasional product settings
-        '2025-10-01', '2025-11-15', 'Special festival sweets available during festive season',
-        'true', 'date_range',
-
-        # Stock management
-        '3',
-
-        # SEO and marketing
-        'festival,sweets,traditional,special', 'Festival Special Sweets - Traditional Taste', 'Authentic traditional sweets for your special celebrations'
+        "Cow Milk #{ts}", 'Dairy',
+        'Fresh cow milk — available in 0.5L, 1L, and 2L packs', '', 'active', 'Milk',
+        'false', '', '',
+        'true', 'milk,dairy,fresh', '5', '3',
+        'true',
+        *no_simple,
+        '0.5', 'Liter', '32.00', '22.00', '200', 'true',
+        'false', '', '', '', '0'
+      ],
+      # Row 2: same product, second variant
+      [
+        "Cow Milk #{ts}", 'Dairy',
+        '', '', '', '',
+        '', '', '',
+        '', '', '', '',
+        'true',
+        *no_simple,
+        '1', 'Liter', '60.00', '42.00', '150', 'false',
+        'false', '', '', '', '1'
+      ],
+      # Row 3: same product, third variant
+      [
+        "Cow Milk #{ts}", 'Dairy',
+        '', '', '', '',
+        '', '', '',
+        '', '', '', '',
+        'true',
+        *no_simple,
+        '2', 'Liter', '112.00', '80.00', '80', 'false',
+        'true', 'percentage', '5.0', '', '2'
       ]
     ]
 

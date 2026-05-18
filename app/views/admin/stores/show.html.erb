@@ -219,6 +219,49 @@
   </div>
 </div>
 
+<!-- Expenses stat -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-4">
+    <div class="card stat-card h-100">
+      <div class="card-body p-3 d-flex align-items-center gap-3">
+        <div class="stat-icon bg-danger bg-opacity-10">
+          <i class="bi bi-receipt text-danger"></i>
+        </div>
+        <div>
+          <div class="text-muted small fw-medium">Expenses This Month</div>
+          <div class="fw-bold fs-5 text-danger">₹<%= number_with_precision(@expenses_total_this_month, precision: 0, delimiter: ',') %></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="card stat-card h-100">
+      <div class="card-body p-3 d-flex align-items-center gap-3">
+        <div class="stat-icon bg-secondary bg-opacity-10">
+          <i class="bi bi-list-ul text-secondary"></i>
+        </div>
+        <div>
+          <div class="text-muted small fw-medium">Expense Entries</div>
+          <div class="fw-bold fs-4 text-secondary"><%= @recent_expenses.size %></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="card stat-card h-100">
+      <div class="card-body p-3 d-flex align-items-center gap-3">
+        <div class="stat-icon bg-warning bg-opacity-10">
+          <i class="bi bi-shop text-warning"></i>
+        </div>
+        <div>
+          <div class="text-muted small fw-medium">By Store</div>
+          <div class="fw-bold fs-4 text-warning"><%= @store_end_expenses_count %></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Inventory Summary Cards -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
@@ -529,6 +572,88 @@
             </div>
             <h6 class="fw-semibold mb-1">No Stock Available</h6>
             <p class="text-muted small mb-0">This store has no active stock batches.</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Expenses -->
+    <div class="card border-0 shadow-sm mt-4" style="border-radius:14px;">
+      <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center" style="border-radius:14px 14px 0 0;">
+        <h5 class="mb-0 fw-semibold">
+          <i class="bi bi-receipt me-2" style="color:#1C7C54;"></i>Expenses
+          <small class="text-muted fw-normal ms-2" style="font-size:0.8rem;">This Month</small>
+        </h5>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-danger-subtle text-danger px-2 py-1 fw-semibold">
+            ₹<%= number_with_precision(@expenses_total_this_month, precision: 0, delimiter: ',') %>
+          </span>
+        </div>
+      </div>
+
+      <% if @expenses_by_category.any? %>
+        <!-- Category Summary -->
+        <div class="px-4 pt-3 pb-2 d-flex flex-wrap gap-2">
+          <% @expenses_by_category.sort_by { |_, v| -v }.each do |cat, total| %>
+            <span class="badge bg-light border text-dark" style="font-size:0.75rem;">
+              <%= cat %> &middot; ₹<%= number_with_precision(total, precision: 0, delimiter: ',') %>
+            </span>
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="card-body p-0">
+        <% if @recent_expenses.any? %>
+          <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size:0.85rem;">
+              <thead style="background:#f9fafb; font-size:0.75rem;">
+                <tr>
+                  <th class="px-4 py-2 text-muted fw-semibold" style="text-transform:uppercase; letter-spacing:0.4px;">Title</th>
+                  <th class="py-2 text-muted fw-semibold" style="text-transform:uppercase; letter-spacing:0.4px;">Category</th>
+                  <th class="py-2 text-muted fw-semibold" style="text-transform:uppercase; letter-spacing:0.4px;">Date</th>
+                  <th class="py-2 text-muted fw-semibold" style="text-transform:uppercase; letter-spacing:0.4px;">Created By</th>
+                  <th class="py-2 text-muted fw-semibold text-end pe-4" style="text-transform:uppercase; letter-spacing:0.4px;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @recent_expenses.each do |expense| %>
+                  <tr>
+                    <td class="px-4 py-2">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="<%= expense.category_icon %> text-muted"></i>
+                        <div>
+                          <div class="fw-semibold text-dark"><%= expense.title %></div>
+                          <% if expense.description.present? %>
+                            <small class="text-muted"><%= truncate(expense.description, length: 50) %></small>
+                          <% end %>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="py-2">
+                      <span class="badge bg-secondary-subtle text-secondary" style="font-size:0.72rem;"><%= expense.category %></span>
+                    </td>
+                    <td class="py-2 text-muted small"><%= expense.expense_date.strftime('%d %b %Y') %></td>
+                    <td class="py-2">
+                      <% if expense.created_by.store_admin? %>
+                        <span class="badge bg-warning-subtle text-warning" style="font-size:0.72rem;">
+                          <i class="bi bi-shop me-1"></i>Store
+                        </span>
+                      <% else %>
+                        <span class="badge bg-info-subtle text-info" style="font-size:0.72rem;">
+                          <i class="bi bi-shield me-1"></i>Admin
+                        </span>
+                      <% end %>
+                    </td>
+                    <td class="py-2 text-end pe-4 fw-semibold text-danger">₹<%= number_with_precision(expense.amount, precision: 2, delimiter: ',') %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <div class="text-center py-5">
+            <i class="bi bi-receipt text-muted" style="font-size:2rem;"></i>
+            <p class="text-muted mt-2 mb-0 small">No expenses recorded yet.</p>
           </div>
         <% end %>
       </div>

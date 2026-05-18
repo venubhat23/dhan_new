@@ -690,6 +690,10 @@ Rails.application.routes.draw do
       end
     end
 
+    # QR Codes
+    get 'qr_codes', to: 'qr_codes#index', as: :qr_codes
+    get 'qr_codes/lookup', to: 'qr_codes#lookup', as: :qr_codes_lookup
+
     # Coupons
     resources :coupons do
       member do

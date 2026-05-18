@@ -756,6 +756,21 @@
           </li>
         <% end %>
 
+        <!-- QR Codes -->
+        <% if current_user.has_sidebar_permission?('products') %>
+          <li class="nav-item">
+            <%= link_to admin_qr_codes_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/qr_codes')}" do %>
+              <div class="nav-icon-modern">
+                <div class="icon-bg" style="background: linear-gradient(135deg, #f3e5f5, #ce93d8);">
+                  <i class="bi bi-qr-code" style="color: #7b1fa2;"></i>
+                </div>
+              </div>
+              <span class="nav-text">QR Codes</span>
+              <div class="nav-indicator"></div>
+            <% end %>
+          </li>
+        <% end %>
+
         <!-- Coupons -->
         <!-- Customer Wallets -->
 
