@@ -10,7 +10,7 @@ class CashfreeService
       # Check if using production credentials (non-test keys)
       client_id = Rails.application.credentials.dig(:cashfree, :client_id) ||
                   ENV['CASHFREE_APP_ID'] ||
-                  'CASHFREE_APPID_REMOVED'
+                  nil # hardcoded fallback removed — set CASHFREE_APP_ID env var
 
       !client_id.start_with?('TEST')
     end
@@ -169,14 +169,14 @@ class CashfreeService
       Rails.application.credentials.dig(:cashfree, :client_id) ||
       ENV['CASHFREE_APP_ID'] ||
       ENV['CASHFREE_CLIENT_ID'] ||
-      'CASHFREE_APPID_REMOVED'
+      nil # hardcoded fallback removed — set CASHFREE_APP_ID env var
     end
 
     def client_secret
       Rails.application.credentials.dig(:cashfree, :client_secret) ||
       ENV['CASHFREE_SECRET_KEY'] ||
       ENV['CASHFREE_CLIENT_SECRET'] ||
-      'CASHFREE_SECRET_REMOVED'
+      nil # hardcoded fallback removed — set CASHFREE_SECRET_KEY env var
     end
 
     def return_url(booking_id)

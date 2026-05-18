@@ -102,7 +102,7 @@ bundle exec rails server -p 3001 -b localhost
 ```bash
 # Cashfree Test Credentials (already configured)
 CASHFREE_APP_ID=CASHFREE_APPID_REMOVED
-CASHFREE_SECRET_KEY=CASHFREE_SECRET_REMOVED
+CASHFREE_SECRET_KEY=your_cashfree_secret_key_here
 
 # Base URL (updated by ngrok)
 BASE_URL=http://localhost:3001
