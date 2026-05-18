@@ -59,6 +59,7 @@
   </div>
 </div>
 
+
 <%# Search and Filters %>
 <div class="card border-0 shadow-sm mb-3" id="searchSection">
   <div class="card-body py-2">
@@ -667,10 +668,12 @@ function initializeCart() {
 }
 
 // Add item to cart
-function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate, variantId) {
-  const quantity = parseFloat(document.getElementById(`qty-${productId}`).value) || 1;
+// qty param is optional — used by barcode scan to bypass the DOM qty input
+function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate, variantId, qty) {
+  const qtyEl = document.getElementById(`qty-${productId}`);
+  const quantity = qty !== undefined ? parseFloat(qty) : (parseFloat(qtyEl?.value) || 1);
 
-  if (quantity > stock) {
+  if (stock > 0 && quantity > stock) {
     alert(`Only ${stock} items available in stock!`);
     return;
   }
@@ -678,7 +681,7 @@ function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate
   const cartKey = variantId ? `${productId}_v${variantId}` : String(productId);
 
   if (cart[cartKey]) {
-    if (cart[cartKey].quantity + quantity > stock) {
+    if (stock > 0 && cart[cartKey].quantity + quantity > stock) {
       alert(`Cannot add more items. Maximum stock: ${stock}`);
       return;
     }
@@ -696,8 +699,8 @@ function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate
     };
   }
 
-  // Reset quantity input
-  document.getElementById(`qty-${productId}`).value = 1;
+  // Reset quantity input if present
+  if (qtyEl) qtyEl.value = 1;
 
   updateCartDisplay();
 
@@ -1920,10 +1923,8 @@ function lookupBarcode(code) {
     .then(r => r.json())
     .then(data => {
       if (data.found) {
-        barcodeFeedback.innerHTML = `<small class="text-success fw-semibold"><i class="bi bi-check-circle me-1"></i>${data.name} added</small>`;
-        addProductToCart(data.id, data.name, data.price, data.unit_type);
         barcodeInput.value = '';
-        barcodeInput.focus();
+        barcodeAddToCart(data);
       } else {
         barcodeFeedback.innerHTML = `<small class="text-danger"><i class="bi bi-x-circle me-1"></i>${data.message}</small>`;
         barcodeInput.select();
@@ -1934,21 +1935,37 @@ function lookupBarcode(code) {
     });
 }
 
-function addProductToCart(productId, productName, price, unitType) {
-  // Find the product card by data-product-id
-  const card = document.querySelector(`[data-product-id="${productId}"]`);
-  if (card) {
-    // Click the "Add to Cart" button inside the card
-    const addBtn = card.querySelector('[onclick*="bookingAddToCart"]');
-    if (addBtn) {
-      addBtn.click();
-      return;
-    }
-    // Fallback: scroll and highlight
-    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    card.style.outline = '3px solid #198754';
-    setTimeout(() => card.style.outline = '', 2000);
+// Scan → instantly add 1 to cart (or increment if already there).
+// For variant products the default variant is used automatically.
+function barcodeAddToCart(data) {
+  let price, stock, variantId, displayName;
+
+  if (data.has_multiple_quantities && data.variants && data.variants.length > 0) {
+    const v = data.variants.find(v => v.is_default) || data.variants[0];
+    price       = v.price;
+    stock       = v.stock;
+    variantId   = v.id;
+    displayName = data.variants.length > 1 ? `${data.name} (${v.label})` : data.name;
+  } else {
+    price       = data.price;
+    stock       = data.available_stock;
+    variantId   = null;
+    displayName = data.name;
   }
+
+  if (stock <= 0) {
+    barcodeFeedback.innerHTML = `<small class="text-danger"><i class="bi bi-x-circle me-1"></i>${displayName} — out of stock</small>`;
+    barcodeInput.focus();
+    return;
+  }
+
+  const basePrice = data.gst_rate > 0 ? price / (1 + data.gst_rate / 100) : price;
+  addToCart(data.id, displayName, price, stock, basePrice, data.gst_rate, variantId, 1);
+
+  const cartKey  = variantId ? `${data.id}_v${variantId}` : String(data.id);
+  const newQty   = cart[cartKey]?.quantity || 1;
+  barcodeFeedback.innerHTML = `<small class="text-success fw-semibold"><i class="bi bi-check-circle me-1"></i>${displayName} — qty ${newQty}</small>`;
+  barcodeInput.focus();
 }
 
 // Camera scanner (html5-qrcode — loaded from CDN only when needed)
