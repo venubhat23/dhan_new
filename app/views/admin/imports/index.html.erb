@@ -168,33 +168,66 @@
     </div>
   </div>
 
-  <!-- Products Import Card -->
+  <!-- Import Products Without Variants -->
   <div class="col-xl-6 col-lg-6 mb-4">
     <div class="card shadow-lg border-0 h-100 import-card">
       <div class="card-header bg-gradient-teal text-white">
         <div class="d-flex align-items-center">
-          <i class="fas fa-boxes fa-2x me-3"></i>
+          <i class="fas fa-box fa-2x me-3"></i>
           <div>
-            <h5 class="mb-0 text-dark"><strong>Import Products</strong></h5>
-            <small class="text-dark-75"><strong>Bulk upload product catalog</strong></small>
+            <h5 class="mb-0 text-dark"><strong>Import Products Dhan</strong></h5>
+            <small class="text-dark-75"><strong>Without Variants — single price & stock</strong></small>
           </div>
         </div>
       </div>
       <div class="card-body">
-        <p class="card-text text-muted mb-4">
-          Import products with pricing, inventory, GST calculations, and category mapping.
-          Supports both subscription and one-time purchase products with automatic SKU generation.
+        <p class="card-text text-muted mb-3">
+          Import simple products with a single price, stock, and unit. One row = one product.
+          Supports GST, discounts, and subscription settings.
         </p>
-
+        <div class="mb-3">
+          <small class="text-muted"><strong>Columns:</strong> name, category, product_type, buying_price, selling_price, stock, unit_type, description, gst, discount…</small>
+        </div>
         <div class="d-flex justify-content-between align-items-center">
-          <%= link_to download_template_admin_imports_path(template_type: 'products'),
-                      class: "btn btn-outline-teal btn-sm",
-                      target: "_blank" do %>
+          <%= link_to download_template_admin_imports_path(template_type: 'products_simple'),
+                      class: "btn btn-outline-teal btn-sm", target: "_blank" do %>
             <i class="fas fa-download me-1"></i> Download Template
           <% end %>
+          <%= link_to products_simple_form_admin_imports_path, class: "btn btn-teal" do %>
+            <i class="fas fa-upload me-1"></i> Import
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
 
-          <%= link_to products_form_admin_imports_path, class: "btn btn-teal" do %>
-            <i class="fas fa-upload me-1"></i> Import Products
+  <!-- Import Products With Variants -->
+  <div class="col-xl-6 col-lg-6 mb-4">
+    <div class="card shadow-lg border-0 h-100 import-card">
+      <div class="card-header text-white" style="background: linear-gradient(87deg, #e74c3c 0, #c0392b 100%);">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-boxes fa-2x me-3"></i>
+          <div>
+            <h5 class="mb-0 text-dark"><strong>Import Products Dhan</strong></h5>
+            <small class="text-dark-75"><strong>With Variants — weight1/price1, weight2/price2…</strong></small>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-text text-muted mb-3">
+          Import products with multiple size/weight variants. One row = one product with up to 5 variants.
+          e.g. Cow Milk: 0.5L ₹32, 1L ₹60, 2L ₹112.
+        </p>
+        <div class="mb-3">
+          <small class="text-muted"><strong>Variant columns:</strong> weight1, unit1, selling_price1, buying_price1, stock1 … weight5, unit5, selling_price5, buying_price5, stock5</small>
+        </div>
+        <div class="d-flex justify-content-between align-items-center">
+          <%= link_to download_template_admin_imports_path(template_type: 'products_variant'),
+                      class: "btn btn-sm btn-outline-danger", target: "_blank" do %>
+            <i class="fas fa-download me-1"></i> Download Template
+          <% end %>
+          <%= link_to products_variant_form_admin_imports_path, class: "btn btn-danger" do %>
+            <i class="fas fa-upload me-1"></i> Import
           <% end %>
         </div>
       </div>

@@ -1,0 +1,133 @@
+<% content_for :page_title, "Import Variant Products" %>
+
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1"><i class="fas fa-boxes me-2"></i>Import Products — With Variants</h2>
+      <p class="text-muted mb-0">Bulk upload products with multiple sizes/weights (up to 5 variants per product, all in one row)</p>
+    </div>
+    <%= link_to admin_imports_path, class: "btn btn-outline-secondary" do %>
+      <i class="fas fa-arrow-left me-1"></i> Back to Imports
+    <% end %>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-cloud-upload-alt me-2"></i>Upload CSV File</h5>
+        </div>
+        <div class="card-body p-4">
+          <%= form_with url: admin_import_products_variant_path, multipart: true, local: true do |f| %>
+            <div class="mb-4">
+              <label class="form-label fw-bold"><i class="fas fa-file-csv me-2"></i>Select File <span class="text-danger">*</span></label>
+              <%= f.file_field :file, class: "form-control form-control-lg", accept: ".csv,.xlsx,.xls", required: true %>
+              <div class="form-text">Supported: CSV, Excel (.xlsx, .xls) — Max 10MB</div>
+            </div>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+              <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-upload me-2"></i>Import Products
+              </button>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Variant structure explanation -->
+      <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="fas fa-info-circle text-info me-2"></i>How Variants Work (1 row per product)</h6>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered small">
+              <thead class="table-light">
+                <tr>
+                  <th>name</th><th>category</th><th>...</th>
+                  <th class="table-success">weight1</th><th class="table-success">unit1</th><th class="table-success">selling_price1</th><th class="table-success">buying_price1</th><th class="table-success">stock1</th>
+                  <th class="table-warning">weight2</th><th class="table-warning">unit2</th><th class="table-warning">selling_price2</th><th class="table-warning">buying_price2</th><th class="table-warning">stock2</th>
+                  <th class="text-muted">weight3...</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Cow Milk</td><td>Dairy</td><td>...</td>
+                  <td class="table-success">0.5</td><td class="table-success">Liter</td><td class="table-success">32</td><td class="table-success">22</td><td class="table-success">200</td>
+                  <td class="table-warning">1</td><td class="table-warning">Liter</td><td class="table-warning">60</td><td class="table-warning">42</td><td class="table-warning">150</td>
+                  <td class="text-muted">leave blank</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-muted small mb-0 mt-2">
+            <i class="fas fa-lightbulb text-warning me-1"></i>
+            The first variant is set as default. Blank variant columns are skipped. Up to <strong>5 variants</strong> per row.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <!-- Download Template -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0"><i class="fas fa-download me-2"></i>Download Template</h5>
+        </div>
+        <div class="card-body">
+          <p class="small text-muted mb-3">Download the CSV template with sample data (Cow Milk 0.5L/1L/2L, Organic Honey 250g/500g/1Kg).</p>
+          <%= link_to download_template_admin_imports_path(template_type: 'products_variant', format: 'csv'),
+              class: "btn btn-success w-100", target: "_blank" do %>
+            <i class="fas fa-file-csv me-2"></i>Download CSV Template
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Product-level columns -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0"><i class="fas fa-table me-2"></i>CSV Columns</h5>
+        </div>
+        <div class="card-body small">
+          <p class="fw-bold text-danger mb-1">Product Info (Required *)</p>
+          <ul class="list-unstyled mb-3">
+            <li><i class="fas fa-check text-success me-1"></i> name*</li>
+            <li><i class="fas fa-check text-success me-1"></i> category*</li>
+            <li><i class="fas fa-check text-success me-1"></i> product_type*</li>
+          </ul>
+          <p class="fw-bold text-muted mb-1">Product Info (Optional)</p>
+          <ul class="list-unstyled mb-3">
+            <li>status, description, is_subscription_enabled</li>
+            <li>is_discounted, discount_type, discount_value</li>
+            <li>gst_enabled, gst_percentage, hsn_code</li>
+            <li>is_occasional_product</li>
+          </ul>
+          <p class="fw-bold text-success mb-1">Variant Columns (repeat 1–5)</p>
+          <ul class="list-unstyled mb-0">
+            <li><i class="fas fa-check text-success me-1"></i> weight1*, unit1*, selling_price1*, buying_price1*, stock1*</li>
+            <li class="text-muted">weight2, unit2, selling_price2, buying_price2, stock2</li>
+            <li class="text-muted">weight3 … stock3</li>
+            <li class="text-muted">weight4 … stock4</li>
+            <li class="text-muted">weight5 … stock5</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Allowed Values -->
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0"><i class="fas fa-list me-2"></i>Allowed Values</h5>
+        </div>
+        <div class="card-body small">
+          <p class="mb-1"><strong>product_type:</strong></p>
+          <code>Milk, Grocery, Fruit & Vegetable</code>
+          <p class="mt-2 mb-1"><strong>unit (per variant):</strong></p>
+          <code>Kg, Bottle, Box, Liter, Piece, Gram</code>
+          <p class="mt-2 mb-1"><strong>status:</strong></p>
+          <code>active, inactive, draft</code>
+          <p class="mt-2 mb-1"><strong>discount_type:</strong></p>
+          <code>percentage, fixed</code>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

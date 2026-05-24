@@ -1,0 +1,101 @@
+<% content_for :page_title, "Import Simple Products" %>
+
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1"><i class="fas fa-box me-2"></i>Import Products — Without Variants</h2>
+      <p class="text-muted mb-0">Bulk upload single-price products (no size/weight variants)</p>
+    </div>
+    <%= link_to admin_imports_path, class: "btn btn-outline-secondary" do %>
+      <i class="fas fa-arrow-left me-1"></i> Back to Imports
+    <% end %>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-cloud-upload-alt me-2"></i>Upload CSV File</h5>
+        </div>
+        <div class="card-body p-4">
+          <%= form_with url: admin_import_products_simple_path, multipart: true, local: true do |f| %>
+            <div class="mb-4">
+              <label class="form-label fw-bold"><i class="fas fa-file-csv me-2"></i>Select File <span class="text-danger">*</span></label>
+              <%= f.file_field :file, class: "form-control form-control-lg", accept: ".csv,.xlsx,.xls", required: true %>
+              <div class="form-text">Supported: CSV, Excel (.xlsx, .xls) — Max 10MB</div>
+            </div>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+              <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-upload me-2"></i>Import Products
+              </button>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <!-- Download Template -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0"><i class="fas fa-download me-2"></i>Download Template</h5>
+        </div>
+        <div class="card-body">
+          <p class="small text-muted mb-3">Download the CSV template with sample data already filled in.</p>
+          <%= link_to download_template_admin_imports_path(template_type: 'products_simple', format: 'csv'),
+              class: "btn btn-success w-100", target: "_blank" do %>
+            <i class="fas fa-file-csv me-2"></i>Download CSV Template
+          <% end %>
+        </div>
+      </div>
+
+      <!-- CSV Columns -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0"><i class="fas fa-table me-2"></i>CSV Columns</h5>
+        </div>
+        <div class="card-body small">
+          <p class="fw-bold text-danger mb-1">Required (*)</p>
+          <ul class="list-unstyled mb-3">
+            <li><i class="fas fa-check text-success me-1"></i> name*</li>
+            <li><i class="fas fa-check text-success me-1"></i> category*</li>
+            <li><i class="fas fa-check text-success me-1"></i> product_type*</li>
+            <li><i class="fas fa-check text-success me-1"></i> buying_price*</li>
+            <li><i class="fas fa-check text-success me-1"></i> selling_price*</li>
+            <li><i class="fas fa-check text-success me-1"></i> stock*</li>
+            <li><i class="fas fa-check text-success me-1"></i> unit_type*</li>
+          </ul>
+          <p class="fw-bold text-muted mb-1">Optional</p>
+          <ul class="list-unstyled mb-0">
+            <li><i class="fas fa-circle text-muted me-1" style="font-size:0.4rem;vertical-align:middle"></i> status</li>
+            <li><i class="fas fa-circle text-muted me-1" style="font-size:0.4rem;vertical-align:middle"></i> description</li>
+            <li><i class="fas fa-circle text-muted me-1" style="font-size:0.4rem;vertical-align:middle"></i> is_subscription_enabled</li>
+            <li><i class="fas fa-circle text-muted me-1" style="font-size:0.4rem;vertical-align:middle"></i> weight, dimensions</li>
+            <li><i class="fas fa-circle text-muted me-1" style="font-size:0.4rem;vertical-align:middle"></i> is_discounted, discount_type, discount_value</li>
+            <li><i class="fas fa-circle text-muted me-1" style="font-size:0.4rem;vertical-align:middle"></i> gst_enabled, gst_percentage, hsn_code</li>
+            <li><i class="fas fa-circle text-muted me-1" style="font-size:0.4rem;vertical-align:middle"></i> is_occasional_product</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Allowed Values -->
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0"><i class="fas fa-list me-2"></i>Allowed Values</h5>
+        </div>
+        <div class="card-body small">
+          <p class="mb-1"><strong>product_type:</strong></p>
+          <code>Milk, Grocery, Fruit & Vegetable</code>
+          <p class="mt-2 mb-1"><strong>unit_type:</strong></p>
+          <code>Kg, Bottle, Box, Liter, Piece, Gram</code>
+          <p class="mt-2 mb-1"><strong>status:</strong></p>
+          <code>active, inactive, draft</code>
+          <p class="mt-2 mb-1"><strong>discount_type:</strong></p>
+          <code>percentage, fixed</code>
+          <p class="mt-2 mb-1"><strong>true/false fields:</strong></p>
+          <code>true / false</code>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

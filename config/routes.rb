@@ -654,6 +654,8 @@ Rails.application.routes.draw do
         get :motor_insurances_form
         get :delivery_people_form
         get :products_form
+        get :products_simple_form
+        get :products_variant_form
         get :customer_subscriptions_form
         get :customer_daily_tasks_form
         get :download_template
@@ -669,6 +671,8 @@ Rails.application.routes.draw do
     post 'import/motor_insurances', to: 'imports#motor_insurances'
     post 'import/delivery_people', to: 'imports#delivery_people'
     post 'import/products', to: 'imports#products'
+    post 'import/products_simple', to: 'imports#products_simple'
+    post 'import/products_variant', to: 'imports#products_variant'
     post 'import/customer_subscriptions', to: 'imports#customer_subscriptions'
     post 'import/customer_daily_tasks', to: 'imports#customer_daily_tasks'
     post 'import/agencies', to: 'imports#agencies'

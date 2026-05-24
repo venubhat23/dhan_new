@@ -26,6 +26,14 @@ class Admin::ImportsController < Admin::ApplicationController
     # Show products import form
   end
 
+  def products_simple_form
+    # Show simple product import form (no variants)
+  end
+
+  def products_variant_form
+    # Show variant product import form
+  end
+
   def customer_subscriptions_form
     # Show customer subscriptions import form
   end
@@ -172,6 +180,46 @@ class Admin::ImportsController < Admin::ApplicationController
     end
   end
 
+  # POST /admin/import/products_simple
+  def products_simple
+    uploaded_file = params[:file]
+    if uploaded_file.blank?
+      redirect_back fallback_location: admin_imports_path, alert: 'Please select a file to import.'
+      return
+    end
+    begin
+      result = ImportService::SimpleProductImporter.new(uploaded_file).import
+      if result[:success]
+        redirect_to admin_products_path, notice: "Successfully imported #{result[:imported_count]} products. #{result[:skipped_count]} skipped."
+      else
+        redirect_back fallback_location: products_simple_form_admin_imports_path, alert: "Import failed: #{result[:error]}"
+      end
+    rescue => e
+      Rails.logger.error "Simple product import error: #{e.message}"
+      redirect_back fallback_location: products_simple_form_admin_imports_path, alert: 'An error occurred during import. Please check your file format and try again.'
+    end
+  end
+
+  # POST /admin/import/products_variant
+  def products_variant
+    uploaded_file = params[:file]
+    if uploaded_file.blank?
+      redirect_back fallback_location: admin_imports_path, alert: 'Please select a file to import.'
+      return
+    end
+    begin
+      result = ImportService::VariantProductImporter.new(uploaded_file).import
+      if result[:success]
+        redirect_to admin_products_path, notice: "Successfully imported #{result[:imported_count]} products. #{result[:skipped_count]} skipped."
+      else
+        redirect_back fallback_location: products_variant_form_admin_imports_path, alert: "Import failed: #{result[:error]}"
+      end
+    rescue => e
+      Rails.logger.error "Variant product import error: #{e.message}"
+      redirect_back fallback_location: products_variant_form_admin_imports_path, alert: 'An error occurred during import. Please check your file format and try again.'
+    end
+  end
+
   # CSV Validation endpoint
   def validate_csv
     uploaded_file = params[:file]
@@ -228,6 +276,10 @@ class Admin::ImportsController < Admin::ApplicationController
       send_delivery_person_template
     when 'products'
       send_product_template
+    when 'products_simple'
+      send_simple_product_template
+    when 'products_variant'
+      send_variant_product_template
     when 'customer_subscriptions'
       send_customer_subscription_template
     when 'customer_daily_tasks'
@@ -555,6 +607,61 @@ class Admin::ImportsController < Admin::ApplicationController
 
     filename = format == 'xlsx' ? 'customer_daily_tasks_import_template.xlsx' : 'customer_daily_tasks_import_template.csv'
     send_data csv_data, filename: filename, type: 'text/csv'
+  end
+
+  def send_simple_product_template
+    headers = [
+      'name*', 'category*', 'product_type*', 'status',
+      'description', 'is_subscription_enabled',
+      'buying_price*', 'selling_price*', 'stock*', 'unit_type*', 'weight', 'dimensions',
+      'is_discounted', 'discount_type', 'discount_value',
+      'gst_enabled', 'gst_percentage', 'hsn_code',
+      'is_occasional_product'
+    ]
+    sample_data = [
+      ['Honey', 'Grocery', 'Grocery', 'active', 'Pure natural honey', 'false', '80', '120', '50', 'Bottle', '0.5', '', 'false', '', '', 'false', '', '', 'false'],
+      ['Cow Milk', 'Dairy', 'Milk', 'active', 'Fresh cow milk 1L', 'true', '40', '60', '100', 'Liter', '1.0', '', 'false', '', '', 'true', '5', '0401', 'false'],
+      ['Basmati Rice', 'Grocery', 'Grocery', 'active', 'Premium basmati rice', 'false', '85', '120', '200', 'Kg', '1.0', '', 'true', 'percentage', '5', 'true', '5', '1006', 'false']
+    ]
+    csv_data = CSV.generate(headers: true) { |csv| csv << headers; sample_data.each { |r| csv << r } }
+    send_data csv_data, filename: 'products_simple_import_template.csv', type: 'text/csv'
+  end
+
+  def send_variant_product_template
+    headers = [
+      'name*', 'category*', 'product_type*', 'status',
+      'description', 'is_subscription_enabled',
+      'is_discounted', 'discount_type', 'discount_value',
+      'gst_enabled', 'gst_percentage', 'hsn_code',
+      'is_occasional_product',
+      'weight1*', 'unit1*', 'selling_price1*', 'buying_price1*', 'stock1*',
+      'weight2', 'unit2', 'selling_price2', 'buying_price2', 'stock2',
+      'weight3', 'unit3', 'selling_price3', 'buying_price3', 'stock3',
+      'weight4', 'unit4', 'selling_price4', 'buying_price4', 'stock4',
+      'weight5', 'unit5', 'selling_price5', 'buying_price5', 'stock5'
+    ]
+    sample_data = [
+      [
+        'Cow Milk', 'Dairy', 'Milk', 'active', 'Fresh cow milk - multiple packs', 'true',
+        'false', '', '', 'false', '', '', 'false',
+        '0.5', 'Liter', '32', '22', '200',
+        '1',   'Liter', '60', '42', '150',
+        '2',   'Liter', '112','80', '80',
+        '', '', '', '', '',
+        '', '', '', '', ''
+      ],
+      [
+        'Organic Honey', 'Grocery', 'Grocery', 'active', 'Pure organic honey - multiple sizes', 'false',
+        'false', '', '', 'false', '', '', 'false',
+        '250',  'Gram', '149', '100', '50',
+        '500',  'Gram', '280', '190', '30',
+        '1000', 'Gram', '520', '360', '20',
+        '', '', '', '', '',
+        '', '', '', '', ''
+      ]
+    ]
+    csv_data = CSV.generate(headers: true) { |csv| csv << headers; sample_data.each { |r| csv << r } }
+    send_data csv_data, filename: 'products_variant_import_template.csv', type: 'text/csv'
   end
 
   # Statistics methods
