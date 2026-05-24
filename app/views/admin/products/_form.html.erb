@@ -48,6 +48,12 @@
           </div>
 
           <div class="col-md-6">
+            <%= form.label :hsn_code, "HSN Number", class: "form-label" %>
+            <%= form.text_field :hsn_code, class: "form-control", placeholder: "e.g., 0401, 1006" %>
+            <div class="form-text">Harmonized System of Nomenclature code</div>
+          </div>
+
+          <div class="col-md-6">
             <%= form.label :status, class: "form-label" %>
             <%= form.select :status,
                 options_for_select([['Draft', 'draft'], ['Active', 'active'], ['Inactive', 'inactive']], @product.status),
@@ -499,13 +505,6 @@
                         {},
                         { class: "form-select", id: "total_gst_rate" } %>
                     <div class="form-text">Select applicable GST rate for your product category</div>
-                  </div>
-
-                  <!-- HSN Code -->
-                  <div class="col-md-6">
-                    <%= form.label :hsn_code, "HSN/SAC Code", class: "form-label" %>
-                    <%= form.text_field :hsn_code, class: "form-control", placeholder: "e.g., 1001, 2202", id: "hsn_code" %>
-                    <div class="form-text">Harmonized System of Nomenclature code</div>
                   </div>
 
                   <!-- Intrastate GST Fields (CGST + SGST) -->

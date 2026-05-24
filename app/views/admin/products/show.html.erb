@@ -99,6 +99,8 @@
                     <div class="hstack gap-3 flex-wrap">
                       <div><span class="text-muted fw-medium">SKU:</span> <span class="fw-medium"><%= @product.sku %></span></div>
                       <div class="vr"></div>
+                      <div><span class="text-muted fw-medium">HSN Number:</span> <span class="fw-medium"><%= @product.hsn_code.presence || '—' %></span></div>
+                      <div class="vr"></div>
                       <div><span class="text-muted fw-medium">Category:</span>
                         <%= link_to @product.category.name, admin_category_path(@product.category), class: "fw-medium" %>
                       </div>
