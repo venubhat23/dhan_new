@@ -156,6 +156,7 @@
               <th class="border-0 fw-semibold">Contact Info</th>
               <th class="border-0 fw-semibold">Status</th>
               <th class="border-0 fw-semibold">Joined</th>
+              <th class="border-0 fw-semibold">Last Updated</th>
               <th class="border-0 fw-semibold">Actions</th>
             </tr>
           </thead>
@@ -204,6 +205,14 @@
                 </td>
                 <td class="align-middle">
                   <%= customer.created_at.strftime("%b %d, %Y") if customer.created_at %>
+                </td>
+                <td class="align-middle">
+                  <% if customer.updated_at %>
+                    <span title="<%= customer.updated_at.strftime("%B %d, %Y at %I:%M %p") %>">
+                      <%= customer.updated_at.strftime("%b %d, %Y") %>
+                    </span>
+                    <div class="small text-muted"><%= customer.updated_at.strftime("%I:%M %p") %></div>
+                  <% end %>
                 </td>
                 <td class="align-middle">
                   <div class="d-flex gap-1">

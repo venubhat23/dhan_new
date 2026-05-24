@@ -57,25 +57,6 @@
               <% end %>
             </div>
             <div class="col-md-6">
-              <strong class="text-muted d-block">Date of Birth</strong>
-              <%= @customer.birth_date&.strftime("%B %d, %Y") || '-' %>
-              <% if @customer.birth_date.present? %>
-                <small class="text-muted d-block">Age: <%= ((Date.current - @customer.birth_date.to_date) / 365.25).floor %> years</small>
-              <% end %>
-            </div>
-            <div class="col-md-6">
-              <strong class="text-muted d-block">Gender</strong>
-              <%= @customer.gender&.capitalize || '-' %>
-            </div>
-            <div class="col-md-6">
-              <strong class="text-muted d-block">Marital Status</strong>
-              <%= @customer.marital_status&.capitalize || '-' %>
-            </div>
-            <div class="col-md-6">
-              <strong class="text-muted d-block">PAN Number</strong>
-              <%= @customer.pan_no || '-' %>
-            </div>
-            <div class="col-md-6">
               <strong class="text-muted d-block">GST Number</strong>
               <%= @customer.gst_no || '-' %>
             </div>
@@ -196,68 +177,6 @@
       </div>
       <% end %>
     </div>
-
-    <!-- Professional Information -->
-    <% if @customer.company_name.present? || @customer.occupation.present? || @customer.annual_income.present? %>
-    <div class="card border-0 shadow-sm mb-4">
-      <div class="card-header bg-transparent border-0">
-        <h5 class="mb-0">Professional Information</h5>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-md-6">
-            <strong class="text-muted d-block">Company Name</strong>
-            <%= @customer.company_name || '-' %>
-          </div>
-          <div class="col-md-6">
-            <strong class="text-muted d-block">Occupation</strong>
-            <%= @customer.occupation || '-' %>
-          </div>
-          <div class="col-md-6">
-            <strong class="text-muted d-block">Annual Income</strong>
-            <% if @customer.annual_income.present? %>
-              ₹ <%= number_with_delimiter(@customer.annual_income) %>
-            <% else %>
-              -
-            <% end %>
-          </div>
-          <div class="col-md-6">
-            <strong class="text-muted d-block">Preferred Language</strong>
-            <%= @customer.preferred_language&.capitalize || '-' %>
-          </div>
-        </div>
-      </div>
-    </div>
-    <% end %>
-
-    <!-- Emergency Contact Information -->
-    <% if @customer.emergency_contact_name.present? || @customer.emergency_contact_number.present? || @customer.blood_group.present? %>
-    <div class="card border-0 shadow-sm mb-4">
-      <div class="card-header bg-transparent border-0">
-        <h5 class="mb-0">Emergency Information</h5>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-md-6">
-            <strong class="text-muted d-block">Emergency Contact Name</strong>
-            <%= @customer.emergency_contact_name || '-' %>
-          </div>
-          <div class="col-md-6">
-            <strong class="text-muted d-block">Emergency Contact Number</strong>
-            <% if @customer.emergency_contact_number.present? %>
-              <a href="tel:<%= @customer.emergency_contact_number %>"><%= @customer.emergency_contact_number %></a>
-            <% else %>
-              -
-            <% end %>
-          </div>
-          <div class="col-md-6">
-            <strong class="text-muted d-block">Blood Group</strong>
-            <span class="badge bg-danger"><%= @customer.blood_group || 'Not Specified' %></span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <% end %>
 
     <!-- Address Information -->
     <% if @customer.address.present? || @customer.latitude.present? || @customer.longitude.present? %>

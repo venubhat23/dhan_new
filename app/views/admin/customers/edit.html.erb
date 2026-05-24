@@ -64,79 +64,9 @@
               <%= form.text_field :whatsapp_number, class: "form-control", placeholder: "Enter WhatsApp number", type: "tel" %>
               <small class="form-text text-muted">Leave blank if same as mobile</small>
             </div>
-            <div class="col-md-4">
-              <%= form.label :birth_date, "Date of Birth", class: "form-label" %>
-              <%= form.date_field :birth_date, class: "form-control", max: Date.current.to_s %>
-            </div>
-            <div class="col-md-4">
-              <%= form.label :gender, class: "form-label" %>
-              <%= form.select :gender, options_for_select([['Select Gender', ''], ['Male', 'male'], ['Female', 'female'], ['Other', 'other']], @customer.gender), {}, class: "form-select" %>
-            </div>
-            <div class="col-md-4">
-              <%= form.label :marital_status, "Marital Status", class: "form-label" %>
-              <%= form.select :marital_status, options_for_select([['Select Status', ''], ['Single', 'single'], ['Married', 'married'], ['Divorced', 'divorced'], ['Widowed', 'widowed']], @customer.marital_status), {}, class: "form-select" %>
-            </div>
-            <div class="col-md-6">
-              <%= form.label :pan_no, "PAN Number", class: "form-label" %>
-              <%= form.text_field :pan_no, class: "form-control text-uppercase", placeholder: "ABCDE1234F", maxlength: 10, pattern: "[A-Z]{5}[0-9]{4}[A-Z]{1}" %>
-            </div>
             <div class="col-md-6">
               <%= form.label :gst_no, "GST Number", class: "form-label" %>
               <%= form.text_field :gst_no, class: "form-control text-uppercase", placeholder: "22ABCDE1234F1Z5", maxlength: 15 %>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Professional Details -->
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-transparent border-0">
-          <h5 class="mb-0">Professional Details</h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <%= form.label :company_name, "Company Name", class: "form-label" %>
-              <%= form.text_field :company_name, class: "form-control", placeholder: "Enter company name" %>
-            </div>
-            <div class="col-md-6">
-              <%= form.label :occupation, class: "form-label" %>
-              <%= form.text_field :occupation, class: "form-control", placeholder: "Enter occupation" %>
-            </div>
-            <div class="col-md-6">
-              <%= form.label :annual_income, "Annual Income", class: "form-label" %>
-              <%= form.number_field :annual_income, class: "form-control", placeholder: "Enter annual income", step: 1000 %>
-            </div>
-            <div class="col-md-6">
-              <%= form.label :preferred_language, "Preferred Language", class: "form-label" %>
-              <%= form.select :preferred_language, options_for_select([['English', 'english'], ['Hindi', 'hindi'], ['Marathi', 'marathi'], ['Gujarati', 'gujarati'], ['Tamil', 'tamil'], ['Telugu', 'telugu'], ['Kannada', 'kannada'], ['Malayalam', 'malayalam'], ['Bengali', 'bengali'], ['Punjabi', 'punjabi']], @customer.preferred_language), { prompt: 'Select Language' }, class: "form-select" %>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Emergency Contact -->
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-transparent border-0">
-          <h5 class="mb-0">Emergency Contact</h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <%= form.label :emergency_contact_name, "Contact Name", class: "form-label" %>
-              <%= form.text_field :emergency_contact_name, class: "form-control", placeholder: "Emergency contact name" %>
-            </div>
-            <div class="col-md-4">
-              <%= form.label :emergency_contact_number, "Contact Number", class: "form-label" %>
-              <%= form.text_field :emergency_contact_number, class: "form-control", placeholder: "Emergency contact number", type: "tel" %>
-            </div>
-            <div class="col-md-4">
-              <%= form.label :blood_group, "Blood Group", class: "form-label" %>
-              <%= form.select :blood_group, options_for_select([['Select Blood Group', ''], ['A+', 'A+'], ['A-', 'A-'], ['B+', 'B+'], ['B-', 'B-'], ['AB+', 'AB+'], ['AB-', 'AB-'], ['O+', 'O+'], ['O-', 'O-']], @customer.blood_group), {}, class: "form-select" %>
-            </div>
-            <div class="col-md-4">
-              <%= form.label :nationality, class: "form-label" %>
-              <%= form.text_field :nationality, class: "form-control", placeholder: "Enter nationality", value: @customer.nationality || "Indian" %>
             </div>
           </div>
         </div>
@@ -292,19 +222,6 @@
           </div>
         </div>
 
-        <% if @customer.birth_date.present? %>
-        <div class="row g-2 mb-2">
-          <div class="col-5"><strong>Age:</strong></div>
-          <div class="col-7"><%= ((Date.current - @customer.birth_date.to_date) / 365.25).floor %> years</div>
-        </div>
-        <% end %>
-
-        <% if @customer.occupation.present? %>
-        <div class="row g-2 mb-2">
-          <div class="col-5"><strong>Occupation:</strong></div>
-          <div class="col-7"><%= @customer.occupation %></div>
-        </div>
-        <% end %>
       </div>
     </div>
   </div>
