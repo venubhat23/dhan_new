@@ -244,96 +244,15 @@ class Admin::ImportsController < Admin::ApplicationController
     format = params[:format] || 'csv'
 
     headers = [
-      # Required fields (marked with *)
-      'first_name*', 'mobile*',
-
-      # Basic information (optional)
-      'middle_name', 'last_name', 'email', 'company_name', 'address', 'whatsapp_number',
-
-      # Personal details (optional)
-      'birth_date', 'gender', 'marital_status', 'blood_group', 'nationality',
-      'preferred_language', 'occupation', 'annual_income',
-
-      # ID documents (optional)
-      'pan_no', 'gst_no',
-
-      # Emergency contact (optional)
-      'emergency_contact_name', 'emergency_contact_number',
-
-      # Location (optional)
-      'longitude', 'latitude',
-
-      # Additional notes (optional)
-      'notes', 'status'
+      'first_name*', 'last_name*', 'mobile*',
+      'email', 'whatsapp_number', 'gst_no',
+      'address', 'notes'
     ]
 
     sample_data = [
-      [
-        # Required fields
-        'John', '9876543210',
-
-        # Basic information
-        'Kumar', 'Doe', 'john.doe@example.com', 'ABC Private Limited', '123 Main Street, Mumbai, Maharashtra, 400001', '9876543210',
-
-        # Personal details
-        '1990-01-15', 'male', 'married', 'A+', 'Indian', 'English', 'Software Engineer', '1200000',
-
-        # ID documents
-        'ABCDE1234F', 'GSTIN1234567890',
-
-        # Emergency contact
-        'Jane Doe', '9876543211',
-
-        # Location
-        '72.8777', '19.0760',
-
-        # Additional notes
-        'VIP Customer', 'true'
-      ],
-      [
-        # Required fields
-        'Priya', '9876543211',
-
-        # Basic information
-        '', 'Sharma', 'priya.sharma@example.com', '', '456 Park Avenue, Delhi, 110001', '9876543211',
-
-        # Personal details
-        '1988-05-20', 'female', 'single', 'B+', 'Indian', 'Hindi', 'Doctor', '800000',
-
-        # ID documents
-        'FGHIJ5678K', '',
-
-        # Emergency contact
-        'Raj Sharma', '9876543212',
-
-        # Location
-        '77.2090', '28.6139',
-
-        # Additional notes
-        'Regular Customer', 'true'
-      ],
-      [
-        # Required fields
-        'Rajesh', 'rajesh.patel@example.com', '9876543212',
-
-        # Basic information
-        'Kumar', 'Patel', 'Patel Traders', '789 Business Complex, Ahmedabad, Gujarat, 380001', '9876543212',
-
-        # Personal details
-        '1985-12-10', 'male', 'married', 'O+', 'Indian', 'Gujarati', 'Business Owner', '1500000',
-
-        # ID documents
-        'KLMNO9012P', 'GSTIN9876543210',
-
-        # Emergency contact
-        'Sunita Patel', '9876543213',
-
-        # Location
-        '72.5714', '23.0225',
-
-        # Additional notes
-        'Corporate Customer', 'true'
-      ]
+      ['John', 'Doe', '9876543210', 'john.doe@example.com', '9876543210', '', '123 Main Street, Mumbai', 'VIP Customer'],
+      ['Priya', 'Sharma', '9876543211', 'priya.sharma@example.com', '9876543211', 'GSTIN1234567890', '456 Park Avenue, Delhi', ''],
+      ['Rajesh', 'Patel', '9876543212', '', '9876543212', '', '789 Business Complex, Ahmedabad', 'Regular Customer']
     ]
 
     csv_data = CSV.generate(headers: true) do |csv|
