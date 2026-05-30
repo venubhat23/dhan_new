@@ -76,8 +76,6 @@
   </div>
 </div>
 
-
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   // Search functionality
@@ -88,22 +86,66 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchTerm = this.value.toLowerCase();
 
     tableRows.forEach(row => {
-      const productName = row.cells[0]?.textContent.toLowerCase() || '';
-      const category = row.cells[1]?.textContent.toLowerCase() || '';
-      const sku = row.cells[0]?.textContent.toLowerCase() || '';
+      const productName = row.cells[1]?.textContent.toLowerCase() || '';
+      const category = row.cells[2]?.textContent.toLowerCase() || '';
 
-      if (productName.includes(searchTerm) ||
-          category.includes(searchTerm) ||
-          sku.includes(searchTerm)) {
+      if (productName.includes(searchTerm) || category.includes(searchTerm)) {
         row.style.display = '';
       } else {
         row.style.display = 'none';
       }
     });
   });
+
+  // Select All checkbox
+  const selectAll = document.getElementById('selectAllProducts');
+  const productCheckboxes = document.querySelectorAll('.product-checkbox');
+  const bulkBar = document.getElementById('bulkActionBar');
+  const selectedCount = document.getElementById('selectedCount');
+  const bulkActionInput = document.getElementById('bulkActionInput');
+
+  function updateBulkBar() {
+    const checked = document.querySelectorAll('.product-checkbox:checked').length;
+    if (checked > 0) {
+      bulkBar.classList.remove('d-none');
+      selectedCount.textContent = checked + ' product' + (checked === 1 ? '' : 's') + ' selected';
+    } else {
+      bulkBar.classList.add('d-none');
+    }
+    if (selectAll) {
+      selectAll.indeterminate = checked > 0 && checked < productCheckboxes.length;
+      selectAll.checked = checked === productCheckboxes.length && productCheckboxes.length > 0;
+    }
+  }
+
+  selectAll?.addEventListener('change', function() {
+    productCheckboxes.forEach(cb => cb.checked = this.checked);
+    updateBulkBar();
+  });
+
+  productCheckboxes.forEach(cb => cb.addEventListener('change', updateBulkBar));
+
+  // Bulk action buttons
+  document.querySelectorAll('[data-bulk-action]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const action = this.dataset.bulkAction;
+      const checked = document.querySelectorAll('.product-checkbox:checked');
+      if (checked.length === 0) return;
+
+      const confirmMessages = {
+        delete: 'Delete ' + checked.length + ' selected product(s)? This cannot be undone.',
+        deactivate: 'Deactivate ' + checked.length + ' selected product(s)?',
+        activate: 'Activate ' + checked.length + ' selected product(s)?'
+      };
+
+      if (!confirm(confirmMessages[action] || 'Confirm action?')) return;
+
+      bulkActionInput.value = action;
+      document.getElementById('bulkActionForm').submit();
+    });
+  });
 });
 </script>
-
 
 <!-- Products Table -->
 <div class="card border-0 shadow-sm">
@@ -118,181 +160,205 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     </div>
   </div>
+
+  <!-- Bulk Action Bar (hidden until items selected) -->
+  <div id="bulkActionBar" class="d-none px-3 py-2 bg-primary-subtle border-bottom d-flex align-items-center gap-3">
+    <span id="selectedCount" class="fw-medium text-primary small"></span>
+    <button type="button" class="btn btn-sm btn-success" data-bulk-action="activate">
+      <i class="bi bi-check-circle me-1"></i>Activate
+    </button>
+    <button type="button" class="btn btn-sm btn-warning" data-bulk-action="deactivate">
+      <i class="bi bi-dash-circle me-1"></i>Deactivate
+    </button>
+    <button type="button" class="btn btn-sm btn-danger" data-bulk-action="delete">
+      <i class="bi bi-trash me-1"></i>Delete Selected
+    </button>
+  </div>
+
   <div class="card-body p-0">
     <% if @products.any? %>
-      <div class="table-responsive">
-        <table class="table table-hover mb-0">
-          <thead class="table-light">
-            <tr>
-              <th class="border-0 fw-semibold">Product</th>
-              <th class="border-0 fw-semibold">Category</th>
-              <th class="border-0 fw-semibold">Price & Profit</th>
-              <th class="border-0 fw-semibold">Stock</th>
-              <th class="border-0 fw-semibold">Status</th>
-              <th class="border-0 fw-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @products.each do |product| %>
+      <%= form_with url: bulk_action_admin_products_path, method: :post, id: "bulkActionForm", local: true do |f| %>
+        <%= hidden_field_tag :bulk_action, '', id: 'bulkActionInput' %>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
               <tr>
-                <td class="align-middle">
-                  <div class="d-flex align-items-center">
-                    <div class="position-relative me-3">
-                      <% if product.r2_image_url.present? %>
-                        <img src="<%= product.r2_image_url %>"
-                             alt="<%= product.name %>"
-                             class="rounded-circle object-fit-cover"
-                             style="width: 40px; height: 40px;">
-                      <% elsif product.main_image_url.present? %>
-                        <img src="<%= product.main_image_url(width: 60, height: 60) %>"
-                             alt="<%= product.name %>"
-                             class="rounded-circle object-fit-cover"
-                             style="width: 40px; height: 40px;">
-                      <% elsif product.image.attached? %>
-                        <%= image_tag product.image,
-                            alt: product.name,
-                            class: "rounded-circle object-fit-cover",
-                            style: "width: 40px; height: 40px;" %>
-                      <% else %>
-                        <div class="avatar-sm bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                          <i class="bi bi-box-seam text-primary"></i>
-                        </div>
-                      <% end %>
+                <th class="border-0 ps-3" style="width: 40px;">
+                  <input type="checkbox" id="selectAllProducts" class="form-check-input">
+                </th>
+                <th class="border-0 fw-semibold">Product</th>
+                <th class="border-0 fw-semibold">Category</th>
+                <th class="border-0 fw-semibold">Price & Profit</th>
+                <th class="border-0 fw-semibold">Stock</th>
+                <th class="border-0 fw-semibold">Status</th>
+                <th class="border-0 fw-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @products.each do |product| %>
+                <tr>
+                  <td class="align-middle ps-3">
+                    <input type="checkbox" name="product_ids[]" value="<%= product.id %>" class="form-check-input product-checkbox">
+                  </td>
+                  <td class="align-middle">
+                    <div class="d-flex align-items-center">
+                      <div class="position-relative me-3">
+                        <% if product.r2_image_url.present? %>
+                          <img src="<%= product.r2_image_url %>"
+                               alt="<%= product.name %>"
+                               class="rounded-circle object-fit-cover"
+                               style="width: 40px; height: 40px;">
+                        <% elsif product.main_image_url.present? %>
+                          <img src="<%= product.main_image_url(width: 60, height: 60) %>"
+                               alt="<%= product.name %>"
+                               class="rounded-circle object-fit-cover"
+                               style="width: 40px; height: 40px;">
+                        <% elsif product.image.attached? %>
+                          <%= image_tag product.image,
+                              alt: product.name,
+                              class: "rounded-circle object-fit-cover",
+                              style: "width: 40px; height: 40px;" %>
+                        <% else %>
+                          <div class="avatar-sm bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <i class="bi bi-box-seam text-primary"></i>
+                          </div>
+                        <% end %>
+                      </div>
+                      <div>
+                        <h6 class="mb-0"><%= product.name %></h6>
+                        <small class="text-muted">SKU: <%= product.sku || 'N/A' %></small>
+                        <% if product.image_url.present? %>
+                          <small class="text-success d-block">
+                            <i class="bi bi-cloud-check me-1"></i>Cloudinary
+                          </small>
+                        <% elsif product.image.attached? %>
+                          <small class="text-info d-block">
+                            <i class="bi bi-server me-1"></i>Local
+                          </small>
+                        <% end %>
+                      </div>
                     </div>
+                  </td>
+                  <td class="align-middle">
+                    <span class="badge bg-secondary-subtle text-secondary"><%= product.category&.name || 'No Category' %></span>
+                  </td>
+                  <td class="align-middle">
                     <div>
-                      <h6 class="mb-0"><%= product.name %></h6>
-                      <small class="text-muted">SKU: <%= product.sku || 'N/A' %></small>
-                      <% if product.image_url.present? %>
-                        <small class="text-success d-block">
-                          <i class="bi bi-cloud-check me-1"></i>Cloudinary
-                        </small>
-                      <% elsif product.image.attached? %>
-                        <small class="text-info d-block">
-                          <i class="bi bi-server me-1"></i>Local
-                        </small>
-                      <% end %>
-                    </div>
-                  </div>
-                </td>
-                <td class="align-middle">
-                  <span class="badge bg-secondary-subtle text-secondary"><%= product.category&.name || 'No Category' %></span>
-                </td>
-                <td class="align-middle">
-                  <div>
-                    <!-- Selling Price -->
-                    <div class="d-flex align-items-center gap-2">
-                      <span class="fw-medium">
-                        <%= product.respond_to?(:formatted_selling_price) ? product.formatted_selling_price : number_to_currency(product.final_price_after_discount) %>
-                      </span>
-                      <% if product.discounted? %>
-                        <small class="badge bg-success-subtle text-success">
-                          <%= product.discount_percentage.round(1) %>% OFF
-                        </small>
-                      <% end %>
-                    </div>
-
-                    <!-- Discount Info -->
-                    <% if product.discounted? %>
-                      <small class="text-muted text-decoration-line-through">
-                        MRP: <%= number_to_currency(product.original_price || product.price) %>
-                      </small>
-                      <br>
-                    <% end %>
-
-                    <!-- Profit Info -->
-                    <% if product.buying_price.present? %>
-                      <div class="small mt-1">
-                        <span class="text-muted">Cost: ₹<%= product.buying_price.round(2) %></span>
-                        <span class="mx-1">•</span>
-                        <span class="<%= product.profit_status_class %> fw-medium">
-                          Profit: ₹<%= product.profit_amount.round(2) %>
+                      <!-- Selling Price -->
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="fw-medium">
+                          <%= product.respond_to?(:formatted_selling_price) ? product.formatted_selling_price : number_to_currency(product.final_price_after_discount) %>
                         </span>
-                        <% if product.profit_percentage != 0 %>
+                        <% if product.discounted? %>
+                          <small class="badge bg-success-subtle text-success">
+                            <%= product.discount_percentage.round(1) %>% OFF
+                          </small>
+                        <% end %>
+                      </div>
+
+                      <!-- Discount Info -->
+                      <% if product.discounted? %>
+                        <small class="text-muted text-decoration-line-through">
+                          MRP: <%= number_to_currency(product.original_price || product.price) %>
+                        </small>
+                        <br>
+                      <% end %>
+
+                      <!-- Profit Info -->
+                      <% if product.buying_price.present? %>
+                        <div class="small mt-1">
+                          <span class="text-muted">Cost: ₹<%= product.buying_price.round(2) %></span>
                           <span class="mx-1">•</span>
                           <span class="<%= product.profit_status_class %> fw-medium">
-                            <%= product.profit_margin_percentage.round(1) %>%
+                            Profit: ₹<%= product.profit_amount.round(2) %>
                           </span>
-                        <% end %>
-                      </div>
-                      <div class="small">
-                        <span class="badge bg-<%= product.profitable? ? 'success' : (product.profit_amount == 0 ? 'warning' : 'danger') %>-subtle text-<%= product.profitable? ? 'success' : (product.profit_amount == 0 ? 'warning' : 'danger') %>">
-                          <%= product.profit_status %>
-                        </span>
-                      </div>
+                          <% if product.profit_percentage != 0 %>
+                            <span class="mx-1">•</span>
+                            <span class="<%= product.profit_status_class %> fw-medium">
+                              <%= product.profit_margin_percentage.round(1) %>%
+                            </span>
+                          <% end %>
+                        </div>
+                        <div class="small">
+                          <span class="badge bg-<%= product.profitable? ? 'success' : (product.profit_amount == 0 ? 'warning' : 'danger') %>-subtle text-<%= product.profitable? ? 'success' : (product.profit_amount == 0 ? 'warning' : 'danger') %>">
+                            <%= product.profit_status %>
+                          </span>
+                        </div>
+                      <% else %>
+                        <small class="text-muted">No cost price set</small>
+                      <% end %>
+                    </div>
+                  </td>
+                  <td class="align-middle">
+                    <% if product.stock.to_i > 0 %>
+                      <span class="text-success fw-medium"><%= product.stock %> <%= product.unit_type %></span>
+                      <div class="small text-muted">In Stock</div>
                     <% else %>
-                      <small class="text-muted">No cost price set</small>
+                      <span class="text-danger fw-medium">0 <%= product.unit_type %></span>
+                      <div class="small text-muted">Out of Stock</div>
                     <% end %>
-                  </div>
-                </td>
-                <td class="align-middle">
-                  <% if product.stock.to_i > 0 %>
-                    <span class="text-success fw-medium"><%= product.stock %> <%= product.unit_type %></span>
-                    <div class="small text-muted">In Stock</div>
-                  <% else %>
-                    <span class="text-danger fw-medium">0 <%= product.unit_type %></span>
-                    <div class="small text-muted">Out of Stock</div>
-                  <% end %>
-                </td>
-                <td class="align-middle">
-                  <% case product.status %>
-                  <% when 'active' %>
-                    <span class="badge bg-success-subtle text-success">
-                      <i class="bi bi-check-circle me-1"></i>
-                      Active
-                    </span>
-                  <% when 'inactive' %>
-                    <span class="badge bg-danger-subtle text-danger">
-                      <i class="bi bi-x-circle me-1"></i>
-                      Inactive
-                    </span>
-                  <% when 'draft' %>
-                    <span class="badge bg-warning-subtle text-warning">
-                      <i class="bi bi-clock me-1"></i>
-                      Draft
-                    </span>
-                  <% else %>
-                    <span class="badge bg-secondary-subtle text-secondary"><%= product.status&.humanize || 'Unknown' %></span>
-                  <% end %>
-                </td>
-                <td class="align-middle">
-                  <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                      <i class="bi bi-three-dots"></i>
-                    </button>
-                    <ul class="dropdown-menu">
-                      <li>
-                        <%= link_to admin_product_path(product), class: "dropdown-item" do %>
-                          <i class="bi bi-eye me-2"></i>
-                          View Details
-                        <% end %>
-                      </li>
-                      <li>
-                        <%= link_to edit_admin_product_path(product), class: "dropdown-item" do %>
-                          <i class="bi bi-pencil me-2"></i>
-                          Edit Product
-                        <% end %>
-                      </li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li>
-                        <%= link_to admin_product_path(product),
-                            class: "dropdown-item text-danger",
-                            data: {
-                              turbo_method: :delete,
-                              turbo_confirm: "Delete '#{product.name}'?\n\nThis will permanently delete the product and all its reviews, ratings, stock batches, and delivery rules.\n\nThis action cannot be undone."
-                            } do %>
-                          <i class="bi bi-trash me-2"></i>
-                          Delete Product
-                        <% end %>
-                      </li>
-                    </ul>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
+                  </td>
+                  <td class="align-middle">
+                    <% case product.status %>
+                    <% when 'active' %>
+                      <span class="badge bg-success-subtle text-success">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Active
+                      </span>
+                    <% when 'inactive' %>
+                      <span class="badge bg-danger-subtle text-danger">
+                        <i class="bi bi-x-circle me-1"></i>
+                        Inactive
+                      </span>
+                    <% when 'draft' %>
+                      <span class="badge bg-warning-subtle text-warning">
+                        <i class="bi bi-clock me-1"></i>
+                        Draft
+                      </span>
+                    <% else %>
+                      <span class="badge bg-secondary-subtle text-secondary"><%= product.status&.humanize || 'Unknown' %></span>
+                    <% end %>
+                  </td>
+                  <td class="align-middle">
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots"></i>
+                      </button>
+                      <ul class="dropdown-menu">
+                        <li>
+                          <%= link_to admin_product_path(product), class: "dropdown-item" do %>
+                            <i class="bi bi-eye me-2"></i>
+                            View Details
+                          <% end %>
+                        </li>
+                        <li>
+                          <%= link_to edit_admin_product_path(product), class: "dropdown-item" do %>
+                            <i class="bi bi-pencil me-2"></i>
+                            Edit Product
+                          <% end %>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                          <%= link_to admin_product_path(product),
+                              class: "dropdown-item text-danger",
+                              data: {
+                                turbo_method: :delete,
+                                turbo_confirm: "Delete '#{product.name}'? This will permanently delete the product and cannot be undone."
+                              } do %>
+                            <i class="bi bi-trash me-2"></i>
+                            Delete Product
+                          <% end %>
+                        </li>
+                      </ul>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
 
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
 
       <!-- Pagination -->
       <% if respond_to?(:paginate) && @products.respond_to?(:total_pages) %>
@@ -312,4 +378,3 @@ document.addEventListener('DOMContentLoaded', function() {
     <% end %>
   </div>
 </div>
-

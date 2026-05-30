@@ -175,13 +175,21 @@ class Admin::ProductsController < Admin::ApplicationController
       Product.where(id: params[:product_ids]).update_all(status: 'inactive')
       message = 'Products deactivated successfully'
     when 'delete'
-      Product.where(id: params[:product_ids]).destroy_all
-      message = 'Products deleted successfully'
+      products = Product.where(id: params[:product_ids])
+      count = products.count
+      products.each do |product|
+        product.booking_items.update_all(product_id: nil)
+        product.order_items.update_all(product_id: nil) if product.respond_to?(:order_items)
+        product.destroy!
+      end
+      message = "#{count} product(s) deleted successfully"
     else
       message = 'Invalid action'
     end
 
     redirect_to admin_products_path, notice: message
+  rescue => e
+    redirect_to admin_products_path, alert: "Could not complete bulk action: #{e.message}"
   end
 
   def products_chart
