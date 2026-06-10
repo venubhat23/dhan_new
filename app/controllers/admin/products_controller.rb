@@ -107,27 +107,41 @@ class Admin::ProductsController < Admin::ApplicationController
   end
 
   def dependencies
-    booking_items_count  = @product.booking_items.count
-    order_items_count    = @product.order_items.count rescue 0
-    invoice_items_count  = InvoiceItem.where(product_id: @product.id).count rescue 0
+    booking_items_count = @product.booking_items.count
+    order_items_count   = begin; @product.order_items.count; rescue; 0; end
+    invoice_items_count = begin; InvoiceItem.where(product_id: @product.id).count; rescue; 0; end
+    bookings_count      = @product.bookings.count
+    orders_count        = begin; @product.orders.count; rescue; 0; end
+    invoices_count      = begin
+      Invoice.joins(:invoice_items).where(invoice_items: { product_id: @product.id }).count
+    rescue
+      0
+    end
 
-    bookings  = @product.bookings.order(created_at: :desc).limit(5)
-                        .pluck(:booking_number, :created_at, :total_amount) rescue []
-    invoices  = Invoice.joins(:invoice_items)
-                       .where(invoice_items: { product_id: @product.id })
-                       .order(created_at: :desc).limit(5)
-                       .pluck(:invoice_number, :created_at, :total_amount) rescue []
+    bookings = begin
+      @product.bookings.order(created_at: :desc).limit(5)
+              .pluck(:booking_number, :created_at, :total_amount)
+    rescue
+      []
+    end
+    invoices = begin
+      Invoice.joins(:invoice_items)
+             .where(invoice_items: { product_id: @product.id })
+             .order(created_at: :desc).limit(5)
+             .pluck(:invoice_number, :created_at, :total_amount)
+    rescue
+      []
+    end
 
     render json: {
-      booking_items_count:  booking_items_count,
-      order_items_count:    order_items_count,
-      invoice_items_count:  invoice_items_count,
-      bookings_count:       @product.bookings.count,
-      orders_count:         @product.orders.count rescue 0,
-      invoices_count:       Invoice.joins(:invoice_items)
-                                   .where(invoice_items: { product_id: @product.id }).count rescue 0,
-      sample_bookings:      bookings.map { |n, d, a| { number: n, date: d&.strftime('%d %b %Y'), amount: a } },
-      sample_invoices:      invoices.map { |n, d, a| { number: n, date: d&.strftime('%d %b %Y'), amount: a } }
+      booking_items_count: booking_items_count,
+      order_items_count:   order_items_count,
+      invoice_items_count: invoice_items_count,
+      bookings_count:      bookings_count,
+      orders_count:        orders_count,
+      invoices_count:      invoices_count,
+      sample_bookings:     bookings.map { |n, d, a| { number: n, date: d&.strftime('%d %b %Y'), amount: a } },
+      sample_invoices:     invoices.map { |n, d, a| { number: n, date: d&.strftime('%d %b %Y'), amount: a } }
     }
   end
 
