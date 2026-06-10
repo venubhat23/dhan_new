@@ -59,7 +59,7 @@ class Product < ApplicationRecord
   validates :discount_price, numericality: { greater_than_or_equal_to: 0 }, allow_blank: true
   validates :stock, presence: true, numericality: { greater_than_or_equal_to: 0 }, unless: :has_multiple_quantities?
   validates :status, presence: true
-  validates :product_type, presence: true, inclusion: { in: PRODUCT_TYPES.map(&:last) }
+  validates :product_type, inclusion: { in: PRODUCT_TYPES.map(&:last) }, allow_blank: true
   validates :weight, numericality: { greater_than: 0 }, allow_blank: true
   validates :buying_price, numericality: { greater_than: 0 }, allow_blank: true, unless: :has_multiple_quantities?
   validates :unit_type, presence: true, inclusion: { in: UNIT_TYPES.map(&:last) }

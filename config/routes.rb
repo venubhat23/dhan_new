@@ -692,6 +692,7 @@ Rails.application.routes.draw do
         patch :toggle_status
         post :bulk_action
         get :detail
+        get :dependencies
       end
       collection do
         get :search

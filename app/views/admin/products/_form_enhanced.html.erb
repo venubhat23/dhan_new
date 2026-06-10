@@ -1038,12 +1038,22 @@
       <div class="form-grid form-grid-2">
         <div class="form-group">
           <%= form.label :buying_price, class: "form-label" do %>
-            Buying Price (₹) <span class="required-mark">*</span>
+            Cost Price (₹) <span class="required-mark">*</span>
           <% end %>
           <%= form.number_field :buying_price, class: "form-control",
               step: "0.01", required: true, placeholder: "0.00",
               id: "buying-price" %>
-          <div class="help-text">Your purchase/cost price</div>
+          <div class="help-text">Your cost price for this product</div>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :purchase_price, class: "form-label" do %>
+            Purchase Price (₹)
+          <% end %>
+          <%= form.number_field :purchase_price, class: "form-control",
+              step: "0.01", min: 0, placeholder: "0.00",
+              id: "purchase-price" %>
+          <div class="help-text">Price at which product was purchased</div>
         </div>
 
         <div class="form-group">

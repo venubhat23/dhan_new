@@ -40,7 +40,7 @@ module ImportService
     end
 
     def validate_headers(headers)
-      required = %w[name category product_type buying_price selling_price stock unit_type]
+      required = %w[name category cost_price selling_price stock unit_type]
       missing = required - headers
       raise "Missing required headers: #{missing.join(', ')}" if missing.any?
     end
@@ -60,13 +60,6 @@ module ImportService
         return
       end
 
-      product_type = row['product_type'].to_s.strip
-      unless Product::PRODUCT_TYPES.map(&:last).include?(product_type)
-        @errors << "Row #{row_number}: invalid product_type '#{product_type}'. Must be one of: #{Product::PRODUCT_TYPES.map(&:last).join(', ')}"
-        @skipped_count += 1
-        return
-      end
-
       unit_type = row['unit_type'].to_s.strip
       unless Product::UNIT_TYPES.map(&:last).include?(unit_type)
         @errors << "Row #{row_number}: invalid unit_type '#{unit_type}'. Must be one of: #{Product::UNIT_TYPES.map(&:last).join(', ')}"
@@ -77,11 +70,11 @@ module ImportService
       product = Product.new(
         name:                    name,
         category:                category,
-        product_type:            product_type,
         status:                  parse_status(row['status']),
         description:             row['description'].to_s.strip,
         is_subscription_enabled: parse_bool(row['is_subscription_enabled']),
-        buying_price:            row['buying_price'].to_s.strip.presence,
+        buying_price:            row['cost_price'].to_s.strip.presence,
+        purchase_price:          row['purchase_price'].to_s.strip.presence,
         price:                   row['selling_price'].to_s.strip.presence,
         stock:                   row['stock'].to_s.strip.to_i,
         unit_type:               unit_type,

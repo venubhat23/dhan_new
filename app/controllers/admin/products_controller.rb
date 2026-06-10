@@ -1,7 +1,7 @@
 class Admin::ProductsController < Admin::ApplicationController
   include LocationHelper
 
-  before_action :set_product, only: [:show, :edit, :update, :destroy, :toggle_status, :detail]
+  before_action :set_product, only: [:show, :edit, :update, :destroy, :toggle_status, :detail, :dependencies]
   before_action :authenticate_user!
 
   def index
@@ -106,15 +106,44 @@ class Admin::ProductsController < Admin::ApplicationController
     end
   end
 
+  def dependencies
+    booking_items_count  = @product.booking_items.count
+    order_items_count    = @product.order_items.count rescue 0
+    invoice_items_count  = InvoiceItem.where(product_id: @product.id).count rescue 0
+
+    bookings  = @product.bookings.order(created_at: :desc).limit(5)
+                        .pluck(:booking_number, :created_at, :total_amount) rescue []
+    invoices  = Invoice.joins(:invoice_items)
+                       .where(invoice_items: { product_id: @product.id })
+                       .order(created_at: :desc).limit(5)
+                       .pluck(:invoice_number, :created_at, :total_amount) rescue []
+
+    render json: {
+      booking_items_count:  booking_items_count,
+      order_items_count:    order_items_count,
+      invoice_items_count:  invoice_items_count,
+      bookings_count:       @product.bookings.count,
+      orders_count:         @product.orders.count rescue 0,
+      invoices_count:       Invoice.joins(:invoice_items)
+                                   .where(invoice_items: { product_id: @product.id }).count rescue 0,
+      sample_bookings:      bookings.map { |n, d, a| { number: n, date: d&.strftime('%d %b %Y'), amount: a } },
+      sample_invoices:      invoices.map { |n, d, a| { number: n, date: d&.strftime('%d %b %Y'), amount: a } }
+    }
+  end
+
   def destroy
     product_name = @product.name
 
-    # Preserve historical booking/order records — clear product reference instead of deleting
-    @product.booking_items.update_all(product_id: nil)
-    @product.order_items.update_all(product_id: nil) if @product.respond_to?(:order_items)
+    ActiveRecord::Base.transaction do
+      # Delete all dependent records not covered by dependent: :destroy
+      @product.booking_items.destroy_all
+      @product.order_items.destroy_all rescue nil
+      InvoiceItem.where(product_id: @product.id).destroy_all rescue nil
 
-    @product.destroy!
-    redirect_to admin_products_path, notice: "Product '#{product_name}' was deleted successfully."
+      @product.destroy!
+    end
+
+    redirect_to admin_products_path, notice: "Product '#{product_name}' and all associated data were deleted successfully."
   rescue => e
     redirect_to admin_products_path, alert: "Could not delete product: #{e.message}"
   end
@@ -178,8 +207,9 @@ class Admin::ProductsController < Admin::ApplicationController
       products = Product.where(id: params[:product_ids])
       count = products.count
       products.each do |product|
-        product.booking_items.update_all(product_id: nil)
-        product.order_items.update_all(product_id: nil) if product.respond_to?(:order_items)
+        product.booking_items.destroy_all
+        product.order_items.destroy_all rescue nil
+        InvoiceItem.where(product_id: product.id).destroy_all rescue nil
         product.destroy!
       end
       message = "#{count} product(s) deleted successfully"
@@ -600,7 +630,7 @@ class Admin::ProductsController < Admin::ApplicationController
     params.require(:product).permit(
       :name, :description, :category_id, :price, :discount_price, :stock, :initial_stock,
       :status, :sku, :hsn_code, :weight, :dimensions, :meta_title, :meta_description, :tags,
-      :buying_price, :discount_type, :discount_value, :original_price, :discount_amount, :is_discounted,
+      :buying_price, :purchase_price, :discount_type, :discount_value, :original_price, :discount_amount, :is_discounted,
       :product_type, :unit_type, :is_subscription_enabled,
       :is_occasional_product, :occasional_start_date, :occasional_end_date, :occasional_description, :occasional_auto_hide,
       :occasional_schedule_type, :occasional_recurring_from_day, :occasional_recurring_from_time,

@@ -611,17 +611,17 @@ class Admin::ImportsController < Admin::ApplicationController
 
   def send_simple_product_template
     headers = [
-      'name*', 'category*', 'product_type*', 'status',
+      'name*', 'category*', 'status',
       'description', 'is_subscription_enabled',
-      'buying_price*', 'selling_price*', 'stock*', 'unit_type*', 'weight', 'dimensions',
+      'cost_price*', 'purchase_price*', 'selling_price*', 'stock*', 'unit_type*', 'weight', 'dimensions',
       'is_discounted', 'discount_type', 'discount_value',
       'gst_enabled', 'gst_percentage', 'hsn_code',
       'is_occasional_product'
     ]
     sample_data = [
-      ['Honey', 'Grocery', 'Grocery', 'active', 'Pure natural honey', 'false', '80', '120', '50', 'Bottle', '0.5', '', 'false', '', '', 'false', '', '', 'false'],
-      ['Cow Milk', 'Dairy', 'Milk', 'active', 'Fresh cow milk 1L', 'true', '40', '60', '100', 'Liter', '1.0', '', 'false', '', '', 'true', '5', '0401', 'false'],
-      ['Basmati Rice', 'Grocery', 'Grocery', 'active', 'Premium basmati rice', 'false', '85', '120', '200', 'Kg', '1.0', '', 'true', 'percentage', '5', 'true', '5', '1006', 'false']
+      ['Honey', 'Grocery', 'active', 'Pure natural honey', 'false', '80', '75', '120', '50', 'Bottle', '0.5', '', 'false', '', '', 'false', '', '', 'false'],
+      ['Cow Milk', 'Dairy', 'active', 'Fresh cow milk 1L', 'true', '40', '38', '60', '100', 'Liter', '1.0', '', 'false', '', '', 'true', '5', '0401', 'false'],
+      ['Basmati Rice', 'Grocery', 'active', 'Premium basmati rice', 'false', '85', '80', '120', '200', 'Kg', '1.0', '', 'true', 'percentage', '5', 'true', '5', '1006', 'false']
     ]
     csv_data = CSV.generate(headers: true) { |csv| csv << headers; sample_data.each { |r| csv << r } }
     send_data csv_data, filename: 'products_simple_import_template.csv', type: 'text/csv'
