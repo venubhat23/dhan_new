@@ -451,6 +451,143 @@
       </ul>
     </div>
 
+    <!-- Master Data Section -->
+    <% if current_user.has_sidebar_permission?('customers') || current_user.has_sidebar_permission?('categories') || current_user.has_sidebar_permission?('products') || current_user.has_sidebar_permission?('coupons') || current_user.has_sidebar_permission?('customer_wallets') || current_user.has_sidebar_permission?('franchises') || current_user.has_sidebar_permission?('affiliates') %>
+    <div class="nav-section">
+      <div class="nav-section-title">Master Data</div>
+      <ul class="nav-menu">
+        <!-- Customers -->
+        <% if current_user.has_sidebar_permission?('customers') %>
+          <li class="nav-item">
+            <%= link_to admin_customers_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/customers')}" do %>
+              <div class="nav-icon-modern">
+                <div class="icon-bg gradient-green">
+                  <i class="bi bi-people-fill"></i>
+                </div>
+              </div>
+              <span class="nav-text">Customers</span>
+              <div class="nav-indicator"></div>
+            <% end %>
+          </li>
+        <% end %>
+
+        <!-- Referrals -->
+        <% if current_user.has_sidebar_permission?('referrals') || current_user.user_type == 'admin' || current_user.user_type == 'super_admin' %>
+          <li class="nav-item dropdown-menu-item">
+            <a href="#" class="nav-link-modern dropdown-toggle #{'active' if request.path.include?('/admin/referrals')}" data-bs-toggle="collapse" data-bs-target="#referralsSubmenu" aria-expanded="false">
+              <div class="nav-icon-modern">
+                <div class="icon-bg gradient-purple">
+                  <i class="bi bi-share-fill"></i>
+                </div>
+              </div>
+              <span class="nav-text">Referrals</span>
+              <span class="dropdown-arrow ms-auto">
+                <i class="bi bi-chevron-down"></i>
+              </span>
+            </a>
+            <div class="submenu collapse" id="referralsSubmenu">
+              <ul class="submenu-list">
+                <li>
+                  <%= link_to admin_referrals_path, class: "submenu-link #{'active' if current_page?(admin_referrals_path)}" do %>
+                    <span class="submenu-bullet">•</span>
+                    <span>All Referrals</span>
+                  <% end %>
+                </li>
+                <li>
+                  <%= link_to affiliate_referrals_admin_referrals_path, class: "submenu-link #{'active' if request.path.include?('/admin/referrals/affiliate_referrals')}" do %>
+                    <span class="submenu-bullet">•</span>
+                    <span>Affiliate Referrals</span>
+                  <% end %>
+                </li>
+                <li>
+                  <%= link_to analytics_admin_referrals_path, class: "submenu-link #{'active' if request.path.include?('/admin/referrals/analytics')}" do %>
+                    <span class="submenu-bullet">•</span>
+                    <span>Analytics</span>
+                  <% end %>
+                </li>
+              </ul>
+            </div>
+          </li>
+        <% end %>
+
+        <!-- Categories -->
+        <% if current_user.has_sidebar_permission?('categories') %>
+          <li class="nav-item">
+            <%= link_to admin_categories_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/categories')}" do %>
+              <div class="nav-icon-modern">
+                <div class="icon-bg gradient-amber">
+                  <i class="bi bi-tags-fill"></i>
+                </div>
+              </div>
+              <span class="nav-text">Categories</span>
+              <div class="nav-indicator"></div>
+            <% end %>
+          </li>
+        <% end %>
+
+        <!-- Products -->
+        <% if current_user.has_sidebar_permission?('products') %>
+          <li class="nav-item">
+            <%= link_to admin_products_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/products')}" do %>
+              <div class="nav-icon-modern">
+                <div class="icon-bg gradient-sky">
+                  <i class="bi bi-box-seam-fill"></i>
+                </div>
+              </div>
+              <span class="nav-text">Products</span>
+              <div class="nav-indicator"></div>
+            <% end %>
+          </li>
+        <% end %>
+
+        <!-- QR Codes -->
+        <% if current_user.has_sidebar_permission?('products') %>
+          <li class="nav-item">
+            <%= link_to admin_qr_codes_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/qr_codes')}" do %>
+              <div class="nav-icon-modern">
+                <div class="icon-bg" style="background: linear-gradient(135deg, #f3e5f5, #ce93d8);">
+                  <i class="bi bi-qr-code" style="color: #7b1fa2;"></i>
+                </div>
+              </div>
+              <span class="nav-text">QR Codes</span>
+              <div class="nav-indicator"></div>
+            <% end %>
+          </li>
+        <% end %>
+
+        <!-- Franchise -->
+        <% if current_user.has_sidebar_permission?('franchises') %>
+          <li class="nav-item">
+            <%= link_to admin_franchises_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/franchises')}" do %>
+              <div class="nav-icon-modern">
+                <div class="icon-bg gradient-indigo">
+                  <i class="bi bi-shop"></i>
+                </div>
+              </div>
+              <span class="nav-text">Franchise</span>
+              <div class="nav-indicator"></div>
+            <% end %>
+          </li>
+        <% end %>
+
+        <!-- Affiliate -->
+        <% if current_user.has_sidebar_permission?('affiliates') %>
+          <li class="nav-item">
+            <%= link_to admin_affiliates_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/affiliates')}" do %>
+              <div class="nav-icon-modern">
+                <div class="icon-bg gradient-purple">
+                  <i class="bi bi-person-badge"></i>
+                </div>
+              </div>
+              <span class="nav-text">Affiliate</span>
+              <div class="nav-indicator"></div>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+    <% end %>
+
     <!-- Bookings Section -->
     <div class="nav-section">
       <div class="nav-section-title">Sales</div>
@@ -743,162 +880,6 @@
           </div>
         </li>
         <% end %>
-      </ul>
-    </div>
-    <% end %>
-
-    <!-- Master Data Section -->
-    <% if current_user.has_sidebar_permission?('customers') || current_user.has_sidebar_permission?('categories') || current_user.has_sidebar_permission?('products') || current_user.has_sidebar_permission?('coupons') || current_user.has_sidebar_permission?('customer_wallets') || current_user.has_sidebar_permission?('franchises') || current_user.has_sidebar_permission?('affiliates') %>
-    <div class="nav-section">
-      <div class="nav-section-title">Master Data</div>
-      <ul class="nav-menu">
-        <!-- Customers -->
-        <% if current_user.has_sidebar_permission?('customers') %>
-          <li class="nav-item">
-            <%= link_to admin_customers_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/customers')}" do %>
-              <div class="nav-icon-modern">
-                <div class="icon-bg gradient-green">
-                  <i class="bi bi-people-fill"></i>
-                </div>
-              </div>
-              <span class="nav-text">Customers</span>
-              <div class="nav-indicator"></div>
-            <% end %>
-          </li>
-        <% end %>
-
-        <!-- Referrals -->
-        <% if current_user.has_sidebar_permission?('referrals') || current_user.user_type == 'admin' || current_user.user_type == 'super_admin' %>
-          <li class="nav-item dropdown-menu-item">
-            <a href="#" class="nav-link-modern dropdown-toggle #{'active' if request.path.include?('/admin/referrals')}" data-bs-toggle="collapse" data-bs-target="#referralsSubmenu" aria-expanded="false">
-              <div class="nav-icon-modern">
-                <div class="icon-bg gradient-purple">
-                  <i class="bi bi-share-fill"></i>
-                </div>
-              </div>
-              <span class="nav-text">Referrals</span>
-              <span class="dropdown-arrow ms-auto">
-                <i class="bi bi-chevron-down"></i>
-              </span>
-            </a>
-            <div class="submenu collapse" id="referralsSubmenu">
-              <ul class="submenu-list">
-                <li>
-                  <%= link_to admin_referrals_path, class: "submenu-link #{'active' if current_page?(admin_referrals_path)}" do %>
-                    <span class="submenu-bullet">•</span>
-                    <span>All Referrals</span>
-                  <% end %>
-                </li>
-                <li>
-                  <%= link_to affiliate_referrals_admin_referrals_path, class: "submenu-link #{'active' if request.path.include?('/admin/referrals/affiliate_referrals')}" do %>
-                    <span class="submenu-bullet">•</span>
-                    <span>Affiliate Referrals</span>
-                  <% end %>
-                </li>
-                <li>
-                  <%= link_to analytics_admin_referrals_path, class: "submenu-link #{'active' if request.path.include?('/admin/referrals/analytics')}" do %>
-                    <span class="submenu-bullet">•</span>
-                    <span>Analytics</span>
-                  <% end %>
-                </li>
-              </ul>
-            </div>
-          </li>
-        <% end %>
-
-        <!-- Categories -->
-        <% if current_user.has_sidebar_permission?('categories') %>
-          <li class="nav-item">
-            <%= link_to admin_categories_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/categories')}" do %>
-              <div class="nav-icon-modern">
-                <div class="icon-bg gradient-amber">
-                  <i class="bi bi-tags-fill"></i>
-                </div>
-              </div>
-              <span class="nav-text">Categories</span>
-              <div class="nav-indicator"></div>
-            <% end %>
-          </li>
-        <% end %>
-
-        <!-- Products -->
-        <% if current_user.has_sidebar_permission?('products') %>
-          <li class="nav-item">
-            <%= link_to admin_products_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/products')}" do %>
-              <div class="nav-icon-modern">
-                <div class="icon-bg gradient-sky">
-                  <i class="bi bi-box-seam-fill"></i>
-                </div>
-              </div>
-              <span class="nav-text">Products</span>
-              <div class="nav-indicator"></div>
-            <% end %>
-          </li>
-        <% end %>
-
-        <!-- QR Codes -->
-        <% if current_user.has_sidebar_permission?('products') %>
-          <li class="nav-item">
-            <%= link_to admin_qr_codes_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/qr_codes')}" do %>
-              <div class="nav-icon-modern">
-                <div class="icon-bg" style="background: linear-gradient(135deg, #f3e5f5, #ce93d8);">
-                  <i class="bi bi-qr-code" style="color: #7b1fa2;"></i>
-                </div>
-              </div>
-              <span class="nav-text">QR Codes</span>
-              <div class="nav-indicator"></div>
-            <% end %>
-          </li>
-        <% end %>
-
-        <!-- Coupons -->
-        <!-- Customer Wallets -->
-
-        <!-- Franchise -->
-        <% if current_user.has_sidebar_permission?('franchises') %>
-          <li class="nav-item">
-            <%= link_to admin_franchises_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/franchises')}" do %>
-              <div class="nav-icon-modern">
-                <div class="icon-bg gradient-indigo">
-                  <i class="bi bi-shop"></i>
-                </div>
-              </div>
-              <span class="nav-text">Franchise</span>
-              <div class="nav-indicator"></div>
-            <% end %>
-          </li>
-        <% end %>
-
-        <!-- Affiliate -->
-        <% if current_user.has_sidebar_permission?('affiliates') %>
-          <li class="nav-item">
-            <%= link_to admin_affiliates_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/affiliates')}" do %>
-              <div class="nav-icon-modern">
-                <div class="icon-bg gradient-purple">
-                  <i class="bi bi-person-badge"></i>
-                </div>
-              </div>
-              <span class="nav-text">Affiliate</span>
-              <div class="nav-indicator"></div>
-            <% end %>
-          </li>
-        <% end %>
-
-        <!-- Subscription Templates -->
-        <%# TODO: Uncomment when SubscriptionTemplatesController is created %>
-        <%# if current_user.has_sidebar_permission?('subscription_templates') %>
-          <%# <li class="nav-item"> %>
-            <%#= link_to admin_subscription_templates_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/subscription_templates')}" do %>
-              <%# <div class="nav-icon-modern"> %>
-                <%# <div class="icon-bg gradient-teal"> %>
-                  <%# <i class="bi bi-clipboard-data"></i> %>
-                <%# </div> %>
-              <%# </div> %>
-              <%# <span class="nav-text">Subscription Templates</span> %>
-              <%# <div class="nav-indicator"></div>
-            <%# end %>
-          <%# </li> %>
-        <%# end %>
       </ul>
     </div>
     <% end %>

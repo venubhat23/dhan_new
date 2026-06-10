@@ -1,58 +1,8 @@
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteProductModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title text-danger">
-          <i class="bi bi-exclamation-triangle-fill me-2"></i>Delete Product
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p class="mb-3">You are about to permanently delete <strong id="deleteProductName"></strong>.</p>
-
-        <div id="deleteDepLoading" class="text-center py-3">
-          <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
-          <span class="text-muted small">Checking associated records…</span>
-        </div>
-
-        <div id="deleteDepContent" class="d-none">
-          <div id="deleteDepNone" class="d-none">
-            <div class="alert alert-success border-0 py-2 mb-3">
-              <i class="bi bi-check-circle me-2"></i>No associated records found. Safe to delete.
-            </div>
-          </div>
-          <div id="deleteDepWarning" class="d-none">
-            <div class="alert alert-warning border-0 py-2 mb-3">
-              <i class="bi bi-exclamation-triangle me-2"></i>
-              <strong>The following associated records will also be permanently deleted:</strong>
-            </div>
-            <ul class="list-group list-group-flush mb-3" id="deleteDepList"></ul>
-            <div id="deleteDepBookings" class="d-none mb-3">
-              <p class="small fw-semibold text-muted mb-1">Linked Bookings (up to 5):</p>
-              <ul class="list-unstyled small" id="deleteDepBookingList"></ul>
-            </div>
-            <div id="deleteDepInvoices" class="d-none mb-3">
-              <p class="small fw-semibold text-muted mb-1">Linked Invoices (up to 5):</p>
-              <ul class="list-unstyled small" id="deleteDepInvoiceList"></ul>
-            </div>
-          </div>
-        </div>
-
-        <p class="text-danger small mb-0"><i class="bi bi-exclamation-circle me-1"></i>This action cannot be undone.</p>
-      </div>
-      <div class="modal-footer border-0 pt-0">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <%= form_with url: "#", method: :delete, id: "deleteProductForm", local: false, data: { turbo: false } do |f| %>
-          <%= hidden_field_tag :_method, "delete" %>
-          <button type="submit" class="btn btn-danger" id="deleteProductConfirmBtn" disabled>
-            <i class="bi bi-trash me-1"></i>Yes, Delete Everything
-          </button>
-        <% end %>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Hidden delete form — reused for all product deletes -->
+<form id="deleteProductForm" method="post" style="display:none">
+  <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+  <%= hidden_field_tag :_method, "delete" %>
+</form>
 
 <!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -133,111 +83,15 @@
 </div>
 
 <script>
-function openDeleteModal(productId, productName, depsUrl, deleteUrl) {
-  // Reset modal state
-  document.getElementById('deleteProductName').textContent = productName;
-  document.getElementById('deleteDepLoading').classList.remove('d-none');
-  document.getElementById('deleteDepContent').classList.add('d-none');
-  document.getElementById('deleteDepNone').classList.add('d-none');
-  document.getElementById('deleteDepWarning').classList.add('d-none');
-  document.getElementById('deleteDepList').innerHTML = '';
-  document.getElementById('deleteDepBookings').classList.add('d-none');
-  document.getElementById('deleteDepInvoices').classList.add('d-none');
-  document.getElementById('deleteProductConfirmBtn').disabled = true;
-
-  // Set form action to the real delete URL
-  var form = document.getElementById('deleteProductForm');
-  form.action = deleteUrl;
-
-  // Open modal
-  var modal = new bootstrap.Modal(document.getElementById('deleteProductModal'));
-  modal.show();
-
-  // Fetch dependency info
-  fetch(depsUrl, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      document.getElementById('deleteDepLoading').classList.add('d-none');
-      document.getElementById('deleteDepContent').classList.remove('d-none');
-
-      var hasData = data.bookings_count > 0 || data.orders_count > 0 || data.invoices_count > 0;
-
-      if (!hasData) {
-        document.getElementById('deleteDepNone').classList.remove('d-none');
-      } else {
-        document.getElementById('deleteDepWarning').classList.remove('d-none');
-        var list = document.getElementById('deleteDepList');
-
-        if (data.bookings_count > 0) {
-          list.innerHTML += '<li class="list-group-item d-flex justify-content-between align-items-center px-0 py-1"><span><i class="bi bi-cart-check me-2 text-warning"></i>Booking line items</span><span class="badge bg-warning text-dark">' + data.bookings_count + ' booking(s)</span></li>';
-        }
-        if (data.orders_count > 0) {
-          list.innerHTML += '<li class="list-group-item d-flex justify-content-between align-items-center px-0 py-1"><span><i class="bi bi-bag me-2 text-info"></i>Order line items</span><span class="badge bg-info text-dark">' + data.orders_count + ' order(s)</span></li>';
-        }
-        if (data.invoices_count > 0) {
-          list.innerHTML += '<li class="list-group-item d-flex justify-content-between align-items-center px-0 py-1"><span><i class="bi bi-receipt me-2 text-secondary"></i>Invoice line items</span><span class="badge bg-secondary">' + data.invoices_count + ' invoice(s)</span></li>';
-        }
-
-        if (data.sample_bookings && data.sample_bookings.length > 0) {
-          document.getElementById('deleteDepBookings').classList.remove('d-none');
-          var blist = document.getElementById('deleteDepBookingList');
-          data.sample_bookings.forEach(function(b) {
-            blist.innerHTML += '<li class="text-muted"><i class="bi bi-dot"></i>' + (b.number || 'N/A') + ' &mdash; ' + (b.date || '') + (b.amount ? ' &mdash; ₹' + Number(b.amount).toLocaleString('en-IN') : '') + '</li>';
-          });
-          if (data.bookings_count > 5) {
-            blist.innerHTML += '<li class="text-muted fst-italic">… and ' + (data.bookings_count - 5) + ' more</li>';
-          }
-        }
-
-        if (data.sample_invoices && data.sample_invoices.length > 0) {
-          document.getElementById('deleteDepInvoices').classList.remove('d-none');
-          var ilist = document.getElementById('deleteDepInvoiceList');
-          data.sample_invoices.forEach(function(inv) {
-            ilist.innerHTML += '<li class="text-muted"><i class="bi bi-dot"></i>' + (inv.number || 'N/A') + ' &mdash; ' + (inv.date || '') + (inv.amount ? ' &mdash; ₹' + Number(inv.amount).toLocaleString('en-IN') : '') + '</li>';
-          });
-          if (data.invoices_count > 5) {
-            ilist.innerHTML += '<li class="text-muted fst-italic">… and ' + (data.invoices_count - 5) + ' more</li>';
-          }
-        }
-      }
-
-      document.getElementById('deleteProductConfirmBtn').disabled = false;
-    })
-    .catch(function() {
-      document.getElementById('deleteDepLoading').classList.add('d-none');
-      document.getElementById('deleteDepContent').classList.remove('d-none');
-      document.getElementById('deleteDepNone').classList.remove('d-none');
-      document.getElementById('deleteProductConfirmBtn').disabled = false;
-    });
+function confirmDeleteProduct(productName, deleteUrl) {
+  if (confirm('Delete "' + productName + '"?\n\nThis will permanently remove the product and all associated data. This cannot be undone.')) {
+    var form = document.getElementById('deleteProductForm');
+    form.action = deleteUrl;
+    form.submit();
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Wire up delete form to submit as DELETE via hidden _method field
-  var deleteForm = document.getElementById('deleteProductForm');
-  if (deleteForm) {
-    deleteForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      var url = this.action;
-      var token = document.querySelector('meta[name="csrf-token"]')?.content;
-      var btn = document.getElementById('deleteProductConfirmBtn');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Deleting…';
-
-      fetch(url, {
-        method: 'DELETE',
-        headers: {
-          'X-CSRF-Token': token,
-          'Accept': 'text/html,application/xhtml+xml',
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      }).then(function(r) {
-        window.location.href = r.redirected ? r.url : '<%= admin_products_path %>';
-      }).catch(function() {
-        window.location.reload();
-      });
-    });
-  }
-
   // Search functionality
   const searchInput = document.getElementById('searchInput');
   const tableRows = document.querySelectorAll('tbody tr');
@@ -501,7 +355,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <li>
                           <button type="button"
                                   class="dropdown-item text-danger"
-                                  onclick="openDeleteModal(<%= product.id %>, '<%= j(product.name) %>', '<%= dependencies_admin_product_path(product) %>', '<%= admin_product_path(product) %>')">
+                                  onclick="confirmDeleteProduct('<%= j(product.name) %>', '<%= admin_product_path(product) %>')">
                             <i class="bi bi-trash me-2"></i>
                             Delete Product
                           </button>
