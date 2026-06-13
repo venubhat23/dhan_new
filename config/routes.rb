@@ -170,6 +170,10 @@ Rails.application.routes.draw do
 
     resources :customers do
       resources :documents, except: [:edit, :update]
+      collection do
+        get :quick_new
+        post :quick_create
+      end
     end
     resources :payouts do
       member do

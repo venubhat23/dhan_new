@@ -730,6 +730,56 @@ class Admin::CustomersController < Admin::ApplicationController
     ]
   end
 
+  # GET /admin/customers/quick_new
+  def quick_new
+    @customer = Customer.new
+  end
+
+  # POST /admin/customers/quick_create
+  def quick_create
+    @customer = Customer.new
+    @customer.first_name = params[:customer][:first_name].to_s.strip
+    @customer.mobile = params[:customer][:mobile].to_s.strip
+    @customer.email = params[:customer][:email].to_s.strip.presence
+
+    # Generate password: first 4 digits of mobile + @123
+    mobile_digits = @customer.mobile.gsub(/\D/, '')
+    generated_password = "#{mobile_digits[0..3]}@123"
+    @customer.password = generated_password
+    @customer.password_confirmation = generated_password
+
+    if @customer.save
+      # Create User account for mobile login
+      begin
+        if @customer.email.present?
+          User.create!(
+            first_name: @customer.first_name,
+            last_name: @customer.last_name || '',
+            email: @customer.email,
+            mobile: @customer.mobile,
+            password: generated_password,
+            password_confirmation: generated_password,
+            user_type: 'customer',
+            city: 'Unknown',
+            state: 'Unknown',
+            pincode: '000000',
+            country: 'India',
+            status: true,
+            is_active: true,
+            is_verified: false
+          )
+        end
+      rescue => e
+        Rails.logger.warn "Could not create user account for quick customer: #{e.message}"
+      end
+
+      redirect_to new_admin_booking_path(customer_id: @customer.id),
+                  notice: "Customer created! Mobile login password: #{generated_password}. Now complete the booking."
+    else
+      render :quick_new, status: :unprocessable_entity
+    end
+  end
+
   # POST /admin/customers/:id/generate_password
   def generate_password
     begin

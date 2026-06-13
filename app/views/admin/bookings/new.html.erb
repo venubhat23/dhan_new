@@ -114,18 +114,18 @@
   <div class="card border-0 shadow-sm">
     <div class="card-body pt-3">
       <% if @products&.any? %>
-        <div class="row g-3" id="productGrid">
+        <div class="row g-2" id="productGrid">
           <% @products.each do |product| %>
             <% current_stock = product.cached_total_batch_stock %>
-            <div class="col-md-4 col-lg-3 product-grid-item" data-product-id="<%= product.id %>" data-category="<%= product.category_id %>" data-stock="<%= current_stock %>">
+            <div class="col-6 col-md-4 col-lg-3 product-grid-item" data-product-id="<%= product.id %>" data-category="<%= product.category_id %>" data-stock="<%= current_stock %>">
               <div class="card h-100 border-0 shadow-sm hover-lift">
                 <%# Product Image %>
                 <div class="position-relative">
                   <% if product.images_attached? && product.images.any? %>
-                    <%= image_tag product.images.first, class: "card-img-top", style: "height: 200px; object-fit: cover;" %>
+                    <%= image_tag product.images.first, class: "card-img-top", style: "height: 130px; object-fit: cover;" %>
                   <% else %>
-                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
-                      <i class="bi bi-box-seam fs-1 text-muted"></i>
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 130px;">
+                      <i class="bi bi-box-seam fs-3 text-muted"></i>
                     </div>
                   <% end %>
 
@@ -152,24 +152,22 @@
                 </div>
 
                 <%# Product Details %>
-                <div class="card-body d-flex flex-column">
-                  <div class="d-flex justify-content-between align-items-start mb-2">
-                    <small class="text-muted"><%= product.category&.name || 'No Category' %></small>
-                    <div class="d-flex align-items-center gap-1">
-                      <small class="text-muted">SKU: <%= product.sku %></small>
-                      <%= link_to edit_admin_product_path(product),
-                          class: "btn btn-sm btn-outline-secondary ms-1",
-                          title: "Edit Product Details",
-                          target: "_blank" do %>
-                        <i class="bi bi-pencil-square"></i>
-                      <% end %>
-                    </div>
+                <div class="card-body d-flex flex-column p-2">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted" style="font-size:0.7rem;"><%= product.category&.name || 'No Category' %></small>
+                    <%= link_to edit_admin_product_path(product),
+                        class: "btn btn-sm btn-outline-secondary p-0 px-1",
+                        style: "font-size:0.7rem;",
+                        title: "Edit",
+                        target: "_blank" do %>
+                      <i class="bi bi-pencil-square"></i>
+                    <% end %>
                   </div>
 
-                  <h6 class="card-title mb-2" style="min-height: 48px;"><%= product.name %></h6>
+                  <h6 class="card-title mb-1" style="min-height: 36px; font-size: 0.85rem; line-height: 1.3;"><%= product.name %></h6>
 
                   <%# Price %>
-                  <div class="mb-3">
+                  <div class="mb-2">
                     <%
                       if product.has_multiple_quantities? && product.product_variants.any?
                         default_v = product.default_variant || product.product_variants.ordered.first
@@ -240,23 +238,21 @@
                       current_stock
                     end
                   %>
-                  <div class="mt-3" id="booking-stock-section-<%= product.id %>">
+                  <div class="mt-auto" id="booking-stock-section-<%= product.id %>">
                     <% if effective_stock > 0 %>
                       <!-- Quantity Selector -->
-                      <div class="mb-3">
-                        <label class="form-label fw-bold small">
-                          Quantity
-                          <span class="badge bg-info-subtle text-info ms-1" id="booking-max-stock-<%= product.id %>">
-                            Max: <%= effective_stock.to_i %>
-                          </span>
-                        </label>
-                        <div class="input-group">
-                          <button class="btn btn-outline-primary" type="button" onclick="decreaseQuantity(<%= product.id %>)" style="width: 45px; height: 45px; border-radius: 8px 0 0 8px;">
-                            <i class="bi bi-dash fw-bold"></i>
+                      <div class="mb-2">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                          <label class="form-label fw-semibold small mb-0">Qty</label>
+                          <span class="badge bg-info-subtle text-info" style="font-size:0.7rem;" id="booking-max-stock-<%= product.id %>">Max: <%= effective_stock.to_i %></span>
+                        </div>
+                        <div class="input-group input-group-sm">
+                          <button class="btn btn-outline-primary btn-sm px-2" type="button" onclick="decreaseQuantity(<%= product.id %>)">
+                            <i class="bi bi-dash"></i>
                           </button>
-                          <input type="number" id="qty-<%= product.id %>" value="1" min="0.1" step="0.1" max="<%= effective_stock %>" class="form-control text-center fw-bold" style="height: 45px; font-size: 1.1rem;" onchange="validateQuantity(<%= product.id %>, <%= effective_stock %>)">
-                          <button class="btn btn-outline-primary" type="button" onclick="increaseQuantity(<%= product.id %>)" style="width: 45px; height: 45px; border-radius: 0 8px 8px 0;">
-                            <i class="bi bi-plus fw-bold"></i>
+                          <input type="number" id="qty-<%= product.id %>" value="1" min="0.1" step="0.1" max="<%= effective_stock %>" class="form-control form-control-sm text-center fw-bold" onchange="validateQuantity(<%= product.id %>, <%= effective_stock %>)">
+                          <button class="btn btn-outline-primary btn-sm px-2" type="button" onclick="increaseQuantity(<%= product.id %>)">
+                            <i class="bi bi-plus"></i>
                           </button>
                         </div>
 
@@ -274,7 +270,7 @@
                         cart_base_price = rounded_base
                         cart_gst_rate = gst_rate
                       %>
-                      <button class="btn btn-primary w-100"
+                      <button class="btn btn-primary btn-sm w-100"
                               id="booking-add-btn-<%= product.id %>"
                               onclick="bookingAddToCart(<%= product.id %>, '<%= j(product.name) %>', <%= cart_final_price %>, <%= effective_stock %>, <%= cart_base_price %>, <%= cart_gst_rate %>)"
                               data-base-price="<%= cart_base_price %>"
@@ -282,14 +278,13 @@
                               data-final-price="<%= cart_final_price %>"
                               data-has-variants="<%= product.has_multiple_quantities? ? 'true' : 'false' %>"
                               <%= 'disabled' if effective_stock <= 0 %>>
-                        <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                        <i class="bi bi-cart-plus me-1"></i>Add to Cart
                       </button>
                     <% else %>
                       <div class="text-center">
-                        <button class="btn btn-danger w-100" disabled>
-                          <i class="bi bi-x-circle me-2"></i>SOLD OUT
+                        <button class="btn btn-danger btn-sm w-100" disabled>
+                          <i class="bi bi-x-circle me-1"></i>Out of Stock
                         </button>
-                        <small class="text-muted mt-1 d-block">Product is currently out of stock</small>
                       </div>
                     <% end %>
                   </div>
@@ -338,6 +333,13 @@
             <div class="mb-4">
               <h6 class="mb-3"><i class="bi bi-person me-2"></i>Customer Information</h6>
 
+              <% if @preselected_customer %>
+                <div class="alert alert-success border-0 mb-3 d-flex align-items-center py-2">
+                  <i class="bi bi-person-check-fill me-2"></i>
+                  <strong>Customer auto-loaded:</strong>&nbsp;<%= @preselected_customer.display_name %> (<%= @preselected_customer.mobile %>)
+                </div>
+              <% end %>
+
               <div class="row g-3">
                 <div class="col-md-4">
                   <label class="form-label">
@@ -345,7 +347,7 @@
                   </label>
                   <div class="position-relative">
                     <!-- Hidden input for form submission -->
-                    <%= f.hidden_field :customer_id, id: 'selected_customer_id' %>
+                    <%= f.hidden_field :customer_id, id: 'selected_customer_id', value: @preselected_customer&.id %>
 
                     <!-- Search input with icon wrapper -->
                     <div class="customer-search-wrapper">
@@ -354,7 +356,8 @@
                              class="form-control customer-search-input"
                              id="customerSearchInput"
                              placeholder="Search by name, phone, or email..."
-                             autocomplete="off">
+                             autocomplete="off"
+                             style="<%= @preselected_customer ? 'display:none;' : '' %>">
                     </div>
 
                     <!-- Search results dropdown -->
@@ -370,11 +373,20 @@
                     </div>
 
                     <!-- Selected customer display -->
-                    <div class="selected-customer-display" id="selectedCustomerDisplay" style="display: none;">
+                    <div class="selected-customer-display" id="selectedCustomerDisplay" style="<%= @preselected_customer ? 'display:block;' : 'display:none;' %>">
                       <div class="d-flex align-items-center justify-content-between">
                         <div class="customer-info">
-                          <div class="customer-name fw-medium"></div>
-                          <div class="customer-details text-muted small"></div>
+                          <div class="customer-name fw-medium"><%= @preselected_customer&.display_name %></div>
+                          <div class="customer-details text-muted small">
+                            <% if @preselected_customer %>
+                              <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-primary-subtle text-primary"><i class="bi bi-telephone me-1"></i><%= @preselected_customer.mobile %></span>
+                                <% if @preselected_customer.email.present? %>
+                                  <span class="badge bg-success-subtle text-success"><i class="bi bi-envelope me-1"></i><%= @preselected_customer.email %></span>
+                                <% end %>
+                              </div>
+                            <% end %>
+                          </div>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearSelectedCustomer()">
                           <i class="bi bi-x"></i>
@@ -1761,6 +1773,27 @@ document.addEventListener('DOMContentLoaded', function() {
   setupSearch();
   initializeCustomerSearch();
 
+  // Auto-select preloaded customer from quick customer creation flow
+  <% if @preselected_customer %>
+  (function() {
+    const preId = <%= @preselected_customer.id %>;
+    const preName = <%= @preselected_customer.display_name.to_json %>;
+    const preMobile = <%= @preselected_customer.mobile.to_json %>;
+    const preEmail = <%= (@preselected_customer.email || '').to_json %>;
+    const preAddress = <%= (@preselected_customer.respond_to?(:address) ? @preselected_customer.address.to_s : '').to_json %>;
+
+    document.getElementById('selected_customer_id').value = preId;
+    const nameField = document.getElementById('booking_customer_name');
+    const phoneField = document.getElementById('booking_customer_phone');
+    const emailField = document.getElementById('booking_customer_email');
+    const addressField = document.getElementById('booking_delivery_address');
+    if (nameField) nameField.value = preName;
+    if (phoneField) phoneField.value = preMobile;
+    if (emailField) emailField.value = preEmail;
+    if (preAddress && addressField && !addressField.value) addressField.value = preAddress;
+  })();
+  <% end %>
+
   // Set default payment method
   selectPaymentMethod('cash');
 
@@ -2059,22 +2092,49 @@ function stopCamera() {
 <style>
 /* Hover effects */
 .hover-lift {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .hover-lift:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important;
+}
+
+/* Product card compact layout */
+#productGrid .card {
+  min-height: 0;
+}
+
+#productGrid .card-body {
+  padding: 0.5rem !important;
+}
+
+#productGrid .input-group-sm .btn {
+  line-height: 1;
+}
+
+#productGrid .badge {
+  font-size: 0.65rem !important;
+  padding: 2px 5px !important;
+}
+
+/* Stock badge on image — smaller */
+#productGrid .position-absolute.badge {
+  font-size: 0.6rem !important;
+  padding: 3px 5px !important;
 }
 
 /* Product grid responsive */
-@media (max-width: 768px) {
-  .products-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+@media (max-width: 576px) {
+  #productGrid .card-img-top,
+  #productGrid .card-img-top.bg-light {
+    height: 100px !important;
   }
+}
 
-  .position-fixed {
-    position: relative !important;
+@media (max-width: 768px) {
+  .position-fixed[style*="top: 90px"] {
+    position: fixed !important;
   }
 }
 

@@ -1,3 +1,8 @@
+<% content_for :head do %>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<% end %>
+
 <!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
@@ -627,3 +632,24 @@
   </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var thumbSlider = document.querySelector('.product-nav-slider');
+  var thumbSwiper = null;
+  if (thumbSlider) {
+    thumbSwiper = new Swiper('.product-nav-slider', {
+      spaceBetween: 10,
+      slidesPerView: 4,
+      watchSlidesProgress: true
+    });
+  }
+  var mainSlider = document.querySelector('.product-thumbnail-slider');
+  if (mainSlider) {
+    new Swiper('.product-thumbnail-slider', {
+      spaceBetween: 10,
+      navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+      thumbs: thumbSwiper ? { swiper: thumbSwiper } : {}
+    });
+  }
+});
+</script>

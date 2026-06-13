@@ -141,6 +141,10 @@
     <!-- Real-time Status -->
     <div class="d-flex align-items-center gap-2">
     </div>
+    <%= link_to quick_new_admin_customers_path, class: "btn btn-success" do %>
+      <i class="bi bi-person-plus me-1"></i>
+      Booking with Customer Creation
+    <% end %>
     <%= link_to new_admin_booking_path, class: "btn btn-primary" do %>
       <i class="bi bi-plus-lg me-1"></i>
       Create New Booking

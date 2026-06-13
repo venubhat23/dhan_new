@@ -52,24 +52,13 @@
       <div class="card-body pt-3">
         <div class="row g-3">
           <div class="col-md-6">
-            <%= form.label :first_name, "First Name", class: "form-label fw-medium" %>
+            <%= form.label :first_name, "Customer Name", class: "form-label fw-medium" %>
             <span class="text-danger ms-1">*</span>
             <div class="input-group">
               <span class="input-group-text bg-light border-end-0">
                 <i class="bi bi-person text-muted"></i>
               </span>
-              <%= form.text_field :first_name, class: "form-control border-start-0", placeholder: "Enter first name", required: true %>
-            </div>
-          </div>
-
-          <div class="col-md-6">
-            <%= form.label :last_name, "Last Name", class: "form-label fw-medium" %>
-            <span class="text-danger ms-1">*</span>
-            <div class="input-group">
-              <span class="input-group-text bg-light border-end-0">
-                <i class="bi bi-person text-muted"></i>
-              </span>
-              <%= form.text_field :last_name, class: "form-control border-start-0", placeholder: "Enter last name", required: true %>
+              <%= form.text_field :first_name, class: "form-control border-start-0", placeholder: "Enter customer name", required: true %>
             </div>
           </div>
 

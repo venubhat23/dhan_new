@@ -60,6 +60,15 @@ class Admin::BookingsController < Admin::ApplicationController
     @booking = Booking.new
     @booking.booking_items.build
 
+    # Pre-select customer if redirected from quick customer creation
+    @preselected_customer = Customer.find_by(id: params[:customer_id]) if params[:customer_id].present?
+    if @preselected_customer
+      @booking.customer_id = @preselected_customer.id
+      @booking.customer_name = @preselected_customer.display_name
+      @booking.customer_phone = @preselected_customer.mobile
+      @booking.customer_email = @preselected_customer.email
+    end
+
     # Only count central/main inventory (store_id IS NULL) so transferred stock is not double-counted
     @products = Product.active
                        .includes(

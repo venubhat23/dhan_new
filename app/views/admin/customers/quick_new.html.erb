@@ -1,0 +1,143 @@
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1"><i class="bi bi-person-plus me-2 text-primary"></i>Quick Customer Creation</h2>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><%= link_to "Dashboard", dashboard_path, class: "text-decoration-none" %></li>
+        <li class="breadcrumb-item"><%= link_to "Bookings", admin_bookings_path, class: "text-decoration-none" %></li>
+        <li class="breadcrumb-item active" aria-current="page">Quick Customer</li>
+      </ol>
+    </nav>
+  </div>
+  <div>
+    <%= link_to admin_bookings_path, class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-arrow-left me-1"></i>Back to Bookings
+    <% end %>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-primary text-white border-0 py-3">
+        <div class="d-flex align-items-center">
+          <div class="bg-white bg-opacity-25 rounded p-2 me-3">
+            <i class="bi bi-lightning-charge text-white fs-5"></i>
+          </div>
+          <div>
+            <h5 class="card-title mb-0 text-white">Quick Customer Registration</h5>
+            <small class="text-white-50">Enter customer details to proceed to booking</small>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-4">
+        <% if @customer.errors.any? %>
+          <div class="alert alert-danger border-0 mb-4">
+            <div class="d-flex align-items-start">
+              <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+              <div>
+                <h6 class="alert-heading mb-1">Please fix the following errors:</h6>
+                <ul class="mb-0 small">
+                  <% @customer.errors.full_messages.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <%= form_with url: quick_create_admin_customers_path, method: :post, local: true do |form| %>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">
+              Customer Name <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-person text-muted"></i>
+              </span>
+              <%= form.text_field "customer[first_name]",
+                  class: "form-control border-start-0 #{'is-invalid' if @customer.errors[:first_name].any?}",
+                  placeholder: "Enter customer full name",
+                  required: true,
+                  autofocus: true,
+                  value: @customer.first_name %>
+            </div>
+            <% if @customer.errors[:first_name].any? %>
+              <div class="invalid-feedback d-block"><%= @customer.errors[:first_name].first %></div>
+            <% end %>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">
+              Phone Number <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-telephone text-muted"></i>
+              </span>
+              <%= form.telephone_field "customer[mobile]",
+                  class: "form-control border-start-0 #{'is-invalid' if @customer.errors[:mobile].any?}",
+                  placeholder: "Enter 10-digit mobile number",
+                  required: true,
+                  id: "quick_mobile",
+                  value: @customer.mobile %>
+            </div>
+            <% if @customer.errors[:mobile].any? %>
+              <div class="invalid-feedback d-block"><%= @customer.errors[:mobile].first %></div>
+            <% end %>
+            <div class="form-text">
+              <i class="bi bi-key me-1 text-warning"></i>
+              Mobile login password will be auto-set to: <strong id="passwordPreview">XXXX@123</strong>
+              <span class="text-muted">(first 4 digits of mobile + @123)</span>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">
+              Email Address <span class="text-muted fw-normal">(Optional)</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-envelope text-muted"></i>
+              </span>
+              <%= form.email_field "customer[email]",
+                  class: "form-control border-start-0",
+                  placeholder: "Enter email address (optional)",
+                  autocomplete: "off",
+                  value: @customer.email %>
+            </div>
+          </div>
+
+          <div class="alert alert-info border-0 mb-4">
+            <div class="d-flex align-items-start">
+              <i class="bi bi-info-circle me-2 mt-1"></i>
+              <div class="small">
+                After creating the customer, you will be redirected to the <strong>New Booking</strong> page
+                with the customer automatically selected and ready for checkout.
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end">
+            <%= link_to admin_bookings_path, class: "btn btn-outline-secondary" do %>
+              <i class="bi bi-x me-1"></i>Cancel
+            <% end %>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-person-check me-2"></i>Create Customer & Proceed to Booking
+            </button>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('quick_mobile').addEventListener('input', function() {
+    const digits = this.value.replace(/\D/g, '');
+    const preview = digits.length >= 4 ? digits.substring(0, 4) + '@123' : 'XXXX@123';
+    document.getElementById('passwordPreview').textContent = preview;
+  });
+</script>

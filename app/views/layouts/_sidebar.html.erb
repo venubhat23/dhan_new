@@ -3,7 +3,7 @@
   position: fixed !important;
   top: 70px !important;
   left: 0 !important;
-  width: 200px !important;
+  width: 260px !important;
   height: calc(100vh - 70px) !important;
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%) !important;
   border-right: 2px solid #e2e8f0 !important;
@@ -326,7 +326,7 @@
 }
 
 .main-content {
-  margin-left: 200px !important;
+  margin-left: 260px !important;
   margin-top: 70px !important;
   padding: 0 !important;
 }
@@ -451,10 +451,10 @@
       </ul>
     </div>
 
-    <!-- Master Data Section -->
-    <% if current_user.has_sidebar_permission?('customers') || current_user.has_sidebar_permission?('categories') || current_user.has_sidebar_permission?('products') || current_user.has_sidebar_permission?('coupons') || current_user.has_sidebar_permission?('customer_wallets') || current_user.has_sidebar_permission?('franchises') || current_user.has_sidebar_permission?('affiliates') %>
+    <!-- Quick Access Section -->
+    <% if current_user.has_sidebar_permission?('customers') || current_user.has_sidebar_permission?('bookings') || current_user.has_sidebar_permission?('products') %>
     <div class="nav-section">
-      <div class="nav-section-title">Master Data</div>
+      <div class="nav-section-title">Quick Access</div>
       <ul class="nav-menu">
         <!-- Customers -->
         <% if current_user.has_sidebar_permission?('customers') %>
@@ -470,6 +470,45 @@
             <% end %>
           </li>
         <% end %>
+
+        <!-- Bookings -->
+        <% if current_user.has_sidebar_permission?('bookings') %>
+          <li class="nav-item">
+            <%= link_to admin_bookings_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/bookings') || request.path.include?('/admin/orders')}" do %>
+              <div class="nav-icon-modern">
+                <div class="icon-bg gradient-teal">
+                  <i class="bi bi-cart-check-fill"></i>
+                </div>
+              </div>
+              <span class="nav-text">Bookings</span>
+              <div class="nav-indicator"></div>
+            <% end %>
+          </li>
+        <% end %>
+
+        <!-- Products -->
+        <% if current_user.has_sidebar_permission?('products') %>
+          <li class="nav-item">
+            <%= link_to admin_products_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/products')}" do %>
+              <div class="nav-icon-modern">
+                <div class="icon-bg gradient-sky">
+                  <i class="bi bi-box-seam-fill"></i>
+                </div>
+              </div>
+              <span class="nav-text">Products</span>
+              <div class="nav-indicator"></div>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+    <% end %>
+
+    <!-- Master Data Section -->
+    <% if current_user.has_sidebar_permission?('categories') || current_user.has_sidebar_permission?('coupons') || current_user.has_sidebar_permission?('customer_wallets') || current_user.has_sidebar_permission?('franchises') || current_user.has_sidebar_permission?('affiliates') %>
+    <div class="nav-section">
+      <div class="nav-section-title">Master Data</div>
+      <ul class="nav-menu">
 
         <!-- Referrals -->
         <% if current_user.has_sidebar_permission?('referrals') || current_user.user_type == 'admin' || current_user.user_type == 'super_admin' %>
@@ -520,21 +559,6 @@
                 </div>
               </div>
               <span class="nav-text">Categories</span>
-              <div class="nav-indicator"></div>
-            <% end %>
-          </li>
-        <% end %>
-
-        <!-- Products -->
-        <% if current_user.has_sidebar_permission?('products') %>
-          <li class="nav-item">
-            <%= link_to admin_products_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/products')}" do %>
-              <div class="nav-icon-modern">
-                <div class="icon-bg gradient-sky">
-                  <i class="bi bi-box-seam-fill"></i>
-                </div>
-              </div>
-              <span class="nav-text">Products</span>
               <div class="nav-indicator"></div>
             <% end %>
           </li>
@@ -592,20 +616,6 @@
     <div class="nav-section">
       <div class="nav-section-title">Sales</div>
       <ul class="nav-menu">
-        <!-- Bookings (merged with Orders) -->
-        <% if current_user.has_sidebar_permission?('bookings') %>
-        <li class="nav-item">
-          <%= link_to admin_bookings_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/bookings') || request.path.include?('/admin/orders')}" do %>
-            <div class="nav-icon-modern">
-              <div class="icon-bg gradient-teal">
-                <i class="bi bi-cart-check-fill"></i>
-              </div>
-            </div>
-            <span class="nav-text">Bookings</span>
-            <div class="nav-indicator"></div>
-          <% end %>
-        </li>
-        <% end %>
         <!-- Stores -->
         <li class="nav-item">
           <%= link_to admin_stores_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/stores')}" do %>

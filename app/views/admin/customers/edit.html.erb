@@ -29,17 +29,10 @@
           <div class="row g-3">
             <div class="col-md-6">
               <%= form.label :first_name, class: "form-label" do %>
-                First Name <span class="text-danger">*</span>
+                Customer Name <span class="text-danger">*</span>
               <% end %>
-              <%= form.text_field :first_name, class: "form-control", placeholder: "Enter first name", required: true %>
-              <div class="invalid-feedback">Please provide a first name.</div>
-            </div>
-            <div class="col-md-6">
-              <%= form.label :last_name, class: "form-label" do %>
-                Last Name <span class="text-danger">*</span>
-              <% end %>
-              <%= form.text_field :last_name, class: "form-control", placeholder: "Enter last name", required: true %>
-              <div class="invalid-feedback">Please provide a last name.</div>
+              <%= form.text_field :first_name, class: "form-control", placeholder: "Enter customer name", required: true %>
+              <div class="invalid-feedback">Please provide a customer name.</div>
             </div>
             <div class="col-md-6">
               <%= form.label :middle_name, class: "form-label" %>

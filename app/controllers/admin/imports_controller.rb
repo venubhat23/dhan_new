@@ -296,15 +296,15 @@ class Admin::ImportsController < Admin::ApplicationController
     format = params[:format] || 'csv'
 
     headers = [
-      'first_name*', 'last_name*', 'mobile*',
+      'customer_name*', 'mobile*',
       'email', 'whatsapp_number', 'gst_no',
       'address', 'notes'
     ]
 
     sample_data = [
-      ['John', 'Doe', '9876543210', 'john.doe@example.com', '9876543210', '', '123 Main Street, Mumbai', 'VIP Customer'],
-      ['Priya', 'Sharma', '9876543211', 'priya.sharma@example.com', '9876543211', 'GSTIN1234567890', '456 Park Avenue, Delhi', ''],
-      ['Rajesh', 'Patel', '9876543212', '', '9876543212', '', '789 Business Complex, Ahmedabad', 'Regular Customer']
+      ['John Doe', '9876543210', 'john.doe@example.com', '9876543210', '', '123 Main Street, Mumbai', 'VIP Customer'],
+      ['Priya Sharma', '9876543211', 'priya.sharma@example.com', '9876543211', 'GSTIN1234567890', '456 Park Avenue, Delhi', ''],
+      ['Rajesh Patel', '9876543212', '', '9876543212', '', '789 Business Complex, Ahmedabad', 'Regular Customer']
     ]
 
     csv_data = CSV.generate(headers: true) do |csv|

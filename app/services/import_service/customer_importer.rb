@@ -60,7 +60,7 @@ module ImportService
 
     def validate_headers(header)
       clean_headers = header.map(&:to_s).map { |h| h.gsub('*', '').downcase.strip }
-      required_headers = %w[first_name mobile]
+      required_headers = %w[customer_name mobile]
       missing_headers = required_headers - clean_headers
 
       if missing_headers.any?
@@ -100,11 +100,11 @@ module ImportService
     end
 
     def normalize_customer_data(row)
-      password = generate_password(row['first_name'])
+      customer_name = row['customer_name']&.to_s&.strip
+      password = generate_password(customer_name)
 
       {
-        first_name:       row['first_name']&.to_s&.strip,
-        last_name:        row['last_name']&.to_s&.strip,
+        first_name:       customer_name,
         email:            row['email']&.to_s&.downcase&.strip.presence,
         mobile:           row['mobile']&.to_s&.strip,
         whatsapp_number:  row['whatsapp_number']&.to_s&.strip.presence || row['mobile']&.to_s&.strip,
@@ -119,7 +119,7 @@ module ImportService
 
     def valid_row?(customer_data, row_number)
       if customer_data[:first_name].blank?
-        @errors << "Row #{row_number}: first_name is required"
+        @errors << "Row #{row_number}: customer_name is required"
         return false
       end
 
