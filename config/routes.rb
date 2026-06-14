@@ -102,6 +102,12 @@ Rails.application.routes.draw do
 
   # Admin routes
   namespace :admin do
+    # Mobile UI — standalone, own session auth (admin/admin123)
+    get  'mobile-ui',          to: 'mobile_ui#login',    as: 'mobile_ui_login'
+    post 'mobile-ui/login',    to: 'mobile_ui#do_login', as: 'mobile_ui_do_login'
+    get  'mobile-ui/bookings', to: 'mobile_ui#index',    as: 'mobile_ui_bookings'
+    get  'mobile-ui/logout',   to: 'mobile_ui#logout',   as: 'mobile_ui_logout'
+
     # Bookings Management (Now handles complete order workflow)
     resources :bookings do
       member do
