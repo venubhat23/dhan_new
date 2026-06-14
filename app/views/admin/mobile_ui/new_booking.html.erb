@@ -1,0 +1,698 @@
+<style>
+/* ─── Page chrome ─────────────────────────────────────────────────── */
+.mob-page-top {
+  padding:12px 12px 0;
+  display:flex; align-items:center; gap:10px;
+  background:#f0f2f5;
+  position:sticky; top:56px; z-index:80;
+}
+.back-btn {
+  width:36px;height:36px;border-radius:10px;background:white;
+  border:2px solid #e9ecef;display:flex;align-items:center;
+  justify-content:center;color:#6f42c1;text-decoration:none;flex-shrink:0;
+}
+
+/* ─── Search bar ──────────────────────────────────────────────────── */
+.prod-search-wrap {
+  background:white;padding:10px 12px;
+  border-bottom:1px solid #eee;
+  position:sticky; top:calc(56px + 52px); z-index:79;
+}
+.prod-search {
+  width:100%;border:2px solid #e9ecef;border-radius:20px;
+  padding:8px 14px 8px 36px;font-size:0.88rem;outline:none;
+}
+.prod-search:focus { border-color:#6f42c1; }
+.prod-search-ico { position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#aaa;font-size:0.9rem; }
+
+/* ─── Product grid ────────────────────────────────────────────────── */
+.prod-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  padding:10px 10px 130px;
+}
+.prod-card {
+  background:white;border-radius:14px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.07);
+  overflow:hidden;
+  border:2px solid transparent;
+  transition:border-color 0.15s;
+}
+.prod-card.in-cart { border-color:#6f42c1; }
+.prod-img {
+  width:100%;height:100px;object-fit:cover;
+}
+.prod-img-placeholder {
+  width:100%;height:100px;background:#f3e5f5;
+  display:flex;align-items:center;justify-content:center;
+  font-size:2rem;color:#6f42c1;
+}
+.prod-info { padding:8px; }
+.prod-name { font-size:0.82rem;font-weight:600;color:#222;line-height:1.3;min-height:34px; }
+.prod-price { font-size:0.95rem;font-weight:700;color:#6f42c1;margin-top:4px; }
+.prod-stock-badge {
+  font-size:0.65rem;font-weight:600;padding:2px 7px;border-radius:10px;
+  display:inline-block;margin-bottom:4px;
+}
+.stock-in   { background:#d4edda;color:#155724; }
+.stock-low  { background:#fff3cd;color:#856404; }
+.stock-out  { background:#f8d7da;color:#721c24; }
+.add-btn {
+  width:100%;background:#6f42c1;color:white;border:none;
+  border-radius:8px;padding:7px;font-size:0.82rem;font-weight:600;
+  margin-top:4px;cursor:pointer;transition:background 0.15s;
+}
+.add-btn:active { background:#4a148c; }
+.add-btn:disabled { background:#ccc;cursor:not-allowed; }
+.qty-row {
+  display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;
+}
+.qty-btn {
+  width:28px;height:28px;border-radius:8px;border:2px solid #6f42c1;
+  background:white;color:#6f42c1;font-size:1rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.qty-btn:active { background:#6f42c1;color:white; }
+.qty-val { font-weight:700;font-size:0.9rem;min-width:28px;text-align:center; }
+
+/* ─── Cart bar (bottom) ───────────────────────────────────────────── */
+.cart-bar {
+  position:fixed;bottom:0;left:0;right:0;
+  background:linear-gradient(135deg,#6f42c1,#4a148c);
+  color:white;padding:12px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  z-index:300;
+  box-shadow:0 -4px 16px rgba(0,0,0,0.2);
+  transform:translateY(100%);
+  transition:transform 0.3s ease;
+}
+.cart-bar.visible { transform:translateY(0); }
+.cart-bar-left { display:flex;align-items:center;gap:10px; }
+.cart-count-badge {
+  background:white;color:#6f42c1;border-radius:50%;
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:0.85rem;flex-shrink:0;
+}
+.cart-checkout-btn {
+  background:white;color:#6f42c1;border:none;border-radius:10px;
+  padding:8px 16px;font-weight:700;font-size:0.88rem;cursor:pointer;
+  display:flex;align-items:center;gap:6px;white-space:nowrap;
+}
+.cart-checkout-btn:active { transform:scale(0.96); }
+
+/* ─── Checkout panel ──────────────────────────────────────────────── */
+.checkout-panel {
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:#f0f2f5;z-index:500;
+  overflow-y:auto;
+  transform:translateX(100%);
+  transition:transform 0.3s ease;
+}
+.checkout-panel.open { transform:translateX(0); }
+.checkout-header {
+  background:linear-gradient(135deg,#6f42c1,#4a148c);color:white;
+  padding:14px 16px;display:flex;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:10;
+}
+.checkout-section {
+  background:white;border-radius:14px;margin:10px 10px 0;
+  padding:14px;box-shadow:0 2px 8px rgba(0,0,0,0.06);
+}
+.section-title { font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;margin-bottom:12px; }
+.mob-input {
+  width:100%;border:2px solid #e9ecef;border-radius:10px;
+  padding:10px 12px;font-size:0.92rem;outline:none;
+  transition:border-color 0.2s;
+}
+.mob-input:focus { border-color:#6f42c1; }
+.mob-select { appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center; }
+.pay-methods { display:flex;gap:8px;flex-wrap:wrap; }
+.pay-method-btn {
+  flex:1;min-width:70px;border:2px solid #e9ecef;background:white;
+  border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer;
+  font-size:0.78rem;font-weight:600;color:#555;transition:all 0.15s;
+}
+.pay-method-btn.active { border-color:#6f42c1;background:#f3e5f5;color:#6f42c1; }
+.pay-method-btn input { display:none; }
+.checkout-item-row { display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f5f5f5;font-size:0.88rem; }
+.checkout-item-row:last-child { border-bottom:none; }
+.total-row { display:flex;justify-content:space-between;font-size:0.88rem;padding:4px 0;color:#555; }
+.total-final { font-size:1.1rem;font-weight:700;color:#1a7f37;border-top:2px solid #e9ecef;padding-top:10px;margin-top:4px; }
+.place-order-btn {
+  width:100%;background:linear-gradient(135deg,#25d366,#1a9e4b);
+  color:white;border:none;border-radius:12px;padding:14px;
+  font-size:1rem;font-weight:700;letter-spacing:0.3px;
+  margin:10px;width:calc(100% - 20px);
+  box-shadow:0 4px 15px rgba(37,211,102,0.35);
+}
+.place-order-btn:disabled { background:#ccc;box-shadow:none; }
+
+/* ─── Customer search ─────────────────────────────────────────────── */
+.cust-search-dropdown {
+  position:absolute;top:100%;left:0;right:0;background:white;
+  border:2px solid #e9ecef;border-top:none;border-radius:0 0 10px 10px;
+  max-height:180px;overflow-y:auto;z-index:20;display:none;
+  box-shadow:0 4px 12px rgba(0,0,0,0.1);
+}
+.cust-search-dropdown.show { display:block; }
+.cust-item {
+  padding:10px 12px;cursor:pointer;border-bottom:1px solid #f5f5f5;
+  font-size:0.85rem;
+}
+.cust-item:hover { background:#f3e5f5; }
+.cust-item:last-child { border-bottom:none; }
+.cust-selected {
+  background:#f3e5f5;border:2px solid #6f42c1;border-radius:10px;
+  padding:10px 12px;display:flex;align-items:center;justify-content:space-between;
+}
+</style>
+
+<%# ── Page Top ──────────────────────────────────────────────────────────── %>
+<div class="mob-page-top">
+  <%= link_to admin_mobile_ui_bookings_path, class: 'back-btn' do %>
+    <i class="bi bi-arrow-left"></i>
+  <% end %>
+  <div>
+    <div style="font-weight:700;font-size:1rem;color:#222;">New Booking</div>
+    <div style="font-size:0.75rem;color:#888;">Select products · review · confirm</div>
+  </div>
+  <% if @preselected_customer %>
+    <div style="margin-left:auto;background:#6f42c1;color:white;border-radius:8px;padding:4px 10px;font-size:0.75rem;font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+      <i class="bi bi-person-check me-1"></i><%= @preselected_customer.display_name %>
+    </div>
+  <% end %>
+</div>
+
+<%# ── Search ──────────────────────────────────────────────────────────────── %>
+<div class="prod-search-wrap">
+  <div style="position:relative;">
+    <i class="bi bi-search prod-search-ico"></i>
+    <input type="text" class="prod-search" id="prodSearchInput"
+           placeholder="Search products…" autocomplete="off">
+  </div>
+</div>
+
+<%# ── Product grid ───────────────────────────────────────────────────────── %>
+<div class="prod-grid" id="prodGrid">
+  <% @products.each do |product| %>
+    <%
+      stock = product.cached_total_batch_stock
+      has_variants = product.has_multiple_quantities? && product.product_variants.any?
+      default_v = has_variants ? (product.default_variant || product.product_variants.ordered.first) : nil
+      effective_stock = has_variants ? (default_v&.available_stock || 0) : stock
+      price = has_variants ? default_v&.effective_price.to_f : product.price.to_f
+      out = effective_stock <= 0
+    %>
+    <div class="prod-card" id="card-<%= product.id %>"
+         data-name="<%= product.name.downcase %>"
+         data-category="<%= product.category&.name.to_s.downcase %>">
+
+      <%# Image %>
+      <% if product.images_attached? && product.images.any? %>
+        <%= image_tag product.images.first, class: 'prod-img', loading: 'lazy' %>
+      <% else %>
+        <div class="prod-img-placeholder"><i class="bi bi-box-seam"></i></div>
+      <% end %>
+
+      <div class="prod-info">
+        <%# Stock badge %>
+        <% if out %>
+          <span class="prod-stock-badge stock-out">Out of Stock</span>
+        <% elsif effective_stock < 5 %>
+          <span class="prod-stock-badge stock-low"><%= effective_stock.to_i %> left</span>
+        <% else %>
+          <span class="prod-stock-badge stock-in"><%= effective_stock.to_i %> in stock</span>
+        <% end %>
+
+        <div class="prod-name"><%= product.name %></div>
+
+        <%# Variant selector %>
+        <% if has_variants %>
+          <select class="mob-input mob-select mt-1" style="font-size:0.78rem;padding:5px 8px;"
+                  id="var-<%= product.id %>"
+                  onchange="updateVariant(<%= product.id %>, this)">
+            <% product.product_variants.default_first.each do |v| %>
+              <option value="<%= v.id %>"
+                      data-price="<%= v.effective_price %>"
+                      data-stock="<%= v.available_stock %>"
+                      <%= 'selected' if v.id == default_v&.id %>>
+                <%= v.label %> – ₹<%= number_with_delimiter(v.effective_price) %>
+              </option>
+            <% end %>
+          </select>
+        <% end %>
+
+        <div class="prod-price" id="price-<%= product.id %>">₹<%= number_with_delimiter(price) %></div>
+
+        <%# Add / qty controls %>
+        <div id="add-area-<%= product.id %>">
+          <% if out %>
+            <button class="add-btn" disabled>Out of Stock</button>
+          <% else %>
+            <button class="add-btn" id="add-btn-<%= product.id %>"
+                    onclick="addProduct(<%= product.id %>, '<%= j(product.name) %>', <%= price %>, <%= effective_stock %>, <%= has_variants ? (default_v&.id || 'null') : 'null' %>)">
+              <i class="bi bi-cart-plus me-1"></i>Add
+            </button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<%# ── Cart bar ──────────────────────────────────────────────────────────── %>
+<div class="cart-bar" id="cartBar">
+  <div class="cart-bar-left">
+    <div class="cart-count-badge" id="cartCountBadge">0</div>
+    <div>
+      <div style="font-size:0.78rem;opacity:0.8;">items in cart</div>
+      <div style="font-size:1rem;font-weight:700;" id="cartTotalBar">₹0</div>
+    </div>
+  </div>
+  <button class="cart-checkout-btn" onclick="openCheckout()">
+    Checkout <i class="bi bi-arrow-right"></i>
+  </button>
+</div>
+
+<%# ── Checkout Panel ──────────────────────────────────────────────────────── %>
+<div class="checkout-panel" id="checkoutPanel">
+  <div class="checkout-header">
+    <button onclick="closeCheckout()" style="background:none;border:none;color:white;font-size:1.2rem;padding:0;">
+      <i class="bi bi-arrow-left"></i>
+    </button>
+    <div>
+      <div style="font-weight:700;font-size:1rem;">Checkout</div>
+      <div style="font-size:0.75rem;opacity:0.8;" id="checkoutSummaryLine">0 items</div>
+    </div>
+  </div>
+
+  <%= form_with url: admin_mobile_ui_create_booking_path, method: :post, local: true, id: 'bookingForm' do |f| %>
+    <%# Hidden item fields populated by JS %>
+    <div id="itemFields"></div>
+    <%= f.hidden_field :discount_amount, value: 0, id: 'hdnDiscount' %>
+    <%= f.hidden_field :status, value: 'completed' %>
+
+    <%# Customer ─────────────────────────────────────────── %>
+    <div class="checkout-section">
+      <div class="section-title"><i class="bi bi-person me-1"></i>Customer</div>
+
+      <%= f.hidden_field :customer_id, id: 'hdnCustomerId', value: @preselected_customer&.id %>
+
+      <% if @preselected_customer %>
+        <div class="cust-selected">
+          <div>
+            <div style="font-weight:600;font-size:0.92rem;"><%= @preselected_customer.display_name %></div>
+            <div style="font-size:0.78rem;color:#888;"><%= @preselected_customer.mobile %></div>
+          </div>
+          <button type="button" onclick="clearCustomer()" style="background:none;border:none;color:#dc3545;font-size:1.1rem;">
+            <i class="bi bi-x-circle"></i>
+          </button>
+        </div>
+        <div id="custSelectedDisplay" style="display:none;"></div>
+      <% else %>
+        <div id="custSelectedDisplay" style="display:none;" class="cust-selected">
+          <div>
+            <div class="fw-semibold" style="font-size:0.92rem;" id="custSelName"></div>
+            <div style="font-size:0.78rem;color:#888;" id="custSelPhone"></div>
+          </div>
+          <button type="button" onclick="clearCustomer()" style="background:none;border:none;color:#dc3545;font-size:1.1rem;">
+            <i class="bi bi-x-circle"></i>
+          </button>
+        </div>
+      <% end %>
+
+      <div id="custSearchWrap" style="<%= @preselected_customer ? 'display:none;' : '' %> position:relative;">
+        <input type="text" id="custSearchInput" class="mob-input"
+               placeholder="Search customer by name or phone…"
+               autocomplete="off" oninput="searchCustomer(this.value)">
+        <div class="cust-search-dropdown" id="custDropdown"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <div style="font-size:0.8rem;color:#888;align-self:center;">or</div>
+        <%= link_to admin_mobile_ui_new_customer_path, style: "font-size:0.8rem;color:#6f42c1;font-weight:600;text-decoration:none;align-self:center;" do %>
+          <i class="bi bi-person-plus me-1"></i>Create New Customer
+        <% end %>
+      </div>
+
+      <div class="mt-2" id="custManualFields" style="<%= @preselected_customer ? 'display:none;' : '' %>">
+        <div style="font-size:0.75rem;font-weight:600;color:#aaa;margin-bottom:6px;">or enter manually:</div>
+        <%= f.text_field :customer_name,  class: 'mob-input mb-2', placeholder: 'Customer name', value: @preselected_customer&.display_name %>
+        <%= f.text_field :customer_phone, class: 'mob-input mb-2', placeholder: 'Phone number',   value: @preselected_customer&.mobile %>
+        <%= f.text_field :customer_email, class: 'mob-input',       placeholder: 'Email (optional)', value: @preselected_customer&.email %>
+      </div>
+    </div>
+
+    <%# Cart Summary ──────────────────────────────────────── %>
+    <div class="checkout-section">
+      <div class="section-title"><i class="bi bi-bag me-1"></i>Order Items</div>
+      <div id="checkoutItems"><p style="color:#aaa;text-align:center;font-size:0.88rem;">No items added</p></div>
+      <div id="checkoutTotals" style="display:none;margin-top:12px;">
+        <div class="total-row"><span>Subtotal</span><span>₹<span id="coSubtotal">0</span></span></div>
+        <div class="total-row"><span>Tax</span><span>₹<span id="coTax">0</span></span></div>
+        <div class="total-row">
+          <span>Discount</span>
+          <span>₹<input type="number" id="discountInput" value="0" min="0" step="0.01"
+                 style="width:70px;border:1px solid #ddd;border-radius:6px;padding:2px 6px;font-size:0.85rem;"
+                 oninput="updateTotals()"></span>
+        </div>
+        <div class="total-row total-final"><span>Total</span><span>₹<span id="coTotal">0</span></span></div>
+      </div>
+    </div>
+
+    <%# Payment Method ────────────────────────────────────── %>
+    <div class="checkout-section">
+      <div class="section-title"><i class="bi bi-credit-card me-1"></i>Payment Method</div>
+      <div class="pay-methods">
+        <% [['cash','Cash'],['card','Card'],['upi','UPI'],['online','Online']].each_with_index do |(val,label),i| %>
+          <label class="pay-method-btn <%= i==0 ? 'active' : '' %>" onclick="selectPay(this, '<%= val %>')">
+            <input type="radio" name="booking[payment_method]" value="<%= val %>" <%= i==0 ? 'checked' : '' %>>
+            <i class="bi bi-<%= val=='cash' ? 'cash-stack' : val=='card' ? 'credit-card' : val=='upi' ? 'phone' : 'globe' %>" style="display:block;font-size:1.1rem;margin-bottom:3px;"></i>
+            <%= label %>
+          </label>
+        <% end %>
+      </div>
+      <div id="cashFields" class="mt-2">
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <div style="flex:1;">
+            <div style="font-size:0.75rem;color:#888;margin-bottom:4px;">Cash Received</div>
+            <%= f.number_field :cash_received, class: 'mob-input', placeholder: '0.00', step: '0.01', oninput: 'calcChange()' %>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:0.75rem;color:#888;margin-bottom:4px;">Change</div>
+            <%= f.number_field :change_amount, class: 'mob-input', placeholder: '0.00', readonly: true, id: 'changeAmt' %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%# Payment Status ────────────────────────────────────── %>
+    <div class="checkout-section" style="display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-weight:600;font-size:0.92rem;">Mark as Paid</div>
+        <div style="font-size:0.75rem;color:#888;">Toggle if payment received</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:50px;height:26px;">
+        <input type="checkbox" id="paidToggle" value="1"
+               style="opacity:0;width:0;height:0;"
+               onchange="togglePaid(this)">
+        <%= f.hidden_field :payment_status, value: 'unpaid', id: 'hdnPayStatus' %>
+        <span id="toggleTrack" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:26px;transition:0.3s;">
+          <span id="toggleThumb" style="position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);"></span>
+        </span>
+      </label>
+    </div>
+
+    <%# Notes ────────────────────────────────────────────── %>
+    <div class="checkout-section">
+      <div class="section-title"><i class="bi bi-chat me-1"></i>Notes (optional)</div>
+      <%= f.text_area :notes, class: 'mob-input', rows: 2, placeholder: 'Add any notes or instructions…' %>
+    </div>
+
+    <%# Delivery Address ──────────────────────────────────── %>
+    <div class="checkout-section">
+      <div class="section-title"><i class="bi bi-geo-alt me-1"></i>Delivery Address</div>
+      <%= f.text_area :delivery_address, class: 'mob-input', rows: 2, placeholder: 'Enter delivery address…', value: @preselected_customer&.respond_to?(:address) ? @preselected_customer.address : '' %>
+    </div>
+
+    <button type="submit" class="place-order-btn" id="placeOrderBtn" onclick="prepareSubmit()">
+      <i class="bi bi-check-circle me-2"></i>Place Order
+    </button>
+    <div style="height:20px;"></div>
+  <% end %>
+</div>
+
+<%# Customer data for JS search %>
+<script>
+const allCustomers = <%= raw @customers.map { |c|
+  {
+    id: c.id,
+    name: [c.first_name, c.middle_name, c.last_name].compact.join(' ').strip,
+    mobile: c.mobile.to_s,
+    email: c.email.to_s
+  }
+}.to_json %>;
+
+// ── Cart state ──────────────────────────────────────────────────────────
+let cart = {}; // key => { productId, variantId, name, price, qty, stock }
+
+function addProduct(pid, name, price, stock, variantId) {
+  const key = variantId ? `${pid}_v${variantId}` : String(pid);
+  if (cart[key]) {
+    if (cart[key].qty < stock) cart[key].qty += 1;
+    else { alert(`Max stock (${stock}) reached`); return; }
+  } else {
+    cart[key] = { productId: pid, variantId: variantId||null, name, price, qty: 1, stock };
+  }
+  renderCartControls(pid, key);
+  updateCartBar();
+}
+
+function changeQty(key, delta) {
+  if (!cart[key]) return;
+  const newQty = cart[key].qty + delta;
+  if (newQty <= 0) {
+    delete cart[key];
+    const pid = parseInt(key.split('_')[0]);
+    resetAddBtn(pid, key);
+  } else if (newQty > cart[key].stock) {
+    alert(`Max stock (${cart[key].stock}) reached`);
+    return;
+  } else {
+    cart[key].qty = newQty;
+  }
+  renderCartControls(parseInt(key.split('_')[0]), key);
+  updateCartBar();
+}
+
+function renderCartControls(pid, key) {
+  const area = document.getElementById(`add-area-${pid}`);
+  if (!area) return;
+  const item = cart[key];
+  if (item) {
+    const card = document.getElementById(`card-${pid}`);
+    if (card) card.classList.add('in-cart');
+    area.innerHTML = `
+      <div class="qty-row">
+        <button type="button" class="qty-btn" onclick="changeQty('${key}',-1)"><i class="bi bi-dash"></i></button>
+        <span class="qty-val">${item.qty}</span>
+        <button type="button" class="qty-btn" onclick="changeQty('${key}',1)"><i class="bi bi-plus"></i></button>
+      </div>`;
+  } else {
+    const card = document.getElementById(`card-${pid}`);
+    if (card) card.classList.remove('in-cart');
+    // Restore add button — find price + stock from DOM
+    const priceEl = document.getElementById(`price-${pid}`);
+    const priceStr = priceEl ? priceEl.textContent.replace(/[₹,]/g,'') : '0';
+    area.innerHTML = `
+      <button class="add-btn" onclick="addProduct(${pid},'${cart[key] ? cart[key].name : ''}',${parseFloat(priceStr)||0},999,null)">
+        <i class="bi bi-cart-plus me-1"></i>Add
+      </button>`;
+  }
+}
+
+function resetAddBtn(pid, key) {
+  const card = document.getElementById(`card-${pid}`);
+  if (card) card.classList.remove('in-cart');
+}
+
+function updateCartBar() {
+  const items = Object.values(cart);
+  const count = items.reduce((s,i)=>s+i.qty, 0);
+  const total = items.reduce((s,i)=>s+(i.qty*i.price), 0);
+  document.getElementById('cartCountBadge').textContent = count;
+  document.getElementById('cartTotalBar').textContent = '₹' + total.toFixed(2);
+  const bar = document.getElementById('cartBar');
+  if (count > 0) bar.classList.add('visible');
+  else bar.classList.remove('visible');
+}
+
+// ── Variant selector ──────────────────────────────────────────────────
+function updateVariant(pid, sel) {
+  const opt   = sel.options[sel.selectedIndex];
+  const price = parseFloat(opt.dataset.price) || 0;
+  const stock = parseInt(opt.dataset.stock) || 0;
+  const vid   = sel.value;
+  const priceEl = document.getElementById(`price-${pid}`);
+  if (priceEl) priceEl.textContent = '₹' + price.toLocaleString('en-IN');
+  // Reset add button with new price/stock/variant
+  const area = document.getElementById(`add-area-${pid}`);
+  if (area) {
+    area.innerHTML = `
+      <button class="add-btn" id="add-btn-${pid}"
+              onclick="addProduct(${pid},'',${price},${stock},'${vid}')">
+        <i class='bi bi-cart-plus me-1'></i>Add
+      </button>`;
+  }
+}
+
+// ── Product search ────────────────────────────────────────────────────
+document.getElementById('prodSearchInput').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('#prodGrid .prod-card').forEach(c => {
+    const match = (c.dataset.name||'').includes(q) || (c.dataset.category||'').includes(q);
+    c.style.display = match ? '' : 'none';
+  });
+});
+
+// ── Checkout ──────────────────────────────────────────────────────────
+function openCheckout() {
+  if (Object.keys(cart).length === 0) { alert('Add at least one product first'); return; }
+  renderCheckout();
+  document.getElementById('checkoutPanel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeCheckout() {
+  document.getElementById('checkoutPanel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function renderCheckout() {
+  const items  = Object.values(cart);
+  const count  = items.reduce((s,i)=>s+i.qty,0);
+  document.getElementById('checkoutSummaryLine').textContent = count + ' item' + (count!=1?'s':'');
+
+  let html = '';
+  items.forEach(item => {
+    html += `<div class="checkout-item-row">
+      <div>
+        <div style="font-weight:600;">${item.name}</div>
+        <div style="font-size:0.75rem;color:#888;">₹${item.price} × ${item.qty}</div>
+      </div>
+      <div style="font-weight:700;color:#6f42c1;">₹${(item.price*item.qty).toFixed(2)}</div>
+    </div>`;
+  });
+  document.getElementById('checkoutItems').innerHTML = html;
+  document.getElementById('checkoutTotals').style.display = 'block';
+  updateTotals();
+}
+
+function updateTotals() {
+  const items = Object.values(cart);
+  const sub   = items.reduce((s,i)=>s+(i.price*i.qty),0);
+  const tax   = 0; // GST handled server-side via model
+  const disc  = parseFloat(document.getElementById('discountInput')?.value)||0;
+  const total = Math.max(0, sub + tax - disc);
+  document.getElementById('coSubtotal').textContent = sub.toFixed(2);
+  document.getElementById('coTax').textContent = tax.toFixed(2);
+  document.getElementById('coTotal').textContent  = total.toFixed(2);
+  document.getElementById('hdnDiscount').value = disc;
+  calcChange();
+}
+
+function calcChange() {
+  const total    = parseFloat(document.getElementById('coTotal').textContent)||0;
+  const received = parseFloat(document.querySelector('[name="booking[cash_received]"]')?.value)||0;
+  const change   = Math.max(0, received - total);
+  const el = document.getElementById('changeAmt');
+  if (el) el.value = change.toFixed(2);
+}
+
+// ── Payment ───────────────────────────────────────────────────────────
+function selectPay(lbl, val) {
+  document.querySelectorAll('.pay-method-btn').forEach(b => b.classList.remove('active'));
+  lbl.classList.add('active');
+  document.getElementById('cashFields').style.display = val==='cash' ? 'block' : 'none';
+}
+
+function togglePaid(cb) {
+  const track = document.getElementById('toggleTrack');
+  const thumb = document.getElementById('toggleThumb');
+  const hdn   = document.getElementById('hdnPayStatus');
+  if (cb.checked) {
+    track.style.background = '#6f42c1';
+    thumb.style.transform  = 'translateX(24px)';
+    hdn.value = 'paid';
+  } else {
+    track.style.background = '#ccc';
+    thumb.style.transform  = '';
+    hdn.value = 'unpaid';
+  }
+}
+
+// ── Customer search ───────────────────────────────────────────────────
+let custTimeout;
+function searchCustomer(q) {
+  clearTimeout(custTimeout);
+  custTimeout = setTimeout(() => {
+    const drop = document.getElementById('custDropdown');
+    if (!q.trim()) { drop.classList.remove('show'); return; }
+    const res = allCustomers.filter(c =>
+      c.name.toLowerCase().includes(q.toLowerCase()) ||
+      c.mobile.includes(q)
+    ).slice(0, 8);
+    if (!res.length) { drop.innerHTML = '<div class="cust-item" style="color:#aaa;">No customers found</div>'; }
+    else {
+      drop.innerHTML = res.map(c => `
+        <div class="cust-item" onclick="selectCustomer(${c.id},'${escJ(c.name)}','${c.mobile}','${escJ(c.email||'')}')">
+          <div style="font-weight:600;">${c.name}</div>
+          <div style="font-size:0.75rem;color:#888;">${c.mobile}</div>
+        </div>`).join('');
+    }
+    drop.classList.add('show');
+  }, 250);
+}
+
+function escJ(s) { return s.replace(/'/g,"\\'"); }
+
+function selectCustomer(id, name, mobile, email) {
+  document.getElementById('hdnCustomerId').value = id;
+  document.getElementById('custSearchWrap').style.display = 'none';
+  document.getElementById('custManualFields').style.display = 'none';
+  const disp = document.getElementById('custSelectedDisplay');
+  disp.innerHTML = `
+    <div class="cust-selected">
+      <div>
+        <div style="font-weight:600;font-size:0.92rem;">${name}</div>
+        <div style="font-size:0.78rem;color:#888;">${mobile}</div>
+      </div>
+      <button type="button" onclick="clearCustomer()" style="background:none;border:none;color:#dc3545;font-size:1.1rem;">
+        <i class="bi bi-x-circle"></i>
+      </button>
+    </div>`;
+  disp.style.display = 'block';
+  document.getElementById('custDropdown').classList.remove('show');
+  // pre-fill manual fields
+  const nameF = document.querySelector('[name="booking[customer_name]"]');
+  const phonF = document.querySelector('[name="booking[customer_phone]"]');
+  const emlF  = document.querySelector('[name="booking[customer_email]"]');
+  if (nameF) nameF.value = name;
+  if (phonF) phonF.value = mobile;
+  if (emlF)  emlF.value  = email;
+}
+
+function clearCustomer() {
+  document.getElementById('hdnCustomerId').value = '';
+  document.getElementById('custSelectedDisplay').style.display = 'none';
+  document.getElementById('custSearchWrap').style.display = '';
+  document.getElementById('custManualFields').style.display = '';
+  document.getElementById('custSearchInput').value = '';
+}
+
+// close dropdown on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#custSearchWrap')) {
+    document.getElementById('custDropdown')?.classList.remove('show');
+  }
+});
+
+// ── Form submit ───────────────────────────────────────────────────────
+function prepareSubmit() {
+  const container = document.getElementById('itemFields');
+  container.innerHTML = '';
+  let i = 0;
+  Object.values(cart).forEach(item => {
+    container.innerHTML += `
+      <input type="hidden" name="booking[booking_items_attributes][${i}][product_id]"      value="${item.productId}">
+      <input type="hidden" name="booking[booking_items_attributes][${i}][quantity]"         value="${item.qty}">
+      <input type="hidden" name="booking[booking_items_attributes][${i}][price]"            value="${item.price}">
+      ${item.variantId ? `<input type="hidden" name="booking[booking_items_attributes][${i}][product_variant_id]" value="${item.variantId}">` : ''}
+    `;
+    i++;
+  });
+  if (i === 0) { alert('Cart is empty'); return false; }
+  // Sync discount
+  document.getElementById('hdnDiscount').value = parseFloat(document.getElementById('discountInput')?.value||0);
+}
+</script>
