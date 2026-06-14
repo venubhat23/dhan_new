@@ -606,6 +606,23 @@
                       <a href="#" class="action-icon delete" title="Delete Booking" onclick="confirmDelete(<%= booking.id %>, '<%= booking.booking_number %>', '<%= booking.customer&.display_name || 'Unknown' %>')">
                         <i class="bi bi-trash"></i>
                       </a>
+                      <%
+                        wa_phone_raw = (booking.customer&.mobile || booking.customer_phone).to_s
+                        wa_phone_clean = wa_phone_raw.gsub(/\D/, '').sub(/^0+/, '').sub(/^91/, '')
+                        wa_phone_full = wa_phone_clean.present? ? "91#{wa_phone_clean}" : nil
+                        wa_cname = booking.customer&.display_name || booking.customer_name.presence || 'Customer'
+                        wa_amount = number_with_delimiter(booking.total_amount || 0)
+                        wa_date = (booking.respond_to?(:booking_date) && booking.booking_date.present? ? booking.booking_date : booking.created_at)&.strftime('%d %b %Y')
+                        wa_msg = "Dear #{wa_cname},\n\nThank you for your booking with Dhanvantri Naturals! 🌿\n\nBooking #: #{booking.booking_number}\nDate: #{wa_date}\nAmount: ₹#{wa_amount}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantri Naturals Team"
+                      %>
+                      <% if wa_phone_full.present? %>
+                        <a href="https://wa.me/<%= wa_phone_full %>?text=<%= ERB::Util.url_encode(wa_msg) %>"
+                           class="action-icon whatsapp"
+                           target="_blank"
+                           title="Send Thank You on WhatsApp">
+                          <i class="bi bi-whatsapp"></i>
+                        </a>
+                      <% end %>
                       <% if booking.has_invoice? %>
                         <% if booking.invoice_link_path %>
                           <%= link_to booking.invoice_link_path, class: "action-icon invoice", title: "View Invoice", target: "_blank" do %>
