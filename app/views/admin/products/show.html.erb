@@ -242,6 +242,50 @@
                       </div>
                     </div>
                   </div>
+
+                  <!-- B2B Price -->
+                  <% if @product.b2b_price.present? %>
+                    <div class="col-lg-3 col-sm-6">
+                      <div class="p-2 border border-dashed border-info rounded">
+                        <div class="d-flex align-items-center">
+                          <div class="avatar-sm me-2">
+                            <div class="avatar-title rounded bg-transparent text-info fs-24">
+                              <i class="bi bi-building"></i>
+                            </div>
+                          </div>
+                          <div class="flex-grow-1">
+                            <p class="text-muted mb-1">B2B Price</p>
+                            <h5 class="mb-0 text-info">₹<%= number_with_precision(@product.b2b_price, precision: 2) %></h5>
+                            <% if @product.b2b_percentage.present? %>
+                              <small class="text-muted"><%= @product.b2b_percentage %>% off</small>
+                            <% end %>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  <% end %>
+
+                  <!-- Low Stock Threshold -->
+                  <div class="col-lg-3 col-sm-6">
+                    <% threshold = @product.low_stock_threshold || 10 %>
+                    <% is_low = @product.stock.to_i <= threshold && @product.stock.to_i > 0 %>
+                    <div class="p-2 border border-dashed <%= is_low ? 'border-warning' : '' %> rounded">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-sm me-2">
+                          <div class="avatar-title rounded bg-transparent <%= is_low ? 'text-warning' : 'text-secondary' %> fs-24">
+                            <i class="bi bi-exclamation-triangle"></i>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1">
+                          <p class="text-muted mb-1">Low Stock Threshold</p>
+                          <h5 class="mb-0 <%= is_low ? 'text-warning' : '' %>"><%= threshold %></h5>
+                          <small class="<%= is_low ? 'text-warning fw-semibold' : 'text-muted' %>">
+                            <%= is_low ? 'Low Stock Alert!' : 'Min quantity alert' %>
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <% if @product.description.present? %>

@@ -42,7 +42,7 @@ module ImportService
     end
 
     def validate_headers(headers)
-      required = %w[name category product_type weight1 unit1 selling_price1 buying_price1 stock1]
+      required = %w[name category weight1 unit1 selling_price1 cost_price1 stock1]
       missing = required - headers
       raise "Missing required headers: #{missing.join(', ')}" if missing.any?
     end
@@ -62,37 +62,42 @@ module ImportService
         return
       end
 
+      # product_type is optional — default to 'Grocery' if blank or invalid
       product_type = row['product_type'].to_s.strip
-      unless Product::PRODUCT_TYPES.map(&:last).include?(product_type)
-        @errors << "Row #{row_number}: invalid product_type '#{product_type}'. Must be one of: #{Product::PRODUCT_TYPES.map(&:last).join(', ')}"
-        @skipped_count += 1
-        return
-      end
+      product_type = 'Grocery' unless Product::PRODUCT_TYPES.map(&:last).include?(product_type)
 
       # Build variants from numbered columns
       variants_attrs = []
       (1..MAX_VARIANTS).each do |n|
-        weight = row["weight#{n}"].to_s.strip
-        unit   = row["unit#{n}"].to_s.strip
-        sp     = row["selling_price#{n}"].to_s.strip
-        bp     = row["buying_price#{n}"].to_s.strip
-        stock  = row["stock#{n}"].to_s.strip
+        weight          = row["weight#{n}"].to_s.strip
+        unit            = row["unit#{n}"].to_s.strip
+        sp              = row["selling_price#{n}"].to_s.strip
+        cp              = row["cost_price#{n}"].to_s.strip
+        pp              = row["purchase_price#{n}"].to_s.strip
+        stock           = row["stock#{n}"].to_s.strip
+        b2b_price       = row["b2b_price#{n}"].to_s.strip
+        b2b_pct         = row["b2b_percentage#{n}"].to_s.strip
+        low_thresh      = row["low_threshold#{n}"].to_s.strip
 
         break if weight.blank? && sp.blank?
         next if weight.blank? || sp.blank?
 
         variants_attrs << {
-          weight:          weight.to_f,
-          unit:            unit.presence || 'Liter',
-          selling_price:   sp.to_f,
-          buying_price:    bp.presence ? bp.to_f : sp.to_f,
-          available_stock: stock.to_i,
-          is_default:      n == 1
+          weight:              weight.to_f,
+          unit:                unit.presence || 'Liter',
+          selling_price:       sp.to_f,
+          buying_price:        cp.presence ? cp.to_f : sp.to_f,
+          purchase_price:      pp.presence ? pp.to_f : nil,
+          b2b_price:           b2b_price.presence ? b2b_price.to_f : nil,
+          b2b_percentage:      b2b_pct.presence ? b2b_pct.to_f : nil,
+          low_stock_threshold: low_thresh.presence ? low_thresh.to_i : 10,
+          available_stock:     stock.to_i,
+          is_default:          n == 1
         }
       end
 
       if variants_attrs.empty?
-        @errors << "Row #{row_number}: at least one variant (weight1, unit1, selling_price1, buying_price1, stock1) is required"
+        @errors << "Row #{row_number}: at least one variant (weight1, unit1, selling_price1, cost_price1, stock1) is required"
         @skipped_count += 1
         return
       end

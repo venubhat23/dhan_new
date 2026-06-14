@@ -1036,6 +1036,8 @@ function showCheckoutView() {
     return;
   }
 
+  minimizeCart();
+
   currentView = 'checkout';
   document.getElementById('productsView').style.display = 'none';
   document.getElementById('checkoutView').style.display = 'block';

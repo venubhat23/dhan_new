@@ -17,7 +17,9 @@ class Product < ApplicationRecord
     ['Kg', 'Kg'],
     ['Bottle', 'Bottle'],
     ['Box', 'Box'],
+    ['Bundle', 'Bundle'],
     ['Liter', 'Liter'],
+    ['Packet', 'Packet'],
     ['Piece', 'Piece'],
     ['Gram', 'Gram']
   ].freeze

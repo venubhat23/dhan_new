@@ -67,6 +67,10 @@ module ImportService
         return
       end
 
+      low_stock_threshold = row['low_stock_threshold'].to_s.strip.presence
+      b2b_price           = row['b2b_price'].to_s.strip.presence
+      b2b_percentage      = row['b2b_percentage'].to_s.strip.presence
+
       product = Product.new(
         name:                    name,
         category:                category,
@@ -87,6 +91,9 @@ module ImportService
         gst_percentage:          row['gst_percentage'].to_s.strip.presence,
         hsn_code:                row['hsn_code'].to_s.strip,
         is_occasional_product:   parse_bool(row['is_occasional_product']),
+        low_stock_threshold:     low_stock_threshold ? low_stock_threshold.to_i : 10,
+        b2b_price:               b2b_price,
+        b2b_percentage:          b2b_percentage,
         has_multiple_quantities: false
       )
 

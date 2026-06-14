@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_10_012119) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_14_105840) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -860,6 +860,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_10_012119) do
     t.boolean "has_multiple_quantities", default: false, null: false
     t.string "barcode"
     t.decimal "purchase_price", precision: 10, scale: 2
+    t.integer "low_stock_threshold", default: 10, null: false
     t.index ["barcode"], name: "index_products_on_barcode", unique: true
     t.index ["category_id"], name: "index_products_on_category_id"
     t.index ["is_occasional_product", "occasional_start_date", "occasional_end_date"], name: "index_products_on_occasional_dates"

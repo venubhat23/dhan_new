@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_14_105840) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_14_112324) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -793,6 +793,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_14_105840) do
     t.decimal "gst_percentage", precision: 5, scale: 2
     t.decimal "gst_amount", precision: 10, scale: 2
     t.decimal "final_price_with_gst", precision: 10, scale: 2
+    t.decimal "purchase_price", precision: 10, scale: 2
+    t.decimal "b2b_price", precision: 10, scale: 2
+    t.decimal "b2b_percentage", precision: 5, scale: 2
+    t.integer "low_stock_threshold", default: 10
     t.index ["is_default"], name: "index_product_variants_on_is_default"
     t.index ["product_id", "weight", "unit"], name: "index_product_variants_uniqueness", unique: true
     t.index ["product_id"], name: "index_product_variants_on_product_id"
@@ -861,6 +865,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_14_105840) do
     t.string "barcode"
     t.decimal "purchase_price", precision: 10, scale: 2
     t.integer "low_stock_threshold", default: 10, null: false
+    t.decimal "b2b_price", precision: 10, scale: 2
+    t.decimal "b2b_percentage", precision: 5, scale: 2
     t.index ["barcode"], name: "index_products_on_barcode", unique: true
     t.index ["category_id"], name: "index_products_on_category_id"
     t.index ["is_occasional_product", "occasional_start_date", "occasional_end_date"], name: "index_products_on_occasional_dates"

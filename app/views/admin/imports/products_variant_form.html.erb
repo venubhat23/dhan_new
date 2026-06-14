@@ -44,17 +44,23 @@
               <thead class="table-light">
                 <tr>
                   <th>name</th><th>category</th><th>...</th>
-                  <th class="table-success">weight1</th><th class="table-success">unit1</th><th class="table-success">selling_price1</th><th class="table-success">buying_price1</th><th class="table-success">stock1</th>
-                  <th class="table-warning">weight2</th><th class="table-warning">unit2</th><th class="table-warning">selling_price2</th><th class="table-warning">buying_price2</th><th class="table-warning">stock2</th>
-                  <th class="text-muted">weight3...</th>
+                  <th class="table-success">weight1</th><th class="table-success">unit1</th>
+                  <th class="table-success">selling_price1</th><th class="table-success">cost_price1</th>
+                  <th class="table-success">purchase_price1</th><th class="table-success">stock1</th>
+                  <th class="table-success">b2b_price1</th><th class="table-success">b2b_percentage1</th>
+                  <th class="table-success">low_threshold1</th>
+                  <th class="table-warning">weight2...</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td>Cow Milk</td><td>Dairy</td><td>...</td>
-                  <td class="table-success">0.5</td><td class="table-success">Liter</td><td class="table-success">32</td><td class="table-success">22</td><td class="table-success">200</td>
-                  <td class="table-warning">1</td><td class="table-warning">Liter</td><td class="table-warning">60</td><td class="table-warning">42</td><td class="table-warning">150</td>
-                  <td class="text-muted">leave blank</td>
+                  <td class="table-success">0.5</td><td class="table-success">Liter</td>
+                  <td class="table-success">32</td><td class="table-success">22</td>
+                  <td class="table-success">20</td><td class="table-success">200</td>
+                  <td class="table-success">28</td><td class="table-success">10</td>
+                  <td class="table-success">10</td>
+                  <td class="text-muted">...</td>
                 </tr>
               </tbody>
             </table>
@@ -92,7 +98,6 @@
           <ul class="list-unstyled mb-3">
             <li><i class="fas fa-check text-success me-1"></i> name*</li>
             <li><i class="fas fa-check text-success me-1"></i> category*</li>
-            <li><i class="fas fa-check text-success me-1"></i> product_type*</li>
           </ul>
           <p class="fw-bold text-muted mb-1">Product Info (Optional)</p>
           <ul class="list-unstyled mb-3">
@@ -103,11 +108,11 @@
           </ul>
           <p class="fw-bold text-success mb-1">Variant Columns (repeat 1–5)</p>
           <ul class="list-unstyled mb-0">
-            <li><i class="fas fa-check text-success me-1"></i> weight1*, unit1*, selling_price1*, buying_price1*, stock1*</li>
-            <li class="text-muted">weight2, unit2, selling_price2, buying_price2, stock2</li>
-            <li class="text-muted">weight3 … stock3</li>
-            <li class="text-muted">weight4 … stock4</li>
-            <li class="text-muted">weight5 … stock5</li>
+            <li><i class="fas fa-check text-success me-1"></i> weight1*, unit1*, selling_price1*, cost_price1*, stock1*</li>
+            <li><i class="fas fa-circle text-muted me-1" style="font-size:0.4rem;vertical-align:middle"></i> purchase_price1</li>
+            <li><i class="fas fa-circle text-info me-1" style="font-size:0.4rem;vertical-align:middle"></i> <span class="text-info">b2b_price1, b2b_percentage1</span></li>
+            <li><i class="fas fa-circle text-warning me-1" style="font-size:0.4rem;vertical-align:middle"></i> <span class="text-warning">low_threshold1</span> (default: 10)</li>
+            <li class="text-muted mt-1">Repeat above with 2, 3, 4, 5 suffix for more variants</li>
           </ul>
         </div>
       </div>
@@ -118,14 +123,14 @@
           <h5 class="mb-0"><i class="fas fa-list me-2"></i>Allowed Values</h5>
         </div>
         <div class="card-body small">
-          <p class="mb-1"><strong>product_type:</strong></p>
-          <code>Milk, Grocery, Fruit & Vegetable</code>
-          <p class="mt-2 mb-1"><strong>unit (per variant):</strong></p>
-          <code>Kg, Bottle, Box, Liter, Piece, Gram</code>
+          <p class="mb-1"><strong>unit (per variant):</strong></p>
+          <code>Kg, Bottle, Box, Bundle, Liter, Packet, Piece, Gram</code>
           <p class="mt-2 mb-1"><strong>status:</strong></p>
           <code>active, inactive, draft</code>
           <p class="mt-2 mb-1"><strong>discount_type:</strong></p>
           <code>percentage, fixed</code>
+          <p class="mt-2 mb-1"><strong>true/false fields:</strong></p>
+          <code>true / false</code>
         </div>
       </div>
     </div>

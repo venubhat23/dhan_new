@@ -634,35 +634,35 @@ class Admin::ImportsController < Admin::ApplicationController
 
   def send_variant_product_template
     headers = [
-      'name*', 'category*', 'product_type*', 'status',
+      'name*', 'category*', 'status',
       'description', 'is_subscription_enabled',
       'is_discounted', 'discount_type', 'discount_value',
       'gst_enabled', 'gst_percentage', 'hsn_code',
       'is_occasional_product',
-      'weight1*', 'unit1*', 'selling_price1*', 'buying_price1*', 'stock1*',
-      'weight2', 'unit2', 'selling_price2', 'buying_price2', 'stock2',
-      'weight3', 'unit3', 'selling_price3', 'buying_price3', 'stock3',
-      'weight4', 'unit4', 'selling_price4', 'buying_price4', 'stock4',
-      'weight5', 'unit5', 'selling_price5', 'buying_price5', 'stock5'
+      'weight1*', 'unit1*', 'selling_price1*', 'cost_price1*', 'purchase_price1', 'stock1*', 'b2b_price1', 'b2b_percentage1', 'low_threshold1',
+      'weight2',  'unit2',  'selling_price2',  'cost_price2',  'purchase_price2',  'stock2',  'b2b_price2', 'b2b_percentage2', 'low_threshold2',
+      'weight3',  'unit3',  'selling_price3',  'cost_price3',  'purchase_price3',  'stock3',  'b2b_price3', 'b2b_percentage3', 'low_threshold3',
+      'weight4',  'unit4',  'selling_price4',  'cost_price4',  'purchase_price4',  'stock4',  'b2b_price4', 'b2b_percentage4', 'low_threshold4',
+      'weight5',  'unit5',  'selling_price5',  'cost_price5',  'purchase_price5',  'stock5',  'b2b_price5', 'b2b_percentage5', 'low_threshold5'
     ]
     sample_data = [
       [
-        'Cow Milk', 'Dairy', 'Milk', 'active', 'Fresh cow milk - multiple packs', 'true',
+        'Cow Milk', 'Dairy', 'active', 'Fresh cow milk - multiple packs', 'true',
         'false', '', '', 'false', '', '', 'false',
-        '0.5', 'Liter', '32', '22', '200',
-        '1',   'Liter', '60', '42', '150',
-        '2',   'Liter', '112','80', '80',
-        '', '', '', '', '',
-        '', '', '', '', ''
+        '0.5', 'Liter', '32', '22', '20', '200', '28', '10', '10',
+        '1',   'Liter', '60', '42', '38', '150', '52', '10', '10',
+        '2',   'Liter', '112','80', '72', '80',  '98', '10', '10',
+        '', '', '', '', '', '', '', '', '',
+        '', '', '', '', '', '', '', '', ''
       ],
       [
-        'Organic Honey', 'Grocery', 'Grocery', 'active', 'Pure organic honey - multiple sizes', 'false',
+        'Organic Honey', 'Grocery', 'active', 'Pure organic honey - multiple sizes', 'false',
         'false', '', '', 'false', '', '', 'false',
-        '250',  'Gram', '149', '100', '50',
-        '500',  'Gram', '280', '190', '30',
-        '1000', 'Gram', '520', '360', '20',
-        '', '', '', '', '',
-        '', '', '', '', ''
+        '250',  'Gram', '149', '100', '90', '50', '130', '12', '5',
+        '500',  'Gram', '280', '190', '175','30', '245', '12', '5',
+        '1000', 'Gram', '520', '360', '330','20', '455', '12', '5',
+        '', '', '', '', '', '', '', '', '',
+        '', '', '', '', '', '', '', '', ''
       ]
     ]
     csv_data = CSV.generate(headers: true) { |csv| csv << headers; sample_data.each { |r| csv << r } }
