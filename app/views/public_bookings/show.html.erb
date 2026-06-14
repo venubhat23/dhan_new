@@ -1,0 +1,218 @@
+<style>
+  .biz-header {
+    background: linear-gradient(135deg, #6f42c1 0%, #4a148c 100%);
+    color: white;
+    border-radius: 16px 16px 0 0;
+    padding: 20px;
+    text-align: center;
+  }
+  .biz-logo {
+    width: 56px; height: 56px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 10px;
+    font-size: 1.5rem;
+  }
+  .biz-name { font-size: 1.2rem; font-weight: 700; }
+  .biz-sub  { font-size: 0.8rem; opacity: 0.8; }
+  .card-main {
+    background: white;
+    border-radius: 0 0 16px 16px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  }
+  .section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    margin-bottom: 8px;
+    margin-top: 18px;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 14px;
+  }
+  .section-label:first-of-type { margin-top: 0; border-top: none; padding-top: 0; }
+  .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.92rem; }
+  .info-label { color: #666; }
+  .info-value { font-weight: 600; color: #222; text-align: right; max-width: 55%; }
+  .status-pill {
+    font-size: 0.75rem; font-weight: 600;
+    padding: 3px 10px; border-radius: 20px;
+    display: inline-block;
+  }
+  .s-completed  { background: #d4edda; color: #155724; }
+  .s-cancelled  { background: #f8d7da; color: #721c24; }
+  .s-pending    { background: #fff3cd; color: #856404; }
+  .s-other      { background: #cfe2ff; color: #084298; }
+  .pay-paid     { background: #d4edda; color: #155724; }
+  .pay-unpaid   { background: #f8d7da; color: #721c24; }
+  .pay-partial  { background: #fff3cd; color: #856404; }
+  .item-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: 0.88rem;
+  }
+  .item-row:last-child { border-bottom: none; }
+  .item-name { font-weight: 500; color: #222; }
+  .item-meta { font-size: 0.78rem; color: #888; margin-top: 2px; }
+  .item-price { font-weight: 600; color: #1a7f37; white-space: nowrap; }
+  .total-row {
+    display: flex; justify-content: space-between;
+    font-size: 0.9rem; padding: 5px 0; color: #555;
+  }
+  .total-final {
+    font-size: 1.15rem; font-weight: 700;
+    color: #1a7f37;
+    border-top: 2px solid #e9ecef;
+    padding-top: 10px; margin-top: 4px;
+  }
+  .wa-btn {
+    display: block; width: 100%;
+    background: #25d366; color: white;
+    border: none; border-radius: 12px;
+    padding: 13px;
+    font-size: 1rem; font-weight: 600;
+    text-align: center; text-decoration: none;
+    margin-top: 20px;
+    transition: background 0.2s;
+  }
+  .wa-btn:hover { background: #1ebe5d; color: white; }
+  .footer-note { text-align: center; font-size: 0.75rem; color: #aaa; margin-top: 14px; }
+</style>
+
+<div class="biz-header">
+  <div class="biz-logo"><i class="bi bi-bag-heart-fill"></i></div>
+  <div class="biz-name"><%= @business&.dig('business_name') || 'Dhanvantri Naturals' %></div>
+  <div class="biz-sub">Booking Confirmation</div>
+</div>
+
+<div class="card-main">
+  <%# Booking Info %>
+  <div class="section-label">Booking Details</div>
+  <div class="info-row">
+    <span class="info-label">Booking #</span>
+    <span class="info-value">#<%= @booking.booking_number %></span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Date</span>
+    <span class="info-value">
+      <%= (@booking.booking_date || @booking.created_at)&.strftime('%d %b %Y') %>
+    </span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Status</span>
+    <span class="info-value">
+      <%
+        st = @booking.status.to_s
+        css = case st
+              when 'completed', 'delivered' then 's-completed'
+              when 'cancelled', 'returned'  then 's-cancelled'
+              when /pending|draft/          then 's-pending'
+              else                               's-other'
+              end
+      %>
+      <span class="status-pill <%= css %>"><%= st.humanize %></span>
+    </span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Payment</span>
+    <span class="info-value">
+      <%
+        pay_css = case @booking.payment_status.to_s
+                  when 'paid'           then 'pay-paid'
+                  when 'partially_paid' then 'pay-partial'
+                  else                       'pay-unpaid'
+                  end
+      %>
+      <span class="status-pill <%= pay_css %>"><%= @booking.payment_status.to_s.humanize %></span>
+      <% if @booking.payment_method.present? %>
+        <small class="text-muted ms-1">(<%= @booking.payment_method.humanize %>)</small>
+      <% end %>
+    </span>
+  </div>
+
+  <%# Customer Info %>
+  <% cname = @booking.customer&.display_name || @booking.customer_name.presence %>
+  <% phone  = @booking.customer&.mobile      || @booking.customer_phone %>
+  <% if cname.present? || phone.present? %>
+    <div class="section-label">Customer</div>
+    <% if cname.present? %>
+      <div class="info-row">
+        <span class="info-label"><i class="bi bi-person me-1"></i>Name</span>
+        <span class="info-value"><%= cname %></span>
+      </div>
+    <% end %>
+    <% if phone.present? %>
+      <div class="info-row">
+        <span class="info-label"><i class="bi bi-telephone me-1"></i>Phone</span>
+        <span class="info-value"><%= phone %></span>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%# Items %>
+  <% if @booking.booking_items.any? %>
+    <div class="section-label">Items Ordered</div>
+    <% @booking.booking_items.each do |item| %>
+      <%
+        pname   = item.product&.name || "Product ##{item.product_id}"
+        vlabel  = item.product_variant&.label
+        qty     = item.quantity.to_f
+        price   = item.price.to_f
+        iTotal  = (qty * price).round(2)
+      %>
+      <div class="item-row">
+        <div>
+          <div class="item-name"><%= pname %><%= " – #{vlabel}" if vlabel.present? %></div>
+          <div class="item-meta">₹<%= number_with_delimiter(price) %> × <%= qty % 1 == 0 ? qty.to_i : qty %></div>
+        </div>
+        <div class="item-price">₹<%= number_with_delimiter(iTotal) %></div>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%# Totals %>
+  <div class="section-label">Order Summary</div>
+  <% subtotal  = @booking.subtotal.to_f %>
+  <% tax       = @booking.tax_amount.to_f %>
+  <% discount  = @booking.discount_amount.to_f %>
+  <% total     = @booking.total_amount.to_f %>
+
+  <% if subtotal > 0 %>
+    <div class="total-row"><span>Subtotal</span><span>₹<%= number_with_delimiter(subtotal.round(2)) %></span></div>
+  <% end %>
+  <% if tax > 0 %>
+    <div class="total-row"><span>GST</span><span>₹<%= number_with_delimiter(tax.round(2)) %></span></div>
+  <% end %>
+  <% if discount > 0 %>
+    <div class="total-row"><span>Discount</span><span style="color:#dc3545;">– ₹<%= number_with_delimiter(discount.round(2)) %></span></div>
+  <% end %>
+  <div class="total-row total-final">
+    <span>Total</span>
+    <span>₹<%= number_with_delimiter(total.round(2)) %></span>
+  </div>
+
+  <%# WhatsApp reply button (customer's phone) %>
+  <%
+    raw_phone  = (@booking.customer&.mobile || @booking.customer_phone).to_s
+    clean_ph   = raw_phone.gsub(/\D/, '').sub(/^0+/, '').sub(/^91/, '')
+    wa_phone   = clean_ph.present? ? "91#{clean_ph}" : nil
+    biz        = @business&.dig('business_name') || 'Dhanvantri Naturals'
+  %>
+  <% if wa_phone.present? %>
+    <% msg = "Hi! I have a query about my booking ##{@booking.booking_number} with #{biz}." %>
+    <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(msg) %>"
+       class="wa-btn" target="_blank">
+      <i class="bi bi-whatsapp me-2"></i>Chat on WhatsApp
+    </a>
+  <% end %>
+
+  <div class="footer-note">
+    <i class="bi bi-shield-check me-1"></i>
+    This booking summary was shared by <%= @business&.dig('business_name') || 'Dhanvantri Naturals' %>.<br>
+    <%= Date.current.year %> &copy; All rights reserved.
+  </div>
+</div>

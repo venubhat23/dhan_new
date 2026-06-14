@@ -73,6 +73,9 @@ Rails.application.routes.draw do
 
   # Public invoice view (no authentication required)
   get '/invoice/:token', to: 'booking_invoices#public_view', as: 'public_invoice'
+
+  # Public booking summary (no authentication required — share link)
+  get '/booking/:token', to: 'public_bookings#show', as: 'public_booking_summary'
   get '/invoice/:token/download', to: 'booking_invoices#public_download_pdf', as: 'public_invoice_download', defaults: { format: :pdf }
 
   # Dashboard

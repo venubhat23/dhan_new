@@ -613,7 +613,9 @@
                         wa_cname = booking.customer&.display_name || booking.customer_name.presence || 'Customer'
                         wa_amount = number_with_delimiter(booking.total_amount || 0)
                         wa_date = (booking.respond_to?(:booking_date) && booking.booking_date.present? ? booking.booking_date : booking.created_at)&.strftime('%d %b %Y')
-                        wa_msg = "Dear #{wa_cname},\n\nThank you for your booking with Dhanvantri Naturals! 🌿\n\nBooking #: #{booking.booking_number}\nDate: #{wa_date}\nAmount: ₹#{wa_amount}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantri Naturals Team"
+                        booking.ensure_share_token!
+                        wa_public_url = "#{request.base_url}/booking/#{booking.share_token}"
+                        wa_msg = "Dear #{wa_cname},\n\nThank you for your booking with Dhanvantri Naturals! 🌿\n\nBooking #: #{booking.booking_number}\nDate: #{wa_date}\nAmount: ₹#{wa_amount}\n\n📄 View your booking: #{wa_public_url}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantri Naturals Team"
                       %>
                       <% if wa_phone_full.present? %>
                         <a href="https://wa.me/<%= wa_phone_full %>?text=<%= ERB::Util.url_encode(wa_msg) %>"

@@ -58,6 +58,7 @@ class Booking < ApplicationRecord
   validates :total_amount, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
   before_validation :generate_booking_number, on: :create
+  before_create     :generate_share_token
   before_validation :calculate_totals
   before_validation :calculate_final_amount_after_discount
   after_validation :ensure_total_amount_present
@@ -78,6 +79,21 @@ class Booking < ApplicationRecord
 
   def generate_booking_number
     self.booking_number ||= "BK#{Date.current.strftime('%Y%m%d')}#{SecureRandom.hex(3).upcase}"
+  end
+
+  def generate_share_token
+    return if share_token.present?
+    loop do
+      token = SecureRandom.urlsafe_base64(16)
+      break self.share_token = token unless Booking.exists?(share_token: token)
+    end
+  end
+
+  def ensure_share_token!
+    return share_token if share_token.present?
+    generate_share_token
+    update_column(:share_token, share_token)
+    share_token
   end
 
 
