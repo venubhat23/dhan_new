@@ -1585,16 +1585,16 @@ function filterProducts(type) {
   const inStockBtn = document.getElementById('inStockBtn');
 
   // Update button states
-  allBtn.classList.remove('active');
-  inStockBtn.classList.remove('active');
+  if (allBtn) allBtn.classList.remove('active');
+  if (inStockBtn) inStockBtn.classList.remove('active');
 
   if (type === 'all') {
-    allBtn.classList.add('active');
+    if (allBtn) allBtn.classList.add('active');
     products.forEach(product => {
       product.style.display = 'block';
     });
   } else if (type === 'instock') {
-    inStockBtn.classList.add('active');
+    if (inStockBtn) inStockBtn.classList.add('active');
     products.forEach(product => {
       const stock = parseInt(product.dataset.stock) || 0;
       product.style.display = stock > 0 ? 'block' : 'none';
@@ -1604,7 +1604,8 @@ function filterProducts(type) {
 
 // Apply category filter
 function applyCategoryFilter() {
-  const categoryFilter = document.getElementById('categoryFilter').value;
+  const categoryFilterEl = document.getElementById('categoryFilter');
+  const categoryFilter = categoryFilterEl ? categoryFilterEl.value : '';
   const products = document.querySelectorAll('.product-grid-item');
 
   products.forEach(product => {
@@ -1960,19 +1961,22 @@ function showBookingDateAlert(message, type, icon) {
 
 // Show camera button only on touch/mobile devices
 if (navigator.maxTouchPoints > 0) {
-  document.getElementById('cameraBtn').classList.remove('d-none');
+  const cameraBtn = document.getElementById('cameraBtn');
+  if (cameraBtn) cameraBtn.classList.remove('d-none');
 }
 
 const barcodeInput = document.getElementById('barcodeInput');
 const barcodeFeedback = document.getElementById('barcodeFeedback');
 
-barcodeInput.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const code = barcodeInput.value.trim();
-    if (code) lookupBarcode(code);
-  }
-});
+if (barcodeInput) {
+  barcodeInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const code = barcodeInput.value.trim();
+      if (code) lookupBarcode(code);
+    }
+  });
+}
 
 function lookupBarcode(code) {
   barcodeFeedback.innerHTML = '<small class="text-secondary"><i class="bi bi-hourglass-split me-1"></i>Looking up...</small>';
