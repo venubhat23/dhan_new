@@ -210,7 +210,12 @@ class Admin::ImportsController < Admin::ApplicationController
     begin
       result = ImportService::VariantProductImporter.new(uploaded_file).import
       if result[:success]
-        redirect_to admin_products_path, notice: "Successfully imported #{result[:imported_count]} products. #{result[:skipped_count]} skipped."
+        msg = "Successfully imported #{result[:imported_count]} products."
+        if result[:skipped_count] > 0
+          error_details = result[:errors].first(10).join(' | ')
+          msg += " #{result[:skipped_count]} skipped — Reasons: #{error_details}"
+        end
+        redirect_to admin_products_path, notice: msg
       else
         redirect_back fallback_location: products_variant_form_admin_imports_path, alert: "Import failed: #{result[:error]}"
       end

@@ -82,12 +82,12 @@ module ImportService
         next if weight.blank? || sp.blank?
 
         variants_attrs << {
-          weight:        weight.to_f,
-          unit:          unit.presence || 'Liter',
-          selling_price: sp.to_f,
-          buying_price:  bp.presence ? bp.to_f : sp.to_f,
-          stock:         stock.to_i,
-          is_default:    n == 1
+          weight:          weight.to_f,
+          unit:            unit.presence || 'Liter',
+          selling_price:   sp.to_f,
+          buying_price:    bp.presence ? bp.to_f : sp.to_f,
+          available_stock: stock.to_i,
+          is_default:      n == 1
         }
       end
 
