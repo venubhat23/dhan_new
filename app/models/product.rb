@@ -975,8 +975,7 @@ class Product < ApplicationRecord
   end
 
   def low_stock?
-    # Use minimum_stock_alert if it exists, otherwise default threshold of 10
-    threshold = respond_to?(:minimum_stock_alert) && minimum_stock_alert.present? ? minimum_stock_alert : 10
+    threshold = low_stock_threshold || 10
     stock_amount = cached_total_batch_stock
     stock_amount > 0 && stock_amount <= threshold
   end

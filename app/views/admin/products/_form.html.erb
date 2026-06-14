@@ -638,6 +638,15 @@
           </div>
 
           <div class="col-12">
+            <%= form.label :low_stock_threshold, "Low Stock Threshold", class: "form-label" %>
+            <%= form.number_field :low_stock_threshold, class: "form-control", min: 0, placeholder: "10" %>
+            <div class="form-text">
+              <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+              Alert when stock falls at or below this quantity (default: 10)
+            </div>
+          </div>
+
+          <div class="col-12">
             <%= form.label :unit_type, "Unit", class: "form-label" %>
             <span class="text-danger">*</span>
             <%= form.select :unit_type,

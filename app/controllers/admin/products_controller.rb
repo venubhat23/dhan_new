@@ -642,7 +642,7 @@ class Admin::ProductsController < Admin::ApplicationController
 
   def product_params
     params.require(:product).permit(
-      :name, :description, :category_id, :price, :discount_price, :stock, :initial_stock,
+      :name, :description, :category_id, :price, :discount_price, :stock, :initial_stock, :low_stock_threshold,
       :status, :sku, :hsn_code, :weight, :dimensions, :meta_title, :meta_description, :tags,
       :buying_price, :purchase_price, :discount_type, :discount_value, :original_price, :discount_amount, :is_discounted,
       :product_type, :unit_type, :is_subscription_enabled,

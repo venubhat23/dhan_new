@@ -703,6 +703,14 @@
                   <% if item.description.present? && item.description != (item.product&.name || 'Product') %>
                     <br><span class="description"><%= item.description %></span>
                   <% end %>
+                  <% if item.product.present? %>
+                    <% threshold = item.product.low_stock_threshold || 10 %>
+                    <% current_stock = item.product.stock.to_i %>
+                    <br><span class="description" style="color: <%= current_stock <= threshold ? '#e74c3c' : '#27ae60' %>;">
+                      Stock: <%= current_stock %> <%= item.product.unit_type %> | Min: <%= threshold %>
+                      <%= ' ⚠ Low Stock' if current_stock <= threshold %>
+                    </span>
+                  <% end %>
                 </div>
               </td>
               <td class="center-align"><%= item.product&.hsn_code || '-' %></td>
