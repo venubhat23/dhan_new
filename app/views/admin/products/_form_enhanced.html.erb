@@ -879,9 +879,9 @@
                     <%= vf.select :unit, options_for_select(Product::UNIT_TYPES, vf.object.unit), {}, { class: "form-select" } %>
                   </div>
 
-                  <!-- Buying + Selling -->
+                  <!-- Cost + Selling -->
                   <div class="col-6 col-md-3">
-                    <%= vf.label :buying_price, "Buying Price ₹", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.label :buying_price, "Cost Price ₹", class: "form-label small fw-semibold mb-1" %>
                     <%= vf.number_field :buying_price, class: "form-control", step: 0.01, min: 0, placeholder: "0.00" %>
                   </div>
                   <div class="col-6 col-md-3">
@@ -924,6 +924,29 @@
                   <div class="col-6 col-md-3">
                     <%= vf.label :available_stock, "Available Stock", class: "form-label small fw-semibold mb-1" %>
                     <%= vf.number_field :available_stock, class: "form-control", min: 0, placeholder: "0" %>
+                  </div>
+
+                  <!-- Purchase Price -->
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :purchase_price, "Purchase Price ₹", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :purchase_price, class: "form-control", step: 0.01, min: 0, placeholder: "0.00" %>
+                  </div>
+
+                  <!-- B2B Price + Percentage -->
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :b2b_price, "B2B Price ₹", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :b2b_price, class: "form-control", step: 0.01, min: 0, placeholder: "0.00" %>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :b2b_percentage, "B2B %", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :b2b_percentage, class: "form-control", step: 0.01, min: 0, max: 100, placeholder: "0.00" %>
+                  </div>
+
+                  <!-- Low Stock Threshold -->
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :low_stock_threshold, "Low Stock Alert", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :low_stock_threshold, class: "form-control", min: 0, placeholder: "10" %>
+                    <div class="form-text">Alert when stock ≤ this value</div>
                   </div>
 
                   <!-- Calculated summary -->
@@ -980,7 +1003,7 @@
               </select>
             </div>
             <div class="col-6 col-md-3">
-              <label class="form-label small fw-semibold mb-1">Buying Price ₹</label>
+              <label class="form-label small fw-semibold mb-1">Cost Price ₹</label>
               <input type="number" name="product[product_variants_attributes][NEW_IDX][buying_price]" class="form-control" step="0.01" min="0" placeholder="0.00">
             </div>
             <div class="col-6 col-md-3">
@@ -1016,6 +1039,24 @@
             <div class="col-6 col-md-3">
               <label class="form-label small fw-semibold mb-1">Available Stock</label>
               <input type="number" name="product[product_variants_attributes][NEW_IDX][available_stock]" class="form-control" min="0" placeholder="0">
+            </div>
+
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">Purchase Price ₹</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][purchase_price]" class="form-control" step="0.01" min="0" placeholder="0.00">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">B2B Price ₹</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][b2b_price]" class="form-control" step="0.01" min="0" placeholder="0.00">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">B2B %</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][b2b_percentage]" class="form-control" step="0.01" min="0" max="100" placeholder="0.00">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">Low Stock Alert</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][low_stock_threshold]" class="form-control" min="0" placeholder="10">
+              <div class="form-text">Alert when stock ≤ this value</div>
             </div>
 
             <div class="col-12">
@@ -1054,6 +1095,26 @@
               step: "0.01", min: 0, placeholder: "0.00",
               id: "purchase-price" %>
           <div class="help-text">Price at which product was purchased</div>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :b2b_price, class: "form-label" do %>
+            B2B Price (₹)
+          <% end %>
+          <%= form.number_field :b2b_price, class: "form-control",
+              step: "0.01", min: 0, placeholder: "0.00",
+              id: "b2b-price" %>
+          <div class="help-text">Special price for B2B customers</div>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :b2b_percentage, class: "form-label" do %>
+            B2B Discount (%)
+          <% end %>
+          <%= form.number_field :b2b_percentage, class: "form-control",
+              step: "0.01", min: 0, max: 100, placeholder: "0.00",
+              id: "b2b-percentage" %>
+          <div class="help-text">B2B discount percentage off selling price</div>
         </div>
 
         <div class="form-group">
@@ -1165,6 +1226,15 @@
           <%= form.number_field :stock, class: "form-control",
               min: 0, required: true, placeholder: "0", id: "product_stock" %>
           <div class="help-text">Current available quantity</div>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :low_stock_threshold, class: "form-label" do %>
+            Low Stock Alert Threshold
+          <% end %>
+          <%= form.number_field :low_stock_threshold, class: "form-control",
+              min: 0, placeholder: "10", id: "low_stock_threshold" %>
+          <div class="help-text">Show low-stock warning when quantity drops to this level (default: 10)</div>
         </div>
 
         <!-- Stock Update Vendor Purchase Linking (shown only when editing) -->
