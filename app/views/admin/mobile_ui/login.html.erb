@@ -1,0 +1,115 @@
+<style>
+  body { background: linear-gradient(160deg, #6f42c1 0%, #4a148c 60%, #1a0033 100%) !important; min-height: 100vh; }
+  .login-card {
+    background: white;
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    padding: 2.5rem 2rem;
+  }
+  .logo-ring {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, #6f42c1, #4a148c);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.2rem;
+    box-shadow: 0 8px 24px rgba(111,66,193,0.4);
+  }
+  .form-control {
+    border-radius: 12px;
+    border: 2px solid #e9ecef;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+  .form-control:focus {
+    border-color: #6f42c1;
+    box-shadow: 0 0 0 3px rgba(111,66,193,0.15);
+  }
+  .input-group-text {
+    border-radius: 12px 0 0 12px !important;
+    border: 2px solid #e9ecef;
+    border-right: none;
+    background: #f8f9fa;
+    color: #6f42c1;
+  }
+  .input-group .form-control { border-radius: 0 12px 12px 0 !important; border-left: none; }
+  .input-group:focus-within .input-group-text { border-color: #6f42c1; }
+  .btn-login {
+    background: linear-gradient(135deg, #6f42c1, #4a148c);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 0.85rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    width: 100%;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 15px rgba(111,66,193,0.4);
+    transition: all 0.2s;
+  }
+  .btn-login:active { transform: scale(0.97); }
+  .eye-toggle { cursor: pointer; color: #6c757d; }
+</style>
+
+<div class="d-flex align-items-center justify-content-center" style="min-height: 100vh; padding: 20px;">
+  <div style="width: 100%; max-width: 380px;">
+    <div class="login-card">
+      <div class="logo-ring">
+        <i class="bi bi-bag-heart-fill text-white" style="font-size: 2rem;"></i>
+      </div>
+      <h4 class="text-center fw-bold mb-1" style="color: #4a148c;">Dhanvantri Naturals</h4>
+      <p class="text-center text-muted mb-4" style="font-size: 0.88rem;">Admin Mobile Portal</p>
+
+      <% if flash[:error].present? %>
+        <div class="alert alert-danger rounded-3 py-2 px-3 mb-3" style="font-size: 0.88rem;">
+          <i class="bi bi-exclamation-circle me-1"></i><%= flash[:error] %>
+        </div>
+      <% end %>
+
+      <%= form_with url: admin_mobile_ui_do_login_path, method: :post, local: true do |f| %>
+        <div class="mb-3">
+          <label class="form-label fw-semibold text-secondary" style="font-size: 0.85rem;">USERNAME</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
+            <%= f.text_field :username, class: 'form-control', placeholder: 'Enter username',
+                autocomplete: 'username', autofocus: true, value: params[:username] %>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold text-secondary" style="font-size: 0.85rem;">PASSWORD</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+            <%= f.password_field :password, class: 'form-control', placeholder: 'Enter password',
+                autocomplete: 'current-password', id: 'passwordField' %>
+            <button type="button" class="btn btn-outline-secondary border-start-0 border eye-toggle"
+                    style="border-radius: 0 12px 12px 0 !important; border: 2px solid #e9ecef; border-left: none;"
+                    onclick="togglePassword()">
+              <i class="bi bi-eye" id="eyeIcon"></i>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn-login">
+          <i class="bi bi-shield-lock me-2"></i>Sign In
+        </button>
+      <% end %>
+
+      <p class="text-center text-muted mt-4 mb-0" style="font-size: 0.78rem;">
+        Dhanvantri Naturals Admin &copy; <%= Date.current.year %>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePassword() {
+  const field = document.getElementById('passwordField');
+  const icon  = document.getElementById('eyeIcon');
+  if (field.type === 'password') {
+    field.type = 'text';
+    icon.classList.replace('bi-eye', 'bi-eye-slash');
+  } else {
+    field.type = 'password';
+    icon.classList.replace('bi-eye-slash', 'bi-eye');
+  }
+}
+</script>

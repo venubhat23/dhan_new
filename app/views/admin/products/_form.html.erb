@@ -323,15 +323,25 @@
         <!-- Single pricing fields (hidden when multi-qty enabled) -->
         <div id="single_pricing_section" style="<%= @product.has_multiple_quantities? ? 'display:none;' : '' %>">
         <div class="row g-3">
-          <div class="col-md-6">
-            <%= form.label :buying_price, "Buying Price", class: "form-label" %>
+          <div class="col-md-4">
+            <%= form.label :buying_price, "Cost Price", class: "form-label" %>
             <div class="input-group">
               <span class="input-group-text">₹</span>
               <%= form.number_field :buying_price, class: "form-control", step: 0.01, min: 0, placeholder: "0.00", id: "product_buying_price" %>
             </div>
+            <div class="form-text">Actual cost / buying price</div>
           </div>
 
-          <div class="col-md-6">
+          <div class="col-md-4">
+            <%= form.label :purchase_price, "Purchase Price", class: "form-label" %>
+            <div class="input-group">
+              <span class="input-group-text">₹</span>
+              <%= form.number_field :purchase_price, class: "form-control", step: 0.01, min: 0, placeholder: "0.00" %>
+            </div>
+            <div class="form-text">Vendor / supplier price</div>
+          </div>
+
+          <div class="col-md-4">
             <%= form.label :price, "Selling Price", class: "form-label" %>
             <span class="text-danger">*</span>
             <div class="input-group">
