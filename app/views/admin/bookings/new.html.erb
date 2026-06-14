@@ -1402,7 +1402,10 @@ function highlightSearchTerm(text, searchTerm) {
 
 function escapeHtml(text) {
   if (!text) return '';
-  return text.replace(/'/g, "\\\\'").replace(/"/g, '&quot;');
+  return String(text)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;');
 }
 
 function escapeRegex(string) {
@@ -1777,10 +1780,10 @@ document.addEventListener('DOMContentLoaded', function() {
   <% if @preselected_customer %>
   (function() {
     const preId = <%= @preselected_customer.id %>;
-    const preName = <%= @preselected_customer.display_name.to_json %>;
-    const preMobile = <%= @preselected_customer.mobile.to_json %>;
-    const preEmail = <%= (@preselected_customer.email || '').to_json %>;
-    const preAddress = <%= (@preselected_customer.respond_to?(:address) ? @preselected_customer.address.to_s : '').to_json %>;
+    const preName = <%= raw @preselected_customer.display_name.to_json %>;
+    const preMobile = <%= raw @preselected_customer.mobile.to_json %>;
+    const preEmail = <%= raw (@preselected_customer.email || '').to_json %>;
+    const preAddress = <%= raw (@preselected_customer.respond_to?(:address) ? @preselected_customer.address.to_s : '').to_json %>;
 
     document.getElementById('selected_customer_id').value = preId;
     const nameField = document.getElementById('booking_customer_name');
