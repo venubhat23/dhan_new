@@ -1,0 +1,97 @@
+<style>
+  .form-card { background:white; border-radius:16px; padding:20px; margin:12px; box-shadow:0 2px 12px rgba(0,0,0,0.08); }
+  .field-label { font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#666; margin-bottom:6px; }
+  .mob-input {
+    width:100%; border:2px solid #e9ecef; border-radius:12px;
+    padding:12px 14px; font-size:1rem; outline:none;
+    transition:border-color 0.2s; background:white;
+  }
+  .mob-input:focus { border-color:#6f42c1; }
+  .mob-input.is-invalid { border-color:#dc3545; }
+  .input-wrap { position:relative; }
+  .input-icon { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:#aaa; font-size:1rem; pointer-events:none; }
+  .input-wrap .mob-input { padding-left:38px; }
+  .submit-btn {
+    width:100%; background:linear-gradient(135deg,#6f42c1,#4a148c);
+    color:white; border:none; border-radius:12px; padding:14px;
+    font-size:1rem; font-weight:700; letter-spacing:0.3px;
+    box-shadow:0 4px 15px rgba(111,66,193,0.35);
+  }
+  .submit-btn:active { transform:scale(0.98); }
+  .page-top { padding:14px 12px 0; display:flex; align-items:center; gap:10px; }
+  .back-btn { width:36px;height:36px;border-radius:10px;background:white;border:2px solid #e9ecef;display:flex;align-items:center;justify-content:center;color:#6f42c1;text-decoration:none;flex-shrink:0; }
+</style>
+
+<div class="page-top">
+  <%= link_to admin_mobile_ui_bookings_path, class: 'back-btn' do %>
+    <i class="bi bi-arrow-left"></i>
+  <% end %>
+  <div>
+    <div style="font-weight:700;font-size:1rem;color:#222;">New Customer</div>
+    <div style="font-size:0.78rem;color:#888;">Create customer then add booking</div>
+  </div>
+</div>
+
+<div class="form-card">
+  <% if @customer.errors.any? %>
+    <div class="alert alert-danger rounded-3 mb-3 py-2 px-3" style="font-size:0.85rem;">
+      <i class="bi bi-exclamation-circle me-1"></i>
+      <%= @customer.errors.full_messages.join(' · ') %>
+    </div>
+  <% end %>
+
+  <%= form_with url: admin_mobile_ui_create_customer_path, method: :post, local: true do |f| %>
+    <div class="mb-3">
+      <div class="field-label">Customer Name *</div>
+      <div class="input-wrap">
+        <i class="bi bi-person input-icon"></i>
+        <input type="text" name="customer[first_name]"
+               class="mob-input <%= @customer.errors[:first_name].any? ? 'is-invalid' : '' %>"
+               placeholder="Full name" required autofocus
+               value="<%= @customer.first_name %>">
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <div class="field-label">Mobile Number *</div>
+      <div class="input-wrap">
+        <i class="bi bi-telephone input-icon"></i>
+        <input type="tel" name="customer[mobile]" id="mob_mobile"
+               class="mob-input <%= @customer.errors[:mobile].any? ? 'is-invalid' : '' %>"
+               placeholder="10-digit mobile" required
+               value="<%= @customer.mobile %>">
+      </div>
+      <div style="font-size:0.75rem;color:#888;margin-top:4px;">
+        <i class="bi bi-key me-1 text-warning"></i>
+        App password: <strong id="pwdPreview">XXXX@123</strong>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <div class="field-label">Email <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>
+      <div class="input-wrap">
+        <i class="bi bi-envelope input-icon"></i>
+        <input type="email" name="customer[email]"
+               class="mob-input"
+               placeholder="Email address (optional)"
+               value="<%= @customer.email %>">
+      </div>
+    </div>
+
+    <div style="background:#f0ebff;border-radius:10px;padding:10px 14px;margin-bottom:18px;font-size:0.82rem;color:#6f42c1;">
+      <i class="bi bi-info-circle me-1"></i>
+      After creating customer you'll go directly to the booking page with customer pre-selected.
+    </div>
+
+    <button type="submit" class="submit-btn">
+      <i class="bi bi-person-check me-2"></i>Create & Go to Booking
+    </button>
+  <% end %>
+</div>
+
+<script>
+  document.getElementById('mob_mobile').addEventListener('input', function() {
+    const d = this.value.replace(/\D/g,'');
+    document.getElementById('pwdPreview').textContent = d.length >= 4 ? d.substring(0,4)+'@123' : 'XXXX@123';
+  });
+</script>
