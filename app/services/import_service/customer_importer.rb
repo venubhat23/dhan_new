@@ -101,10 +101,14 @@ module ImportService
 
     def normalize_customer_data(row)
       customer_name = row['customer_name']&.to_s&.strip
-      password = generate_password(customer_name)
+      name_parts    = customer_name.to_s.split(/\s+/, 2)
+      first_name    = name_parts[0].to_s.strip.presence
+      last_name     = name_parts[1].to_s.strip.presence
+      password      = generate_password(first_name || customer_name)
 
       {
-        first_name:       customer_name,
+        first_name:       first_name,
+        last_name:        last_name,
         email:            row['email']&.to_s&.downcase&.strip.presence,
         mobile:           row['mobile']&.to_s&.strip,
         whatsapp_number:  row['whatsapp_number']&.to_s&.strip.presence || row['mobile']&.to_s&.strip,
@@ -118,7 +122,7 @@ module ImportService
     end
 
     def valid_row?(customer_data, row_number)
-      if customer_data[:first_name].blank?
+      if customer_data[:first_name].blank? && customer_data[:last_name].blank?
         @errors << "Row #{row_number}: customer_name is required"
         return false
       end

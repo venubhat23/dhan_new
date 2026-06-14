@@ -19,6 +19,7 @@ class Product < ApplicationRecord
     ['Box', 'Box'],
     ['Bundle', 'Bundle'],
     ['Liter', 'Liter'],
+    ['Ml', 'Ml'],
     ['Packet', 'Packet'],
     ['Piece', 'Piece'],
     ['Gram', 'Gram']
