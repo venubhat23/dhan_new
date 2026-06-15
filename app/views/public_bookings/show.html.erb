@@ -85,7 +85,7 @@
 
 <div class="biz-header">
   <div class="biz-logo"><i class="bi bi-bag-heart-fill"></i></div>
-  <div class="biz-name"><%= @business&.dig('business_name') || 'Dhanvantri Naturals' %></div>
+  <div class="biz-name"><%= @business&.business_name || 'Dhanvantri Naturals' %></div>
   <div class="biz-sub">Booking Confirmation</div>
 </div>
 
@@ -200,7 +200,7 @@
     raw_phone  = (@booking.customer&.mobile || @booking.customer_phone).to_s
     clean_ph   = raw_phone.gsub(/\D/, '').sub(/^0+/, '').sub(/^91/, '')
     wa_phone   = clean_ph.present? ? "91#{clean_ph}" : nil
-    biz        = @business&.dig('business_name') || 'Dhanvantri Naturals'
+    biz        = @business&.business_name || 'Dhanvantri Naturals'
   %>
   <% if wa_phone.present? %>
     <% msg = "Hi! I have a query about my booking ##{@booking.booking_number} with #{biz}." %>
@@ -212,7 +212,7 @@
 
   <div class="footer-note">
     <i class="bi bi-shield-check me-1"></i>
-    This booking summary was shared by <%= @business&.dig('business_name') || 'Dhanvantri Naturals' %>.<br>
+    This booking summary was shared by <%= @business&.business_name || 'Dhanvantri Naturals' %>.<br>
     <%= Date.current.year %> &copy; All rights reserved.
   </div>
 </div>
