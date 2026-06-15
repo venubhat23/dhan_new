@@ -1,5 +1,5 @@
 class PublicBookingsController < ActionController::Base
-  layout 'public_booking'
+  layout 'invoice'
   protect_from_forgery with: :exception
 
   def show

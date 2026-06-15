@@ -1,218 +1,956 @@
-<style>
-  .biz-header {
-    background: linear-gradient(135deg, #6f42c1 0%, #4a148c 100%);
-    color: white;
-    border-radius: 16px 16px 0 0;
-    padding: 20px;
-    text-align: center;
-  }
-  .biz-logo {
-    width: 56px; height: 56px;
-    background: rgba(255,255,255,0.2);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 10px;
-    font-size: 1.5rem;
-  }
-  .biz-name { font-size: 1.2rem; font-weight: 700; }
-  .biz-sub  { font-size: 0.8rem; opacity: 0.8; }
-  .card-main {
-    background: white;
-    border-radius: 0 0 16px 16px;
-    padding: 20px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-  }
-  .section-label {
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #888;
-    margin-bottom: 8px;
-    margin-top: 18px;
-    border-top: 1px solid #f0f0f0;
-    padding-top: 14px;
-  }
-  .section-label:first-of-type { margin-top: 0; border-top: none; padding-top: 0; }
-  .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.92rem; }
-  .info-label { color: #666; }
-  .info-value { font-weight: 600; color: #222; text-align: right; max-width: 55%; }
-  .status-pill {
-    font-size: 0.75rem; font-weight: 600;
-    padding: 3px 10px; border-radius: 20px;
-    display: inline-block;
-  }
-  .s-completed  { background: #d4edda; color: #155724; }
-  .s-cancelled  { background: #f8d7da; color: #721c24; }
-  .s-pending    { background: #fff3cd; color: #856404; }
-  .s-other      { background: #cfe2ff; color: #084298; }
-  .pay-paid     { background: #d4edda; color: #155724; }
-  .pay-unpaid   { background: #f8d7da; color: #721c24; }
-  .pay-partial  { background: #fff3cd; color: #856404; }
-  .item-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #f5f5f5;
-    font-size: 0.88rem;
-  }
-  .item-row:last-child { border-bottom: none; }
-  .item-name { font-weight: 500; color: #222; }
-  .item-meta { font-size: 0.78rem; color: #888; margin-top: 2px; }
-  .item-price { font-weight: 600; color: #1a7f37; white-space: nowrap; }
-  .total-row {
-    display: flex; justify-content: space-between;
-    font-size: 0.9rem; padding: 5px 0; color: #555;
-  }
-  .total-final {
-    font-size: 1.15rem; font-weight: 700;
-    color: #1a7f37;
-    border-top: 2px solid #e9ecef;
-    padding-top: 10px; margin-top: 4px;
-  }
-  .wa-btn {
-    display: block; width: 100%;
-    background: #25d366; color: white;
-    border: none; border-radius: 12px;
-    padding: 13px;
-    font-size: 1rem; font-weight: 600;
-    text-align: center; text-decoration: none;
-    margin-top: 20px;
-    transition: background 0.2s;
-  }
-  .wa-btn:hover { background: #1ebe5d; color: white; }
-  .footer-note { text-align: center; font-size: 0.75rem; color: #aaa; margin-top: 14px; }
-</style>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Invoice #<%= @booking.invoice_number || @booking.booking_number %></title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 10px;
+        background-color: #f5f5f5;
+        font-size: 11px;
+      }
 
-<div class="biz-header">
-  <div class="biz-logo"><i class="bi bi-bag-heart-fill"></i></div>
-  <div class="biz-name"><%= @business&.business_name || 'Dhanvantri Naturals' %></div>
-  <div class="biz-sub">Booking Confirmation</div>
-</div>
+      .invoice-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 15px;
+        border: 1px solid #ddd;
+        position: relative;
+      }
 
-<div class="card-main">
-  <%# Booking Info %>
-  <div class="section-label">Booking Details</div>
-  <div class="info-row">
-    <span class="info-label">Booking #</span>
-    <span class="info-value">#<%= @booking.booking_number %></span>
-  </div>
-  <div class="info-row">
-    <span class="info-label">Date</span>
-    <span class="info-value">
-      <%= (@booking.booking_date || @booking.created_at)&.strftime('%d %b %Y') %>
-    </span>
-  </div>
-  <div class="info-row">
-    <span class="info-label">Status</span>
-    <span class="info-value">
-      <%
-        st = @booking.status.to_s
-        css = case st
-              when 'completed', 'delivered' then 's-completed'
-              when 'cancelled', 'returned'  then 's-cancelled'
-              when /pending|draft/          then 's-pending'
-              else                               's-other'
+      .paid-watermark {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-35deg);
+        font-size: 100px;
+        font-weight: 900;
+        color: rgba(40, 167, 69, 0.12);
+        border: 12px solid rgba(40, 167, 69, 0.12);
+        border-radius: 10px;
+        padding: 10px 30px;
+        letter-spacing: 10px;
+        pointer-events: none;
+        z-index: 0;
+        user-select: none;
+        white-space: nowrap;
+      }
+
+      @media print {
+        .paid-watermark { color: rgba(40,167,69,0.10); border-color: rgba(40,167,69,0.10); }
+      }
+
+      .invoice-header-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 8px;
+      }
+
+      .invoice-header-table td {
+        vertical-align: top;
+        padding: 0;
+      }
+
+      .logo-cell {
+        width: 150px;
+        padding-right: 12px;
+      }
+
+      .logo {
+        width: 100px;
+        height: auto;
+        border-radius: 50%;
+        border: 3px solid #5a4ec9;
+      }
+
+      .company-info-cell {
+        width: auto;
+      }
+
+      .tax-label-container {
+        margin-bottom: 10px;
+        position: relative;
+      }
+
+      .tax-label {
+        font-weight: bold;
+        font-size: 14px;
+        color: #333;
+        display: inline-block;
+      }
+
+      .original-recipient {
+        display: inline-block;
+        font-size: 10px;
+        color: #666;
+        border: 1px solid #999;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 12px;
+        background-color: #f9f9f9;
+      }
+
+      .company-name {
+        color: #5a4ec9;
+        font-size: 22px;
+        font-weight: bold;
+        margin: 0 0 5px 0;
+      }
+
+      .address,
+      .contact {
+        font-size: 11px;
+        line-height: 1.3;
+        color: #333;
+      }
+
+      .highlight {
+        font-weight: bold;
+      }
+
+      .top-bar {
+        height: 6px;
+        background-color: #5a4ec9;
+        margin-bottom: 10px;
+        width: 100%;
+      }
+
+      .invoice-divider {
+        height: 2px;
+        background-color: #5a4ec9;
+        margin: 12px 0;
+        width: 100%;
+        border-radius: 2px;
+      }
+
+      .invoice-meta-table {
+        width: 100%;
+        background-color: #e7e7e7;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        overflow: hidden;
+      }
+
+      .invoice-meta-table td {
+        padding: 8px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: bold;
+        width: 33.33%;
+        border-right: 1px solid #ddd;
+      }
+
+      .invoice-meta-table td:last-child {
+        border-right: none;
+      }
+
+      .invoice-meta-table span {
+        font-weight: normal;
+        margin-left: 5px;
+      }
+
+      .bill-ship-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0 10px 0;
+      }
+
+      .bill-ship-table td {
+        width: 50%;
+        vertical-align: top;
+        padding: 0 8px;
+      }
+
+      .bill-title,
+      .ship-title {
+        font-size: 12px;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #5a4ec9;
+      }
+
+      .client-name {
+        font-size: 13px;
+        font-weight: bold;
+        margin-bottom: 3px;
+        color: #333;
+      }
+
+      .mobile {
+        font-size: 11px;
+        color: #666;
+      }
+
+      .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 10px 0;
+      }
+
+      .items-table thead {
+        border-top: 3px solid #5a4ec9;
+        border-bottom: 3px solid #5a4ec9;
+        background-color: #f8f9fa;
+      }
+
+      .items-table th {
+        padding: 6px 4px;
+        font-size: 12px;
+        font-weight: bold;
+        text-align: left;
+        color: #333;
+      }
+
+      .items-table th.center-align {
+        text-align: center;
+      }
+
+      .items-table th.right-align {
+        text-align: right;
+      }
+
+      .items-table td {
+        padding: 5px 4px;
+        font-size: 11px;
+        vertical-align: top;
+        border-bottom: 1px solid #eee;
+      }
+
+      .items-table td.center-align {
+        text-align: center;
+      }
+
+      .items-table td.right-align {
+        text-align: right;
+        font-weight: bold;
+      }
+
+      .items-table tbody tr:nth-child(even) {
+        background-color: #f8f9fa;
+      }
+
+      .tax-rate {
+        font-size: 9px;
+        color: #888;
+      }
+
+      .subtotal-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 10px 0;
+      }
+
+      .subtotal-table .section-border {
+        border-top: 3px solid #5a4ec9;
+        border-bottom: 3px solid #5a4ec9;
+        font-weight: bold;
+        font-size: 14px;
+        background-color: #f8f9fa;
+      }
+
+      .subtotal-table td {
+        padding: 8px;
+      }
+
+      .subtotal-values-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .subtotal-values-table td {
+        text-align: right;
+        padding: 0 12px;
+        font-weight: bold;
+        font-size: 12px;
+      }
+
+      .details-main-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 10px 0;
+      }
+
+      .details-main-table td {
+        vertical-align: top;
+        padding: 0 6px;
+      }
+
+      .bank-details-cell {
+        width: 48%;
+      }
+
+      .tax-summary-cell {
+        width: 48%;
+        border-left: 1px solid #ddd;
+        padding-left: 12px;
+      }
+
+      .bank-details h3,
+      .payment-qr h4 {
+        font-size: 13px;
+        margin-bottom: 5px;
+        color: #5a4ec9;
+        border-bottom: 2px solid #5a4ec9;
+        padding-bottom: 2px;
+      }
+
+      .bank-details-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10px;
+        margin-bottom: 8px;
+        background-color: #f9f9f9;
+        border-radius: 5px;
+        overflow: hidden;
+      }
+
+      .bank-details-table td {
+        padding: 4px 6px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .bank-details-table td:first-child {
+        font-weight: bold;
+        background-color: #f0f0f0;
+        width: 35%;
+      }
+
+      .payment-qr-table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #f9f9f9;
+        border-radius: 5px;
+        overflow: hidden;
+      }
+
+      .payment-qr-table td {
+        vertical-align: middle;
+        padding: 5px;
+      }
+
+      .qr-image {
+        width: 60px;
+        height: 60px;
+        border: 2px solid #5a4ec9;
+        border-radius: 6px;
+      }
+
+      .upi-icons {
+        margin-top: 3px;
+      }
+
+      .upi-icons span {
+        display: inline-block;
+        margin-right: 5px;
+        margin-bottom: 3px;
+        padding: 3px 5px;
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        font-size: 8px;
+        font-weight: bold;
+      }
+
+      .phonepe { color: #5f2d91; }
+      .gpay { color: #4285f4; }
+      .paytm { color: #00baf2; }
+      .upi { color: #ff6600; }
+
+      .upi-id {
+        font-size: 9px;
+        color: #666;
+        margin-bottom: 3px;
+      }
+
+      .tax-summary {
+        font-size: 11px;
+        line-height: 1.4;
+        background-color: #f9f9f9;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #e0e0e0;
+      }
+
+      .tax-summary .tax-line {
+        width: 100%;
+        margin-bottom: 5px;
+        padding: 3px 0;
+        border-bottom: 1px solid #eee;
+        position: relative;
+      }
+
+      .tax-summary .tax-line:last-child {
+        border-bottom: none;
+      }
+
+      .tax-summary .tax-line .tax-label {
+        float: left;
+        text-align: left;
+      }
+
+      .tax-summary .tax-line .tax-amount {
+        float: right;
+        text-align: right;
+        font-weight: bold;
+        min-width: 70px;
+      }
+
+      .tax-summary .tax-line::after {
+        content: "";
+        display: table;
+        clear: both;
+      }
+
+      .tax-summary .total {
+        font-weight: bold;
+        border-top: 2px solid #5a4ec9;
+        padding-top: 6px;
+        margin-top: 6px;
+        background-color: #f0f0f0;
+        padding: 8px;
+        border-radius: 5px;
+      }
+
+      .tax-summary .total .tax-line {
+        border-bottom: none;
+        margin-bottom: 3px;
+      }
+
+      .amount-words {
+        margin-top: 8px;
+        background-color: #f0f0f0;
+        padding: 6px;
+        border-radius: 5px;
+      }
+
+      .amount-words h3 {
+        font-size: 11px;
+        font-weight: bold;
+        margin-bottom: 3px;
+        color: #5a4ec9;
+        text-align: left;
+      }
+
+      .amount-words div {
+        font-size: 10px;
+        font-weight: bold;
+        text-align: left;
+      }
+
+      .terms-signature-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+      }
+
+      .terms-signature-table td {
+        vertical-align: top;
+        padding: 0 6px;
+      }
+
+      .terms-cell {
+        width: 65%;
+      }
+
+      .signature-cell {
+        width: 35%;
+        text-align: center;
+      }
+
+      .terms h3 {
+        font-size: 12px;
+        font-weight: bold;
+        margin-bottom: 5px;
+        color: #5a4ec9;
+      }
+
+      .terms ol {
+        font-size: 9px;
+        padding-left: 15px;
+        line-height: 1.3;
+        margin: 0;
+      }
+
+      .signature-box {
+        height: 50px;
+        border: 2px solid #5a4ec9;
+        margin-bottom: 5px;
+        width: 120px;
+        margin-left: auto;
+        margin-right: auto;
+        border-radius: 5px;
+        background-color: #f8f9fa;
+      }
+
+      .signature-label {
+        font-weight: bold;
+        font-size: 9px;
+        color: #333;
+      }
+
+      .signature-name {
+        font-size: 10px;
+        margin-top: 2px;
+        color: #5a4ec9;
+        font-weight: bold;
+      }
+
+      @media print {
+        body {
+          padding: 0;
+          background-color: white;
+          font-size: 10px;
+        }
+        .invoice-container {
+          border: none;
+          padding: 10px;
+        }
+        .logo {
+          width: 80px;
+        }
+        .company-name {
+          font-size: 18px;
+        }
+        .qr-image {
+          width: 50px;
+          height: 50px;
+        }
+        .signature-box {
+          height: 40px;
+          width: 100px;
+        }
+      }
+
+      .float-right {
+        float: right;
+      }
+
+      .clear-both {
+        clear: both;
+      }
+    </style>
+  </head>
+  <body>
+    <%
+      has_gst = @booking.booking_items&.any? { |item| item.product&.gst_enabled }
+
+      subtotal_amount = 0
+      taxable_amount = 0
+      total_cgst = 0
+      total_sgst = 0
+      total_igst = 0
+
+      (@booking.booking_items || []).each do |item|
+        base_amount = item.quantity * (item.price || 0)
+
+        if item.product&.gst_enabled
+          taxable_amount += base_amount
+
+          if item.product.cgst_percentage.present? && item.product.sgst_percentage.present?
+            cgst_rate = item.product.cgst_percentage
+            sgst_rate = item.product.sgst_percentage
+            igst_rate = item.product.igst_percentage || 0
+            total_gst_rate = cgst_rate + sgst_rate + igst_rate
+          elsif item.product.gst_percentage.present?
+            total_gst_rate = item.product.gst_percentage || 0
+            cgst_rate = total_gst_rate / 2.0
+            sgst_rate = total_gst_rate / 2.0
+            igst_rate = 0
+          else
+            cgst_rate = sgst_rate = igst_rate = total_gst_rate = 0
+          end
+
+          total_item_tax = (base_amount * total_gst_rate / 100)
+
+          if total_gst_rate > 0
+            cgst_amount = (total_item_tax * cgst_rate / total_gst_rate).round(2)
+            sgst_amount = (total_item_tax * sgst_rate / total_gst_rate).round(2)
+            igst_amount = (total_item_tax * igst_rate / total_gst_rate).round(2)
+
+            calculated_sum = cgst_amount + sgst_amount + igst_amount
+            total_item_tax_rounded = total_item_tax.round(2)
+
+            if calculated_sum != total_item_tax_rounded
+              if cgst_amount >= sgst_amount && cgst_amount >= igst_amount
+                cgst_amount = total_item_tax_rounded - sgst_amount - igst_amount
+              elsif sgst_amount >= igst_amount
+                sgst_amount = total_item_tax_rounded - cgst_amount - igst_amount
+              else
+                igst_amount = total_item_tax_rounded - cgst_amount - sgst_amount
               end
-      %>
-      <span class="status-pill <%= css %>"><%= st.humanize %></span>
-    </span>
-  </div>
-  <div class="info-row">
-    <span class="info-label">Payment</span>
-    <span class="info-value">
-      <%
-        pay_css = case @booking.payment_status.to_s
-                  when 'paid'           then 'pay-paid'
-                  when 'partially_paid' then 'pay-partial'
-                  else                       'pay-unpaid'
-                  end
-      %>
-      <span class="status-pill <%= pay_css %>"><%= @booking.payment_status.to_s.humanize %></span>
-      <% if @booking.payment_method.present? %>
-        <small class="text-muted ms-1">(<%= @booking.payment_method.humanize %>)</small>
+            end
+          else
+            cgst_amount = sgst_amount = igst_amount = 0
+          end
+
+          total_cgst += cgst_amount
+          total_sgst += sgst_amount
+          total_igst += igst_amount
+
+          item_total = base_amount + cgst_amount + sgst_amount + igst_amount
+          subtotal_amount += item_total
+        else
+          subtotal_amount += base_amount
+        end
+      end
+
+      total_tax = total_cgst + total_sgst + total_igst
+      final_total = subtotal_amount
+      business_settings = @business
+    %>
+
+    <div class="invoice-container">
+      <% if @booking.payment_status_paid? %>
+        <div class="paid-watermark">PAID</div>
       <% end %>
-    </span>
-  </div>
 
-  <%# Customer Info %>
-  <% cname = @booking.customer&.display_name || @booking.customer_name.presence %>
-  <% phone  = @booking.customer&.mobile      || @booking.customer_phone %>
-  <% if cname.present? || phone.present? %>
-    <div class="section-label">Customer</div>
-    <% if cname.present? %>
-      <div class="info-row">
-        <span class="info-label"><i class="bi bi-person me-1"></i>Name</span>
-        <span class="info-value"><%= cname %></span>
+      <div class="tax-label-container">
+        <span class="tax-label"><%= has_gst ? 'TAX INVOICE' : 'BILL OF SUPPLY' %></span>
+        <span class="original-recipient">ORIGINAL FOR RECIPIENT</span>
       </div>
-    <% end %>
-    <% if phone.present? %>
-      <div class="info-row">
-        <span class="info-label"><i class="bi bi-telephone me-1"></i>Phone</span>
-        <span class="info-value"><%= phone %></span>
-      </div>
-    <% end %>
-  <% end %>
 
-  <%# Items %>
-  <% if @booking.booking_items.any? %>
-    <div class="section-label">Items Ordered</div>
-    <% @booking.booking_items.each do |item| %>
-      <%
-        pname   = item.product&.name || "Product ##{item.product_id}"
-        vlabel  = item.product_variant&.label
-        qty     = item.quantity.to_f
-        price   = item.price.to_f
-        iTotal  = (qty * price).round(2)
-      %>
-      <div class="item-row">
-        <div>
-          <div class="item-name"><%= pname %><%= " – #{vlabel}" if vlabel.present? %></div>
-          <div class="item-meta">₹<%= number_with_delimiter(price) %> × <%= qty % 1 == 0 ? qty.to_i : qty %></div>
-        </div>
-        <div class="item-price">₹<%= number_with_delimiter(iTotal) %></div>
-      </div>
-    <% end %>
-  <% end %>
+      <table class="invoice-header-table">
+        <tr>
+          <td class="logo-cell">
+            <img class="logo" src="/logo.jpeg" alt="<%= business_settings&.business_name %> Logo" />
+          </td>
+          <td class="company-info-cell">
+            <div class="company-name"><%= business_settings&.business_name || 'Dhanvantri Naturals' %></div>
+            <div class="address">
+              <%= business_settings&.address || '#827 4th main 9th Block 2nd Stage Near Hanumagiri temple Nagarbhavi, Bangalore, Karnataka, 560072' %>
+            </div>
+            <div class="contact">
+              <span class="highlight">Mobile:</span> <%= business_settings&.mobile || '9972808044' %> &nbsp;&nbsp;
+              <span class="highlight">GSTIN:</span> <%= business_settings&.gstin || '29AOIPT8113K1ZC' %> &nbsp;&nbsp;
+              <span class="highlight">PAN Number:</span> <%= business_settings&.pan_number || 'AOIPT8113K' %><br />
+              <span class="highlight">Email:</span> <%= business_settings&.email || 'Dhanvantri Naturalsfarm@gmail.com' %>
+            </div>
+          </td>
+        </tr>
+      </table>
 
-  <%# Totals %>
-  <div class="section-label">Order Summary</div>
-  <% subtotal  = @booking.subtotal.to_f %>
-  <% tax       = @booking.tax_amount.to_f %>
-  <% discount  = @booking.discount_amount.to_f %>
-  <% total     = @booking.total_amount.to_f %>
+      <div class="top-bar"></div>
 
-  <% if subtotal > 0 %>
-    <div class="total-row"><span>Subtotal</span><span>₹<%= number_with_delimiter(subtotal.round(2)) %></span></div>
-  <% end %>
-  <% if tax > 0 %>
-    <div class="total-row"><span>GST</span><span>₹<%= number_with_delimiter(tax.round(2)) %></span></div>
-  <% end %>
-  <% if discount > 0 %>
-    <div class="total-row"><span>Discount</span><span style="color:#dc3545;">– ₹<%= number_with_delimiter(discount.round(2)) %></span></div>
-  <% end %>
-  <div class="total-row total-final">
-    <span>Total</span>
-    <span>₹<%= number_with_delimiter(total.round(2)) %></span>
-  </div>
+      <table class="invoice-meta-table">
+        <tr>
+          <td>Invoice No.: <span><%= @booking.invoice_number || @booking.booking_number %></span></td>
+          <td>Invoice Date: <span><%= Date.current.strftime('%d/%m/%Y') %></span></td>
+          <td>Due Date: <span><%= (Date.current + 30.days).strftime('%d/%m/%Y') %></span></td>
+        </tr>
+      </table>
 
-  <%# WhatsApp reply button (customer's phone) %>
-  <%
-    raw_phone  = (@booking.customer&.mobile || @booking.customer_phone).to_s
-    clean_ph   = raw_phone.gsub(/\D/, '').sub(/^0+/, '').sub(/^91/, '')
-    wa_phone   = clean_ph.present? ? "91#{clean_ph}" : nil
-    biz        = @business&.business_name || 'Dhanvantri Naturals'
-  %>
-  <% if wa_phone.present? %>
-    <% msg = "Hi! I have a query about my booking ##{@booking.booking_number} with #{biz}." %>
-    <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(msg) %>"
-       class="wa-btn" target="_blank">
-      <i class="bi bi-whatsapp me-2"></i>Chat on WhatsApp
-    </a>
-  <% end %>
+      <div class="invoice-divider"></div>
 
-  <div class="footer-note">
-    <i class="bi bi-shield-check me-1"></i>
-    This booking summary was shared by <%= @business&.business_name || 'Dhanvantri Naturals' %>.<br>
-    <%= Date.current.year %> &copy; All rights reserved.
-  </div>
-</div>
+      <table class="bill-ship-table">
+        <tr>
+          <td>
+            <div class="bill-title">BILL TO</div>
+            <div class="client-name"><%= @booking.customer_name || @booking.customer&.display_name || 'Customer Name' %></div>
+            <div><%= @booking.delivery_address || @booking.customer&.address || 'Address' %></div>
+            <% if @booking.customer_phone.present? || @booking.customer&.mobile.present? %>
+              <div class="mobile">Mobile: <%= @booking.customer_phone || @booking.customer&.mobile %></div>
+            <% end %>
+          </td>
+          <td>
+            <div class="ship-title">SHIP TO</div>
+            <div class="client-name"><%= @booking.customer_name || @booking.customer&.display_name || 'Customer Name' %></div>
+            <div><%= @booking.delivery_address || @booking.customer&.address || 'Address' %></div>
+          </td>
+        </tr>
+      </table>
+
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>ITEMS</th>
+            <th class="center-align">HSN</th>
+            <th class="center-align">QTY.</th>
+            <th class="right-align">RATE</th>
+            <th class="right-align">TAX</th>
+            <th class="right-align">AMOUNT</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% (@booking.booking_items || []).each do |item| %>
+            <tr>
+              <td>
+                <div>
+                  <%= item.product&.name || 'Product' %>
+                </div>
+              </td>
+              <td class="center-align"><%= item.product&.hsn_code || '-' %></td>
+              <td class="center-align"><%= item.quantity %> <%= item.product&.unit_type || 'PCS' %></td>
+              <td class="right-align">
+                <%
+                  unit_price = item.price || 0
+                %>
+                ₹<%= number_with_delimiter(sprintf('%.2f', unit_price), delimiter: ',') %>
+              </td>
+              <td class="right-align">
+                <%
+                  base_amount = item.quantity * (item.price || 0)
+                  if item.product&.gst_enabled
+                    if item.product.cgst_percentage.present? || item.product.sgst_percentage.present?
+                      total_gst_rate = (item.product.cgst_percentage || 0) + (item.product.sgst_percentage || 0) + (item.product.igst_percentage || 0)
+                    else
+                      total_gst_rate = item.product.gst_percentage || 0
+                    end
+                    tax_amount = (base_amount * total_gst_rate) / 100
+                  else
+                    total_gst_rate = 0
+                    tax_amount = 0
+                  end
+                %>
+                ₹<%= number_with_delimiter(tax_amount.round(2), delimiter: ',') %><br />
+                <span class="tax-rate">(<%= total_gst_rate.to_i == total_gst_rate ? total_gst_rate.to_i : total_gst_rate %>%)</span>
+              </td>
+              <td class="right-align">
+                <%
+                  base_amount = item.quantity * (item.price || 0)
+                  if item.product&.gst_enabled
+                    if item.product.cgst_percentage.present? || item.product.sgst_percentage.present?
+                      total_gst_rate = (item.product.cgst_percentage || 0) + (item.product.sgst_percentage || 0) + (item.product.igst_percentage || 0)
+                    else
+                      total_gst_rate = item.product.gst_percentage || 0
+                    end
+                    tax_amount = (base_amount * total_gst_rate) / 100
+                    final_amount = base_amount + tax_amount
+                  else
+                    final_amount = base_amount
+                  end
+                %>
+                ₹<%= number_with_delimiter(final_amount.round(2), delimiter: ',') %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+
+      <table class="subtotal-table">
+        <tr class="section-border">
+          <td>SUBTOTAL</td>
+          <td>-</td>
+          <td style="width: 40%;">
+            <table class="subtotal-values-table">
+              <tr>
+                <td></td>
+                <td>₹ <%= number_with_delimiter(subtotal_amount.round(2), delimiter: ',') %></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <table class="details-main-table">
+        <tr>
+          <td class="bank-details-cell">
+            <div class="bank-details">
+              <h3>BANK DETAILS</h3>
+              <table class="bank-details-table">
+                <tr>
+                  <td>Name:</td>
+                  <td><%= business_settings&.account_holder_name || 'Dhanvantri Naturals' %></td>
+                </tr>
+                <tr>
+                  <td>IFSC Code:</td>
+                  <td><%= business_settings&.ifsc_code || 'CNRB0003194' %></td>
+                </tr>
+                <tr>
+                  <td>Account No:</td>
+                  <td><%= business_settings&.account_number || '3194201000718' %></td>
+                </tr>
+                <tr>
+                  <td>Bank:</td>
+                  <td><%= business_settings&.bank_name || 'Canara Bank' %></td>
+                </tr>
+              </table>
+
+              <h4>PAYMENT QR CODE</h4>
+              <table class="payment-qr-table">
+                <tr>
+                  <td>
+                    <p class="upi-id">UPI ID: <%= business_settings&.upi_id || '9972808044@ybl' %></p>
+                    <div class="upi-icons">
+                      <span class="phonepe">PhonePe</span>
+                      <span class="gpay">Google Pay</span>
+                      <span class="paytm">Paytm</span>
+                      <span class="upi">UPI</span>
+                    </div>
+                  </td>
+                  <td style="text-align: center;">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=upi://pay?pa=<%= business_settings&.upi_id || '9972808044@ybl' %>&pn=<%= CGI.escape(business_settings&.business_name || 'Dhanvantri Naturals') %>" alt="QR Code" class="qr-image" />
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </td>
+          <td class="tax-summary-cell">
+            <div class="tax-summary">
+              <div class="tax-line">
+                <span class="tax-label">TAXABLE AMOUNT</span>
+                <span class="tax-amount">₹ <%= number_with_delimiter(taxable_amount.round(2), delimiter: ',') %></span>
+              </div>
+              <%
+                cgst_groups = {}
+                sgst_groups = {}
+
+                (@booking.booking_items || []).each do |item|
+                  if item.product&.gst_enabled
+                    base_amount = item.quantity * (item.price || 0)
+
+                    if item.product.cgst_percentage.present? && item.product.sgst_percentage.present?
+                      cgst_rate = item.product.cgst_percentage
+                      sgst_rate = item.product.sgst_percentage
+                    elsif item.product.gst_percentage.present?
+                      cgst_rate = item.product.gst_percentage / 2.0
+                      sgst_rate = item.product.gst_percentage / 2.0
+                    else
+                      cgst_rate = 0
+                      sgst_rate = 0
+                    end
+
+                    if cgst_rate > 0
+                      cgst_amount = (base_amount * cgst_rate / 100).round(2)
+                      cgst_groups[cgst_rate] = (cgst_groups[cgst_rate] || 0) + cgst_amount
+                    end
+
+                    if sgst_rate > 0
+                      sgst_amount = (base_amount * sgst_rate / 100).round(2)
+                      sgst_groups[sgst_rate] = (sgst_groups[sgst_rate] || 0) + sgst_amount
+                    end
+                  end
+                end
+              %>
+
+              <%
+                all_rates = (cgst_groups.keys + sgst_groups.keys).uniq.sort
+                all_rates.each do |rate|
+                  if cgst_groups[rate] && cgst_groups[rate] > 0
+              %>
+                <div class="tax-line">
+                  <span class="tax-label">CGST @<%= rate.to_i == rate ? rate.to_i : rate %>%</span>
+                  <span class="tax-amount">₹ <%= number_with_delimiter(cgst_groups[rate].round(2), delimiter: ',') %></span>
+                </div>
+              <%
+                  end
+                  if sgst_groups[rate] && sgst_groups[rate] > 0
+              %>
+                <div class="tax-line">
+                  <span class="tax-label">SGST @<%= rate.to_i == rate ? rate.to_i : rate %>%</span>
+                  <span class="tax-amount">₹ <%= number_with_delimiter(sgst_groups[rate].round(2), delimiter: ',') %></span>
+                </div>
+              <%
+                  end
+                end
+              %>
+              <% if total_igst > 0 %>
+                <% igst_rate = (@booking.booking_items || []).select { |item| item.product&.gst_enabled }.sum { |item| item.product.igst_percentage || 0 }.to_f / [(@booking.booking_items || []).select { |item| item.product&.gst_enabled }.count, 1].max rescue 0 %>
+                <div class="tax-line">
+                  <span class="tax-label">IGST @<%= igst_rate %>%</span>
+                  <span class="tax-amount">₹ <%= number_with_delimiter(total_igst.round(2), delimiter: ',') %></span>
+                </div>
+              <% end %>
+              <div class="total">
+                <div class="tax-line">
+                  <span class="tax-label">TOTAL AMOUNT</span>
+                  <span class="tax-amount">₹ <%= number_with_delimiter(subtotal_amount.round(2), delimiter: ',') %></span>
+                </div>
+                <div class="tax-line" style="font-weight: normal; font-size: 10px;">
+                  <span class="tax-label">Received Amount</span>
+                  <span class="tax-amount">₹ <%= @booking.payment_status_paid? ? number_with_delimiter(final_total.round(2), delimiter: ',') : '0' %></span>
+                </div>
+              </div>
+              <div class="amount-words">
+                <h3>Total Amount (in words)</h3>
+                <%
+                  total_amount_int = subtotal_amount.to_i
+                  ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"]
+                  teens = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"]
+                  tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"]
+
+                  def convert_hundreds(num, ones, teens, tens)
+                    result = ""
+                    if num >= 100
+                      result += ones[num / 100] + " Hundred "
+                      num %= 100
+                    end
+                    if num >= 20
+                      result += tens[num / 10] + " "
+                      num %= 10
+                    elsif num >= 10
+                      result += teens[num - 10] + " "
+                      num = 0
+                    end
+                    if num > 0
+                      result += ones[num] + " "
+                    end
+                    result.strip
+                  end
+
+                  words = ""
+                  if total_amount_int >= 10000000
+                    crores = total_amount_int / 10000000
+                    words += convert_hundreds(crores, ones, teens, tens) + " Crore "
+                    total_amount_int %= 10000000
+                  end
+                  if total_amount_int >= 100000
+                    lakhs = total_amount_int / 100000
+                    words += convert_hundreds(lakhs, ones, teens, tens) + " Lakh "
+                    total_amount_int %= 100000
+                  end
+                  if total_amount_int >= 1000
+                    thousands = total_amount_int / 1000
+                    words += convert_hundreds(thousands, ones, teens, tens) + " Thousand "
+                    total_amount_int %= 1000
+                  end
+                  if total_amount_int > 0
+                    words += convert_hundreds(total_amount_int, ones, teens, tens)
+                  end
+                  words = words.strip
+                  words = "Zero" if words.empty?
+                %>
+                <div><%= words %> Rupees Only</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <table class="terms-signature-table">
+        <tr>
+          <td class="terms-cell">
+            <div class="terms">
+              <h3>TERMS AND CONDITIONS</h3>
+              <% if business_settings&.terms_and_conditions.present? %>
+                <% formatted_terms = business_settings.formatted_terms_and_conditions %>
+                <% if formatted_terms.any? %>
+                  <ol>
+                    <% formatted_terms.each do |term| %>
+                      <li><%= term %></li>
+                    <% end %>
+                  </ol>
+                <% else %>
+                  <div style="padding-left: 15px; font-size: 9px;"><%= simple_format(business_settings.terms_and_conditions) %></div>
+                <% end %>
+              <% else %>
+                <ol>
+                  <li>Kindly Do Make Every Month Payment on or Before the 10th of The Month</li>
+                  <li>Kindly Share the Screenshot Immediately Once the Payment is Done to Confirm Your Payment</li>
+                </ol>
+              <% end %>
+            </div>
+          </td>
+          <td class="signature-cell">
+            <div class="signature-box"></div>
+            <div class="signature-label">AUTHORISED SIGNATORY FOR</div>
+            <div class="signature-name"><%= business_settings&.business_name || 'Dhanvantri Naturals' %></div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>
