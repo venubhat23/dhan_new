@@ -580,6 +580,66 @@ class Admin::ReportsController < Admin::ApplicationController
     redirect_to admin_reports_enhanced_sales_path
   end
 
+  # GET /admin/reports/profit_loss
+  def profit_loss
+    @from_date = params[:from_date].present? ? Date.parse(params[:from_date]) : Date.current.beginning_of_month
+    @to_date   = params[:to_date].present?   ? Date.parse(params[:to_date])   : Date.current
+
+    items = BookingItem.joins(:booking)
+                       .includes(:product)
+                       .where(bookings: { booking_date: @from_date.beginning_of_day..@to_date.end_of_day })
+
+    product_data = {}
+    items.each do |item|
+      product = item.product
+      next unless product
+
+      qty       = item.quantity.to_f
+      revenue   = qty * item.price.to_f
+      cost_each = product.buying_price.to_f
+      cost      = qty * cost_each
+      profit    = revenue - cost
+
+      if product_data[product.id]
+        d = product_data[product.id]
+        d[:qty_sold] += qty
+        d[:revenue]  += revenue
+        d[:cost]     += cost
+        d[:profit]   += profit
+      else
+        product_data[product.id] = {
+          name:          product.name,
+          unit_type:     product.unit_type || 'Pcs',
+          selling_price: item.price.to_f,
+          cost_price:    cost_each,
+          qty_sold:      qty,
+          revenue:       revenue,
+          cost:          cost,
+          profit:        profit
+        }
+      end
+    end
+
+    @product_rows = product_data.values.sort_by { |r| -r[:revenue] }
+    @totals = {
+      qty_sold: @product_rows.sum { |r| r[:qty_sold] },
+      revenue:  @product_rows.sum { |r| r[:revenue] },
+      cost:     @product_rows.sum { |r| r[:cost] },
+      profit:   @product_rows.sum { |r| r[:profit] }
+    }
+
+    if params[:download] == 'csv'
+      send_data generate_profit_loss_csv(@product_rows, @totals, @from_date, @to_date),
+                filename: "profit_loss_#{@from_date.strftime('%Y%m%d')}_#{@to_date.strftime('%Y%m%d')}.csv",
+                type: 'text/csv',
+                disposition: 'attachment'
+    end
+  rescue => e
+    Rails.logger.error "Error in profit_loss: #{e.message}"
+    @product_rows = []
+    @totals = { qty_sold: 0, revenue: 0, cost: 0, profit: 0 }
+  end
+
   private
 
   def build_enhanced_sales_data
@@ -763,6 +823,29 @@ class Admin::ReportsController < Admin::ApplicationController
         "₹#{totals[:sgst]&.round(2)}",
         "₹#{totals[:igst]&.round(2)}"
       ]
+    end
+  end
+
+  def generate_profit_loss_csv(rows, totals, from_date, to_date)
+    require 'csv'
+    CSV.generate(headers: true) do |csv|
+      csv << ["Profit & Loss Report", "#{from_date.strftime('%d/%m/%Y')} to #{to_date.strftime('%d/%m/%Y')}"]
+      csv << []
+      csv << ['Product', 'Unit', 'Qty Sold', 'Selling Price (₹)', 'Cost Price (₹)', 'Revenue (₹)', 'Cost (₹)', 'Profit/Loss (₹)']
+      rows.each do |r|
+        csv << [
+          r[:name],
+          r[:unit_type],
+          r[:qty_sold].to_s.sub(/\.0$/, ''),
+          r[:selling_price].round(2),
+          r[:cost_price].round(2),
+          r[:revenue].round(2),
+          r[:cost].round(2),
+          r[:profit].round(2)
+        ]
+      end
+      csv << []
+      csv << ['TOTAL', '', totals[:qty_sold].to_s.sub(/\.0$/, ''), '', '', totals[:revenue].round(2), totals[:cost].round(2), totals[:profit].round(2)]
     end
   end
 

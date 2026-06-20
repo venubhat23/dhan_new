@@ -973,6 +973,17 @@
             <div class="nav-indicator"></div>
           <% end %>
         </li>
+        <li class="nav-item">
+          <%= link_to admin_reports_profit_loss_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/reports/profit_loss')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-green">
+                <i class="bi bi-graph-up-arrow"></i>
+              </div>
+            </div>
+            <span class="nav-text">Profit & Loss Report</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
         <% end %>
       </ul>
     </div>

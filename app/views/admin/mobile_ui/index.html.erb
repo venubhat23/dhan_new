@@ -242,17 +242,19 @@
       booking.ensure_share_token!
       public_url = "#{request.base_url}/booking/#{booking.share_token}"
 
-      # WhatsApp thank-you message — always includes public booking link
-      wa_thank_msg = "Dear #{cname},\n\nThank you for your booking with Dhanvantri Naturals! 🌿\n\nBooking #: #{booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📄 View your booking: #{public_url}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantri Naturals Team"
-
       # Invoice WhatsApp (when a formal BookingInvoice with share token exists)
       bi = booking.booking_invoices.first
       inv_wa_url = nil
       if bi&.share_token.present?
-        inv_url = "#{request.base_url}/invoice/#{bi.share_token}"
-        inv_msg = "Dear #{cname},\n\nHere is your invoice from Dhanvantri Naturals 🌿\n\nBooking #: #{booking.booking_number}\nAmount: ₹#{amount}\n\n📋 View Invoice: #{inv_url}\n📄 View Booking: #{public_url}\n\nThank you!\n🙏 Dhanvantri Naturals Team"
+        inv_url      = "#{request.base_url}/invoice/#{bi.share_token}"
+        inv_pdf_url  = "#{request.base_url}/invoice/#{bi.share_token}/download"
+        inv_msg = "Dear #{cname},\n\nHere is your invoice from Dhanvantri Naturals 🌿\n\nBooking #: #{booking.booking_number}\nAmount: ₹#{amount}\n\n📋 View Invoice: #{inv_url}\n📄 Download PDF: #{inv_pdf_url}\n\nThank you!\n🙏 Dhanvantri Naturals Team"
         inv_wa_url = "https://wa.me/#{wa_phone}?text=#{ERB::Util.url_encode(inv_msg)}" if wa_phone.present?
       end
+
+      # WhatsApp thank-you message — includes booking link + PDF link if invoice exists
+      pdf_line = bi&.share_token.present? ? "\n📄 Download Invoice PDF: #{request.base_url}/invoice/#{bi.share_token}/download" : ""
+      wa_thank_msg = "Dear #{cname},\n\nThank you for your booking with Dhanvantri Naturals! 🌿\n\nBooking #: #{booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View your booking: #{public_url}#{pdf_line}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantri Naturals Team"
     %>
     <div class="booking-card">
       <div class="booking-card-header">
