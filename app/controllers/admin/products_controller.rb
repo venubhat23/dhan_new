@@ -209,6 +209,32 @@ class Admin::ProductsController < Admin::ApplicationController
     render layout: 'application'
   end
 
+  def bulk_update
+    updates = params[:products] || {}
+    updated = 0
+    errors  = []
+
+    updates.each do |id, attrs|
+      product = Product.find_by(id: id)
+      next unless product
+
+      permitted = attrs.permit(:name, :price, :buying_price, :purchase_price, :stock, :unit_type, :status, :category_id)
+      if product.update(permitted)
+        updated += 1
+      else
+        errors << "#{product.name}: #{product.errors.full_messages.join(', ')}"
+      end
+    end
+
+    if errors.empty?
+      redirect_to admin_products_path, notice: "#{updated} product(s) updated successfully"
+    else
+      redirect_to admin_products_path, alert: "Updated #{updated}, errors: #{errors.join(' | ')}"
+    end
+  rescue => e
+    redirect_to admin_products_path, alert: "Bulk update failed: #{e.message}"
+  end
+
   def bulk_action
     case params[:bulk_action]
     when 'activate'

@@ -715,6 +715,7 @@ Rails.application.routes.draw do
       collection do
         get :search
         post :bulk_action
+        post :bulk_update
         get :categories_for_select
         get :products_chart
         post :upload_cloudinary_image

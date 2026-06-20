@@ -87,7 +87,7 @@
   font-weight: 700;
   color: #1a7f37;
 }
-.action-row { display: flex; gap: 8px; align-items: center; }
+.action-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 
 /* Status pill */
 .status-pill {
@@ -164,7 +164,7 @@
 
 <%# Search & Filters %>
 <div class="search-bar">
-  <%= form_with url: admin_mobile_ui_bookings_path, method: :get, local: true do |f| %>
+  <%= form_with url: admin_mobile_ui_bookings_path, method: :get, local: true, data: { no_loader: '' } do |f| %>
     <div class="search-wrap mb-2">
       <i class="bi bi-search"></i>
       <%= f.text_field :search, value: params[:search], class: 'search-input',
@@ -303,17 +303,27 @@
             <i class="bi bi-pencil-fill"></i>
           <% end %>
 
-          <%# WhatsApp — sends invoice link if available, else thank-you with booking link %>
+          <%# WhatsApp buttons — Thanks always shown, Invoice shown when available %>
           <% if wa_phone.present? %>
+            <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
+               class="wa-send-btn" target="_blank" title="Send Thank You + Booking Link on WhatsApp">
+              <i class="bi bi-whatsapp"></i> Thanks
+            </a>
             <% if inv_wa_url.present? %>
-              <a href="<%= inv_wa_url %>" class="wa-send-btn" target="_blank" title="Send Invoice on WhatsApp">
+              <a href="<%= inv_wa_url %>" class="wa-send-btn" target="_blank"
+                 title="Send Invoice on WhatsApp"
+                 style="background:#7b1fa2;">
                 <i class="bi bi-whatsapp"></i> Invoice
               </a>
-            <% else %>
-              <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
-                 class="wa-send-btn" target="_blank" title="Send Thank You + Booking Link on WhatsApp">
-                <i class="bi bi-whatsapp"></i> Thanks
-              </a>
+            <% end %>
+          <% end %>
+
+          <%# Generate Invoice — for paid/completed bookings that have no invoice yet %>
+          <% if bi.nil? && %w[paid].include?(booking.payment_status.to_s) %>
+            <%= link_to generate_invoice_admin_booking_path(booking), method: :post,
+                class: 'icon-btn icon-inv', title: 'Generate Invoice',
+                data: { confirm: 'Generate invoice for this booking?' } do %>
+              <i class="bi bi-receipt"></i>
             <% end %>
           <% end %>
         </div>
@@ -346,6 +356,7 @@
 
 <script>
 function setStatus(val) {
+  showLoader('Loading…', 'Filtering bookings');
   document.getElementById('statusHidden').value = val;
   document.getElementById('mobileSearch').closest('form').submit();
 }

@@ -176,8 +176,11 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 
   <!-- Bulk Action Bar (hidden until items selected) -->
-  <div id="bulkActionBar" class="d-none px-3 py-2 bg-primary-subtle border-bottom d-flex align-items-center gap-3">
+  <div id="bulkActionBar" class="d-none px-3 py-2 bg-primary-subtle border-bottom d-flex align-items-center gap-3 flex-wrap">
     <span id="selectedCount" class="fw-medium text-primary small"></span>
+    <button type="button" class="btn btn-sm btn-primary" id="bulkEditBtn">
+      <i class="bi bi-pencil-square me-1"></i>Bulk Edit
+    </button>
     <button type="button" class="btn btn-sm btn-success" data-bulk-action="activate">
       <i class="bi bi-check-circle me-1"></i>Activate
     </button>
@@ -210,7 +213,8 @@ document.addEventListener('DOMContentLoaded', function() {
             </thead>
             <tbody>
               <% @products.each do |product| %>
-                <tr>
+                <tr data-product-id="<%= product.id %>"
+                    data-product='<%= { id: product.id, name: product.name, price: product.price.to_f, buying_price: product.buying_price.to_f, purchase_price: product.purchase_price.to_f, stock: product.stock.to_i, unit_type: product.unit_type, status: product.status, category_id: product.category_id }.to_json %>'>
                   <td class="align-middle ps-3">
                     <input type="checkbox" name="product_ids[]" value="<%= product.id %>" class="form-check-input product-checkbox">
                   </td>
@@ -384,6 +388,12 @@ document.addEventListener('DOMContentLoaded', function() {
           <%= paginate @products %>
         </div>
       <% end %>
+
+      <!-- Bulk Edit Form (hidden, submitted by modal) -->
+      <form id="bulkEditForm" method="post" action="<%= bulk_update_admin_products_path %>">
+        <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+        <div id="bulkEditFields"></div>
+      </form>
     <% else %>
       <div class="text-center py-5">
         <div class="mb-3">
@@ -396,3 +406,134 @@ document.addEventListener('DOMContentLoaded', function() {
     <% end %>
   </div>
 </div>
+
+<!-- Bulk Edit Modal -->
+<div class="modal fade" id="bulkEditModal" tabindex="-1" aria-labelledby="bulkEditModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bulkEditModalLabel">
+          <i class="bi bi-pencil-square me-2"></i>Bulk Edit Products
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle mb-0" id="bulkEditTable">
+            <thead class="table-dark sticky-top">
+              <tr>
+                <th style="min-width:160px;">Product Name</th>
+                <th style="min-width:100px;">Sell Price (₹)</th>
+                <th style="min-width:100px;">Cost Price (₹)</th>
+                <th style="min-width:110px;">Purchase Price (₹)</th>
+                <th style="min-width:80px;">Stock</th>
+                <th style="min-width:110px;">Unit</th>
+                <th style="min-width:100px;">Status</th>
+                <th style="min-width:140px;">Category</th>
+              </tr>
+            </thead>
+            <tbody id="bulkEditBody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="bulkEditSaveBtn">
+          <i class="bi bi-check-lg me-1"></i>Save All Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const UNIT_TYPES   = <%= Product::UNIT_TYPES.map(&:last).to_json.html_safe %>;
+  const CATEGORIES   = <%= @categories.map { |c| [c.id, c.name] }.to_json.html_safe %>;
+  const STATUSES     = [['active','Active'],['inactive','Inactive'],['draft','Draft']];
+
+  function buildSelect(name, options, selected, extraClass) {
+    let html = `<select name="${name}" class="form-select form-select-sm ${extraClass||''}">`;
+    options.forEach(([val, label]) => {
+      html += `<option value="${val}"${val == selected ? ' selected' : ''}>${label}</option>`;
+    });
+    html += '</select>';
+    return html;
+  }
+
+  function openBulkEditModal() {
+    const checked = document.querySelectorAll('.product-checkbox:checked');
+    if (checked.length === 0) return;
+
+    const tbody = document.getElementById('bulkEditBody');
+    tbody.innerHTML = '';
+
+    checked.forEach(cb => {
+      const row = cb.closest('tr');
+      const p   = JSON.parse(row.dataset.product);
+      const id  = p.id;
+
+      const unitOptions  = UNIT_TYPES.map(u => [u, u]);
+      const catOptions   = [['' , '— No Category —'], ...CATEGORIES];
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <input type="text" name="products[${id}][name]"
+                 class="form-control form-control-sm"
+                 value="${escHtml(p.name)}" required>
+        </td>
+        <td>
+          <input type="number" name="products[${id}][price]"
+                 class="form-control form-control-sm"
+                 value="${p.price}" min="0" step="0.01">
+        </td>
+        <td>
+          <input type="number" name="products[${id}][buying_price]"
+                 class="form-control form-control-sm"
+                 value="${p.buying_price}" min="0" step="0.01">
+        </td>
+        <td>
+          <input type="number" name="products[${id}][purchase_price]"
+                 class="form-control form-control-sm"
+                 value="${p.purchase_price}" min="0" step="0.01">
+        </td>
+        <td>
+          <input type="number" name="products[${id}][stock]"
+                 class="form-control form-control-sm"
+                 value="${p.stock}" min="0" step="1">
+        </td>
+        <td>${buildSelect(`products[${id}][unit_type]`, unitOptions, p.unit_type)}</td>
+        <td>${buildSelect(`products[${id}][status]`, STATUSES, p.status)}</td>
+        <td>${buildSelect(`products[${id}][category_id]`, catOptions, p.category_id)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    new bootstrap.Modal(document.getElementById('bulkEditModal')).show();
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  document.getElementById('bulkEditBtn').addEventListener('click', openBulkEditModal);
+
+  document.getElementById('bulkEditSaveBtn').addEventListener('click', function() {
+    const tbody = document.getElementById('bulkEditBody');
+    if (tbody.children.length === 0) return;
+
+    // Copy modal inputs into the hidden form's container
+    const container = document.getElementById('bulkEditFields');
+    container.innerHTML = '';
+    tbody.querySelectorAll('input, select').forEach(el => {
+      const clone = el.cloneNode(true);
+      clone.style.display = 'none';
+      container.appendChild(clone);
+    });
+
+    document.getElementById('bulkEditForm').submit();
+  });
+})();
+</script>

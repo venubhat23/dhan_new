@@ -16,14 +16,16 @@
     color:white; border:none; border-radius:12px; padding:14px;
     font-size:1rem; font-weight:700; letter-spacing:0.3px;
     box-shadow:0 4px 15px rgba(111,66,193,0.35);
+    transition: opacity 0.2s;
   }
   .submit-btn:active { transform:scale(0.98); }
+  .submit-btn:disabled { opacity:0.75; cursor:not-allowed; transform:none; }
   .page-top { padding:14px 12px 0; display:flex; align-items:center; gap:10px; }
   .back-btn { width:36px;height:36px;border-radius:10px;background:white;border:2px solid #e9ecef;display:flex;align-items:center;justify-content:center;color:#6f42c1;text-decoration:none;flex-shrink:0; }
 </style>
 
 <div class="page-top">
-  <%= link_to admin_mobile_ui_bookings_path, class: 'back-btn' do %>
+  <%= link_to admin_mobile_ui_bookings_path, class: 'back-btn', data: { no_loader: '' } do %>
     <i class="bi bi-arrow-left"></i>
   <% end %>
   <div>
@@ -83,7 +85,7 @@
       After creating customer you'll go directly to the booking page with customer pre-selected.
     </div>
 
-    <button type="submit" class="submit-btn">
+    <button type="submit" class="submit-btn" id="createCustomerBtn">
       <i class="bi bi-person-check me-2"></i>Create & Go to Booking
     </button>
   <% end %>
@@ -93,5 +95,13 @@
   document.getElementById('mob_mobile').addEventListener('input', function() {
     const d = this.value.replace(/\D/g,'');
     document.getElementById('pwdPreview').textContent = d.length >= 4 ? d.substring(0,4)+'@123' : 'XXXX@123';
+  });
+
+  document.querySelector('form').addEventListener('submit', function(e) {
+    if (!this.checkValidity()) return;
+    const btn = document.getElementById('createCustomerBtn');
+    btn.disabled  = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Creating…';
+    showLoader('Creating Customer…', 'Setting up booking page');
   });
 </script>

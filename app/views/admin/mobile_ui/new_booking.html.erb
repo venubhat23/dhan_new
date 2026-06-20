@@ -694,5 +694,6 @@ function prepareSubmit() {
   if (i === 0) { alert('Cart is empty'); return false; }
   // Sync discount
   document.getElementById('hdnDiscount').value = parseFloat(document.getElementById('discountInput')?.value||0);
+  showLoader('Placing Order…', 'Saving your booking');
 }
 </script>

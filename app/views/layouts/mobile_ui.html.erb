@@ -63,6 +63,37 @@
       from { opacity: 0; transform: translateY(-10px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+
+    /* ── Global page loader ── */
+    #globalLoader {
+      display: none;
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,0.45);
+      align-items: center; justify-content: center;
+    }
+    #globalLoader.active { display: flex; }
+    .gl-box {
+      background: white; border-radius: 20px;
+      padding: 28px 36px; text-align: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+      min-width: 200px;
+      animation: glPop 0.2s ease;
+    }
+    @keyframes glPop {
+      from { transform: scale(0.85); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+    .gl-ring {
+      width: 50px; height: 50px;
+      border: 5px solid #ede9ff;
+      border-top-color: #6f42c1;
+      border-radius: 50%;
+      animation: glSpin 0.7s linear infinite;
+      margin: 0 auto 14px;
+    }
+    @keyframes glSpin { to { transform: rotate(360deg); } }
+    .gl-text { font-size: 0.95rem; font-weight: 700; color: #4a148c; }
+    .gl-sub  { font-size: 0.75rem; color: #999; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -155,6 +186,15 @@
     </script>
   <% end %>
 
+  <!-- Global page loader overlay -->
+  <div id="globalLoader">
+    <div class="gl-box">
+      <div class="gl-ring"></div>
+      <div class="gl-text" id="glText">Please wait…</div>
+      <div class="gl-sub"  id="glSub"></div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     // Auto-dismiss flash after 3s
@@ -165,6 +205,44 @@
         setTimeout(() => el.remove(), 400);
       });
     }, 3000);
+
+    /* ── Global Loader API ── */
+    function showLoader(text, sub) {
+      document.getElementById('glText').textContent = text || 'Please wait…';
+      document.getElementById('glSub').textContent  = sub  || '';
+      document.getElementById('globalLoader').classList.add('active');
+    }
+    function hideLoader() {
+      document.getElementById('globalLoader').classList.remove('active');
+    }
+
+    /* Hide loader on browser back (page restored from bfcache) */
+    window.addEventListener('pageshow', function(e) {
+      if (e.persisted) hideLoader();
+    });
+
+    /* ── Auto-wire: show loader on all form submits ──
+       Skip forms marked data-no-loader or method=GET search forms            */
+    document.addEventListener('submit', function(e) {
+      const form = e.target;
+      if (form.dataset.noLoader !== undefined) return;
+      if (form.method === 'get' && form.dataset.loaderOnGet === undefined) return;
+      showLoader();
+    }, true);
+
+    /* ── Auto-wire: show loader on internal link clicks ──
+       Skip: target=_blank, href=#, wa.me, data-no-loader                      */
+    document.addEventListener('click', function(e) {
+      const a = e.target.closest('a[href]');
+      if (!a) return;
+      if (a.dataset.noLoader !== undefined) return;
+      if (a.target === '_blank') return;
+      const href = a.getAttribute('href') || '';
+      if (href === '#' || href.startsWith('#')) return;
+      if (href.includes('wa.me') || href.includes('whatsapp')) return;
+      if (a.hasAttribute('data-bs-dismiss') || a.hasAttribute('data-bs-toggle')) return;
+      showLoader();
+    }, true);
   </script>
 </body>
 </html>
