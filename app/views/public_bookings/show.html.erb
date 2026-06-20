@@ -2,6 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Invoice #<%= @booking.invoice_number || @booking.booking_number %></title>
     <style>
       body {
@@ -531,6 +532,117 @@
 
       .clear-both {
         clear: both;
+      }
+
+      @media (max-width: 600px) {
+        body {
+          padding: 6px;
+          font-size: 10px;
+        }
+
+        .invoice-container {
+          padding: 10px;
+        }
+
+        /* Header: logo + company info stack vertically */
+        .invoice-header-table,
+        .invoice-header-table tbody,
+        .invoice-header-table tr {
+          display: block;
+          width: 100%;
+        }
+        .invoice-header-table td {
+          display: block;
+          width: 100% !important;
+          padding: 0 0 6px 0;
+        }
+        .logo-cell { padding-right: 0; }
+        .logo { width: 70px; }
+        .company-name { font-size: 16px; }
+
+        /* Meta table: stack 3 columns into rows */
+        .invoice-meta-table,
+        .invoice-meta-table tbody,
+        .invoice-meta-table tr {
+          display: block;
+          width: 100%;
+        }
+        .invoice-meta-table td {
+          display: block;
+          width: 100% !important;
+          border-right: none;
+          border-bottom: 1px solid #ddd;
+          text-align: left;
+          padding: 5px 8px;
+        }
+        .invoice-meta-table td:last-child { border-bottom: none; }
+
+        /* Bill/ship: stack into single column */
+        .bill-ship-table,
+        .bill-ship-table tbody,
+        .bill-ship-table tr {
+          display: block;
+          width: 100%;
+        }
+        .bill-ship-table td {
+          display: block;
+          width: 100% !important;
+          padding: 0 0 8px 0;
+        }
+
+        /* Items table: compress columns */
+        .items-table th,
+        .items-table td {
+          padding: 4px 3px;
+          font-size: 9px;
+        }
+
+        /* Details: bank + tax summary stack vertically */
+        .details-main-table,
+        .details-main-table tbody,
+        .details-main-table tr {
+          display: block;
+          width: 100%;
+        }
+        .details-main-table td {
+          display: block;
+          width: 100% !important;
+          padding: 0 0 12px 0;
+        }
+        .tax-summary-cell {
+          border-left: none;
+          border-top: 1px solid #ddd;
+          padding-left: 0;
+          padding-top: 12px;
+        }
+
+        /* Terms + signature: stack vertically */
+        .terms-signature-table,
+        .terms-signature-table tbody,
+        .terms-signature-table tr {
+          display: block;
+          width: 100%;
+        }
+        .terms-signature-table td {
+          display: block;
+          width: 100% !important;
+          padding: 0 0 10px 0;
+        }
+        .signature-cell { text-align: left; }
+        .signature-box { margin-left: 0; }
+
+        /* Subtotal table */
+        .subtotal-table,
+        .subtotal-table tbody,
+        .subtotal-table tr {
+          display: block;
+          width: 100%;
+        }
+        .subtotal-table td {
+          display: block;
+          width: 100% !important;
+        }
+        .subtotal-values-table td { text-align: left; padding: 0; }
       }
     </style>
   </head>

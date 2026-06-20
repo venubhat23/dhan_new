@@ -14,15 +14,17 @@ class Product < ApplicationRecord
 
   # Unit Type Constants - Fixed Options Only
   UNIT_TYPES = [
+    ['Gram', 'Gram'],
+    ['Jar', 'Jar'],
     ['Kg', 'Kg'],
+    ['Liter', 'Liter'],
+    ['Ml', 'Ml'],
     ['Bottle', 'Bottle'],
     ['Box', 'Box'],
     ['Bundle', 'Bundle'],
-    ['Liter', 'Liter'],
-    ['Ml', 'Ml'],
+    ['Pack', 'Pack'],
     ['Packet', 'Packet'],
-    ['Piece', 'Piece'],
-    ['Gram', 'Gram']
+    ['Piece', 'Piece']
   ].freeze
 
   belongs_to :category
