@@ -94,6 +94,7 @@
               <th class="text-center">Qty Sold</th>
               <th class="text-end">Selling Price</th>
               <th class="text-end">Cost Price</th>
+              <th class="text-end">Purchase Price</th>
               <th class="text-end">Revenue</th>
               <th class="text-end">Cost</th>
               <th class="text-end">Profit / Loss</th>
@@ -111,6 +112,7 @@
                 <td class="text-center fw-semibold"><%= row[:qty_sold].to_s.sub(/\.0$/, '') %></td>
                 <td class="text-end">₹<%= number_with_delimiter(row[:selling_price].round(2)) %></td>
                 <td class="text-end">₹<%= number_with_delimiter(row[:cost_price].round(2)) %></td>
+                <td class="text-end">₹<%= number_with_delimiter(row[:purchase_price].round(2)) %></td>
                 <td class="text-end text-primary fw-semibold">₹<%= number_with_delimiter(row[:revenue].round(2)) %></td>
                 <td class="text-end text-warning fw-semibold">₹<%= number_with_delimiter(row[:cost].round(2)) %></td>
                 <td class="text-end fw-bold <%= profit >= 0 ? 'text-success' : 'text-danger' %>">
@@ -123,6 +125,7 @@
             <tr>
               <td colspan="2">TOTAL</td>
               <td class="text-center"><%= @totals[:qty_sold].to_s.sub(/\.0$/, '') %></td>
+              <td></td>
               <td></td>
               <td></td>
               <td class="text-end text-primary">₹<%= number_with_delimiter(@totals[:revenue].round(2)) %></td>

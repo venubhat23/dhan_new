@@ -594,11 +594,12 @@ class Admin::ReportsController < Admin::ApplicationController
       product = item.product
       next unless product
 
-      qty       = item.quantity.to_f
-      revenue   = qty * item.price.to_f
-      cost_each = product.buying_price.to_f
-      cost      = qty * cost_each
-      profit    = revenue - cost
+      qty            = item.quantity.to_f
+      revenue        = qty * item.price.to_f
+      cost_each      = product.buying_price.to_f
+      purchase_each  = product.purchase_price.to_f
+      cost           = qty * cost_each
+      profit         = revenue - cost
 
       if product_data[product.id]
         d = product_data[product.id]
@@ -608,14 +609,15 @@ class Admin::ReportsController < Admin::ApplicationController
         d[:profit]   += profit
       else
         product_data[product.id] = {
-          name:          product.name,
-          unit_type:     product.unit_type || 'Pcs',
-          selling_price: item.price.to_f,
-          cost_price:    cost_each,
-          qty_sold:      qty,
-          revenue:       revenue,
-          cost:          cost,
-          profit:        profit
+          name:           product.name,
+          unit_type:      product.unit_type || 'Pcs',
+          selling_price:  item.price.to_f,
+          cost_price:     cost_each,
+          purchase_price: purchase_each,
+          qty_sold:       qty,
+          revenue:        revenue,
+          cost:           cost,
+          profit:         profit
         }
       end
     end
@@ -831,7 +833,7 @@ class Admin::ReportsController < Admin::ApplicationController
     CSV.generate(headers: true) do |csv|
       csv << ["Profit & Loss Report", "#{from_date.strftime('%d/%m/%Y')} to #{to_date.strftime('%d/%m/%Y')}"]
       csv << []
-      csv << ['Product', 'Unit', 'Qty Sold', 'Selling Price (₹)', 'Cost Price (₹)', 'Revenue (₹)', 'Cost (₹)', 'Profit/Loss (₹)']
+      csv << ['Product', 'Unit', 'Qty Sold', 'Selling Price (₹)', 'Cost Price (₹)', 'Purchase Price (₹)', 'Revenue (₹)', 'Cost (₹)', 'Profit/Loss (₹)']
       rows.each do |r|
         csv << [
           r[:name],
@@ -839,13 +841,14 @@ class Admin::ReportsController < Admin::ApplicationController
           r[:qty_sold].to_s.sub(/\.0$/, ''),
           r[:selling_price].round(2),
           r[:cost_price].round(2),
+          r[:purchase_price].round(2),
           r[:revenue].round(2),
           r[:cost].round(2),
           r[:profit].round(2)
         ]
       end
       csv << []
-      csv << ['TOTAL', '', totals[:qty_sold].to_s.sub(/\.0$/, ''), '', '', totals[:revenue].round(2), totals[:cost].round(2), totals[:profit].round(2)]
+      csv << ['TOTAL', '', totals[:qty_sold].to_s.sub(/\.0$/, ''), '', '', '', totals[:revenue].round(2), totals[:cost].round(2), totals[:profit].round(2)]
     end
   end
 
