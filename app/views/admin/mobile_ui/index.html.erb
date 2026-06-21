@@ -303,8 +303,8 @@
             <i class="bi bi-pencil-fill"></i>
           <% end %>
 
-          <%# WhatsApp buttons — Thanks always shown, Invoice shown when available %>
-          <% if wa_phone.present? %>
+          <%# WhatsApp buttons — only for paid bookings %>
+          <% if wa_phone.present? && booking.payment_status.to_s == 'paid' %>
             <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
                class="wa-send-btn" target="_blank" title="Send Thank You + Booking Link on WhatsApp">
               <i class="bi bi-whatsapp"></i> Thanks
