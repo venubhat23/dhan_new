@@ -411,6 +411,9 @@
 
     </script>
 
+    <!-- Modals rendered outside main-content to avoid stacking context issues -->
+    <%= yield :modals %>
+
     <!-- Global Form Enhancement Script -->
     <script>
 <%= File.read(Rails.root.join('app/assets/javascripts/form_enhancements.js')).html_safe %>

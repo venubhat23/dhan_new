@@ -407,6 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
+<% content_for :modals do %>
 <!-- Bulk Edit Modal -->
 <div class="modal fade" id="bulkEditModal" tabindex="-1" aria-labelledby="bulkEditModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -446,6 +447,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
 </div>
+<% end %>
 
 <script>
 (function() {
