@@ -12,23 +12,61 @@
   </div>
   <div class="d-flex gap-2">
     <!-- Invoice Actions -->
-    <% if @booking.invoice_generated? || @booking.payment_status_paid? %>
+    <% if @booking.invoice_generated? %>
       <%= link_to invoice_admin_booking_path(@booking), class: "btn btn-primary" do %>
         <i class="bi bi-eye me-1"></i>
         Show Invoice
       <% end %>
     <% else %>
-      <%= button_to mark_paid_admin_booking_path(@booking), method: :patch, class: "btn btn-warning",
-            data: { confirm: "Mark this booking as paid and generate invoice?" } do %>
-        <i class="bi bi-check-circle me-1"></i>
-        Mark as Paid & Invoice
-      <% end %>
       <%= button_to generate_invoice_admin_booking_path(@booking), method: :post, class: "btn btn-success" do %>
         <i class="bi bi-receipt me-1"></i>
         Generate Invoice
       <% end %>
+      <% unless @booking.payment_status_paid? %>
+        <%= button_to mark_paid_admin_booking_path(@booking), method: :patch, class: "btn btn-warning",
+              data: { confirm: "Mark this booking as paid and generate invoice?" } do %>
+          <i class="bi bi-check-circle me-1"></i>
+          Mark as Paid & Invoice
+        <% end %>
+      <% end %>
     <% end %>
 
+
+    <%# WhatsApp buttons %>
+    <%
+      wa_phone = (@booking.customer_phone || @booking.customer&.mobile).to_s.gsub(/\D/, '')
+      wa_phone = "91#{wa_phone}" if wa_phone.length == 10
+      cname    = @booking.customer_name || @booking.customer&.display_name || 'Customer'
+      amount   = number_with_delimiter(@booking.total_amount.to_f)
+      bdate    = @booking.booking_date&.strftime('%d %b %Y') || @booking.created_at&.strftime('%d %b %Y')
+      @booking.ensure_share_token!
+      public_url   = "#{request.base_url}/booking/#{@booking.share_token}"
+      bi           = @booking.booking_invoices.first
+      pdf_line     = bi&.share_token.present? ? "\n📄 Download Invoice PDF: #{request.base_url}/invoice/#{bi.share_token}/download" : ""
+      wa_thank_msg = "Dear #{cname},\n\nThank you for your booking with Dhanvantri Naturals! 🌿\n\nBooking #: #{@booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View your booking: #{public_url}#{pdf_line}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantri Naturals Team"
+    %>
+    <% if wa_phone.length >= 10 %>
+      <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
+         target="_blank" class="btn btn-success"
+         title="Send Thank You on WhatsApp">
+        <i class="bi bi-whatsapp me-1"></i>
+        Thanks
+      </a>
+      <% if @booking.payment_status_paid? && bi&.share_token.present? %>
+        <%
+          inv_url     = "#{request.base_url}/invoice/#{bi.share_token}"
+          inv_pdf_url = "#{request.base_url}/invoice/#{bi.share_token}/download"
+          wa_inv_msg  = "Dear #{cname},\n\nHere is your invoice from Dhanvantri Naturals 🌿\n\nBooking #: #{@booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View Invoice: #{inv_url}\n📄 Download PDF: #{inv_pdf_url}\n\nThank you!\n🙏 Dhanvantri Naturals Team"
+        %>
+        <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_inv_msg) %>"
+           target="_blank" class="btn btn-success"
+           style="background:#7b1fa2;border-color:#7b1fa2;"
+           title="Share Invoice via WhatsApp">
+          <i class="bi bi-whatsapp me-1"></i>
+          Invoice
+        </a>
+      <% end %>
+    <% end %>
 
     <div class="dropdown">
       <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
