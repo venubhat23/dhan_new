@@ -1,6 +1,6 @@
 class Admin::BookingsController < Admin::ApplicationController
   before_action :authenticate_user!
-  before_action :set_booking, only: [:show, :edit, :update, :destroy, :generate_invoice, :invoice, :convert_to_order, :update_status, :cancel_order, :mark_delivered, :mark_completed, :manage_stage, :update_stage]
+  before_action :set_booking, only: [:show, :edit, :update, :destroy, :generate_invoice, :invoice, :convert_to_order, :update_status, :cancel_order, :mark_delivered, :mark_completed, :mark_paid, :manage_stage, :update_stage]
 
   def index
     # Start with base query for statistics (before filtering)
@@ -388,6 +388,25 @@ class Admin::BookingsController < Admin::ApplicationController
   def mark_completed
     @booking.mark_as_completed!
     redirect_to admin_booking_path(@booking), notice: 'Order marked as completed!'
+  end
+
+  def mark_paid
+    if @booking.payment_status_paid?
+      redirect_to admin_booking_path(@booking), notice: 'Booking is already marked as paid.'
+      return
+    end
+
+    @booking.payment_status = :paid
+    @booking.save!
+
+    invoice = generate_immediate_invoice_for_booking(@booking)
+    if invoice
+      redirect_to admin_booking_path(@booking), notice: "Booking marked as paid. Invoice ##{invoice.invoice_number} generated."
+    else
+      redirect_to admin_booking_path(@booking), notice: 'Booking marked as paid.'
+    end
+  rescue => e
+    redirect_to admin_booking_path(@booking), alert: "Failed to mark as paid: #{e.message}"
   end
 
   def stage_transition

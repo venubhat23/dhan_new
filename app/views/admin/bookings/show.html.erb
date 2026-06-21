@@ -18,6 +18,11 @@
         Show Invoice
       <% end %>
     <% else %>
+      <%= button_to mark_paid_admin_booking_path(@booking), method: :patch, class: "btn btn-warning",
+            data: { confirm: "Mark this booking as paid and generate invoice?" } do %>
+        <i class="bi bi-check-circle me-1"></i>
+        Mark as Paid & Invoice
+      <% end %>
       <%= button_to generate_invoice_admin_booking_path(@booking), method: :post, class: "btn btn-success" do %>
         <i class="bi bi-receipt me-1"></i>
         Generate Invoice
