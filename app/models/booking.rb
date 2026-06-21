@@ -726,6 +726,70 @@ class Booking < ApplicationRecord
     end
   end
 
+  # Generate a proper Invoice record (with InvoiceItems) for a paid booking.
+  # Sets invoice_generated=true and invoice_number on the booking so the admin UI
+  # recognises the booking as invoiced. Returns the Invoice on success, nil on failure.
+  def generate_quick_invoice!
+    return nil if invoice_generated?
+    return nil if booking_items.empty?
+
+    invoice = Invoice.new(
+      customer: customer,
+      invoice_date: Date.current,
+      due_date: Date.current + 30.days,
+      status: :sent,
+      payment_status: :fully_paid,
+      paid_at: Time.current,
+      quick_invoice: true
+    )
+
+    invoice_total = 0
+
+    booking_items.includes(:product).each do |item|
+      product = item.product
+      next unless product
+
+      unit_price = if product.gst_enabled? && product.gst_percentage.present?
+        product.calculate_base_price || item.price
+      else
+        item.price || product.selling_price
+      end
+
+      if discount_amount.to_f > 0 && total_amount.to_f > 0
+        unit_price = unit_price * (1 - discount_amount.to_f / total_amount.to_f)
+      end
+
+      item_total = item.quantity * unit_price
+      invoice_total += item_total
+
+      invoice.invoice_items.build(
+        description: "#{product.name} - Booking ##{booking_number} (#{booking_date.strftime('%d %b %Y')})",
+        quantity: item.quantity,
+        unit_price: unit_price,
+        total_amount: item_total,
+        product: product
+      )
+    end
+
+    invoice.total_amount = invoice_total
+
+    if invoice.save
+      update_columns(
+        invoice_generated: true,
+        invoice_number: invoice.invoice_number,
+        quick_invoice: true
+      )
+      Rails.logger.info "Invoice ##{invoice.invoice_number} generated for booking ##{booking_number}"
+      invoice
+    else
+      Rails.logger.error "Failed to generate invoice for booking ##{booking_number}: #{invoice.errors.full_messages.join(', ')}"
+      nil
+    end
+  rescue => e
+    Rails.logger.error "Error generating invoice for booking ##{booking_number}: #{e.message}"
+    nil
+  end
+
   private
 
 end

@@ -972,65 +972,6 @@ class Admin::BookingsController < Admin::ApplicationController
 
   # Generate immediate invoice for paid booking
   def generate_immediate_invoice_for_booking(booking)
-    # Create quick invoice for this specific booking with paid status
-    invoice = Invoice.new(
-      customer: booking.customer, # Optional for walk-in customers
-      invoice_date: Date.current,
-      due_date: Date.current + 30.days,
-      status: :sent,
-      payment_status: :fully_paid,
-      paid_at: Time.current,
-      quick_invoice: true
-    )
-
-    total_amount = 0
-
-    # Create invoice items for each booking item, applying discount proportionally
-    booking.booking_items.includes(:product).each do |item|
-      product = item.product
-      next unless product
-
-      # Calculate proper unit price (base price excluding GST for GST products)
-      unit_price = if product.gst_enabled? && product.gst_percentage.present?
-        product.calculate_base_price || item.price
-      else
-        item.price || product.selling_price
-      end
-
-      # Apply any booking-level discount proportionally
-      if booking.discount_amount.to_f > 0 && booking.total_amount.to_f > 0
-        discount_ratio = booking.discount_amount.to_f / booking.total_amount.to_f
-        unit_price = unit_price * (1 - discount_ratio)
-      end
-
-      item_total = item.quantity * unit_price
-
-      invoice_item = invoice.invoice_items.build(
-        description: "#{product.name} - Booking ##{booking.booking_number} (#{booking.booking_date.strftime('%d %b %Y')})",
-        quantity: item.quantity,
-        unit_price: unit_price,
-        total_amount: item_total,
-        product: product
-      )
-
-      total_amount += item_total
-    end
-
-    invoice.total_amount = total_amount
-
-    if invoice.save
-      # Mark booking as invoiced and quick invoice
-      booking.update!(
-        invoice_generated: true,
-        invoice_number: invoice.invoice_number,
-        quick_invoice: true
-      )
-
-      Rails.logger.info "Immediate invoice ##{invoice.invoice_number} generated for paid booking ##{booking.booking_number}"
-      return invoice
-    else
-      Rails.logger.error "Failed to generate immediate invoice for booking ##{booking.booking_number}: #{invoice.errors.full_messages.join(', ')}"
-      return nil
-    end
+    booking.generate_quick_invoice!
   end
 end

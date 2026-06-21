@@ -81,16 +81,18 @@ class Admin::MobileUiController < ActionController::Base
       @booking.save!
 
       # Generate invoice if paid
+      invoice_notice = ""
       if @booking.payment_status_paid?
-        begin
-          @booking.create_booking_invoice_record
-        rescue => e
-          Rails.logger.warn "Mobile UI: Invoice auto-gen failed for booking #{@booking.id}: #{e.message}"
+        invoice = @booking.generate_quick_invoice!
+        if invoice
+          invoice_notice = " Invoice ##{invoice.invoice_number} generated."
+        else
+          Rails.logger.warn "Mobile UI: Invoice generation returned nil for booking #{@booking.id}"
         end
       end
 
       redirect_to admin_mobile_ui_bookings_path,
-                  notice: "Booking ##{@booking.booking_number} created successfully!"
+                  notice: "Booking ##{@booking.booking_number} created successfully!#{invoice_notice}"
     else
       @products = load_mobile_products
       @customers = Customer.select(:id, :first_name, :middle_name, :last_name, :email, :mobile)
