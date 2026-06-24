@@ -666,6 +666,53 @@ class Admin::CustomersController < Admin::ApplicationController
     end
   end
 
+  def bulk_delete
+    customer_ids = params[:customer_ids]
+
+    if customer_ids.blank?
+      redirect_to admin_customers_path, alert: 'No customers selected for deletion.'
+      return
+    end
+
+    customers = Customer.where(id: customer_ids)
+    deleted_count = 0
+    errors = []
+
+    customers.each do |customer|
+      customer_id = customer.id
+      customer_name = customer.display_name
+
+      begin
+        ActiveRecord::Base.transaction do
+          conn = ActiveRecord::Base.connection
+
+          %w[milk_delivery_tasks booking_schedules booking_invoices bookings
+             orders subscription_templates customer_formats milk_subscriptions
+             product_reviews invoices customer_addresses wishlists carts
+             pending_amounts referrals client_requests].each do |table|
+            conn.execute("DELETE FROM #{table} WHERE customer_id = #{customer_id}") if conn.table_exists?(table)
+          end
+
+          if customer.email.present?
+            user = User.find_by(email: customer.email, user_type: 'customer')
+            conn.execute("DELETE FROM users WHERE id = #{user.id}") if user
+          end
+
+          conn.execute("DELETE FROM customers WHERE id = #{customer_id}")
+          deleted_count += 1
+        end
+      rescue => e
+        errors << "#{customer_name}: #{e.message}"
+      end
+    end
+
+    if errors.any?
+      redirect_to admin_customers_path, alert: "Deleted #{deleted_count} customer(s). Errors: #{errors.join('; ')}"
+    else
+      redirect_to admin_customers_path, notice: "#{deleted_count} customer(s) deleted successfully."
+    end
+  end
+
   # PATCH /admin/customers/1/toggle_status
   def toggle_status
     # Check if status column exists or use virtual attribute

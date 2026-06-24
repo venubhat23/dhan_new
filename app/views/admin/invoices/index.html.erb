@@ -161,10 +161,14 @@
       </div>
       <div class="d-flex align-items-center gap-2">
         <!-- Bulk Actions -->
-        <div id="bulkActions" style="display: none;" class="me-3">
+        <div id="bulkActions" style="display: none;" class="me-3 d-flex gap-2 align-items-center">
           <button id="bulkMarkPaidBtn" class="btn btn-success btn-sm" onclick="markSelectedAsPaid()">
             <i class="bi bi-check-circle me-1"></i>
             Mark as Paid (<span id="selectedCount">0</span>)
+          </button>
+          <button id="bulkDeleteInvoiceBtn" class="btn btn-danger btn-sm" onclick="deleteSelectedInvoices()">
+            <i class="bi bi-trash me-1"></i>
+            Delete Selected
           </button>
           <button class="btn btn-outline-secondary btn-sm" onclick="clearSelection()">
             <i class="bi bi-x me-1"></i>
@@ -1552,6 +1556,56 @@ function markSelectedAsPaid() {
     // Re-enable button
     bulkMarkPaidBtn.disabled = false;
     bulkMarkPaidBtn.innerHTML = originalText;
+  });
+}
+
+function deleteSelectedInvoices() {
+  const selectedCheckboxes = document.querySelectorAll('.invoice-checkbox:checked');
+  const invoiceIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+  if (invoiceIds.length === 0) {
+    alert('Please select at least one invoice to delete.');
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to permanently delete ${invoiceIds.length} invoice(s)? This cannot be undone.`)) {
+    return;
+  }
+
+  const btn = document.getElementById('bulkDeleteInvoiceBtn');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Deleting...';
+
+  fetch('/admin/invoices/bulk_delete', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({ invoice_ids: invoiceIds })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      const alert = document.createElement('div');
+      alert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+      alert.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+      alert.innerHTML = `<i class="bi bi-check-circle me-2"></i>Deleted ${data.deleted_count} invoice(s) successfully!
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+      document.body.appendChild(alert);
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      alert('Error: ' + (data.error || 'Failed to delete invoices'));
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('An error occurred while deleting invoices. Please try again.');
+    btn.disabled = false;
+    btn.innerHTML = originalText;
   });
 }
 

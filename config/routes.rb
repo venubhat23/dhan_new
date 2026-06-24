@@ -187,6 +187,7 @@ Rails.application.routes.draw do
       collection do
         get :quick_new
         post :quick_create
+        post :bulk_delete
       end
     end
     resources :payouts do
@@ -260,6 +261,7 @@ Rails.application.routes.draw do
         post :generate_invoice
         post :generate_bulk_invoices
         post :bulk_mark_as_paid
+        post :bulk_delete
         post :partial_payment
         get :customers
         get :delivery_persons

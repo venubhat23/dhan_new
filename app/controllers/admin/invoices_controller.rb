@@ -279,6 +279,31 @@ class Admin::InvoicesController < Admin::ApplicationController
     redirect_to admin_invoices_path, alert: "Error marking invoice as paid: #{e.message}"
   end
 
+  def bulk_delete
+    invoice_ids = params[:invoice_ids]
+
+    if invoice_ids.blank? || !invoice_ids.is_a?(Array)
+      render json: { success: false, error: 'No invoice IDs provided' }, status: :bad_request
+      return
+    end
+
+    invoices = Invoice.where(id: invoice_ids)
+    deleted_count = invoices.count
+
+    Invoice.transaction do
+      InvoiceItem.where(invoice_id: invoice_ids).delete_all
+      invoices.delete_all
+    end
+
+    render json: {
+      success: true,
+      deleted_count: deleted_count,
+      message: "Successfully deleted #{deleted_count} invoice(s)"
+    }
+  rescue => e
+    render json: { success: false, error: e.message }, status: :internal_server_error
+  end
+
   def bulk_mark_as_paid
     invoice_ids = params[:invoice_ids]
 

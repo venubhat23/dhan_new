@@ -138,7 +138,20 @@
   <div class="card-header bg-transparent border-0">
     <div class="d-flex justify-content-between align-items-center">
       <h5 class="mb-0">Customer List</h5>
-      <div class="d-flex gap-2">
+      <div class="d-flex gap-2 align-items-center">
+        <!-- Bulk Actions (hidden until items are selected) -->
+        <div id="customerBulkActions" style="display: none;">
+          <%= form_with url: bulk_delete_admin_customers_path, method: :post, id: "bulkDeleteForm", local: true do |f| %>
+            <div id="bulk_customer_ids_container"></div>
+            <button type="button" class="btn btn-danger btn-sm" onclick="confirmBulkDelete()">
+              <i class="bi bi-trash me-1"></i>
+              Delete Selected (<span id="customerSelectedCount">0</span>)
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearCustomerSelection()">
+              <i class="bi bi-x me-1"></i>Clear
+            </button>
+          <% end %>
+        </div>
         <div class="position-relative">
           <input type="text" class="form-control" placeholder="Search in table..." id="searchInput">
           <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3"></i>
@@ -152,6 +165,11 @@
         <table class="table table-hover mb-0">
           <thead class="table-light">
             <tr>
+              <th class="border-0 fw-semibold" style="width: 50px;">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="selectAllCustomers" onchange="toggleSelectAllCustomers()">
+                </div>
+              </th>
               <th class="border-0 fw-semibold">Customer</th>
               <th class="border-0 fw-semibold">Contact Info</th>
               <th class="border-0 fw-semibold">Status</th>
@@ -163,6 +181,14 @@
           <tbody>
             <% @customers.each do |customer| %>
               <tr>
+                <td class="align-middle">
+                  <div class="form-check">
+                    <input class="form-check-input customer-checkbox" type="checkbox"
+                           value="<%= customer.id %>"
+                           id="customer_<%= customer.id %>"
+                           onchange="updateCustomerBulkActions()">
+                  </div>
+                </td>
                 <td class="align-middle">
                   <div class="d-flex align-items-center">
                     <div class="avatar-sm bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center me-3">
@@ -699,3 +725,63 @@ tbody tr:nth-last-child(2) .dropdown-menu {
   }
 }
 </style>
+
+<script>
+// Bulk delete for customers
+function toggleSelectAllCustomers() {
+  const selectAll = document.getElementById('selectAllCustomers');
+  document.querySelectorAll('.customer-checkbox').forEach(cb => { cb.checked = selectAll.checked; });
+  updateCustomerBulkActions();
+}
+
+function updateCustomerBulkActions() {
+  const selected = document.querySelectorAll('.customer-checkbox:checked');
+  const total = document.querySelectorAll('.customer-checkbox');
+  const bulkBar = document.getElementById('customerBulkActions');
+  const countEl = document.getElementById('customerSelectedCount');
+  const selectAll = document.getElementById('selectAllCustomers');
+
+  countEl.textContent = selected.length;
+  bulkBar.style.display = selected.length > 0 ? 'flex' : 'none';
+
+  if (selected.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
+  else if (selected.length === total.length) { selectAll.checked = true; selectAll.indeterminate = false; }
+  else { selectAll.checked = false; selectAll.indeterminate = true; }
+}
+
+function clearCustomerSelection() {
+  document.querySelectorAll('.customer-checkbox').forEach(cb => { cb.checked = false; });
+  document.getElementById('selectAllCustomers').checked = false;
+  document.getElementById('selectAllCustomers').indeterminate = false;
+  updateCustomerBulkActions();
+}
+
+function confirmBulkDelete() {
+  const selected = document.querySelectorAll('.customer-checkbox:checked');
+  if (selected.length === 0) return;
+
+  Swal.fire({
+    title: 'Delete ' + selected.length + ' customer(s)?',
+    text: 'This will permanently delete all selected customers and their data. This cannot be undone.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Yes, delete all',
+    cancelButtonText: 'Cancel'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const container = document.getElementById('bulk_customer_ids_container');
+      container.innerHTML = '';
+      selected.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'customer_ids[]';
+        input.value = cb.value;
+        container.appendChild(input);
+      });
+      document.getElementById('bulkDeleteForm').submit();
+    }
+  });
+}
+</script>
