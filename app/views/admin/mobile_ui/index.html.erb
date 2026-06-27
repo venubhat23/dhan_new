@@ -303,8 +303,8 @@
             <i class="bi bi-pencil-fill"></i>
           <% end %>
 
-          <%# WhatsApp buttons — only for paid bookings %>
-          <% if wa_phone.present? && booking.payment_status.to_s == 'paid' %>
+          <%# WhatsApp Thanks button — for paid and unpaid bookings %>
+          <% if wa_phone.present? %>
             <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
                class="wa-send-btn" target="_blank" title="Send Thank You + Booking Link on WhatsApp">
               <i class="bi bi-whatsapp"></i> Thanks
@@ -318,8 +318,8 @@
             <% end %>
           <% end %>
 
-          <%# Generate Invoice — for paid/completed bookings that have no invoice yet %>
-          <% if bi.nil? && %w[paid].include?(booking.payment_status.to_s) %>
+          <%# Generate Invoice — for any booking without an invoice yet %>
+          <% if bi.nil? %>
             <%= link_to generate_invoice_admin_booking_path(booking), method: :post,
                 class: 'icon-btn icon-inv', title: 'Generate Invoice',
                 data: { confirm: 'Generate invoice for this booking?' } do %>
