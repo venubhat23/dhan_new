@@ -262,7 +262,7 @@
                       Enabled
                     </span>
                     <p class="mb-0 mt-2">Customers can select stores for collection during checkout.</p>
-                    <small class="text-muted">Current stores: <%= @stores_count %> / <%= @max_stores_limit %> maximum</small>
+                    <small class="text-muted">Current stores: <%= @stores_count %></small>
                   <% else %>
                     <span class="badge bg-secondary">
                       <i class="bi bi-x-circle me-1"></i>
@@ -643,22 +643,10 @@
           </div>
           <div class="card-body">
             <div class="row text-center">
-              <div class="col-md-4">
+              <div class="col-md-12">
                 <div class="stat-card">
                   <h3 class="mb-1 text-primary"><%= @stores_count %></h3>
                   <p class="text-muted mb-0">Total Stores</p>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="stat-card">
-                  <h3 class="mb-1 text-warning"><%= @max_stores_limit %></h3>
-                  <p class="text-muted mb-0">Maximum Limit</p>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="stat-card">
-                  <h3 class="mb-1 text-success"><%= [@max_stores_limit - @stores_count, 0].max %></h3>
-                  <p class="text-muted mb-0">Available Slots</p>
                 </div>
               </div>
             </div>
@@ -668,18 +656,6 @@
                 <i class="bi bi-exclamation-triangle me-2"></i>
                 <strong>Feature Disabled:</strong>
                 Enable the "Collect From Store" feature above to manage stores.
-              </div>
-            <% elsif @stores_count >= @max_stores_limit %>
-              <div class="alert alert-danger mt-3">
-                <i class="bi bi-exclamation-circle me-2"></i>
-                <strong>Maximum Limit Reached:</strong>
-                You can add up to <%= @max_stores_limit %> stores maximum.
-              </div>
-            <% else %>
-              <div class="alert alert-info mt-3">
-                <i class="bi bi-info-circle me-2"></i>
-                <strong>Available Slots:</strong>
-                You can add <%= @max_stores_limit - @stores_count %> more store(s).
               </div>
             <% end %>
           </div>

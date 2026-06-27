@@ -1,5 +1,4 @@
 class Store < ApplicationRecord
-  # No hard limit on stores
 
   # Associations
   has_many :bookings, dependent: :restrict_with_error
@@ -27,7 +26,6 @@ class Store < ApplicationRecord
   validates :contact_person, presence: true, length: { maximum: 100 }
   validates :description, length: { maximum: 1000 }, allow_blank: true
 
-  # No maximum stores limit
   validate :validate_admin_details, if: :create_admin_user
 
   after_create :create_store_admin_user!, if: :create_admin_user
@@ -40,14 +38,6 @@ class Store < ApplicationRecord
   # Class methods
   def self.available_for_collection
     active.by_display_order
-  end
-
-  def self.can_add_more_stores?
-    true
-  end
-
-  def self.remaining_store_slots
-    nil
   end
 
   # Instance methods

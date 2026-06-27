@@ -30,7 +30,6 @@ class Admin::Settings::SystemController < Admin::Settings::BaseController
     # Get collect from store settings
     @collect_from_store_enabled = SystemSetting.collect_from_store_enabled?
     @stores_count = Store.count
-    @max_stores_limit = Store::MAX_STORES_LIMIT
 
     # Get delivery only at shop settings
     @delivery_only_at_shop_enabled = SystemSetting.delivery_only_at_shop_enabled?
