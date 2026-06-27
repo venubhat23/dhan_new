@@ -40,6 +40,10 @@ class Store < ApplicationRecord
     active.by_display_order
   end
 
+  def self.can_add_more_stores?
+    true
+  end
+
   # Instance methods
   def display_name
     "#{name} - #{city}"
