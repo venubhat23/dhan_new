@@ -188,12 +188,10 @@ class Admin::ImportsController < Admin::ApplicationController
       return
     end
     begin
-      result = ImportService::SimpleProductImporter.new(uploaded_file).import
-      if result[:success]
-        redirect_to admin_products_path, notice: "Successfully imported #{result[:imported_count]} products. #{result[:skipped_count]} skipped."
-      else
-        redirect_back fallback_location: products_simple_form_admin_imports_path, alert: "Import failed: #{result[:error]}"
-      end
+      @import_result = ImportService::SimpleProductImporter.new(uploaded_file).import
+      @import_type   = 'simple'
+      @retry_path    = products_simple_form_admin_imports_path
+      render :import_result
     rescue => e
       Rails.logger.error "Simple product import error: #{e.message}"
       redirect_back fallback_location: products_simple_form_admin_imports_path, alert: 'An error occurred during import. Please check your file format and try again.'
@@ -208,17 +206,10 @@ class Admin::ImportsController < Admin::ApplicationController
       return
     end
     begin
-      result = ImportService::VariantProductImporter.new(uploaded_file).import
-      if result[:success]
-        msg = "Successfully imported #{result[:imported_count]} products."
-        if result[:skipped_count] > 0
-          error_details = result[:errors].first(10).join(' | ')
-          msg += " #{result[:skipped_count]} skipped — Reasons: #{error_details}"
-        end
-        redirect_to admin_products_path, notice: msg
-      else
-        redirect_back fallback_location: products_variant_form_admin_imports_path, alert: "Import failed: #{result[:error]}"
-      end
+      @import_result = ImportService::VariantProductImporter.new(uploaded_file).import
+      @import_type   = 'variant'
+      @retry_path    = products_variant_form_admin_imports_path
+      render :import_result
     rescue => e
       Rails.logger.error "Variant product import error: #{e.message}"
       redirect_back fallback_location: products_variant_form_admin_imports_path, alert: 'An error occurred during import. Please check your file format and try again.'
@@ -283,8 +274,12 @@ class Admin::ImportsController < Admin::ApplicationController
       send_product_template
     when 'products_simple'
       send_simple_product_template
+    when 'products_simple_partial'
+      send_simple_product_partial_template
     when 'products_variant'
       send_variant_product_template
+    when 'products_variant_partial'
+      send_variant_product_partial_template
     when 'customer_subscriptions'
       send_customer_subscription_template
     when 'customer_daily_tasks'
@@ -633,6 +628,34 @@ class Admin::ImportsController < Admin::ApplicationController
     send_data csv_data, filename: 'products_simple_import_template.csv', type: 'text/csv'
   end
 
+  def send_simple_product_partial_template
+    headers = [
+      'name*', 'category*', 'status',
+      'description', 'is_subscription_enabled',
+      'cost_price*', 'purchase_price', 'selling_price*', 'stock*', 'unit_type*', 'weight', 'dimensions',
+      'b2b_price', 'b2b_percentage', 'low_stock_threshold',
+      'is_discounted', 'discount_type', 'discount_value',
+      'gst_enabled', 'gst_percentage', 'hsn_code',
+      'is_occasional_product'
+    ]
+    sample_data = [
+      # Row 2 — will SUCCEED
+      ['Turmeric Powder', 'Grocery', 'active', 'Organic turmeric powder', 'false', '60', '55', '90', '80', 'Packet', '0.1', '', '', '', '10', 'false', '', '', 'false', '', '', 'false'],
+      # Row 3 — will SUCCEED
+      ['Coconut Oil',     'Grocery', 'active', 'Cold-pressed coconut oil', 'false', '120', '110', '180', '60', 'Bottle', '0.5', '', '', '', '5', 'false', '', '', 'false', '', '', 'false'],
+      # Row 4 — will FAIL: name is blank
+      ['', 'Dairy', 'active', 'Missing product name', 'false', '40', '', '60', '100', 'Liter', '1.0', '', '', '', '10', 'false', '', '', 'false', '', '', 'false'],
+      # Row 5 — will FAIL: invalid unit_type "Gallons" (not in allowed list)
+      ['Mustard Oil', 'Grocery', 'active', 'Pure mustard oil', 'false', '90', '85', '130', '40', 'Gallons', '1.0', '', '', '', '10', 'false', '', '', 'false', '', '', 'false'],
+      # Row 6 — will SUCCEED
+      ['Green Tea', 'Grocery', 'active', 'Premium green tea bags', 'false', '100', '90', '150', '30', 'Box', '0.05', '', '', '', '5', 'false', '', '', 'false', '', '', 'false'],
+      # Row 7 — will FAIL: selling_price is blank (required field)
+      ['Rock Salt', 'Grocery', 'active', 'Himalayan rock salt', 'false', '25', '', '', '200', 'Kg', '1.0', '', '', '', '10', 'false', '', '', 'false', '', '', 'false'],
+    ]
+    csv_data = CSV.generate(headers: true) { |csv| csv << headers; sample_data.each { |r| csv << r } }
+    send_data csv_data, filename: 'products_simple_partial_success_sample.csv', type: 'text/csv'
+  end
+
   def send_variant_product_template
     headers = [
       'name*', 'category*', 'status',
@@ -668,6 +691,63 @@ class Admin::ImportsController < Admin::ApplicationController
     ]
     csv_data = CSV.generate(headers: true) { |csv| csv << headers; sample_data.each { |r| csv << r } }
     send_data csv_data, filename: 'products_variant_import_template.csv', type: 'text/csv'
+  end
+
+  def send_variant_product_partial_template
+    headers = [
+      'name*', 'category*', 'status',
+      'description', 'is_subscription_enabled',
+      'is_discounted', 'discount_type', 'discount_value',
+      'gst_enabled', 'gst_percentage', 'hsn_code',
+      'is_occasional_product',
+      'weight1*', 'unit1*', 'selling_price1*', 'cost_price1*', 'purchase_price1', 'stock1*', 'b2b_price1', 'b2b_percentage1', 'low_threshold1',
+      'weight2',  'unit2',  'selling_price2',  'cost_price2',  'purchase_price2',  'stock2',  'b2b_price2', 'b2b_percentage2', 'low_threshold2',
+      'weight3',  'unit3',  'selling_price3',  'cost_price3',  'purchase_price3',  'stock3',  'b2b_price3', 'b2b_percentage3', 'low_threshold3',
+    ]
+    sample_data = [
+      # Row 2 — will SUCCEED (Buffalo Milk, 2 variants)
+      [
+        'Buffalo Milk', 'Dairy', 'active', 'Rich buffalo milk', 'true',
+        'false', '', '', 'false', '', '', 'false',
+        '0.5', 'Liter', '35', '24', '22', '150', '30', '10', '10',
+        '1',   'Liter', '65', '45', '40', '100', '55', '10', '10',
+        '', '', '', '', '', '', '', '', ''
+      ],
+      # Row 3 — will FAIL: name is blank
+      [
+        '', 'Dairy', 'active', 'No name provided', 'false',
+        'false', '', '', 'false', '', '', 'false',
+        '1', 'Liter', '60', '42', '38', '80', '', '', '10',
+        '', '', '', '', '', '', '', '', '',
+        '', '', '', '', '', '', '', '', ''
+      ],
+      # Row 4 — will SUCCEED (Ghee, 3 variants)
+      [
+        'Pure Ghee', 'Dairy', 'active', 'Cow ghee - multiple pack sizes', 'false',
+        'false', '', '', 'true', '5', '0405', 'false',
+        '200',  'Gram', '180', '120', '110', '60', '160', '10', '5',
+        '500',  'Gram', '420', '280', '260', '40', '375', '10', '5',
+        '1000', 'Gram', '800', '530', '500', '20', '710', '10', '5'
+      ],
+      # Row 5 — will FAIL: weight1 and selling_price1 both blank → no variants found
+      [
+        'Mystery Product', 'Grocery', 'active', 'All variant columns left blank', 'false',
+        'false', '', '', 'false', '', '', 'false',
+        '', '', '', '', '', '', '', '', '',
+        '', '', '', '', '', '', '', '', '',
+        '', '', '', '', '', '', '', '', ''
+      ],
+      # Row 6 — will SUCCEED (Paneer, 2 variants)
+      [
+        'Fresh Paneer', 'Dairy', 'active', 'Fresh cottage cheese', 'false',
+        'false', '', '', 'true', '5', '0406', 'false',
+        '200', 'Gram', '90',  '60', '55', '50', '80', '10', '5',
+        '500', 'Gram', '210', '140','130','30', '185', '10', '5',
+        '', '', '', '', '', '', '', '', ''
+      ],
+    ]
+    csv_data = CSV.generate(headers: true) { |csv| csv << headers; sample_data.each { |r| csv << r } }
+    send_data csv_data, filename: 'products_variant_partial_success_sample.csv', type: 'text/csv'
   end
 
   # Statistics methods

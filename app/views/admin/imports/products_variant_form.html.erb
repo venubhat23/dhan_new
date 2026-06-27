@@ -80,10 +80,20 @@
           <h5 class="mb-0"><i class="fas fa-download me-2"></i>Download Template</h5>
         </div>
         <div class="card-body">
-          <p class="small text-muted mb-3">Download the CSV template with sample data (Cow Milk 0.5L/1L/2L, Organic Honey 250g/500g/1Kg).</p>
+          <p class="small text-muted mb-2">All rows valid — Cow Milk (0.5L/1L/2L) and Organic Honey (250g/500g/1Kg).</p>
           <%= link_to download_template_admin_imports_path(template_type: 'products_variant', format: 'csv'),
-              class: "btn btn-success w-100", target: "_blank" do %>
+              class: "btn btn-success w-100 mb-3", target: "_blank" do %>
             <i class="fas fa-file-csv me-2"></i>Download CSV Template
+          <% end %>
+
+          <hr class="my-2">
+          <p class="small text-muted mb-2">
+            <i class="fas fa-flask text-warning me-1"></i>
+            <strong>Partial-success sample</strong> — 3 rows succeed, 2 rows fail on purpose. Upload this to preview the error report.
+          </p>
+          <%= link_to download_template_admin_imports_path(template_type: 'products_variant_partial', format: 'csv'),
+              class: "btn btn-outline-warning w-100", target: "_blank" do %>
+            <i class="fas fa-exclamation-triangle me-2"></i>Download Sample with Errors
           <% end %>
         </div>
       </div>

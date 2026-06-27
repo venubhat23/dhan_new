@@ -3,13 +3,14 @@ require 'roo'
 
 module ImportService
   class SimpleProductImporter
-    attr_reader :file, :imported_count, :skipped_count, :errors
+    attr_reader :file, :imported_count, :skipped_count, :errors, :failed_rows
 
     def initialize(file)
       @file = file
       @imported_count = 0
       @skipped_count = 0
       @errors = []
+      @failed_rows = []
     end
 
     def import
@@ -23,9 +24,9 @@ module ImportService
         process_row(row, i)
       end
 
-      { success: true, imported_count: @imported_count, skipped_count: @skipped_count, errors: @errors }
+      { success: true, imported_count: @imported_count, skipped_count: @skipped_count, errors: @errors, failed_rows: @failed_rows }
     rescue => e
-      { success: false, error: e.message, imported_count: @imported_count, skipped_count: @skipped_count, errors: @errors }
+      { success: false, error: e.message, imported_count: @imported_count, skipped_count: @skipped_count, errors: @errors, failed_rows: @failed_rows }
     end
 
     private
@@ -48,22 +49,19 @@ module ImportService
     def process_row(row, row_number)
       name = row['name'].to_s.strip
       if name.blank?
-        @errors << "Row #{row_number}: name is required"
-        @skipped_count += 1
+        record_failure(row_number, '(blank)', 'Name is required')
         return
       end
 
       category = find_or_create_category(row['category'].to_s.strip)
       unless category
-        @errors << "Row #{row_number}: category '#{row['category']}' could not be found or created"
-        @skipped_count += 1
+        record_failure(row_number, name, "Category '#{row['category']}' could not be found or created")
         return
       end
 
       unit_type = row['unit_type'].to_s.strip
       unless Product::UNIT_TYPES.map(&:last).include?(unit_type)
-        @errors << "Row #{row_number}: invalid unit_type '#{unit_type}'. Must be one of: #{Product::UNIT_TYPES.map(&:last).join(', ')}"
-        @skipped_count += 1
+        record_failure(row_number, name, "Invalid unit_type '#{unit_type}'. Must be one of: #{Product::UNIT_TYPES.map(&:last).join(', ')}")
         return
       end
 
@@ -100,11 +98,15 @@ module ImportService
       if product.save
         @imported_count += 1
       else
-        @errors << "Row #{row_number}: #{product.errors.full_messages.join(', ')}"
-        @skipped_count += 1
+        record_failure(row_number, name, product.errors.full_messages.join(', '))
       end
     rescue => e
-      @errors << "Row #{row_number}: #{e.message}"
+      record_failure(row_number, row['name'].to_s.strip.presence || '(unknown)', e.message)
+    end
+
+    def record_failure(row_number, name, error_message)
+      @errors << "Row #{row_number}: #{error_message}"
+      @failed_rows << { row: row_number, name: name, error: error_message }
       @skipped_count += 1
     end
 
