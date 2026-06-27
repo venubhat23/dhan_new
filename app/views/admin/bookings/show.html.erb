@@ -43,7 +43,7 @@
       public_url   = "#{request.base_url}/booking/#{@booking.share_token}"
       bi           = @booking.booking_invoices.first
       pdf_line     = bi&.share_token.present? ? "\n📄 Download Invoice PDF: #{request.base_url}/invoice/#{bi.share_token}/download" : ""
-      wa_thank_msg = "Dear #{cname},\n\nThank you for your booking with Dhanvantri Naturals! 🌿\n\nBooking #: #{@booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View your booking: #{public_url}#{pdf_line}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantri Naturals Team"
+      wa_thank_msg = "Dear #{cname},\n\nThank you for your booking with Dhanvantari Naturals! 🌿\n\nBooking #: #{@booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View your booking: #{public_url}#{pdf_line}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
     %>
     <% if wa_phone.length >= 10 %>
       <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
@@ -56,7 +56,7 @@
         <%
           inv_url     = "#{request.base_url}/invoice/#{bi.share_token}"
           inv_pdf_url = "#{request.base_url}/invoice/#{bi.share_token}/download"
-          wa_inv_msg  = "Dear #{cname},\n\nHere is your invoice from Dhanvantri Naturals 🌿\n\nBooking #: #{@booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View Invoice: #{inv_url}\n📄 Download PDF: #{inv_pdf_url}\n\nThank you!\n🙏 Dhanvantri Naturals Team"
+          wa_inv_msg  = "Dear #{cname},\n\nHere is your invoice from Dhanvantari Naturals 🌿\n\nBooking #: #{@booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View Invoice: #{inv_url}\n📄 Download PDF: #{inv_pdf_url}\n\nThank you!\n🙏 Dhanvantari Naturals Team"
         %>
         <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_inv_msg) %>"
            target="_blank" class="btn btn-success"

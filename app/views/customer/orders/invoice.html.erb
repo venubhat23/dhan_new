@@ -620,10 +620,10 @@
       <table class="invoice-header-table">
         <tr>
           <td class="logo-cell">
-            <img class="logo" src="/logo.jpeg" alt="Dhanvantri Naturals Logo" />
+            <img class="logo" src="/logo.jpeg" alt="Dhanvantari Naturals Logo" />
           </td>
           <td class="company-info-cell">
-            <div class="company-name"><%= business_settings.business_name || 'Dhanvantri Naturals' %></div>
+            <div class="company-name"><%= business_settings.business_name || 'Dhanvantari Naturals' %></div>
             <div class="address">
               <%= business_settings.address || '#827 4th main 9th Block 2nd Stage Near Hanumagiri temple Nagarbhavi, Bangalore, Karnataka, 560072' %>
             </div>
@@ -757,7 +757,7 @@
               <table class="bank-details-table">
                 <tr>
                   <td>Name:</td>
-                  <td><%= business_settings.account_holder_name || 'Dhanvantri Naturals' %></td>
+                  <td><%= business_settings.account_holder_name || 'Dhanvantari Naturals' %></td>
                 </tr>
                 <tr>
                   <td>IFSC Code:</td>
@@ -786,7 +786,7 @@
                     </div>
                   </td>
                   <td style="text-align: center;">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=upi://pay?pa=<%= business_settings.upi_id || '9972808044@ybl' %>&pn=<%= CGI.escape(business_settings.business_name || 'Dhanvantri Naturals') %>" alt="QR Code" class="qr-image" />
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=upi://pay?pa=<%= business_settings.upi_id || '9972808044@ybl' %>&pn=<%= CGI.escape(business_settings.business_name || 'Dhanvantari Naturals') %>" alt="QR Code" class="qr-image" />
                   </td>
                 </tr>
               </table>
@@ -939,7 +939,7 @@
           <td class="signature-cell">
             <div class="signature-box"></div>
             <div class="signature-label">AUTHORISED SIGNATORY FOR</div>
-            <div class="signature-name"><%= business_settings.business_name || 'Dhanvantri Naturals' %></div>
+            <div class="signature-name"><%= business_settings.business_name || 'Dhanvantari Naturals' %></div>
           </td>
         </tr>
       </table>

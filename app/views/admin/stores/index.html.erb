@@ -157,14 +157,8 @@
         <p class="mb-0 opacity-75">Manage all your retail stores and pickup locations</p>
       </div>
       <div class="d-flex gap-2 align-items-center mt-2">
-        <% if @can_add_more %>
-          <%= link_to new_admin_store_path, class: "btn btn-light fw-semibold px-4 py-2", style: "border-radius:10px; color:#1C7C54;" do %>
-            <i class="bi bi-plus-lg me-2"></i>Create Store
-          <% end %>
-        <% else %>
-          <button class="btn btn-light fw-semibold px-4 py-2 disabled" style="border-radius:10px; opacity:0.6;" title="Maximum store limit reached">
-            <i class="bi bi-slash-circle me-2"></i>Limit Reached
-          </button>
+        <%= link_to new_admin_store_path, class: "btn btn-light fw-semibold px-4 py-2", style: "border-radius:10px; color:#1C7C54;" do %>
+          <i class="bi bi-plus-lg me-2"></i>Create Store
         <% end %>
       </div>
     </div>
@@ -215,11 +209,11 @@
       <div class="card stat-card h-100">
         <div class="card-body p-3 d-flex align-items-center gap-3">
           <div class="stat-icon" style="background:rgba(28,124,84,0.1);">
-            <i class="bi bi-geo-alt" style="color:#1C7C54;"></i>
+            <i class="bi bi-infinity" style="color:#1C7C54;"></i>
           </div>
           <div>
-            <div class="text-muted small fw-medium">Slots Left</div>
-            <div class="fw-bold fs-4" style="color:#1C7C54;"><%= @remaining_slots %></div>
+            <div class="text-muted small fw-medium">Store Limit</div>
+            <div class="fw-bold fs-5" style="color:#1C7C54;">Unlimited</div>
           </div>
         </div>
       </div>
@@ -239,10 +233,8 @@
           <input type="text" class="form-control search-box" id="storeSearch"
                  placeholder="Search stores..." style="width:220px; padding-left:2rem;">
         </div>
-        <% if @can_add_more %>
-          <%= link_to new_admin_store_path, class: "btn btn-create-store btn-sm" do %>
-            <i class="bi bi-plus-lg me-1"></i>New Store
-          <% end %>
+        <%= link_to new_admin_store_path, class: "btn btn-create-store btn-sm" do %>
+          <i class="bi bi-plus-lg me-1"></i>New Store
         <% end %>
       </div>
     </div>
@@ -315,18 +307,26 @@
                 </div>
 
                 <!-- Card Footer Actions -->
-                <div class="card-footer bg-transparent border-top px-4 py-2 d-flex gap-2">
+                <div class="card-footer bg-transparent border-top px-4 py-2 d-flex gap-2 flex-wrap">
                   <%= link_to admin_store_path(store), class: "btn btn-sm btn-outline-secondary store-action-btn flex-fill text-center" do %>
                     <i class="bi bi-eye me-1"></i>View
                   <% end %>
                   <%= link_to edit_admin_store_path(store), class: "btn btn-sm btn-outline-primary store-action-btn flex-fill text-center" do %>
                     <i class="bi bi-pencil me-1"></i>Edit
                   <% end %>
-                  <%= link_to toggle_status_admin_store_path(store),
-                      data: { turbo_method: :patch },
-                      class: "btn btn-sm store-action-btn #{store.status ? 'btn-outline-danger' : 'btn-outline-success'} flex-fill text-center" do %>
+                  <%= button_to toggle_status_admin_store_path(store),
+                      method: :patch,
+                      class: "btn btn-sm store-action-btn #{store.status ? 'btn-outline-danger' : 'btn-outline-success'} flex-fill text-center",
+                      form: { style: "display:contents;" } do %>
                     <i class="bi bi-toggle-<%= store.status ? 'off' : 'on' %> me-1"></i>
                     <%= store.status ? 'Disable' : 'Enable' %>
+                  <% end %>
+                  <%= button_to admin_store_path(store),
+                      method: :delete,
+                      data: { confirm: "Delete '#{store.name}'? This cannot be undone." },
+                      class: "btn btn-sm btn-outline-danger store-action-btn flex-fill text-center",
+                      form: { style: "display:contents;" } do %>
+                    <i class="bi bi-trash me-1"></i>Delete
                   <% end %>
                 </div>
               </div>

@@ -48,21 +48,11 @@ class Admin::StoresController < Admin::ApplicationController
   end
 
   def new
-    unless Store.can_add_more_stores?
-      redirect_to admin_stores_path, alert: "Maximum #{Store::MAX_STORES_LIMIT} stores allowed. Cannot add more stores."
-      return
-    end
-
     @store = Store.new
     @store.status = true # Default to active
   end
 
   def create
-    unless Store.can_add_more_stores?
-      redirect_to admin_stores_path, alert: "Maximum #{Store::MAX_STORES_LIMIT} stores allowed. Cannot add more stores."
-      return
-    end
-
     @store = Store.new(store_params)
 
     if params[:store][:create_admin_user] == '1'

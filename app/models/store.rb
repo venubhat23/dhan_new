@@ -1,6 +1,5 @@
 class Store < ApplicationRecord
-  # Constants
-  MAX_STORES_LIMIT = 10
+  # No hard limit on stores
 
   # Associations
   has_many :bookings, dependent: :restrict_with_error
@@ -28,8 +27,7 @@ class Store < ApplicationRecord
   validates :contact_person, presence: true, length: { maximum: 100 }
   validates :description, length: { maximum: 1000 }, allow_blank: true
 
-  # Custom validation for maximum stores limit
-  validate :check_maximum_stores_limit, on: :create
+  # No maximum stores limit
   validate :validate_admin_details, if: :create_admin_user
 
   after_create :create_store_admin_user!, if: :create_admin_user
@@ -45,11 +43,11 @@ class Store < ApplicationRecord
   end
 
   def self.can_add_more_stores?
-    Store.count < MAX_STORES_LIMIT
+    true
   end
 
   def self.remaining_store_slots
-    MAX_STORES_LIMIT - Store.count
+    nil
   end
 
   # Instance methods
@@ -185,9 +183,4 @@ class Store < ApplicationRecord
     end
   end
 
-  def check_maximum_stores_limit
-    if Store.count >= MAX_STORES_LIMIT
-      errors.add(:base, "Maximum #{MAX_STORES_LIMIT} stores allowed. Cannot add more stores.")
-    end
-  end
 end

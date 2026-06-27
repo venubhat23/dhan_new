@@ -617,7 +617,7 @@
                         wa_public_url = "#{request.base_url}/booking/#{booking.share_token}"
                         wa_bi = booking.booking_invoices.first
                         wa_pdf_line = wa_bi&.share_token.present? ? "\n📄 Download Invoice PDF: #{request.base_url}/invoice/#{wa_bi.share_token}/download" : ""
-                        wa_msg = "Dear #{wa_cname},\n\nThank you for your booking with Dhanvantri Naturals! 🌿\n\nBooking #: #{booking.booking_number}\nDate: #{wa_date}\nAmount: ₹#{wa_amount}\n\n📋 View your booking: #{wa_public_url}#{wa_pdf_line}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantri Naturals Team"
+                        wa_msg = "Dear #{wa_cname},\n\nThank you for your booking with Dhanvantari Naturals! 🌿\n\nBooking #: #{booking.booking_number}\nDate: #{wa_date}\nAmount: ₹#{wa_amount}\n\n📋 View your booking: #{wa_public_url}#{wa_pdf_line}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
                       %>
                       <% if wa_phone_full.present? %>
                         <a href="https://wa.me/<%= wa_phone_full %>?text=<%= ERB::Util.url_encode(wa_msg) %>"
@@ -641,7 +641,7 @@
                         <% if bi&.share_token.present? %>
                           <% wa_inv_url = public_invoice_url(token: bi.share_token) %>
                           <% wa_inv_pdf_url = "#{request.base_url}/invoice/#{bi.share_token}/download" %>
-                          <% wa_text = "Dear #{wa_cname},\n\nHere is your invoice from Dhanvantri Naturals 🌿\n\nBooking #: #{booking.booking_number}\nAmount: ₹#{wa_amount}\n\n📋 View Invoice: #{wa_inv_url}\n📄 Download PDF: #{wa_inv_pdf_url}\n\nThank you!\n🙏 Dhanvantri Naturals Team" %>
+                          <% wa_text = "Dear #{wa_cname},\n\nHere is your invoice from Dhanvantari Naturals 🌿\n\nBooking #: #{booking.booking_number}\nAmount: ₹#{wa_amount}\n\n📋 View Invoice: #{wa_inv_url}\n📄 Download PDF: #{wa_inv_pdf_url}\n\nThank you!\n🙏 Dhanvantari Naturals Team" %>
                           <a href="https://wa.me/<%= wa_phone_full.present? ? wa_phone_full : '' %>?text=<%= ERB::Util.url_encode(wa_text) %>"
                              class="action-icon whatsapp"
                              target="_blank"

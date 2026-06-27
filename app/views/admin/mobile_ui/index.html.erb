@@ -248,13 +248,13 @@
       if bi&.share_token.present?
         inv_url      = "#{request.base_url}/invoice/#{bi.share_token}"
         inv_pdf_url  = "#{request.base_url}/invoice/#{bi.share_token}/download"
-        inv_msg = "Dear #{cname},\n\nHere is your invoice from Dhanvantri Naturals 🌿\n\nBooking #: #{booking.booking_number}\nAmount: ₹#{amount}\n\n📋 View Invoice: #{inv_url}\n📄 Download PDF: #{inv_pdf_url}\n\nThank you!\n🙏 Dhanvantri Naturals Team"
+        inv_msg = "Dear #{cname},\n\nHere is your invoice from Dhanvantari Naturals 🌿\n\nBooking #: #{booking.booking_number}\nAmount: ₹#{amount}\n\n📋 View Invoice: #{inv_url}\n📄 Download PDF: #{inv_pdf_url}\n\nThank you!\n🙏 Dhanvantari Naturals Team"
         inv_wa_url = "https://wa.me/#{wa_phone}?text=#{ERB::Util.url_encode(inv_msg)}" if wa_phone.present?
       end
 
       # WhatsApp thank-you message — includes booking link + PDF link if invoice exists
       pdf_line = bi&.share_token.present? ? "\n📄 Download Invoice PDF: #{request.base_url}/invoice/#{bi.share_token}/download" : ""
-      wa_thank_msg = "Dear #{cname},\n\nThank you for your booking with Dhanvantri Naturals! 🌿\n\nBooking #: #{booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View your booking: #{public_url}#{pdf_line}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantri Naturals Team"
+      wa_thank_msg = "Dear #{cname},\n\nThank you for your booking with Dhanvantari Naturals! 🌿\n\nBooking #: #{booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View your booking: #{public_url}#{pdf_line}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
     %>
     <div class="booking-card">
       <div class="booking-card-header">

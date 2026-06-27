@@ -272,13 +272,13 @@
       <div class="inv-header">
         <img class="inv-logo" src="/logo.jpeg" alt="Logo" />
         <div>
-          <div class="inv-company-name"><%= business_settings&.business_name || 'Dhanvantri Naturals' %></div>
+          <div class="inv-company-name"><%= business_settings&.business_name || 'Dhanvantari Naturals' %></div>
           <div class="inv-company-info">
             <%= business_settings&.address || '#827 4th main 9th Block 2nd Stage Near Hanumagiri temple Nagarbhavi, Bangalore, Karnataka, 560072' %><br/>
             <strong>Mobile:</strong> <%= business_settings&.mobile || '9972808044' %> &nbsp;
             <strong>GSTIN:</strong> <%= business_settings&.gstin || '29AOIPT8113K1ZC' %><br/>
             <strong>PAN:</strong> <%= business_settings&.pan_number || 'AOIPT8113K' %> &nbsp;
-            <strong>Email:</strong> <%= business_settings&.email || 'Dhanvantrinaturalsfarm@gmail.com' %>
+            <strong>Email:</strong> <%= business_settings&.email || 'Dhanvantarinaturalsfarm@gmail.com' %>
           </div>
         </div>
       </div>
@@ -367,7 +367,7 @@
         <div class="inv-bank">
           <div class="inv-section-title">BANK DETAILS</div>
           <table class="bank-table">
-            <tr><td>Name</td><td><%= business_settings&.account_holder_name || 'Dhanvantri Naturals' %></td></tr>
+            <tr><td>Name</td><td><%= business_settings&.account_holder_name || 'Dhanvantari Naturals' %></td></tr>
             <tr><td>IFSC</td><td><%= business_settings&.ifsc_code || 'CNRB0003194' %></td></tr>
             <tr><td>Account</td><td><%= business_settings&.account_number || '3194201000718' %></td></tr>
             <tr><td>Bank</td><td><%= business_settings&.bank_name || 'Canara Bank' %></td></tr>
@@ -385,7 +385,7 @@
               </div>
             </div>
             <img class="qr-img"
-                 src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=upi://pay?pa=<%= business_settings&.upi_id || '9972808044@ybl' %>&pn=<%= CGI.escape(business_settings&.business_name || 'Dhanvantri Naturals') %>"
+                 src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=upi://pay?pa=<%= business_settings&.upi_id || '9972808044@ybl' %>&pn=<%= CGI.escape(business_settings&.business_name || 'Dhanvantari Naturals') %>"
                  alt="QR Code" />
           </div>
         </div>
@@ -505,7 +505,7 @@
         <div class="inv-sig">
           <div class="sig-box"></div>
           <div class="sig-label">AUTHORISED SIGNATORY FOR</div>
-          <div class="sig-name"><%= business_settings&.business_name || 'Dhanvantri Naturals' %></div>
+          <div class="sig-name"><%= business_settings&.business_name || 'Dhanvantari Naturals' %></div>
         </div>
       </div>
     </div>
