@@ -25,6 +25,8 @@ class Admin::ProductsController < Admin::ApplicationController
         @products = @products.in_stock
       when 'out_of_stock'
         @products = @products.out_of_stock
+      when 'low_stock'
+        @products = @products.where('stock <= 5 AND stock > 0')
       end
     end
 

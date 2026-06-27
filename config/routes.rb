@@ -114,6 +114,7 @@ Rails.application.routes.draw do
     post 'mobile-ui/create-booking',   to: 'mobile_ui#create_booking',  as: 'mobile_ui_create_booking'
     get  'mobile-ui/new-customer',     to: 'mobile_ui#new_customer',    as: 'mobile_ui_new_customer'
     post 'mobile-ui/create-customer',  to: 'mobile_ui#create_customer', as: 'mobile_ui_create_customer'
+    get  'mobile-ui/price-list',       to: 'mobile_ui#price_list',      as: 'mobile_ui_price_list'
 
     # Bookings Management (Now handles complete order workflow)
     resources :bookings do

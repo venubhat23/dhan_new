@@ -29,6 +29,31 @@
     .mobile-header .brand { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.3px; }
     .mobile-header .sub-brand { font-size: 0.7rem; opacity: 0.8; }
     .mobile-content { padding-bottom: 80px; }
+    .tab-nav {
+      display: flex;
+      background: white;
+      border-bottom: 2px solid #e9ecef;
+      position: sticky;
+      top: 56px;
+      z-index: 95;
+    }
+    .tab-nav a {
+      flex: 1;
+      text-align: center;
+      padding: 10px 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #6c757d;
+      text-decoration: none;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.15s;
+    }
+    .tab-nav a.active {
+      color: #6f42c1;
+      border-bottom-color: #6f42c1;
+    }
+    .tab-nav a i { display: block; font-size: 1.1rem; margin-bottom: 2px; }
     .fab {
       position: fixed;
       bottom: 24px;
@@ -136,6 +161,20 @@
       <i class="bi bi-check-circle me-2"></i><%= flash[:notice] %>
       <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
     </div>
+  <% end %>
+
+  <% if session[:mobile_ui_auth] %>
+    <% current_path = request.path %>
+    <nav class="tab-nav">
+      <%= link_to admin_mobile_ui_bookings_path,
+            class: "#{current_path == admin_mobile_ui_bookings_path ? 'active' : ''}" do %>
+        <i class="bi bi-receipt"></i>Bookings
+      <% end %>
+      <%= link_to admin_mobile_ui_price_list_path,
+            class: "#{current_path == admin_mobile_ui_price_list_path ? 'active' : ''}" do %>
+        <i class="bi bi-tags"></i>Price List
+      <% end %>
+    </nav>
   <% end %>
 
   <div class="mobile-content">

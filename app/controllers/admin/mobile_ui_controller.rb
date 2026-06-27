@@ -103,6 +103,32 @@ class Admin::MobileUiController < ActionController::Base
     end
   end
 
+  # ── Price List ────────────────────────────────────────────────────────────
+  def price_list
+    products = Product.joins(:category)
+                      .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id
+                              AND stock_batches.status = 'active'
+                              AND stock_batches.quantity_remaining > 0
+                              AND stock_batches.store_id IS NULL")
+                      .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) AS cached_stock,
+                               categories.name AS cat_name")
+                      .group("products.id, categories.id, categories.name")
+                      .order("categories.name ASC, products.name ASC")
+
+    if params[:category_id].present?
+      products = products.where(products: { category_id: params[:category_id] })
+    end
+
+    if params[:search].present?
+      q = "%#{params[:search]}%"
+      products = products.where("products.name LIKE ? OR products.sku LIKE ?", q, q)
+    end
+
+    @categories = Category.order(:name)
+    # Group by category_id so products sharing a category are correctly grouped
+    @products_by_category = products.group_by { |p| [p.category_id, p.cat_name] }
+  end
+
   # ── Quick Customer ────────────────────────────────────────────────────────
   def new_customer
     @customer = Customer.new
