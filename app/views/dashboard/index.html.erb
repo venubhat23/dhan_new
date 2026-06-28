@@ -370,46 +370,95 @@
     </div>
   </div>
 
-  <!-- Quick Insights -->
+  <!-- Low Stock Products -->
   <div class="col-md-4">
-    <div class="card border-0 shadow-sm">
-      <div class="card-header bg-transparent border-0">
-        <h5 class="mb-0">Quick Insights</h5>
+    <%= link_to admin_low_stock_product_path, class: "text-decoration-none" do %>
+      <div class="card border-0 shadow-sm h-100" style="cursor:pointer; border-left: 4px solid #f59e0b !important;">
+        <div class="card-header bg-transparent border-0">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Low Stock Products
+            </h5>
+            <span class="badge bg-warning text-dark"><%= @low_stock_count %> items</span>
+          </div>
+        </div>
+        <div class="card-body text-center py-4">
+          <div class="mb-3">
+            <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-warning-subtle" style="width:64px;height:64px;">
+              <i class="bi bi-exclamation-triangle-fill text-warning fs-2"></i>
+            </span>
+          </div>
+          <h1 class="display-4 fw-bold text-warning mb-1"><%= @low_stock_count %></h1>
+          <p class="text-muted mb-4">product<%= @low_stock_count == 1 ? '' : 's' %> need restocking</p>
+          <span class="btn btn-warning btn-sm px-4">
+            <i class="bi bi-arrow-right-circle me-1"></i>View Low Stock List
+          </span>
+        </div>
       </div>
-      <div class="card-body">
-        <% quick_insights = [
-             { label: 'Stock Value', value: @total_stock_value || 0, format: 'currency', icon: 'bi-box-seam', color: 'purple', link: admin_products_path, count: @total_products },
-             { label: 'Pending Payments', value: @pending_payments || 0, format: 'currency', icon: 'bi-credit-card', color: 'danger', link: admin_vendor_purchases_path(status: 'pending'), count: @pending_purchases },
-             { label: 'Active Vendors', value: @active_vendors || 0, format: 'number', icon: 'bi-building', color: 'success', link: admin_vendors_path, count: @active_vendors },
-             { label: 'Inventory Turnover', value: @inventory_turnover || 0, format: 'decimal', icon: 'bi-arrow-repeat', color: 'info', link: admin_products_path, count: @total_products }
-           ] %>
-        <% quick_insights.each do |insight| %>
-          <%= link_to insight[:link], class: "text-decoration-none" do %>
-            <div class="d-flex align-items-center py-2 border-bottom insight-row" style="cursor:pointer; transition: background 0.15s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background=''">
-              <div class="me-3">
-                <i class="<%= insight[:icon] %> text-<%= insight[:color] %> fs-5"></i>
-              </div>
-              <div class="flex-grow-1">
-                <h6 class="mb-0 text-dark"><%= insight[:label] %></h6>
-                <small class="text-muted"><%= insight[:count] %> items</small>
-              </div>
-              <div class="text-end">
-                <span class="text-<%= insight[:color] %> fw-bold d-block">
-                  <% if insight[:format] == 'currency' %>
-                    ₹<%= number_with_delimiter((insight[:value].to_f / 1000).round(0)) %>K
-                  <% elsif insight[:format] == 'decimal' %>
-                    <%= insight[:value] %>x
-                  <% else %>
-                    <%= insight[:value] %>
-                  <% end %>
-                </span>
-                <small class="text-muted"><i class="bi bi-arrow-right-circle"></i> View</small>
-              </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- Pending Payment & Pending Orders Cards -->
+<div class="row mb-4">
+  <!-- Pending Payments -->
+  <div class="col-md-6">
+    <%= link_to admin_bookings_path(payment_status: 'unpaid'), class: "text-decoration-none" do %>
+      <div class="card border-0 shadow-sm h-100" style="cursor:pointer; border-left: 4px solid #ef4444 !important;">
+        <div class="card-header bg-transparent border-0">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="bi bi-credit-card-fill text-danger me-2"></i>Pending Payments
+            </h5>
+            <span class="badge bg-danger"><%= @pending_payments_count %> unpaid</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-4 text-center">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-danger-subtle" style="width:64px;height:64px;">
+                <i class="bi bi-credit-card-fill text-danger fs-2"></i>
+              </span>
             </div>
-          <% end %>
-        <% end %>
+            <div class="col-8">
+              <h2 class="fw-bold text-danger mb-1">₹<%= number_with_delimiter(@pending_payments_amount.to_i) %></h2>
+              <p class="text-muted mb-0"><%= @pending_payments_count %> booking<%= @pending_payments_count == 1 ? '' : 's' %> with unpaid status</p>
+              <small class="text-danger fw-semibold"><i class="bi bi-arrow-right-circle me-1"></i>View Unpaid Orders</small>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    <% end %>
+  </div>
+
+  <!-- Pending Orders (delivery not done) -->
+  <div class="col-md-6">
+    <%= link_to admin_bookings_path(delivery_pending: '1'), class: "text-decoration-none" do %>
+      <div class="card border-0 shadow-sm h-100" style="cursor:pointer; border-left: 4px solid #3b82f6 !important;">
+        <div class="card-header bg-transparent border-0">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="bi bi-truck text-primary me-2"></i>Pending Orders
+            </h5>
+            <span class="badge bg-primary"><%= @pending_orders_count %> pending</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-4 text-center">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle" style="width:64px;height:64px;">
+                <i class="bi bi-truck text-primary fs-2"></i>
+              </span>
+            </div>
+            <div class="col-8">
+              <h2 class="fw-bold text-primary mb-1"><%= @pending_orders_count %></h2>
+              <p class="text-muted mb-0">Orders not yet delivered or completed</p>
+              <small class="text-primary fw-semibold"><i class="bi bi-arrow-right-circle me-1"></i>View Pending Orders</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
   </div>
 </div>
 

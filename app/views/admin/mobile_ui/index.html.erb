@@ -131,7 +131,6 @@
 .icon-edit  { background: #e8f5e9; color: #2e7d32; }
 .icon-wa    { background: #e8f8ee; color: #25d366; }
 .icon-wa:hover { background: #25d366; color: white; }
-.icon-inv   { background: #f3e5f5; color: #7b1fa2; }
 
 /* Invoice share */
 .wa-send-btn {
@@ -242,15 +241,7 @@
       booking.ensure_share_token!
       public_url = "#{request.base_url}/booking/#{booking.share_token}"
 
-      # Invoice WhatsApp (when a formal BookingInvoice with share token exists)
       bi = booking.booking_invoices.first
-      inv_wa_url = nil
-      if bi&.share_token.present?
-        inv_url      = "#{request.base_url}/invoice/#{bi.share_token}"
-        inv_pdf_url  = "#{request.base_url}/invoice/#{bi.share_token}/download"
-        inv_msg = "Dear #{cname},\n\nHere is your invoice from Dhanvantari Naturals 🌿\n\nBooking #: #{booking.booking_number}\nAmount: ₹#{amount}\n\n📋 View Invoice: #{inv_url}\n📄 Download PDF: #{inv_pdf_url}\n\nThank you!\n🙏 Dhanvantari Naturals Team"
-        inv_wa_url = "https://wa.me/#{wa_phone}?text=#{ERB::Util.url_encode(inv_msg)}" if wa_phone.present?
-      end
 
       # WhatsApp thank-you message — includes booking link + PDF link if invoice exists
       pdf_line = bi&.share_token.present? ? "\n📄 Download Invoice PDF: #{request.base_url}/invoice/#{bi.share_token}/download" : ""
@@ -309,13 +300,6 @@
                class="wa-send-btn" target="_blank" title="Send Thank You + Booking Link on WhatsApp">
               <i class="bi bi-whatsapp"></i> Thanks
             </a>
-            <% if inv_wa_url.present? %>
-              <a href="<%= inv_wa_url %>" class="wa-send-btn" target="_blank"
-                 title="Send Invoice on WhatsApp"
-                 style="background:#7b1fa2;">
-                <i class="bi bi-whatsapp"></i> Invoice
-              </a>
-            <% end %>
           <% end %>
         </div>
       </div>

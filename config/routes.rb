@@ -115,6 +115,8 @@ Rails.application.routes.draw do
     get  'mobile-ui/new-customer',     to: 'mobile_ui#new_customer',    as: 'mobile_ui_new_customer'
     post 'mobile-ui/create-customer',  to: 'mobile_ui#create_customer', as: 'mobile_ui_create_customer'
     get  'mobile-ui/price-list',       to: 'mobile_ui#price_list',      as: 'mobile_ui_price_list'
+    get  'low_stock_alert',            to: 'low_stock_alert#index',     as: 'low_stock_alert'
+    get  'low-stock-product',          to: 'low_stock_alert#index',     as: 'low_stock_product'
     get  'mobile-ui/booking/:id',      to: 'mobile_ui#show_booking',    as: 'mobile_ui_show_booking'
     get  'mobile-ui/booking/:id/edit', to: 'mobile_ui#edit_booking',    as: 'mobile_ui_edit_booking'
     patch 'mobile-ui/booking/:id',     to: 'mobile_ui#update_booking',  as: 'mobile_ui_update_booking'

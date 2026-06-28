@@ -330,14 +330,19 @@
           <div class="col-auto">
             <div class="filter-actions d-flex gap-2 align-items-center">
               <%= form.submit "Apply", class: "btn btn-primary btn-sm px-3 shadow-sm d-none" %>
-              <% if params[:search].present? || params[:status].present? || params[:customer_id].present? || params[:b2b].present? %>
+              <% active_filter = params[:search].present? || params[:status].present? || params[:customer_id].present? || params[:b2b].present? || params[:payment_status].present? || params[:delivery_pending].present? %>
+              <% if active_filter %>
                 <%= link_to admin_bookings_path, class: "btn btn-outline-secondary btn-sm px-3 shadow-sm", title: "Clear all filters" do %>
                   <i class="bi bi-arrow-clockwise me-1"></i>Reset
                 <% end %>
               <% end %>
               <div class="filter-status small text-muted align-self-center text-nowrap">
                 <%= pluralize(@bookings.respond_to?(:total_count) ? @bookings.total_count : @bookings.count, 'result') %>
-                <% if params[:search].present? || params[:status].present? || params[:customer_id].present? || params[:b2b].present? %>
+                <% if params[:payment_status] == 'unpaid' %>
+                  <span class="badge bg-danger-subtle text-danger ms-1">Unpaid only</span>
+                <% elsif params[:delivery_pending] == '1' %>
+                  <span class="badge bg-primary-subtle text-primary ms-1">Delivery pending</span>
+                <% elsif active_filter %>
                   <span class="text-primary">(filtered)</span>
                 <% end %>
               </div>

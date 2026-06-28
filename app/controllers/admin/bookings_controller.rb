@@ -42,6 +42,14 @@ class Admin::BookingsController < Admin::ApplicationController
       @bookings = @bookings.where(booked_by: params[:booked_by])
     end
 
+    if params[:payment_status].present? && params[:payment_status].strip != ''
+      @bookings = @bookings.where(payment_status: params[:payment_status])
+    end
+
+    if params[:delivery_pending] == '1'
+      @bookings = @bookings.where.not(status: %w[delivered completed cancelled returned])
+    end
+
     # Get pagination settings from system settings
     @per_page = SystemSetting.default_pagination_per_page
 

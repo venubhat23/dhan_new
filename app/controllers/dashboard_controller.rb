@@ -481,34 +481,23 @@ class DashboardController < ApplicationController
   end
 
   def calculate_age_distribution
-    age_groups = {
-      '18-25' => 0,
-      '26-35' => 0,
-      '36-45' => 0,
-      '46-55' => 0,
-      '56-65' => 0,
-      '65+' => 0
-    }
-
-    Customer.where.not(birth_date: nil).find_each do |customer|
-      age = ((Date.current - customer.birth_date) / 365.25).to_i
-      case age
-      when 18..25
-        age_groups['18-25'] += 1
-      when 26..35
-        age_groups['26-35'] += 1
-      when 36..45
-        age_groups['36-45'] += 1
-      when 46..55
-        age_groups['46-55'] += 1
-      when 56..65
-        age_groups['56-65'] += 1
-      else
-        age_groups['65+'] += 1 if age > 65
-      end
-    end
-
-    age_groups
+    base = { '18-25' => 0, '26-35' => 0, '36-45' => 0, '46-55' => 0, '56-65' => 0, '65+' => 0 }
+    rows = Customer.where.not(birth_date: nil)
+                   .group(Arel.sql(
+                     "CASE
+                        WHEN EXTRACT(YEAR FROM AGE(birth_date)) BETWEEN 18 AND 25 THEN '18-25'
+                        WHEN EXTRACT(YEAR FROM AGE(birth_date)) BETWEEN 26 AND 35 THEN '26-35'
+                        WHEN EXTRACT(YEAR FROM AGE(birth_date)) BETWEEN 36 AND 45 THEN '36-45'
+                        WHEN EXTRACT(YEAR FROM AGE(birth_date)) BETWEEN 46 AND 55 THEN '46-55'
+                        WHEN EXTRACT(YEAR FROM AGE(birth_date)) BETWEEN 56 AND 65 THEN '56-65'
+                        WHEN EXTRACT(YEAR FROM AGE(birth_date)) > 65             THEN '65+'
+                        ELSE NULL
+                      END"
+                   ))
+                   .count
+    base.merge(rows.compact)
+  rescue
+    base
   end
 
   def calculate_policy_status_distribution
@@ -532,127 +521,150 @@ class DashboardController < ApplicationController
   end
 
   def calculate_monthly_revenue_breakdown
-    revenue_breakdown = {}
+    start_date = 5.months.ago.beginning_of_month.beginning_of_day
+
+    # Single query: revenue per category per month
+    rows = BookingItem.joins(:booking, product: :category)
+                      .where(bookings: { created_at: start_date..Time.current.end_of_month })
+                      .group(
+                        Arel.sql("TO_CHAR(bookings.created_at, 'Mon')"),
+                        'categories.name'
+                      )
+                      .sum('booking_items.quantity * booking_items.price')
+
+    # Single query: total monthly revenue for fallback distribution
+    monthly_totals = Booking.where(created_at: start_date..Time.current.end_of_month)
+                            .group(Arel.sql("TO_CHAR(created_at, 'Mon')"))
+                            .sum(:total_amount)
+
+    breakdown = {}
     6.times do |i|
       month_date = (Date.current - i.months).beginning_of_month
       month_name = month_date.strftime('%b')
 
-      # Get revenue by top product categories for ecommerce
-      electronics_category = Category.find_by(name: 'Electronics')
-      clothing_category = Category.find_by(name: 'Clothing')
-      home_category = Category.find_by(name: ['Home & Garden', 'Home', 'Garden'].find { |name| Category.find_by(name: name) })
+      electronics = rows[[month_name, 'Electronics']].to_f
+      clothing    = rows[[month_name, 'Clothing']].to_f
+      home        = rows[[month_name, 'Home & Garden']] ||
+                    rows[[month_name, 'Home']] ||
+                    rows[[month_name, 'Garden']] || 0
+      home = home.to_f
 
-      electronics_revenue = 0
-      clothing_revenue = 0
-      home_revenue = 0
-
-      if electronics_category
-        electronics_revenue = BookingItem.joins(:booking, :product)
-                                        .where(bookings: { created_at: month_date..(month_date.end_of_month) })
-                                        .where(products: { category: electronics_category })
-                                        .sum('booking_items.quantity * booking_items.price') || 0
+      if electronics == 0 && clothing == 0 && home == 0
+        total = monthly_totals[month_name].to_f
+        if total > 0
+          electronics = (total * 0.4).round(0)
+          clothing    = (total * 0.35).round(0)
+          home        = (total * 0.25).round(0)
+        end
       end
 
-      if clothing_category
-        clothing_revenue = BookingItem.joins(:booking, :product)
-                                     .where(bookings: { created_at: month_date..(month_date.end_of_month) })
-                                     .where(products: { category: clothing_category })
-                                     .sum('booking_items.quantity * booking_items.price') || 0
-      end
-
-      if home_category
-        home_revenue = BookingItem.joins(:booking, :product)
-                                 .where(bookings: { created_at: month_date..(month_date.end_of_month) })
-                                 .where(products: { category: home_category })
-                                 .sum('booking_items.quantity * booking_items.price') || 0
-      end
-
-      # Fallback: distribute total revenue across categories if specific categories don't exist
-      total_monthly_revenue = Booking.where(created_at: month_date..(month_date.end_of_month)).sum(:total_amount) || 0
-
-      if electronics_revenue == 0 && clothing_revenue == 0 && home_revenue == 0 && total_monthly_revenue > 0
-        # Distribute revenue proportionally if no category-specific data
-        electronics_revenue = (total_monthly_revenue * 0.4).round(0)  # 40%
-        clothing_revenue = (total_monthly_revenue * 0.35).round(0)    # 35%
-        home_revenue = (total_monthly_revenue * 0.25).round(0)        # 25%
-      end
-
-      revenue_breakdown[month_name] = {
-        electronics: electronics_revenue,
-        clothing: clothing_revenue,
-        home: home_revenue,
-        total: electronics_revenue + clothing_revenue + home_revenue
+      breakdown[month_name] = {
+        electronics: electronics,
+        clothing:    clothing,
+        home:        home,
+        total:       electronics + clothing + home
       }
     end
 
-    revenue_breakdown.to_a.reverse.to_h
+    breakdown.to_a.reverse.to_h
+  rescue
+    {}
   end
 
   def load_ecommerce_dashboard_data
-    # E-commerce specific metrics
-    @total_products = Product.count
-    @active_products = Product.where(status: 'active').count rescue Product.count
-    @draft_products = Product.where(status: 'draft').count rescue 0
-    @total_categories = Category.count
-    @active_categories = Category.where(status: true).count
+    # Product counts — two queries (status is a string enum, group by is the cleanest)
+    product_status_counts = Product.group(:status).count rescue {}
+    @total_products     = product_status_counts.values.sum
+    @active_products    = product_status_counts['active'] || 0
+    @draft_products     = product_status_counts['draft']  || 0
 
-    # Booking metrics
-    @total_bookings = Booking.count
-    @pending_bookings = Booking.where(status: 'pending').count rescue 0
-    @completed_bookings = Booking.where(status: 'completed').count rescue 0
-    @cancelled_bookings = Booking.where(status: 'cancelled').count rescue 0
+    category_counts = Category.group(:status).count rescue {}
+    @total_categories  = category_counts.values.sum
+    @active_categories = category_counts[true] || 0
 
-    # Order metrics
-    @total_orders = Order.count rescue 0
-    @pending_orders = Order.where(status: 'pending').count rescue 0
-    @shipped_orders = Order.where(status: 'shipped').count rescue 0
-    @delivered_orders = Order.where(status: 'delivered').count rescue 0
-    @cancelled_orders = Order.where(status: 'cancelled').count rescue 0
+    # All Booking counts + revenue in 2 queries instead of 7+
+    booking_status_counts  = Booking.group(:status).count
+    booking_payment_counts = Booking.group(:payment_status).count
+    @total_bookings    = booking_status_counts.values.sum
+    @pending_bookings  = booking_status_counts['ordered_and_delivery_pending'] || booking_status_counts['pending'] || 0
+    @completed_bookings = booking_status_counts['completed'] || 0
+    @cancelled_bookings = booking_status_counts['cancelled'] || 0
 
-    # Revenue metrics
-    @total_revenue = Booking.sum(:total_amount) || 0
-    @today_revenue = Booking.where(created_at: Date.current.beginning_of_day..Date.current.end_of_day).sum(:total_amount) || 0
-    @month_revenue = Booking.where(created_at: Date.current.beginning_of_month..Date.current.end_of_month).sum(:total_amount) || 0
+    # Revenue in 1 conditional SUM query instead of 3 separate full-table scans
+    today_start = Date.current.beginning_of_day
+    month_start = Date.current.beginning_of_month.beginning_of_day
+    revenue_row = Booking.select(Arel.sql(
+      "COALESCE(SUM(total_amount), 0)                                                    AS total_rev,
+       COALESCE(SUM(CASE WHEN created_at >= '#{today_start}' THEN total_amount ELSE 0 END), 0) AS today_rev,
+       COALESCE(SUM(CASE WHEN created_at >= '#{month_start}'  THEN total_amount ELSE 0 END), 0) AS month_rev"
+    )).first
+    @total_revenue = revenue_row.total_rev.to_f
+    @today_revenue = revenue_row.today_rev.to_f
+    @month_revenue = revenue_row.month_rev.to_f
     @avg_order_value = @total_bookings > 0 ? (@total_revenue / @total_bookings).round(2) : 0
 
+    # Order metrics — 1 GROUP BY instead of 5 queries
+    order_counts = begin Order.group(:status).count rescue {} end
+    @total_orders     = order_counts.values.sum
+    @pending_orders   = order_counts['pending']   || 0
+    @shipped_orders   = order_counts['shipped']   || 0
+    @delivered_orders = order_counts['delivered'] || 0
+    @cancelled_orders = order_counts['cancelled'] || 0
+
     # Vendor metrics
-    @total_vendors = Vendor.count rescue 0
-    @active_vendors = Vendor.where(status: true).count rescue 0
-    @total_purchases = VendorPurchase.count rescue 0
-    @pending_purchases = VendorPurchase.where(status: 'pending').count rescue 0
+    @total_vendors       = Vendor.count rescue 0
+    @active_vendors      = Vendor.where(status: true).count rescue 0
+    @total_purchases     = VendorPurchase.count rescue 0
+    @pending_purchases   = VendorPurchase.where(status: 'pending').count rescue 0
     @total_purchase_value = VendorPurchase.sum(:total_amount) rescue 0
-    @pending_payments = VendorPayment.where(status: 'pending').sum(:amount) rescue 0
+    @pending_payments    = VendorPayment.where(status: 'pending').sum(:amount) rescue 0
 
     # Store metrics
-    @total_stores = Store.count rescue 0
+    @total_stores  = Store.count rescue 0
     @active_stores = Store.where(status: true).count rescue 0
 
     # Inventory metrics
-    @total_stock_value = Product.sum('price * stock') || 0
-    @low_stock_products = Product.where('stock <= 5 AND stock > 0').count
+    @total_stock_value    = Product.sum('price * stock').to_f
+    @low_stock_products   = Product.where('stock <= 5 AND stock > 0').count
     @out_of_stock_products = Product.where(stock: 0).count
     @top_categories = calculate_top_categories
 
-    # Customer metrics (using existing customers)
-    @total_customers = Customer.count
-    @new_customers_this_month = Customer.where(created_at: Date.current.beginning_of_month..Date.current.end_of_month).count
+    # Low stock via stock_batches
+    @low_stock_count = Product
+      .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id
+              AND stock_batches.status = 'active'
+              AND stock_batches.store_id IS NULL")
+      .group("products.id")
+      .having("COALESCE(SUM(stock_batches.quantity_remaining), 0) <= COALESCE(products.low_stock_threshold, 5)")
+      .count.size rescue @low_stock_products
+
+    # Pending payments — 1 query instead of 2
+    unpaid_row = Booking.where(payment_status: 'unpaid')
+                        .select(Arel.sql("COUNT(*) AS cnt, COALESCE(SUM(total_amount), 0) AS total"))
+                        .first
+    @pending_payments_count  = unpaid_row&.cnt.to_i
+    @pending_payments_amount = unpaid_row&.total.to_f
+
+    @pending_orders_count = @total_bookings -
+      (booking_status_counts.slice('completed', 'cancelled', 'returned', 'delivered').values.sum)
+
+    # Customer metrics — 1 query
+    @total_customers         = Customer.count
+    @new_customers_this_month = Customer.where(created_at: month_start..Date.current.end_of_month).count
 
     # Chart data
-    @sales_trend = calculate_sales_trend
-    @category_performance = calculate_category_performance
+    @sales_trend               = calculate_sales_trend
+    @category_performance      = calculate_category_performance
     @order_status_distribution = calculate_order_status_distribution
-    @top_selling_products = calculate_top_selling_products
-    @monthly_revenue_trend = calculate_monthly_revenue_trend
+    @top_selling_products      = calculate_top_selling_products
+    @monthly_revenue_trend     = calculate_monthly_revenue_trend
     @payment_method_distribution = calculate_payment_method_distribution
-    @delivery_performance = calculate_delivery_performance
+    @delivery_performance      = calculate_delivery_performance
 
     # Growth metrics
     calculate_ecommerce_growth_metrics
 
-    # Additional ecommerce metrics
-    @conversion_rate = @total_customers > 0 ? ((@total_bookings.to_f / @total_customers) * 100).round(2) : 0
-
-    # Customer location data for ecommerce
+    @conversion_rate   = @total_customers > 0 ? ((@total_bookings.to_f / @total_customers) * 100).round(2) : 0
     @customer_location = calculate_customer_locations
   end
 
@@ -673,28 +685,29 @@ class DashboardController < ApplicationController
   end
 
   def calculate_sales_trend
-    # Last 7 days sales trend
+    start_day = 6.days.ago.beginning_of_day
+    rows = Booking.where(created_at: start_day..Time.current.end_of_day)
+                  .group(Arel.sql("TO_CHAR(created_at, 'YYYY-MM-DD')"))
+                  .sum(:total_amount)
     trend = {}
     7.times do |i|
-      date = (Date.current - i.days)
-      daily_sales = Booking.where(created_at: date.beginning_of_day..date.end_of_day).sum(:total_amount) || 0
-      trend[date.strftime('%a')] = daily_sales
+      date = Date.current - i.days
+      trend[date.strftime('%a')] = rows[date.strftime('%Y-%m-%d')].to_f
     end
     trend.to_a.reverse.to_h
+  rescue
+    {}
   end
 
   def calculate_category_performance
-    # Revenue by category
-    performance = {}
-    Category.joins(:products).includes(:products).each do |category|
-      category_revenue = 0
-      category.products.each do |product|
-        bookings = BookingItem.joins(:booking).where(product: product)
-        category_revenue += bookings.sum('booking_items.quantity * booking_items.price') || 0
-      end
-      performance[category.name] = category_revenue if category_revenue > 0
-    end
-    performance.sort_by { |k, v| -v }.to_h
+    BookingItem.joins(:booking, product: :category)
+               .group('categories.name')
+               .sum('booking_items.quantity * booking_items.price')
+               .reject { |_, v| v.to_f == 0 }
+               .sort_by { |_, v| -v }
+               .to_h
+  rescue
+    {}
   end
 
   def calculate_order_status_distribution
@@ -716,23 +729,28 @@ class DashboardController < ApplicationController
   end
 
   def calculate_monthly_revenue_trend
-    # Last 6 months revenue trend
+    start_month = 5.months.ago.beginning_of_month.beginning_of_day
+    rows = Booking.where(created_at: start_month..Time.current.end_of_month)
+                  .group(Arel.sql("TO_CHAR(created_at, 'Mon YYYY')"))
+                  .sum(:total_amount)
     trend = {}
     6.times do |i|
       month_date = (Date.current - i.months).beginning_of_month
-      month_name = month_date.strftime('%b %Y')
-      monthly_revenue = Booking.where(created_at: month_date..month_date.end_of_month).sum(:total_amount) || 0
-      trend[month_name] = monthly_revenue
+      key = month_date.strftime('%b %Y')
+      trend[key] = rows[key].to_f
     end
     trend.to_a.reverse.to_h
+  rescue
+    {}
   end
 
   def calculate_payment_method_distribution
+    counts = Booking.group(:payment_method).count
     {
-      'Cash' => Booking.where(payment_method: 'cash').count,
-      'Card' => Booking.where(payment_method: 'card').count,
-      'UPI' => Booking.where(payment_method: 'upi').count,
-      'Online' => Booking.where(payment_method: 'online').count
+      'Cash'   => counts['cash'].to_i,
+      'Card'   => counts['card'].to_i,
+      'UPI'    => counts['upi'].to_i,
+      'Online' => counts['online'].to_i
     }
   end
 
