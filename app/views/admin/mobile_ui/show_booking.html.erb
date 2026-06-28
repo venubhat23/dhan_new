@@ -1,0 +1,165 @@
+<style>
+.bk-back { display: flex; align-items: center; gap: 6px; padding: 12px 14px; font-size: 0.85rem; color: #6f42c1; text-decoration: none; font-weight: 600; }
+.bk-back:hover { color: #4a148c; }
+
+.bk-section { margin: 10px 12px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden; }
+.bk-section-header { background: linear-gradient(135deg, #6f42c1, #4a148c); color: white; padding: 9px 14px; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.bk-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid #f5f5f5; font-size: 0.85rem; }
+.bk-row:last-child { border-bottom: none; }
+.bk-label { color: #888; font-size: 0.78rem; }
+.bk-value { font-weight: 600; color: #1a1a1a; text-align: right; }
+
+.status-pill { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; display: inline-block; }
+.s-completed { background: #d4edda; color: #155724; }
+.s-cancelled { background: #f8d7da; color: #721c24; }
+.s-draft { background: #f0f0f0; color: #555; }
+.s-pending { background: #fff3cd; color: #856404; }
+.s-confirmed { background: #cfe2ff; color: #0a58ca; }
+.s-processing { background: #d1ecf1; color: #0c5460; }
+.s-packed { background: #d4edda; color: #155724; }
+.s-shipped { background: #cce5ff; color: #004085; }
+.s-out_delivery { background: #ffeeba; color: #856404; }
+.s-delivered { background: #d4edda; color: #155724; }
+.s-returned { background: #f8d7da; color: #721c24; }
+.pay-paid { background: #d4edda; color: #155724; }
+.pay-unpaid { background: #f8d7da; color: #721c24; }
+.pay-partial { background: #fff3cd; color: #856404; }
+
+.item-row { padding: 10px 14px; border-bottom: 1px solid #f5f5f5; }
+.item-row:last-child { border-bottom: none; }
+.item-name { font-weight: 600; font-size: 0.85rem; color: #1a1a1a; }
+.item-detail { font-size: 0.75rem; color: #888; margin-top: 2px; }
+.item-total { font-weight: 700; color: #1a7f37; font-size: 0.9rem; }
+
+.total-row { display: flex; justify-content: space-between; padding: 8px 14px; font-size: 0.85rem; }
+.grand-total { font-size: 1rem; font-weight: 700; color: #1a7f37; }
+
+.edit-btn { display: flex; align-items: center; justify-content: center; gap: 6px; background: #6f42c1; color: white; border-radius: 12px; padding: 12px; margin: 12px; font-weight: 700; font-size: 0.9rem; text-decoration: none; }
+.edit-btn:hover { background: #4a148c; color: white; }
+
+.notice-flash { background: #d4edda; color: #155724; padding: 10px 14px; font-size: 0.85rem; font-weight: 600; margin: 8px 12px; border-radius: 10px; }
+</style>
+
+<% if flash[:notice] %>
+  <div class="notice-flash"><i class="bi bi-check-circle-fill me-2"></i><%= flash[:notice] %></div>
+<% end %>
+
+<a href="<%= admin_mobile_ui_bookings_path %>" class="bk-back">
+  <i class="bi bi-arrow-left"></i> Back to Bookings
+</a>
+
+<%
+  booking = @booking
+  cname   = booking.customer&.display_name || booking.customer_name.presence || 'Walk-in'
+  phone   = booking.customer&.mobile || booking.customer_phone
+  bdate   = (booking.booking_date.presence || booking.created_at)&.strftime('%d %b %Y')
+  amount  = number_with_delimiter(booking.total_amount.to_f.round(2))
+
+  status_css = case booking.status&.to_s
+               when 'draft'                        then 's-draft'
+               when 'ordered_and_delivery_pending' then 's-pending'
+               when 'confirmed'                    then 's-confirmed'
+               when 'processing'                   then 's-processing'
+               when 'packed'                       then 's-packed'
+               when 'shipped'                      then 's-shipped'
+               when 'out_for_delivery'             then 's-out_delivery'
+               when 'delivered'                    then 's-delivered'
+               when 'completed'                    then 's-completed'
+               when 'cancelled'                    then 's-cancelled'
+               when 'returned'                     then 's-returned'
+               else 's-draft'
+               end
+
+  pay_css = case booking.payment_status&.to_s
+            when 'paid'           then 'pay-paid'
+            when 'unpaid'         then 'pay-unpaid'
+            when 'partially_paid' then 'pay-partial'
+            else 'pay-unpaid'
+            end
+%>
+
+<%# Booking Info %>
+<div class="bk-section">
+  <div class="bk-section-header"><i class="bi bi-receipt"></i> Booking Details</div>
+  <div class="bk-row">
+    <span class="bk-label">Booking #</span>
+    <span class="bk-value">#<%= booking.booking_number %></span>
+  </div>
+  <div class="bk-row">
+    <span class="bk-label">Date</span>
+    <span class="bk-value"><%= bdate %></span>
+  </div>
+  <div class="bk-row">
+    <span class="bk-label">Status</span>
+    <span class="status-pill <%= status_css %>"><%= booking.status&.humanize %></span>
+  </div>
+  <div class="bk-row">
+    <span class="bk-label">Payment</span>
+    <span class="status-pill <%= pay_css %>"><%= booking.payment_status&.humanize %></span>
+  </div>
+  <% if booking.payment_method.present? %>
+    <div class="bk-row">
+      <span class="bk-label">Method</span>
+      <span class="bk-value"><%= booking.payment_method&.humanize %></span>
+    </div>
+  <% end %>
+</div>
+
+<%# Customer Info %>
+<div class="bk-section">
+  <div class="bk-section-header"><i class="bi bi-person-fill"></i> Customer</div>
+  <div class="bk-row">
+    <span class="bk-label">Name</span>
+    <span class="bk-value"><%= cname %></span>
+  </div>
+  <% if phone.present? %>
+    <div class="bk-row">
+      <span class="bk-label">Phone</span>
+      <span class="bk-value"><%= phone %></span>
+    </div>
+  <% end %>
+  <% if booking.customer&.email.present? %>
+    <div class="bk-row">
+      <span class="bk-label">Email</span>
+      <span class="bk-value" style="font-size:0.78rem;"><%= booking.customer.email %></span>
+    </div>
+  <% end %>
+</div>
+
+<%# Items %>
+<div class="bk-section">
+  <div class="bk-section-header"><i class="bi bi-bag-fill"></i> Items (<%= booking.booking_items.size %>)</div>
+  <% booking.booking_items.each do |item| %>
+    <div class="item-row">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="item-name"><%= item.product&.name || 'Unknown Product' %></div>
+          <div class="item-detail">Qty: <%= item.quantity %> × ₹<%= number_with_delimiter(item.price.to_f.round(2)) %></div>
+        </div>
+        <div class="item-total">₹<%= number_with_delimiter((item.quantity.to_f * item.price.to_f).round(2)) %></div>
+      </div>
+    </div>
+  <% end %>
+
+  <% if booking.discount_amount.to_f > 0 %>
+    <div class="total-row" style="color:#dc3545;">
+      <span>Discount</span>
+      <span>− ₹<%= number_with_delimiter(booking.discount_amount.to_f.round(2)) %></span>
+    </div>
+  <% end %>
+  <div class="total-row" style="border-top:2px solid #f0f0f0; padding-top:10px; margin-top:4px;">
+    <span style="font-weight:700;">Total</span>
+    <span class="grand-total">₹<%= amount %></span>
+  </div>
+</div>
+
+<% if booking.notes.present? %>
+  <div class="bk-section">
+    <div class="bk-section-header"><i class="bi bi-chat-left-text-fill"></i> Notes</div>
+    <div class="bk-row"><span style="color:#444; font-size:0.85rem;"><%= booking.notes %></span></div>
+  </div>
+<% end %>
+
+<a href="<%= admin_mobile_ui_edit_booking_path(booking) %>" class="edit-btn">
+  <i class="bi bi-pencil-fill"></i> Edit Booking
+</a>

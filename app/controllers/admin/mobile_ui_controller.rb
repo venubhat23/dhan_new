@@ -103,6 +103,24 @@ class Admin::MobileUiController < ActionController::Base
     end
   end
 
+  # ── Booking Show / Edit ───────────────────────────────────────────────────
+  def show_booking
+    @booking = Booking.includes(:customer, booking_items: :product, booking_invoices: []).find(params[:id])
+  end
+
+  def edit_booking
+    @booking = Booking.includes(:customer, booking_items: :product).find(params[:id])
+  end
+
+  def update_booking
+    @booking = Booking.find(params[:id])
+    if @booking.update(mobile_update_booking_params)
+      redirect_to admin_mobile_ui_show_booking_path(@booking), notice: 'Booking updated successfully.'
+    else
+      render :edit_booking, status: :unprocessable_entity
+    end
+  end
+
   # ── Price List ────────────────────────────────────────────────────────────
   def price_list
     products = Product.joins(:category)
@@ -159,6 +177,10 @@ class Admin::MobileUiController < ActionController::Base
 
   def authenticate_mobile!
     redirect_to admin_mobile_ui_login_path unless session[:mobile_ui_auth]
+  end
+
+  def mobile_update_booking_params
+    params.require(:booking).permit(:status, :payment_status, :payment_method, :notes, :discount_amount)
   end
 
   def mobile_booking_params

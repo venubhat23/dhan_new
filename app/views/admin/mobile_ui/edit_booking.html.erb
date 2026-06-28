@@ -1,0 +1,113 @@
+<style>
+.eb-back { display: flex; align-items: center; gap: 6px; padding: 12px 14px; font-size: 0.85rem; color: #6f42c1; text-decoration: none; font-weight: 600; }
+.eb-back:hover { color: #4a148c; }
+
+.eb-section { margin: 10px 12px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden; }
+.eb-section-header { background: linear-gradient(135deg, #6f42c1, #4a148c); color: white; padding: 9px 14px; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.eb-field { padding: 12px 14px; border-bottom: 1px solid #f5f5f5; }
+.eb-field:last-child { border-bottom: none; }
+.eb-label { font-size: 0.75rem; font-weight: 700; color: #6c757d; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
+.eb-select, .eb-textarea {
+  width: 100%;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+  background: white;
+}
+.eb-select:focus, .eb-textarea:focus { border-color: #6f42c1; }
+.eb-textarea { resize: vertical; min-height: 80px; }
+
+.eb-info { font-size: 0.82rem; color: #555; padding: 10px 14px; }
+
+.save-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: #6f42c1; color: white; border: none; border-radius: 12px;
+  padding: 14px; margin: 12px; font-weight: 700; font-size: 0.95rem;
+  width: calc(100% - 24px); cursor: pointer;
+}
+.save-btn:active { background: #4a148c; }
+
+.cancel-link { display: block; text-align: center; color: #888; font-size: 0.85rem; padding-bottom: 16px; text-decoration: none; }
+
+.error-flash { background: #f8d7da; color: #721c24; padding: 10px 14px; font-size: 0.85rem; font-weight: 600; margin: 8px 12px; border-radius: 10px; }
+</style>
+
+<% if flash[:error] %>
+  <div class="error-flash"><i class="bi bi-exclamation-circle-fill me-2"></i><%= flash[:error] %></div>
+<% end %>
+
+<a href="<%= admin_mobile_ui_show_booking_path(@booking) %>" class="eb-back">
+  <i class="bi bi-arrow-left"></i> Back to Booking
+</a>
+
+<%= form_with url: admin_mobile_ui_update_booking_path(@booking), method: :patch, local: true do |f| %>
+
+  <div class="eb-section">
+    <div class="eb-section-header"><i class="bi bi-receipt"></i> #<%= @booking.booking_number %></div>
+    <div class="eb-info">
+      <i class="bi bi-person-fill me-1"></i>
+      <%= @booking.customer&.display_name || @booking.customer_name.presence || 'Walk-in' %>
+      &nbsp;·&nbsp; <%= (@booking.booking_date.presence || @booking.created_at)&.strftime('%d %b %Y') %>
+    </div>
+  </div>
+
+  <div class="eb-section">
+    <div class="eb-section-header"><i class="bi bi-toggles"></i> Status</div>
+
+    <div class="eb-field">
+      <div class="eb-label">Booking Status</div>
+      <%= f.select :status, [
+            ['Draft',            'draft'],
+            ['Pending',          'ordered_and_delivery_pending'],
+            ['Confirmed',        'confirmed'],
+            ['Processing',       'processing'],
+            ['Packed',           'packed'],
+            ['Shipped',          'shipped'],
+            ['Out for Delivery', 'out_for_delivery'],
+            ['Delivered',        'delivered'],
+            ['Completed',        'completed'],
+            ['Cancelled',        'cancelled'],
+            ['Returned',         'returned']
+          ], { selected: @booking.status }, class: 'eb-select' %>
+    </div>
+
+    <div class="eb-field">
+      <div class="eb-label">Payment Status</div>
+      <%= f.select :payment_status, [
+            ['Unpaid',        'unpaid'],
+            ['Paid',          'paid'],
+            ['Partially Paid','partially_paid'],
+            ['Refunded',      'refunded']
+          ], { selected: @booking.payment_status }, class: 'eb-select' %>
+    </div>
+
+    <div class="eb-field">
+      <div class="eb-label">Payment Method</div>
+      <%= f.select :payment_method, [
+            ['Cash',          0],
+            ['Card',          1],
+            ['UPI',           2],
+            ['Bank Transfer', 3],
+            ['Online',        4],
+            ['COD',           5]
+          ], { selected: @booking.payment_method_before_type_cast, include_blank: '— Select —' }, class: 'eb-select' %>
+    </div>
+  </div>
+
+  <div class="eb-section">
+    <div class="eb-section-header"><i class="bi bi-chat-left-text-fill"></i> Notes</div>
+    <div class="eb-field">
+      <%= f.text_area :notes, value: @booking.notes, class: 'eb-textarea', placeholder: 'Add notes…' %>
+    </div>
+  </div>
+
+  <button type="submit" class="save-btn">
+    <i class="bi bi-check-lg"></i> Save Changes
+  </button>
+
+<% end %>
+
+<a href="<%= admin_mobile_ui_show_booking_path(@booking) %>" class="cancel-link">Cancel</a>
