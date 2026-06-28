@@ -327,38 +327,28 @@ class Booking < ApplicationRecord
   end
 
   def payment_method_display
-    raw_value = self.class.connection.select_value("SELECT payment_method FROM bookings WHERE id = #{id}")
-    return 'Cash on Delivery' if raw_value.blank?
-
-    case raw_value.to_s
-    when 'cash', '0'          then 'Cash'
-    when 'card', '1'          then 'Card'
-    when 'upi', '2'           then 'UPI'
-    when 'bank_transfer', '3' then 'Bank Transfer'
-    when 'online', '4'        then 'Online'
-    when 'cod', '5'           then 'Cash on Delivery'
-    when 'cashfree', '6'      then 'Online Payment'
-    when 'cloudflare', '7'    then 'Online Payment'
+    case payment_method.to_s
+    when 'cash'          then 'Cash'
+    when 'card'          then 'Card'
+    when 'upi'           then 'UPI'
+    when 'bank_transfer' then 'Bank Transfer'
+    when 'online'        then 'Online'
+    when 'cod'           then 'Cash on Delivery'
+    when 'cashfree', 'cloudflare' then 'Online Payment'
     else 'Cash on Delivery'
     end
   end
 
   def payment_method_label
-    raw_value = self.class.connection.select_value("SELECT payment_method FROM bookings WHERE id = #{id}").to_s
-    # Online payment methods: card=1, upi=2, bank_transfer=3, online=4, cashfree=6, cloudflare=7
-    %w[card 1 upi 2 bank_transfer 3 online 4 cashfree 6 cloudflare 7].include?(raw_value) ? 'Online Payment' : 'Cash on Delivery'
+    %w[card upi bank_transfer online cashfree cloudflare].include?(payment_method.to_s) ? 'Online Payment' : 'Cash on Delivery'
   end
 
   def payment_status_display
-    # Get the raw value directly from database using SQL to bypass any Rails caching issues
-    raw_value = self.class.connection.select_value("SELECT payment_status FROM bookings WHERE id = #{id}")
-    return 'Unpaid' if raw_value.blank?
-
-    case raw_value.to_s
-    when 'unpaid', '0' then 'Unpaid'
-    when 'paid', '1' then 'Paid'
-    when 'partially_paid', '2' then 'Partially Paid'
-    when 'refunded', '3' then 'Refunded'
+    case payment_status.to_s
+    when 'unpaid'         then 'Unpaid'
+    when 'paid'           then 'Paid'
+    when 'partially_paid' then 'Partially Paid'
+    when 'refunded'       then 'Refunded'
     else 'Unpaid'
     end
   end

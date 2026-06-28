@@ -41,7 +41,25 @@ class Admin::BookingsController < Admin::ApplicationController
     @bookings = @bookings.includes(:customer, { user: :franchise }, :booking_items, :store, :booking_invoices)
                          .page(params[:page]).per(@per_page)
 
-    # Only load customers needed for the filter dropdown (selected + recent, not all thousands)
+    # Batch-preload associated_invoice for bookings with no BookingInvoice,
+    # replacing up to N individual LIKE queries with a single batched query.
+    bookings_without_bi = @bookings.select { |b| b.booking_invoices.empty? }
+    if bookings_without_bi.any?
+      numbers = bookings_without_bi.map(&:booking_number)
+      like_clauses = numbers.map { "invoice_items.description LIKE ?" }.join(" OR ")
+      matched = InvoiceItem.joins(:invoice)
+                           .eager_load(:invoice)
+                           .where(like_clauses, *numbers.map { |n| "%#{n}%" })
+      inv_by_number = {}
+      matched.each do |item|
+        numbers.each { |bn| inv_by_number[bn] ||= item.invoice if item.description.include?(bn) }
+      end
+      bookings_without_bi.each do |b|
+        b.instance_variable_set(:@associated_invoice, inv_by_number[b.booking_number])
+      end
+    end
+
+    # Only load customers needed for the filter dropdown
     @customers = Customer.select(:id, :first_name, :middle_name, :last_name, :email, :mobile)
                          .order(:first_name, :last_name)
                          .limit(500)
@@ -68,8 +86,10 @@ class Admin::BookingsController < Admin::ApplicationController
                        .group("products.id")
                        .order(Arel.sql("CASE WHEN COALESCE(SUM(stock_batches.quantity_remaining), 0) > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
 
+    @categories = Category.where(status: true).order(:name)
     @customers = Customer.select(:id, :first_name, :middle_name, :last_name, :email, :mobile)
-                        .order(:first_name, :last_name)
+                         .order(:first_name, :last_name)
+                         .limit(500)
   end
 
   def create

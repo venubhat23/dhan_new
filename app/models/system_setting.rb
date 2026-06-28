@@ -41,12 +41,15 @@ class SystemSetting < ApplicationRecord
 
   # Get default pagination per page as integer
   def self.default_pagination_per_page
-    value = get_value('default_pagination_per_page')
-    value ? value.to_i : 10
+    Rails.cache.fetch('system_setting:pagination_per_page', expires_in: 10.minutes) do
+      value = get_value('default_pagination_per_page')
+      value ? value.to_i : 10
+    end
   end
 
   # Set default pagination per page
   def self.set_default_pagination_per_page(per_page)
+    Rails.cache.delete('system_setting:pagination_per_page')
     set_value(
       'default_pagination_per_page',
       per_page.to_s,

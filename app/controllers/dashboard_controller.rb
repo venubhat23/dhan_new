@@ -774,28 +774,29 @@ class DashboardController < ApplicationController
   end
 
   def calculate_ecommerce_growth_metrics
-    current_month_start = Date.current.beginning_of_month
-    last_month_start = 1.month.ago.beginning_of_month
-    last_month_end = 1.month.ago.end_of_month
+    cur_start  = Date.current.beginning_of_month.beginning_of_day
+    prev_start = 1.month.ago.beginning_of_month.beginning_of_day
+    prev_end   = 1.month.ago.end_of_month.end_of_day
 
-    # Current month data
-    current_revenue = Booking.where('created_at >= ?', current_month_start).sum(:total_amount) || 0
-    current_orders = Booking.where('created_at >= ?', current_month_start).count
-    current_customers = Customer.where('created_at >= ?', current_month_start).count
+    # 2 queries instead of 6: one conditional SUM/COUNT for bookings, one for customers
+    booking_row = Booking.select(Arel.sql(
+      "COALESCE(SUM(CASE WHEN created_at >= '#{cur_start}'  THEN total_amount ELSE 0 END), 0) AS cur_rev,
+       COUNT(CASE WHEN created_at >= '#{cur_start}'                             THEN 1 END)   AS cur_cnt,
+       COALESCE(SUM(CASE WHEN created_at BETWEEN '#{prev_start}' AND '#{prev_end}' THEN total_amount ELSE 0 END), 0) AS prev_rev,
+       COUNT(CASE WHEN created_at BETWEEN '#{prev_start}' AND '#{prev_end}'        THEN 1 END) AS prev_cnt"
+    )).first
 
-    # Last month data
-    last_revenue = Booking.where(created_at: last_month_start..last_month_end).sum(:total_amount) || 0
-    last_orders = Booking.where(created_at: last_month_start..last_month_end).count
-    last_customers = Customer.where(created_at: last_month_start..last_month_end).count
+    customer_row = Customer.select(Arel.sql(
+      "COUNT(CASE WHEN created_at >= '#{cur_start}'                                 THEN 1 END) AS cur_cnt,
+       COUNT(CASE WHEN created_at BETWEEN '#{prev_start}' AND '#{prev_end}'         THEN 1 END) AS prev_cnt"
+    )).first
 
-    # Calculate growth
-    @revenue_growth = calculate_percentage_change(current_revenue, last_revenue)
-    @order_growth = calculate_percentage_change(current_orders, last_orders)
-    @customer_acquisition_growth = calculate_percentage_change(current_customers, last_customers)
+    @revenue_growth              = calculate_percentage_change(booking_row.cur_rev.to_f,  booking_row.prev_rev.to_f)
+    @order_growth                = calculate_percentage_change(booking_row.cur_cnt.to_i,  booking_row.prev_cnt.to_i)
+    @customer_acquisition_growth = calculate_percentage_change(customer_row.cur_cnt.to_i, customer_row.prev_cnt.to_i)
 
-    # Additional metrics
-    @conversion_rate = @total_customers > 0 ? ((@total_bookings.to_f / @total_customers) * 100).round(1) : 0
-    @inventory_turnover = @total_stock_value > 0 ? (@total_revenue / @total_stock_value).round(2) : 0
+    @conversion_rate     = @total_customers > 0 ? ((@total_bookings.to_f / @total_customers) * 100).round(1) : 0
+    @inventory_turnover  = @total_stock_value > 0 ? (@total_revenue / @total_stock_value).round(2) : 0
   end
 
   def calculate_customer_locations
