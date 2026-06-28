@@ -135,7 +135,7 @@ class Admin::CustomersController < Admin::ApplicationController
       "COUNT(*) AS total_count,
        COUNT(CASE WHEN status = true THEN 1 END) AS active_count,
        COUNT(CASE WHEN created_at BETWEEN '#{month_start}' AND '#{month_end}' THEN 1 END) AS new_count"
-    )).first
+    )).take
     customers_with_orders = begin stats_scope.joins(:orders).distinct.count rescue 0 end
 
     @stats = {

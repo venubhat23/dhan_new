@@ -641,7 +641,7 @@ class DashboardController < ApplicationController
     # Pending payments — 1 query instead of 2
     unpaid_row = Booking.where(payment_status: 'unpaid')
                         .select(Arel.sql("COUNT(*) AS cnt, COALESCE(SUM(total_amount), 0) AS total"))
-                        .first
+                        .take
     @pending_payments_count  = unpaid_row&.cnt.to_i
     @pending_payments_amount = unpaid_row&.total.to_f
 
