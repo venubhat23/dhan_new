@@ -24,7 +24,7 @@ class Admin::BookingsController < Admin::ApplicationController
     @bookings = @bookings.where.not(status: %w[delivered completed cancelled returned]) if params[:delivery_pending] == '1'
 
     # Pre-compute stats with a single GROUP BY — avoids 6 COUNT queries in the view
-    stats_counts = @bookings.group(:status).count
+    stats_counts = @bookings.reorder('').group(:status).count
     @booking_stats = {
       draft:      stats_counts['draft'].to_i,
       pending:    stats_counts['ordered_and_delivery_pending'].to_i,
