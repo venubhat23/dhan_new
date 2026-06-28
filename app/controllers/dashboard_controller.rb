@@ -784,12 +784,12 @@ class DashboardController < ApplicationController
        COUNT(CASE WHEN created_at >= '#{cur_start}'                             THEN 1 END)   AS cur_cnt,
        COALESCE(SUM(CASE WHEN created_at BETWEEN '#{prev_start}' AND '#{prev_end}' THEN total_amount ELSE 0 END), 0) AS prev_rev,
        COUNT(CASE WHEN created_at BETWEEN '#{prev_start}' AND '#{prev_end}'        THEN 1 END) AS prev_cnt"
-    )).first
+    )).take
 
     customer_row = Customer.select(Arel.sql(
       "COUNT(CASE WHEN created_at >= '#{cur_start}'                                 THEN 1 END) AS cur_cnt,
        COUNT(CASE WHEN created_at BETWEEN '#{prev_start}' AND '#{prev_end}'         THEN 1 END) AS prev_cnt"
-    )).first
+    )).take
 
     @revenue_growth              = calculate_percentage_change(booking_row.cur_rev.to_f,  booking_row.prev_rev.to_f)
     @order_growth                = calculate_percentage_change(booking_row.cur_cnt.to_i,  booking_row.prev_cnt.to_i)
