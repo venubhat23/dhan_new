@@ -597,7 +597,7 @@ class DashboardController < ApplicationController
       "COALESCE(SUM(total_amount), 0)                                                    AS total_rev,
        COALESCE(SUM(CASE WHEN created_at >= '#{today_start}' THEN total_amount ELSE 0 END), 0) AS today_rev,
        COALESCE(SUM(CASE WHEN created_at >= '#{month_start}'  THEN total_amount ELSE 0 END), 0) AS month_rev"
-    )).reorder('').first
+    )).take
     @total_revenue = revenue_row.total_rev.to_f
     @today_revenue = revenue_row.today_rev.to_f
     @month_revenue = revenue_row.month_rev.to_f
