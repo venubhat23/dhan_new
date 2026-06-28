@@ -5,7 +5,7 @@ class Admin::ProductsController < Admin::ApplicationController
   before_action :authenticate_user!
 
   def index
-    @products = Product.includes(:category, image_attachment: :blob, additional_images_attachments: :blob)
+    @products = Product.includes(:category, image_attachment: :blob)
 
     if params[:search].present?
       @products = @products.search(params[:search])

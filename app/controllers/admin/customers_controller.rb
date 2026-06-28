@@ -128,17 +128,26 @@ class Admin::CustomersController < Admin::ApplicationController
       end
     end
 
-    # Calculate filtered stats
+    # Calculate filtered stats in 2 queries instead of 4
+    month_start = Time.current.beginning_of_month
+    month_end   = Time.current.end_of_month
+    stats_row = stats_scope.select(Arel.sql(
+      "COUNT(*) AS total_count,
+       COUNT(CASE WHEN status = true THEN 1 END) AS active_count,
+       COUNT(CASE WHEN created_at BETWEEN '#{month_start}' AND '#{month_end}' THEN 1 END) AS new_count"
+    )).first
+    customers_with_orders = begin stats_scope.joins(:orders).distinct.count rescue 0 end
+
     @stats = {
-      total_customers: stats_scope.count,
-      active_customers: stats_scope.where(status: true).count,
-      new_this_month: stats_scope.where(created_at: Time.current.beginning_of_month..Time.current.end_of_month).count,
-      customers_with_orders: stats_scope.joins(:orders).distinct.count
+      total_customers:       stats_row.total_count.to_i,
+      active_customers:      stats_row.active_count.to_i,
+      new_this_month:        stats_row.new_count.to_i,
+      customers_with_orders: customers_with_orders
     }
 
-    @total_customers = @stats[:total_customers]
-    @active_customers = @stats[:active_customers]
-    @new_this_month = @stats[:new_this_month]
+    @total_customers       = @stats[:total_customers]
+    @active_customers      = @stats[:active_customers]
+    @new_this_month        = @stats[:new_this_month]
     @customers_with_orders = @stats[:customers_with_orders]
 
     # Handle AJAX requests

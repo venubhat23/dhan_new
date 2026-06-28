@@ -3,17 +3,11 @@ class Admin::BookingsController < Admin::ApplicationController
   before_action :set_booking, only: [:show, :edit, :update, :destroy, :generate_invoice, :invoice, :convert_to_order, :update_status, :cancel_order, :mark_delivered, :mark_completed, :mark_paid, :manage_stage, :update_stage]
 
   def index
-    # Start with base query for statistics (before filtering)
-    @all_bookings = if current_user.franchise?
-                     # Franchise users see only their own bookings
-                     Booking.where(user_id: current_user.id).includes(:customer, :user, :booking_items, :store, :booking_invoices)
-                   else
-                     # Admin sees all bookings
-                     Booking.includes(:customer, :user, :booking_items, :store, :franchise, :booking_invoices)
-                   end
+    # Base scope for filters — no includes here (stats use SQL aggregates, not loaded records)
+    base_scope = current_user.franchise? ? Booking.where(user_id: current_user.id) : Booking.all
 
-    # Apply filters
-    @bookings = @all_bookings.recent
+    # Build filtered scope
+    @bookings = base_scope.recent
 
     if params[:search].present?
       @bookings = @bookings.where(
@@ -21,47 +15,36 @@ class Admin::BookingsController < Admin::ApplicationController
         "%#{params[:search]}%", "%#{params[:search]}%", "%#{params[:search]}%", "%#{params[:search]}%"
       )
     end
+    @bookings = @bookings.where(status: params[:status])           if params[:status].present? && params[:status].strip != ''
+    @bookings = @bookings.where(created_at: params[:date_from]..params[:date_to]) if params[:date_from].present? && params[:date_to].present?
+    @bookings = @bookings.where(customer_id: params[:customer_id]) if params[:customer_id].present? && params[:customer_id].strip != ''
+    @bookings = @bookings.where(is_b2b: true)                      if params[:b2b] == '1'
+    @bookings = @bookings.where(booked_by: params[:booked_by])     if params[:booked_by].present? && params[:booked_by].strip != ''
+    @bookings = @bookings.where(payment_status: params[:payment_status]) if params[:payment_status].present? && params[:payment_status].strip != ''
+    @bookings = @bookings.where.not(status: %w[delivered completed cancelled returned]) if params[:delivery_pending] == '1'
 
-    if params[:status].present? && params[:status].strip != ''
-      @bookings = @bookings.where(status: params[:status])
-    end
+    # Pre-compute stats with a single GROUP BY — avoids 6 COUNT queries in the view
+    stats_counts = @bookings.group(:status).count
+    @booking_stats = {
+      draft:      stats_counts['draft'].to_i,
+      pending:    stats_counts['ordered_and_delivery_pending'].to_i,
+      processing: stats_counts.slice('confirmed', 'processing', 'packed').values.sum,
+      shipped:    stats_counts.slice('shipped', 'out_for_delivery').values.sum,
+      completed:  stats_counts['completed'].to_i,
+      issues:     (stats_counts['cancelled'].to_i + stats_counts['returned'].to_i)
+    }
+    # Keep @bookings_for_stats as the filtered scope (without includes) so view COUNT calls still work
+    @bookings_for_stats = @bookings
 
-    if params[:date_from].present? && params[:date_to].present?
-      @bookings = @bookings.where(created_at: params[:date_from]..params[:date_to])
-    end
-
-    if params[:customer_id].present? && params[:customer_id].strip != ''
-      @bookings = @bookings.where(customer_id: params[:customer_id])
-    end
-
-    if params[:b2b].present? && params[:b2b] == '1'
-      @bookings = @bookings.where(is_b2b: true)
-    end
-
-    if params[:booked_by].present? && params[:booked_by].strip != ''
-      @bookings = @bookings.where(booked_by: params[:booked_by])
-    end
-
-    if params[:payment_status].present? && params[:payment_status].strip != ''
-      @bookings = @bookings.where(payment_status: params[:payment_status])
-    end
-
-    if params[:delivery_pending] == '1'
-      @bookings = @bookings.where.not(status: %w[delivered completed cancelled returned])
-    end
-
-    # Get pagination settings from system settings
+    # Paginate with eager-loading only on the page being displayed
     @per_page = SystemSetting.default_pagination_per_page
+    @bookings = @bookings.includes(:customer, { user: :franchise }, :booking_items, :store, :booking_invoices)
+                         .page(params[:page]).per(@per_page)
 
-    # Paginate the filtered results
-    @bookings = @bookings.page(params[:page]).per(@per_page)
-
-    # Use all_bookings for statistics cards to show complete picture
-    @bookings_for_stats = @all_bookings
-
-    # Load customers for filter dropdown
+    # Only load customers needed for the filter dropdown (selected + recent, not all thousands)
     @customers = Customer.select(:id, :first_name, :middle_name, :last_name, :email, :mobile)
-                        .order(:first_name, :last_name)
+                         .order(:first_name, :last_name)
+                         .limit(500)
   end
 
   def new
@@ -79,20 +62,9 @@ class Admin::BookingsController < Admin::ApplicationController
 
     # Only count central/main inventory (store_id IS NULL) so transferred stock is not double-counted
     @products = Product.active
-                       .includes(
-                         :category,
-                         :stock_batches,
-                         :product_variants,
-                         image_attachment: :blob,
-                         additional_images_attachments: :blob
-                       )
+                       .includes(:category, :product_variants, image_attachment: :blob)
                        .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND stock_batches.store_id IS NULL")
-                       .select(
-                         "products.*,
-                          COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock,
-                          MIN(stock_batches.batch_date) as first_batch_date,
-                          (SELECT quantity_purchased FROM stock_batches sb2 WHERE sb2.product_id = products.id AND sb2.store_id IS NULL ORDER BY sb2.batch_date ASC, sb2.created_at ASC LIMIT 1) as initial_stock_value"
-                       )
+                       .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock")
                        .group("products.id")
                        .order(Arel.sql("CASE WHEN COALESCE(SUM(stock_batches.quantity_remaining), 0) > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
 
@@ -799,15 +771,22 @@ class Admin::BookingsController < Admin::ApplicationController
 
   def validate_stock_availability(booking, is_update: false)
     stock_errors = []
+    active_items = booking.booking_items.reject(&:marked_for_destruction?).select { |i| i.product_id.present? && i.quantity.to_i > 0 }
+    return true if active_items.empty?
 
-    booking.booking_items.reject(&:marked_for_destruction?).each do |item|
-      next unless item.product_id.present? && item.quantity.present? && item.quantity > 0
+    # Preload products and variants to avoid N+1
+    product_ids = active_items.map(&:product_id).uniq
+    variant_ids = active_items.map(&:product_variant_id).compact.uniq
+    products_by_id = Product.where(id: product_ids).index_by(&:id)
+    variants_by_id = ProductVariant.where(id: variant_ids).index_by(&:id)
 
-      product = Product.find(item.product_id)
+    active_items.each do |item|
+      product = products_by_id[item.product_id]
+      next unless product
 
       # Admin bookings sell from central inventory only (store_id IS NULL)
       if product.has_multiple_quantities? && item.product_variant_id.present?
-        variant = ProductVariant.find_by(id: item.product_variant_id)
+        variant = variants_by_id[item.product_variant_id]
         available_stock = variant ? variant.available_stock.to_f : 0.0
       else
         available_stock = StockBatch.available_for_product(product.id, store_id: nil).sum(:quantity_remaining).to_f
