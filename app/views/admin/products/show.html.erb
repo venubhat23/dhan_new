@@ -388,11 +388,11 @@
                             </div>
                             <div class="d-flex justify-content-between mt-2">
                               <span class="text-muted">GST Amount:</span>
-                              <span class="fw-medium">₹<%= (@product.gst_amount || (@product.final_price_after_discount * @product.gst_percentage / 100)).round(2) %></span>
+                              <span class="fw-medium">₹<%= (@product.gst_amount || (@product.final_price_after_discount * (@product.gst_percentage || 0) / 100)).round(2) %></span>
                             </div>
                             <div class="d-flex justify-content-between mt-2">
                               <span class="text-muted fw-bold">Price with GST:</span>
-                              <span class="fw-bold text-primary">₹<%= (@product.final_amount_with_gst || (@product.final_price_after_discount * (1 + @product.gst_percentage.to_f / 100))).round(2) %></span>
+                              <span class="fw-bold text-primary">₹<%= (@product.final_amount_with_gst || (@product.final_price_after_discount * (1 + (@product.gst_percentage || 0).to_f / 100))).round(2) %></span>
                             </div>
                           </div>
                         </div>
