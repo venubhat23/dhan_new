@@ -195,18 +195,22 @@
             <div class="card-body">
               <div class="mb-3">
                 <%= form.label :upi_id, "UPI ID", class: "form-label" %>
-                <%= form.text_field :upi_id, class: "form-control", placeholder: "yourname@paytm or yourname@upi", value: @business_setting.upi_id %>
-                <div class="form-text">Enter your UPI ID to generate QR code automatically</div>
+                <div class="input-group">
+                  <%= form.text_field :upi_id, id: "upi_id_field", class: "form-control", placeholder: "yourname@paytm or yourname@upi", value: @business_setting.upi_id %>
+                  <button type="button" id="generate_qr_code_btn" class="btn btn-outline-primary">
+                    <i class="bi bi-qr-code me-1"></i>Generate QR
+                  </button>
+                </div>
+                <div class="form-text">Enter your UPI ID and click "Generate QR" to create the payment QR code</div>
+                <div id="qr_code_error" class="text-danger small mt-1" style="display: none;"></div>
               </div>
 
-              <% if @business_setting.upi_id.present? && @business_setting.qr_code_path.present? %>
-                <div class="mb-3">
-                  <label class="form-label">UPI QR Code</label>
-                  <div class="text-center">
-                    <%= image_tag @business_setting.qr_code_path, alt: "UPI QR Code", class: "img-fluid", style: "max-width: 150px;" %>
-                  </div>
+              <div id="qr_code_wrapper" class="mb-3" style="<%= 'display: none;' unless @business_setting.upi_id.present? && @business_setting.qr_code_path.present? %>">
+                <label class="form-label">UPI QR Code</label>
+                <div class="text-center">
+                  <img src="<%= @business_setting.qr_code_path %>" alt="UPI QR Code" id="upi_qr_code_img" class="img-fluid" style="max-width: 150px;">
                 </div>
-              <% end %>
+              </div>
             </div>
           </div>
         </div>
@@ -868,6 +872,56 @@ function copyUpiId() {
     });
   }
 }
+
+// Generate UPI QR Code via AJAX (no full page reload)
+document.getElementById('generate_qr_code_btn')?.addEventListener('click', function() {
+  const btn = this;
+  const upiIdField = document.getElementById('upi_id_field');
+  const errorDiv = document.getElementById('qr_code_error');
+  const qrWrapper = document.getElementById('qr_code_wrapper');
+  const qrImg = document.getElementById('upi_qr_code_img');
+  const upiId = upiIdField.value.trim();
+
+  errorDiv.style.display = 'none';
+
+  if (!upiId) {
+    errorDiv.textContent = 'Please enter a UPI ID first.';
+    errorDiv.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generating...';
+
+  fetch('<%= admin_settings_system_generate_qr_code_path %>', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: JSON.stringify({ upi_id: upiId })
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        qrImg.src = data.qr_code_path;
+        qrWrapper.style.display = '';
+      } else {
+        errorDiv.textContent = data.error || 'Failed to generate QR code.';
+        errorDiv.style.display = 'block';
+      }
+    })
+    .catch(function() {
+      errorDiv.textContent = 'Failed to generate QR code. Please try again.';
+      errorDiv.style.display = 'block';
+    })
+    .finally(function() {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    });
+});
 
 // Collect From Store Toggle Function
 function handleCollectFromStoreToggle(checkbox) {

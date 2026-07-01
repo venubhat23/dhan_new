@@ -817,6 +817,7 @@ Rails.application.routes.draw do
       get :system, to: 'system#index'
       patch :system, to: 'system#update'
       put :system, to: 'system#update'
+      post 'system/generate_qr_code', to: 'system#generate_qr_code', as: :system_generate_qr_code
     end
   end
 

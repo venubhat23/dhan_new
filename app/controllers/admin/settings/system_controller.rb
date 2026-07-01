@@ -121,7 +121,7 @@ class Admin::Settings::SystemController < Admin::Settings::BaseController
         @business_setting = SystemSetting.update_business_settings(business_params)
 
         # Generate QR code if UPI ID is present
-        generate_qr_code if @business_setting.upi_id.present?
+        write_upi_qr_code(@business_setting.upi_id) if @business_setting.upi_id.present?
 
         # Handle store settings if present
         if params[:collect_from_store_enabled].present?
@@ -207,6 +207,25 @@ class Admin::Settings::SystemController < Admin::Settings::BaseController
     end
   end
 
+  # Generate (and persist) the UPI QR code for the given UPI ID via AJAX,
+  # without requiring a full Business Settings form submit.
+  def generate_qr_code
+    @business_setting = SystemSetting.business_settings
+    upi_id = params[:upi_id].to_s.strip
+
+    unless upi_id.match?(/\A[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+\z/)
+      render json: { success: false, error: 'Please enter a valid UPI ID.' }, status: :unprocessable_entity
+      return
+    end
+
+    @business_setting.update!(upi_id: upi_id)
+    write_upi_qr_code(upi_id)
+
+    render json: { success: true, qr_code_path: @business_setting.qr_code_path }
+  rescue => e
+    render json: { success: false, error: e.message }, status: :unprocessable_entity
+  end
+
   private
 
   def system_setting_params
@@ -218,12 +237,16 @@ class Admin::Settings::SystemController < Admin::Settings::BaseController
     )
   end
 
-  def generate_qr_code
+  def write_upi_qr_code(upi_id)
     require 'rqrcode'
 
-    qr = RQRCode::QRCode.new(@business_setting.upi_id)
+    # Encode a proper UPI payment deep link so scanning it opens a UPI app
+    # with the payee pre-filled, instead of just the raw UPI ID as text.
+    payee_name = @business_setting.business_name.presence || 'Merchant'
+    upi_uri = "upi://pay?pa=#{ERB::Util.url_encode(upi_id)}&pn=#{ERB::Util.url_encode(payee_name)}&cu=INR"
 
-    # Generate SVG
+    qr = RQRCode::QRCode.new(upi_uri)
+
     svg = qr.as_svg(
       color: "000",
       shape_rendering: "crispEdges",
@@ -231,12 +254,11 @@ class Admin::Settings::SystemController < Admin::Settings::BaseController
       standalone: true
     )
 
-    # Save to storage
-    qr_code_path = Rails.root.join('public', 'qr_codes')
-    FileUtils.mkdir_p(qr_code_path) unless Dir.exist?(qr_code_path)
+    qr_code_dir = Rails.root.join('public', 'qr_codes')
+    FileUtils.mkdir_p(qr_code_dir) unless Dir.exist?(qr_code_dir)
 
     File.write(Rails.root.join('public', 'qr_codes', "upi_qr_#{@business_setting.id}.svg"), svg)
 
-    @business_setting.update(qr_code_path: "/qr_codes/upi_qr_#{@business_setting.id}.svg")
+    @business_setting.update!(qr_code_path: "/qr_codes/upi_qr_#{@business_setting.id}.svg?v=#{Time.current.to_i}")
   end
 end

@@ -6,7 +6,6 @@ class Admin::StoresController < Admin::ApplicationController
   def index
     @stores = Store.all.order(:name)
     @can_add_more = Store.can_add_more_stores?
-    @remaining_slots = Store.remaining_store_slots
     @collect_from_store_enabled = SystemSetting.collect_from_store_enabled?
 
     respond_to do |format|
