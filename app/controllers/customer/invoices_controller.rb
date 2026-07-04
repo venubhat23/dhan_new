@@ -50,7 +50,7 @@ class Customer::InvoicesController < Customer::BaseController
     respond_to do |format|
       format.pdf do
         pdf = WickedPdf.new.pdf_from_string(
-          render_to_string('customer/invoices/show', layout: 'invoice_pdf'),
+          render_to_string('customer/invoices/show', formats: [:html], layout: 'invoice_pdf'),
           page_size: 'A4',
           margin: {
             top: '0.75in',

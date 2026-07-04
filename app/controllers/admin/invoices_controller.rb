@@ -180,7 +180,7 @@ class Admin::InvoicesController < Admin::ApplicationController
     respond_to do |format|
       format.pdf do
         pdf = WickedPdf.new.pdf_from_string(
-          render_to_string(template: 'admin/invoices/show', layout: false),
+          render_to_string(template: 'admin/invoices/show', formats: [:html], layout: false),
           page_size: 'A4',
           margin: {
             top: '0.5in',

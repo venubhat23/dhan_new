@@ -131,6 +131,7 @@
 
 
 
+<% list_state = params.permit(:page, :search, :status, :date_from, :date_to, :customer_id, :b2b, :booked_by, :payment_status, :delivery_pending).to_h %>
 
 <!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -518,7 +519,7 @@
                           <li class="dropdown-header">Quick Stage Update</li>
                           <% booking.next_possible_statuses.each do |status| %>
                             <li>
-                              <%= link_to update_status_admin_booking_path(booking, status: status),
+                              <%= link_to update_status_admin_booking_path(booking, status: status, list_state: list_state, return_to: 'index'),
                                   method: :patch, class: "dropdown-item",
                                   confirm: status == 'cancelled' ? 'Are you sure you want to cancel this order?' : nil do %>
                                 <i class="bi bi-arrow-right me-2"></i>
@@ -594,7 +595,7 @@
                 <td class="align-middle">
                   <div class="d-flex gap-2 align-items-center">
                     <!-- Stage Management Icon -->
-                    <%= link_to manage_stage_admin_booking_path(booking),
+                    <%= link_to manage_stage_admin_booking_path(booking, list_state: list_state),
                         class: "btn btn-sm btn-outline-primary stage-management-btn",
                         title: "Manage Order Stages" do %>
                       <i class="bi bi-arrows-move"></i>
@@ -602,13 +603,13 @@
 
                     <!-- Actions Icons -->
                     <div class="action-icons">
-                      <%= link_to admin_booking_path(booking), class: "action-icon view", title: "View Booking" do %>
+                      <%= link_to admin_booking_path(booking, list_state: list_state), class: "action-icon view", title: "View Booking" do %>
                         <i class="bi bi-eye"></i>
                       <% end %>
-                      <%= link_to edit_admin_booking_path(booking), class: "action-icon edit", title: "Edit Booking" do %>
+                      <%= link_to edit_admin_booking_path(booking, list_state: list_state), class: "action-icon edit", title: "Edit Booking" do %>
                         <i class="bi bi-pencil"></i>
                       <% end %>
-                      <a href="#" class="action-icon delete" title="Delete Booking" onclick="confirmDelete(<%= booking.id %>, '<%= booking.booking_number %>', '<%= booking.customer&.display_name || 'Unknown' %>')">
+                      <a href="#" class="action-icon delete" title="Delete Booking" onclick="confirmDelete(<%= booking.id %>, '<%= booking.booking_number %>', '<%= booking.customer&.display_name || 'Unknown' %>', '<%= list_state.to_query('list_state') %>')">
                         <i class="bi bi-trash"></i>
                       </a>
                       <%
@@ -766,7 +767,7 @@
 
 <script>
 // Delete confirmation function
-function confirmDelete(bookingId, bookingNumber, customerName) {
+function confirmDelete(bookingId, bookingNumber, customerName, listStateQuery) {
   const confirmation = confirm(
     `⚠️ DELETE BOOKING CONFIRMATION ⚠️\n\n` +
     `Booking: ${bookingNumber}\n` +
@@ -784,7 +785,7 @@ function confirmDelete(bookingId, bookingNumber, customerName) {
     // Create a form and submit it to delete the booking
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = `/admin/bookings/${bookingId}`;
+    form.action = listStateQuery ? `/admin/bookings/${bookingId}?${listStateQuery}` : `/admin/bookings/${bookingId}`;
 
     // Add CSRF token
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');

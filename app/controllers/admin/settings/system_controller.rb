@@ -283,11 +283,20 @@ class Admin::Settings::SystemController < Admin::Settings::BaseController
       standalone: true
     )
 
-    qr_code_dir = Rails.root.join('public', 'qr_codes')
-    FileUtils.mkdir_p(qr_code_dir) unless Dir.exist?(qr_code_dir)
+    # Upload to R2 rather than local disk — Render's filesystem is ephemeral
+    # and wipes public/qr_codes on every deploy/restart.
+    result = R2Service.upload_content(
+      svg,
+      filename: "upi_qr_#{@business_setting.id}.svg",
+      content_type: 'image/svg+xml',
+      folder: 'qr_codes'
+    )
 
-    File.write(Rails.root.join('public', 'qr_codes', "upi_qr_#{@business_setting.id}.svg"), svg)
+    if result[:error]
+      Rails.logger.error "UPI QR R2 upload failed: #{result[:error]}"
+      return
+    end
 
-    @business_setting.update!(qr_code_path: "/qr_codes/upi_qr_#{@business_setting.id}.svg?v=#{Time.current.to_i}")
+    @business_setting.update!(qr_code_path: result[:public_url])
   end
 end

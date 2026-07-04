@@ -63,6 +63,23 @@ class R2Service
       false
     end
 
+    # Upload raw content (e.g. a generated SVG string) rather than an uploaded file param
+    def upload_content(content, filename:, content_type: 'application/octet-stream', folder: nil)
+      key = generate_key(filename, folder)
+
+      r2_client.put_object(
+        bucket: R2_BUCKET,
+        key: key,
+        body: content,
+        content_type: content_type
+      )
+
+      { key: key, public_url: public_url(key) }
+    rescue => e
+      Rails.logger.error "R2 Upload Error: #{e.message}"
+      { error: e.message }
+    end
+
     # Get public URL for file
     def public_url(key)
       "#{R2_PUBLIC_DOMAIN}/#{key}"

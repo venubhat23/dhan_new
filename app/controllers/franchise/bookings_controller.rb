@@ -260,7 +260,7 @@ class Franchise::BookingsController < Franchise::BaseController
       format.html { render template: 'franchise/bookings/invoice', layout: 'invoice' }
       format.pdf do
         pdf = WickedPdf.new.pdf_from_string(
-          render_to_string('franchise/bookings/invoice', layout: 'invoice_pdf'),
+          render_to_string('franchise/bookings/invoice', formats: [:html], layout: 'invoice_pdf'),
           page_size: 'A4',
           margin: {
             top: '0.75in',

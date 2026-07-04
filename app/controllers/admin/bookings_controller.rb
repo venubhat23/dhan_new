@@ -1,6 +1,8 @@
 class Admin::BookingsController < Admin::ApplicationController
   before_action :authenticate_user!
-  before_action :set_booking, only: [:show, :edit, :update, :destroy, :generate_invoice, :invoice, :convert_to_order, :update_status, :cancel_order, :mark_delivered, :mark_completed, :mark_paid, :manage_stage, :update_stage]
+  before_action :set_booking, only: [:show, :edit, :update, :destroy, :generate_invoice, :invoice, :convert_to_order, :update_status, :cancel_order, :mark_delivered, :mark_completed, :mark_paid, :manage_stage, :update_stage, :update_delivery_charge]
+
+  LIST_STATE_PARAMS = %i[page search status date_from date_to customer_id b2b booked_by payment_status delivery_pending].freeze
 
   def index
     # Base scope for filters — no includes here (stats use SQL aggregates, not loaded records)
@@ -199,15 +201,19 @@ class Admin::BookingsController < Admin::ApplicationController
   end
 
   def show
+    @list_state = list_state_params
     @booking_items = @booking.booking_items.includes(product: [:category, image_attachment: :blob, additional_images_attachments: :blob])
   end
 
   def edit
+    @list_state = list_state_params
     @products = Product.active.includes(:category, image_attachment: :blob, additional_images_attachments: :blob)
     @customers = Customer.all.order(:first_name, :last_name)
   end
 
   def update
+    @list_state = list_state_params
+
     # Validate stock availability for updates
     unless validate_stock_availability(@booking, is_update: true)
       @products = Product.active.includes(:category, image_attachment: :blob, additional_images_attachments: :blob)
@@ -217,7 +223,7 @@ class Admin::BookingsController < Admin::ApplicationController
     end
 
     if @booking.update(booking_params)
-      redirect_to admin_booking_path(@booking), notice: 'Booking updated successfully!'
+      redirect_to admin_bookings_path(@list_state), notice: 'Booking updated successfully!'
     else
       @products = Product.active.includes(:category, image_attachment: :blob, additional_images_attachments: :blob)
       @customers = Customer.all.order(:first_name, :last_name)
@@ -229,7 +235,7 @@ class Admin::BookingsController < Admin::ApplicationController
     begin
       # Check for associated orders (if enabled)
       if @booking.respond_to?(:order) && @booking.order.present?
-        redirect_to admin_bookings_path, alert: 'Cannot delete booking with associated order.'
+        redirect_to admin_bookings_path(list_state_params), alert: 'Cannot delete booking with associated order.'
         return
       end
 
@@ -264,29 +270,29 @@ class Admin::BookingsController < Admin::ApplicationController
       # Log successful deletion
       Rails.logger.info "Successfully deleted booking #{booking_number} and all associated records"
 
-      redirect_to admin_bookings_path, notice: "Booking #{booking_number} for #{customer_name} has been permanently deleted along with all associated records."
+      redirect_to admin_bookings_path(list_state_params), notice: "Booking #{booking_number} for #{customer_name} has been permanently deleted along with all associated records."
     rescue => e
       # Log the error
       Rails.logger.error "Failed to delete booking #{@booking.booking_number} (ID: #{@booking.id}): #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
 
       # Provide user-friendly error message
-      redirect_to admin_bookings_path, alert: "Failed to delete booking: #{e.message}. Please try again or contact support if the issue persists."
+      redirect_to admin_bookings_path(list_state_params), alert: "Failed to delete booking: #{e.message}. Please try again or contact support if the issue persists."
     end
   end
 
   def generate_invoice
     if @booking.invoice_generated?
-      redirect_to admin_booking_path(@booking), notice: 'Invoice already generated.'
+      redirect_to admin_booking_path(@booking, list_state_params), notice: 'Invoice already generated.'
       return
     end
 
     invoice = generate_immediate_invoice_for_booking(@booking)
     if invoice
-      redirect_to admin_booking_path(@booking), notice: "Invoice ##{invoice.invoice_number} generated successfully."
+      redirect_to admin_booking_path(@booking, list_state_params), notice: "Invoice ##{invoice.invoice_number} generated successfully."
     else
       @booking.generate_invoice_number
-      redirect_to admin_booking_path(@booking), notice: 'Invoice generated successfully.'
+      redirect_to admin_booking_path(@booking, list_state_params), notice: 'Invoice generated successfully.'
     end
   end
 
@@ -295,7 +301,7 @@ class Admin::BookingsController < Admin::ApplicationController
       format.html { render template: 'admin/bookings/invoice', layout: 'invoice' }
       format.pdf do
         pdf = WickedPdf.new.pdf_from_string(
-          render_to_string('admin/bookings/invoice', layout: 'invoice_pdf'),
+          render_to_string('admin/bookings/invoice', formats: [:html], layout: 'invoice_pdf'),
           page_size: 'A4',
           margin: {
             top: '0.75in',
@@ -375,12 +381,24 @@ class Admin::BookingsController < Admin::ApplicationController
       end
 
       respond_to do |format|
-        format.html { redirect_to admin_booking_path(@booking), notice: message }
+        format.html {
+          if params[:return_to] == 'index'
+            redirect_to admin_bookings_path(list_state_params), notice: message
+          else
+            redirect_to admin_booking_path(@booking, list_state_params), notice: message
+          end
+        }
         format.json { render json: { success: true, message: message, new_status: @booking.status } }
       end
     else
       respond_to do |format|
-        format.html { redirect_to admin_booking_path(@booking), alert: 'Invalid status transition!' }
+        format.html {
+          if params[:return_to] == 'index'
+            redirect_to admin_bookings_path(list_state_params), alert: 'Invalid status transition!'
+          else
+            redirect_to admin_booking_path(@booking, list_state_params), alert: 'Invalid status transition!'
+          end
+        }
         format.json { render json: { success: false, error: 'Invalid status transition!' } }
       end
     end
@@ -389,22 +407,22 @@ class Admin::BookingsController < Admin::ApplicationController
   def cancel_order
     reason = params[:reason]
     @booking.cancel_order!(reason)
-    redirect_to admin_booking_path(@booking), notice: 'Booking cancelled successfully!'
+    redirect_to admin_booking_path(@booking, list_state_params), notice: 'Booking cancelled successfully!'
   end
 
   def mark_delivered
     @booking.mark_as_delivered!
-    redirect_to admin_booking_path(@booking), notice: 'Order marked as delivered!'
+    redirect_to admin_booking_path(@booking, list_state_params), notice: 'Order marked as delivered!'
   end
 
   def mark_completed
     @booking.mark_as_completed!
-    redirect_to admin_booking_path(@booking), notice: 'Order marked as completed!'
+    redirect_to admin_booking_path(@booking, list_state_params), notice: 'Order marked as completed!'
   end
 
   def mark_paid
     if @booking.payment_status_paid?
-      redirect_to admin_booking_path(@booking), notice: 'Booking is already marked as paid.'
+      redirect_to admin_booking_path(@booking, list_state_params), notice: 'Booking is already marked as paid.'
       return
     end
 
@@ -413,12 +431,31 @@ class Admin::BookingsController < Admin::ApplicationController
 
     invoice = generate_immediate_invoice_for_booking(@booking)
     if invoice
-      redirect_to admin_booking_path(@booking), notice: "Booking marked as paid. Invoice ##{invoice.invoice_number} generated."
+      redirect_to admin_booking_path(@booking, list_state_params), notice: "Booking marked as paid. Invoice ##{invoice.invoice_number} generated."
     else
-      redirect_to admin_booking_path(@booking), notice: 'Booking marked as paid.'
+      redirect_to admin_booking_path(@booking, list_state_params), notice: 'Booking marked as paid.'
     end
   rescue => e
-    redirect_to admin_booking_path(@booking), alert: "Failed to mark as paid: #{e.message}"
+    redirect_to admin_booking_path(@booking, list_state_params), alert: "Failed to mark as paid: #{e.message}"
+  end
+
+  def update_delivery_charge
+    new_charge = params[:shipping_charges].to_s.gsub(/\s+/, '').to_f
+    new_charge = 0 if new_charge < 0
+
+    @booking.shipping_charges = new_charge
+    @booking.calculate_totals!
+    sync_booking_invoice_totals(@booking)
+
+    respond_to do |format|
+      format.html { redirect_to admin_booking_path(@booking), notice: 'Delivery charge updated successfully!' }
+      format.json { render json: { success: true, shipping_charges: @booking.shipping_charges, total_amount: @booking.total_amount } }
+    end
+  rescue => e
+    respond_to do |format|
+      format.html { redirect_to admin_booking_path(@booking), alert: "Failed to update delivery charge: #{e.message}" }
+      format.json { render json: { success: false, error: e.message } }
+    end
   end
 
   def stage_transition
@@ -563,15 +600,17 @@ class Admin::BookingsController < Admin::ApplicationController
 
   def manage_stage
     # This will render the manage_stage.html.erb view
+    @list_state = list_state_params
     @available_statuses = Booking.statuses.keys.map { |status| [status.humanize, status] }
     @next_stages = @booking.next_possible_statuses
   end
 
   def update_stage
+    @list_state = list_state_params
     @target_stage = params[:target_stage] || params[:booking][:status]
 
     unless @target_stage.present?
-      redirect_to manage_stage_admin_booking_path(@booking), alert: "Please select a target stage."
+      redirect_to manage_stage_admin_booking_path(@booking, list_state: @list_state), alert: "Please select a target stage."
       return
     end
 
@@ -581,14 +620,14 @@ class Admin::BookingsController < Admin::ApplicationController
 
       # Update booking with new status and transition data
       if update_booking_with_stage_transition(transition_data)
-        redirect_to admin_bookings_path, notice: "Booking stage updated to #{@target_stage.humanize} successfully."
+        redirect_to admin_bookings_path(@list_state), notice: "Booking stage updated to #{@target_stage.humanize} successfully."
       else
-        redirect_to manage_stage_admin_booking_path(@booking), alert: "Failed to update stage: #{@booking.errors.full_messages.join(', ')}"
+        redirect_to manage_stage_admin_booking_path(@booking, list_state: @list_state), alert: "Failed to update stage: #{@booking.errors.full_messages.join(', ')}"
       end
     rescue => e
       Rails.logger.error "Error in update_stage: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
-      redirect_to manage_stage_admin_booking_path(@booking), alert: "Failed to update stage: #{e.message}"
+      redirect_to manage_stage_admin_booking_path(@booking, list_state: @list_state), alert: "Failed to update stage: #{e.message}"
     end
   end
 
@@ -596,6 +635,27 @@ class Admin::BookingsController < Admin::ApplicationController
 
   def set_booking
     @booking = Booking.find(params[:id])
+  end
+
+  # Read forward-carried list page/filter state from the nested `list_state`
+  # param, never the top-level params (some actions, e.g. update_status,
+  # use a top-level `status` param for their own purpose which would
+  # otherwise collide with the list's `status` filter).
+  def list_state_params
+    params[:list_state]&.permit(*LIST_STATE_PARAMS)&.to_h || {}
+  end
+
+  # Keep any persisted BookingInvoice snapshot for this booking in sync with the
+  # booking's freshly recalculated totals (delivery charge changes only affect total_amount).
+  def sync_booking_invoice_totals(booking)
+    booking.booking_invoices.each do |booking_invoice|
+      booking_invoice.update!(
+        subtotal: booking.subtotal,
+        tax_amount: booking.tax_amount,
+        discount_amount: booking.discount_amount,
+        total_amount: booking.total_amount
+      )
+    end
   end
 
   # Build transition data from form parameters

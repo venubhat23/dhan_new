@@ -144,6 +144,7 @@ Rails.application.routes.draw do
         get :manage_stage
         patch :process_stage_transition
         patch :update_stage
+        patch :update_delivery_charge
       end
       collection do
         get :search_products
