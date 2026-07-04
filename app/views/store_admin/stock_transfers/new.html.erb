@@ -96,7 +96,7 @@
                 <% if product.has_multiple_quantities? && product.product_variants.any? %>
                   <select class="form-select form-select-sm mb-2" id="st-variant-<%= product.id %>" onclick="event.stopPropagation()">
                     <option value="">— Select variant —</option>
-                    <% product.product_variants.order(:display_order, :weight).each do |v| %>
+                    <% product.product_variants.sort_by { |v| [v.display_order || 0, v.weight.to_f] }.each do |v| %>
                       <option value="<%= v.id %>" data-label="<%= v.label %>" data-stock="<%= v.available_stock %>">
                         <%= v.label %> (stock: <%= v.available_stock.to_i %>)
                       </option>

@@ -6,7 +6,14 @@ class StoreAdmin::StockTransfersController < StoreAdmin::ApplicationController
   end
 
   def new
-    @products = Product.active.by_stock_availability
+    # Eager-load category/variants and precompute total batch stock in one grouped
+    # query (cached_stock) so the view doesn't hit stock_batches/category per product.
+    @products = Product.active
+                       .includes(:category, :product_variants)
+                       .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0")
+                       .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock")
+                       .group("products.id")
+                       .order(Arel.sql("CASE WHEN COALESCE(SUM(stock_batches.quantity_remaining), 0) > 0 THEN 0 ELSE 1 END ASC, products.display_order ASC NULLS LAST, products.name ASC"))
     @stores = Store.where.not(id: @current_store.id).active.order(:name)
   end
 
