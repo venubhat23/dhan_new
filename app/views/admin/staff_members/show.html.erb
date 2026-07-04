@@ -97,6 +97,74 @@
         <h6 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Attendance</h6>
       </div>
       <div class="card-body">
+        <!-- Calendar: tick multiple days and bulk-mark their status -->
+        <%= form_with url: bulk_create_admin_staff_attendances_path, method: :post, local: true, class: "mb-3" do |f| %>
+          <%= hidden_field_tag "staff_attendance[staff_member_id]", @staff_member.id %>
+          <%= hidden_field_tag :month, @month %>
+          <%= hidden_field_tag :year, @year %>
+
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="calendar-select-all">
+              <label class="form-check-label small" for="calendar-select-all">Select all</label>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+              <%= select_tag "staff_attendance[status]",
+                  options_for_select([['Present', 'present'], ['Absent', 'absent'], ['Half Day', 'half_day'], ['Leave', 'leave']]),
+                  class: "form-select form-select-sm", style: "width: auto;" %>
+              <button type="submit" class="btn btn-primary btn-sm">Mark Selected</button>
+            </div>
+          </div>
+
+          <%
+            attendance_by_date = @attendances.index_by(&:attendance_date)
+            calendar_badge = { 'present' => 'success', 'absent' => 'danger', 'half_day' => 'warning', 'leave' => 'secondary' }
+            first_day = Date.new(@year, @month, 1)
+            last_day  = Date.new(@year, @month, -1)
+          %>
+          <div class="attendance-calendar">
+            <div class="attendance-calendar-row attendance-calendar-header">
+              <% %w[Sun Mon Tue Wed Thu Fri Sat].each do |d| %>
+                <div class="attendance-calendar-label"><%= d %></div>
+              <% end %>
+            </div>
+            <div class="attendance-calendar-row">
+              <% first_day.wday.times do %>
+                <div class="attendance-calendar-cell attendance-calendar-cell-blank"></div>
+              <% end %>
+              <% (first_day..last_day).each do |date| %>
+                <% att = attendance_by_date[date] %>
+                <label class="attendance-calendar-cell">
+                  <input type="checkbox" name="dates[]" value="<%= date.iso8601 %>" class="attendance-calendar-checkbox">
+                  <span class="attendance-calendar-date"><%= date.day %></span>
+                  <% if att %>
+                    <span class="attendance-calendar-dot bg-<%= calendar_badge[att.status] %>" title="<%= att.status.humanize %>"></span>
+                  <% end %>
+                </label>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <style>
+          .attendance-calendar-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
+          .attendance-calendar-label { text-align: center; font-size: 0.75rem; color: #6c757d; font-weight: 600; }
+          .attendance-calendar-cell { position: relative; border: 1px solid #e2e8f0; border-radius: 6px; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+          .attendance-calendar-cell:hover { background: #f8f9fa; }
+          .attendance-calendar-cell:has(.attendance-calendar-checkbox:checked) { background: #e7f0ff; border-color: #667eea; }
+          .attendance-calendar-cell-blank { visibility: hidden; cursor: default; }
+          .attendance-calendar-checkbox { position: absolute; top: 3px; left: 3px; margin: 0; }
+          .attendance-calendar-date { font-size: 0.8rem; }
+          .attendance-calendar-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-top: 2px; }
+        </style>
+
+        <script>
+          document.getElementById('calendar-select-all')?.addEventListener('change', function() {
+            document.querySelectorAll('.attendance-calendar-checkbox').forEach(function(cb) { cb.checked = document.getElementById('calendar-select-all').checked; });
+          });
+        </script>
+
+        <!-- Mark a single day -->
         <%= form_with url: admin_staff_attendances_path, method: :post, local: true, class: "row g-2 align-items-end mb-3" do |f| %>
           <%= hidden_field_tag "staff_attendance[staff_member_id]", @staff_member.id %>
           <%= hidden_field_tag :month, @month %>

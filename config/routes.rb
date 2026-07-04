@@ -399,7 +399,11 @@ Rails.application.routes.draw do
         patch :toggle_status
       end
     end
-    resources :staff_attendances, only: [:create, :destroy]
+    resources :staff_attendances, only: [:create, :destroy] do
+      collection do
+        post :bulk_create
+      end
+    end
     resources :staff_payments, only: [:create, :destroy]
 
     # Customer Format Management
