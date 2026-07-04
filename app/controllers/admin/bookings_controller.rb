@@ -155,6 +155,8 @@ class Admin::BookingsController < Admin::ApplicationController
       # Set payment status after initial save (to avoid enum conflicts)
       if @payment_status_from_form == 'paid'
         @booking.payment_status = :paid
+      elsif @payment_status_from_form == 'partially_paid'
+        @booking.payment_status = :partially_paid
       else
         @booking.payment_status = :unpaid
       end
@@ -166,20 +168,17 @@ class Admin::BookingsController < Admin::ApplicationController
       Rails.logger.info "Booking totals - Subtotal: #{@booking.subtotal}, Tax: #{@booking.tax_amount}, Discount: #{@booking.discount_amount}, Total: #{@booking.total_amount}"
       Rails.logger.info "Final payment status after save: #{@booking.payment_status}"
 
-      # Generate invoice immediately if payment is received
+      # Generate the invoice immediately, regardless of payment status —
+      # the invoice's own payment_status mirrors the booking's (paid vs unpaid).
       invoice_notice = ""
-      if @booking.payment_status_paid?
-        begin
-          invoice = generate_immediate_invoice_for_booking(@booking)
-          if invoice
-            invoice_notice = " Invoice ##{invoice.invoice_number} generated with paid status."
-          end
-        rescue => e
-          Rails.logger.error "Failed to generate immediate invoice for booking ##{@booking.id}: #{e.message}"
-          invoice_notice = " Note: Invoice generation failed, will be handled via consolidated system."
+      begin
+        invoice = generate_immediate_invoice_for_booking(@booking)
+        if invoice
+          invoice_notice = " Invoice ##{invoice.invoice_number} generated (#{@booking.payment_status_paid? ? 'paid' : 'unpaid'})."
         end
-      else
-        Rails.logger.info "Booking ##{@booking.id} created successfully. Invoice will be generated via consolidated system when payment is received."
+      rescue => e
+        Rails.logger.error "Failed to generate immediate invoice for booking ##{@booking.id}: #{e.message}"
+        invoice_notice = " Note: Invoice generation failed."
       end
 
       # Convert to order if payment is received
@@ -427,11 +426,11 @@ class Admin::BookingsController < Admin::ApplicationController
     end
 
     @booking.payment_status = :paid
-    @booking.save!
+    @booking.save! # syncs the existing invoice to fully_paid via the payment_status callback, if one exists
 
-    invoice = generate_immediate_invoice_for_booking(@booking)
+    invoice = @booking.invoice_generated? ? Invoice.find_by(invoice_number: @booking.invoice_number) : generate_immediate_invoice_for_booking(@booking)
     if invoice
-      redirect_to admin_booking_path(@booking, list_state_params), notice: "Booking marked as paid. Invoice ##{invoice.invoice_number} generated."
+      redirect_to admin_booking_path(@booking, list_state_params), notice: "Booking marked as paid. Invoice ##{invoice.invoice_number} updated."
     else
       redirect_to admin_booking_path(@booking, list_state_params), notice: 'Booking marked as paid.'
     end

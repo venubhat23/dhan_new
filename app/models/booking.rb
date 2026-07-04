@@ -63,11 +63,33 @@ class Booking < ApplicationRecord
   before_validation :calculate_final_amount_after_discount
   after_validation :ensure_total_amount_present
   after_update :allocate_inventory, if: :saved_change_to_status?
+  after_update :sync_invoice_payment_status, if: :saved_change_to_payment_status?
   after_commit :bust_mobile_customer_cache
 
   def bust_mobile_customer_cache
     cid = customer_id || customer&.id
     MobileApiCache.bust_booking!(cid)
+  end
+
+  # Keeps the already-generated Invoice's payment_status in step with the booking's,
+  # so a booking marked paid after invoice creation doesn't leave a stale "unpaid" invoice.
+  def sync_invoice_payment_status
+    return unless invoice_generated? && invoice_number.present?
+
+    invoice = Invoice.find_by(invoice_number: invoice_number)
+    return unless invoice
+
+    case payment_status
+    when 'paid'
+      return if invoice.payment_status == 'fully_paid'
+      invoice.update(payment_status: :fully_paid, paid_at: invoice.paid_at || Time.current, paid_amount: invoice.total_amount)
+    when 'partially_paid'
+      return if invoice.payment_status == 'partially_paid'
+      invoice.update(payment_status: :partially_paid)
+    else
+      return if invoice.payment_status == 'unpaid'
+      invoice.update(payment_status: :unpaid, paid_at: nil, paid_amount: 0)
+    end
   end
 
   scope :recent, -> { order(created_at: :desc) }
@@ -716,9 +738,10 @@ class Booking < ApplicationRecord
     end
   end
 
-  # Generate a proper Invoice record (with InvoiceItems) for a paid booking.
-  # Sets invoice_generated=true and invoice_number on the booking so the admin UI
-  # recognises the booking as invoiced. Returns the Invoice on success, nil on failure.
+  # Generate a proper Invoice record (with InvoiceItems) for this booking.
+  # The invoice's payment_status mirrors the booking's payment_status (paid -> fully_paid,
+  # otherwise unpaid). Sets invoice_generated=true and invoice_number on the booking so
+  # the admin UI recognises the booking as invoiced. Returns the Invoice on success, nil on failure.
   def generate_quick_invoice!
     return nil if invoice_generated?
     return nil if booking_items.empty?
@@ -728,8 +751,8 @@ class Booking < ApplicationRecord
       invoice_date: Date.current,
       due_date: Date.current + 30.days,
       status: :sent,
-      payment_status: :fully_paid,
-      paid_at: Time.current,
+      payment_status: payment_status_paid? ? :fully_paid : :unpaid,
+      paid_at: payment_status_paid? ? Time.current : nil,
       quick_invoice: true
     )
 

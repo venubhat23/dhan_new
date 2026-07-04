@@ -15,8 +15,26 @@ class Invoice < ApplicationRecord
   before_validation :generate_invoice_number, on: :create
   before_validation :calculate_total_from_items
   before_create :generate_share_token
+  after_update :sync_booking_payment_status, if: :saved_change_to_payment_status?
 
   scope :for_month, ->(month, year) { where(invoice_date: Date.new(year, month).beginning_of_month..Date.new(year, month).end_of_month) }
+
+  # Keeps the originating Booking's payment_status/label in sync when an invoice is
+  # marked paid (or unpaid) from the invoices screen, mirroring Booking#sync_invoice_payment_status.
+  def sync_booking_payment_status
+    return if invoice_number.blank?
+
+    booking = Booking.find_by(invoice_number: invoice_number)
+    return unless booking
+
+    target_status = case payment_status
+                     when 'fully_paid' then 'paid'
+                     when 'partially_paid' then 'partially_paid'
+                     else 'unpaid'
+                     end
+
+    booking.update(payment_status: target_status) unless booking.payment_status == target_status
+  end
 
   # Get customer display name (customer or walk-in from booking)
   def customer_display_name

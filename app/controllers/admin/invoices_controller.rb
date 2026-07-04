@@ -204,7 +204,7 @@ class Admin::InvoicesController < Admin::ApplicationController
   end
 
   def edit
-    @invoice_items = @invoice.invoice_items.includes(:product, :milk_delivery_task)
+    @invoice_items = @invoice.invoice_items.includes(:milk_delivery_task, product: :product_variants)
   end
 
   def update
@@ -300,7 +300,8 @@ class Admin::InvoicesController < Admin::ApplicationController
     @invoice.update!(
       payment_status: :fully_paid,
       status: :paid,
-      paid_at: Time.current
+      paid_at: Time.current,
+      paid_amount: @invoice.total_amount
     )
 
     redirect_to admin_invoices_path, notice: 'Invoice marked as paid successfully.'
