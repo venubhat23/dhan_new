@@ -76,6 +76,11 @@
               <%= form.label :address, class: "form-label" %>
               <%= form.text_area :address, class: "form-control", placeholder: "Enter complete address", rows: 2 %>
             </div>
+
+            <div class="col-12">
+              <%= form.label :location_link, "Location Link", class: "form-label" %>
+              <%= form.url_field :location_link, class: "form-control", placeholder: "Paste Google Maps link (optional)" %>
+            </div>
           </div>
         </div>
       </div>

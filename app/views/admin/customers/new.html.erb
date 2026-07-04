@@ -143,6 +143,16 @@
             </div>
           </div>
 
+          <div class="col-12">
+            <%= form.label :location_link, "Location Link", class: "form-label fw-medium" %>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-geo-alt text-muted"></i>
+              </span>
+              <%= form.url_field :location_link, class: "form-control border-start-0", placeholder: "Paste Google Maps link (optional)" %>
+            </div>
+          </div>
+
           <!-- Location Section -->
           <div class="col-12">
             <hr class="my-4">

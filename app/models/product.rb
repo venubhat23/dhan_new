@@ -138,7 +138,10 @@ class Product < ApplicationRecord
       .having('COALESCE(SUM(CASE WHEN stock_batches.status = ? THEN stock_batches.quantity_remaining ELSE 0 END), 0) = 0', 'active')
   }
   scope :by_category, ->(category_id) { where(category_id: category_id) }
-  scope :search, ->(query) { where('name ILIKE ?', "%#{query}%") }
+  scope :search, ->(query) {
+    words = query.to_s.strip.split(/\s+/)
+    words.inject(all) { |relation, word| relation.where('name ILIKE :q OR sku ILIKE :q', q: "%#{word}%") }
+  }
   scope :recent, -> { order(created_at: :desc) }
   scope :by_stock_availability, -> { order(Arel.sql("CASE WHEN stock > 0 THEN 0 ELSE 1 END ASC, display_order ASC NULLS LAST, name ASC")) }
   scope :occasional, -> { where(is_occasional_product: true) }

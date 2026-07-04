@@ -10,14 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_04_120002) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_04_120003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
-# Could not dump table "active_storage_attachments" because of following ActiveRecord::ConnectionFailed
-#   PQconsumeInput() could not receive data from server: Network is unreachable
-SSL SYSCALL error: Network is unreachable
-
+  create_table "active_storage_attachments", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
 
   create_table "active_storage_blobs", force: :cascade do |t|
     t.string "key", null: false
@@ -373,6 +378,7 @@ SSL SYSCALL error: Network is unreachable
     t.boolean "is_registered_by_mobile"
     t.string "password_reset_token"
     t.datetime "password_reset_sent_at"
+    t.string "location_link"
     t.index ["latitude", "longitude"], name: "index_customers_on_location"
     t.index ["whatsapp_number"], name: "index_customers_on_whatsapp_number"
   end
@@ -1093,6 +1099,19 @@ SSL SYSCALL error: Network is unreachable
     t.index ["store_id"], name: "index_staff_members_on_store_id"
   end
 
+  create_table "staff_payments", force: :cascade do |t|
+    t.bigint "staff_member_id", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.date "payment_date", null: false
+    t.integer "month", null: false
+    t.integer "year", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["staff_member_id", "year", "month"], name: "index_staff_payments_on_member_and_period"
+    t.index ["staff_member_id"], name: "index_staff_payments_on_staff_member_id"
+  end
+
   create_table "stock_batches", force: :cascade do |t|
     t.bigint "product_id", null: false
     t.bigint "vendor_id", null: false
@@ -1520,6 +1539,7 @@ SSL SYSCALL error: Network is unreachable
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "staff_attendances", "staff_members"
   add_foreign_key "staff_members", "stores"
+  add_foreign_key "staff_payments", "staff_members"
   add_foreign_key "stock_batches", "products"
   add_foreign_key "stock_batches", "stores"
   add_foreign_key "stock_batches", "vendor_purchases"

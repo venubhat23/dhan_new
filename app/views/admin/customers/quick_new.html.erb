@@ -87,10 +87,26 @@
             <% if @customer.errors[:mobile].any? %>
               <div class="invalid-feedback d-block"><%= @customer.errors[:mobile].first %></div>
             <% end %>
-            <div class="form-text">
+            <div class="form-text" id="passwordPreviewText">
               <i class="bi bi-key me-1 text-warning"></i>
               Mobile login password will be auto-set to: <strong id="passwordPreview">XXXX@123</strong>
               <span class="text-muted">(first 4 digits of mobile + @123)</span>
+            </div>
+          </div>
+
+          <!-- Existing customer match -->
+          <div id="existingCustomerAlert" class="alert alert-warning border-0 mb-4" style="display: none;">
+            <div class="d-flex align-items-start">
+              <i class="bi bi-person-check-fill me-2 mt-1"></i>
+              <div class="flex-grow-1">
+                <h6 class="alert-heading mb-1">This customer already exists</h6>
+                <p class="mb-2 small">
+                  <strong id="existingCustomerName"></strong> is already registered with this phone number.
+                </p>
+                <a href="#" id="proceedWithExistingBtn" class="btn btn-sm btn-warning">
+                  <i class="bi bi-arrow-right-circle me-1"></i>Proceed to Booking with This Customer
+                </a>
+              </div>
             </div>
           </div>
 
@@ -124,7 +140,7 @@
             <%= link_to admin_bookings_path, class: "btn btn-outline-secondary" do %>
               <i class="bi bi-x me-1"></i>Cancel
             <% end %>
-            <button type="submit" class="btn btn-primary px-4">
+            <button type="submit" id="createCustomerBtn" class="btn btn-primary px-4">
               <i class="bi bi-person-check me-2"></i>Create Customer & Proceed to Booking
             </button>
           </div>
@@ -135,9 +151,49 @@
 </div>
 
 <script>
-  document.getElementById('quick_mobile').addEventListener('input', function() {
+  const quickMobileInput = document.getElementById('quick_mobile');
+  const existingAlert = document.getElementById('existingCustomerAlert');
+  const existingName = document.getElementById('existingCustomerName');
+  const proceedBtn = document.getElementById('proceedWithExistingBtn');
+  const createBtn = document.getElementById('createCustomerBtn');
+  let mobileCheckTimeout = null;
+
+  quickMobileInput.addEventListener('input', function() {
     const digits = this.value.replace(/\D/g, '');
     const preview = digits.length >= 4 ? digits.substring(0, 4) + '@123' : 'XXXX@123';
     document.getElementById('passwordPreview').textContent = preview;
+
+    hideExistingCustomerMatch();
+    clearTimeout(mobileCheckTimeout);
+    if (digits.length === 10) {
+      mobileCheckTimeout = setTimeout(() => checkExistingCustomer(digits), 400);
+    }
   });
+
+  function checkExistingCustomer(mobile) {
+    fetch(`<%= check_mobile_admin_customers_path %>?mobile=${mobile}`, {
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.exists) {
+          showExistingCustomerMatch(data.customer);
+        } else {
+          hideExistingCustomerMatch();
+        }
+      })
+      .catch(() => hideExistingCustomerMatch());
+  }
+
+  function showExistingCustomerMatch(customer) {
+    existingName.textContent = `${customer.name} (${customer.mobile})`;
+    proceedBtn.href = `<%= new_admin_booking_path %>?customer_id=${customer.id}`;
+    existingAlert.style.display = '';
+    createBtn.disabled = true;
+  }
+
+  function hideExistingCustomerMatch() {
+    existingAlert.style.display = 'none';
+    createBtn.disabled = false;
+  }
 </script>

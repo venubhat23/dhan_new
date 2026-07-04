@@ -791,8 +791,33 @@ class Admin::CustomersController < Admin::ApplicationController
     @customer = Customer.new
   end
 
+  # GET /admin/customers/check_mobile
+  def check_mobile
+    mobile = normalize_mobile_for_lookup(params[:mobile])
+    customer = mobile.present? ? Customer.find_by(mobile: mobile) : nil
+
+    if customer
+      render json: {
+        exists: true,
+        customer: { id: customer.id, name: customer.display_name, mobile: customer.mobile, email: customer.email }
+      }
+    else
+      render json: { exists: false }
+    end
+  end
+
   # POST /admin/customers/quick_create
   def quick_create
+    # Safety net: if a customer with this mobile already exists (e.g. the
+    # client-side check was skipped), proceed with them instead of hitting
+    # the mobile uniqueness validation and failing.
+    existing_customer = Customer.find_by(mobile: normalize_mobile_for_lookup(params[:customer][:mobile]))
+    if existing_customer
+      redirect_to new_admin_booking_path(customer_id: existing_customer.id),
+                  notice: "A customer with this phone number already exists (#{existing_customer.display_name}). Proceeding with the existing customer."
+      return
+    end
+
     @customer = Customer.new
     @customer.first_name = params[:customer][:first_name].to_s.strip
     @customer.mobile = params[:customer][:mobile].to_s.strip
@@ -837,25 +862,44 @@ class Admin::CustomersController < Admin::ApplicationController
   end
 
   # POST /admin/customers/:id/generate_password
+  # Supports either an auto-generated password (default) or an admin-supplied
+  # custom password via params[:password_mode] == 'custom'.
   def generate_password
     begin
+      if params[:password_mode] == 'custom'
+        new_password = params[:custom_password].to_s
+        confirmation = params[:custom_password_confirmation].to_s
+
+        if new_password.length < 6
+          redirect_to admin_customer_path(@customer), alert: 'Password must be at least 6 characters long.' and return
+        end
+
+        if new_password != confirmation
+          redirect_to admin_customer_path(@customer), alert: 'Password and confirmation do not match.' and return
+        end
+      else
+        new_password = Customer.generate_random_password
+      end
+
       ActiveRecord::Base.transaction do
-        # Generate password
-        generated_password = "Welcome@123"
+        # Set the real password on the customer record (hashed into password_digest via
+        # has_secure_password) so the customer's own web login actually accepts it, and
+        # keep auto_generated_password in sync so the admin UI can display/copy it.
+        @customer.password = new_password
+        @customer.password_confirmation = new_password
+        @customer.auto_generated_password = new_password
+        @customer.save!
 
-        # Store password in customer record
-        @customer.update!(auto_generated_password: generated_password)
-
-        # Find or create User account
+        # Find or create the linked User account (used for the separate mobile app login)
         user = User.find_by(email: @customer.email, user_type: 'customer')
 
         if user
           # Update existing user password
           user.update!(
-            password: generated_password,
-            password_confirmation: generated_password
+            password: new_password,
+            password_confirmation: new_password
           )
-          message = "Password generated and updated for existing user account."
+          message = "Password reset and updated for existing user account."
         else
           # Create new User account
           if @customer.email.present?
@@ -865,8 +909,8 @@ class Admin::CustomersController < Admin::ApplicationController
               middle_name: @customer.middle_name,
               email: @customer.email,
               mobile: @customer.mobile,
-              password: generated_password,
-              password_confirmation: generated_password,
+              password: new_password,
+              password_confirmation: new_password,
               user_type: 'customer',
               address: @customer.address,
               city: 'Unknown',
@@ -877,22 +921,22 @@ class Admin::CustomersController < Admin::ApplicationController
               is_active: true,
               is_verified: false
             )
-            message = "User account created with generated password."
+            message = "User account created with new password."
           else
-            message = "Cannot create user account: email is required."
+            message = "Customer password reset. No email on file, so no separate login account was created."
           end
         end
 
         respond_to do |format|
           format.html {
             redirect_to admin_customer_path(@customer),
-            notice: "#{message} Password: #{generated_password}"
+            notice: "#{message} Password: #{new_password}"
           }
           format.json {
             render json: {
               success: true,
               message: message,
-              password: generated_password
+              password: new_password
             }
           }
         end
@@ -901,12 +945,12 @@ class Admin::CustomersController < Admin::ApplicationController
       respond_to do |format|
         format.html {
           redirect_to admin_customer_path(@customer),
-          alert: "Failed to generate password: #{e.message}"
+          alert: "Failed to reset password: #{e.message}"
         }
         format.json {
           render json: {
             success: false,
-            message: "Failed to generate password: #{e.message}"
+            message: "Failed to reset password: #{e.message}"
           }
         }
       end
@@ -949,6 +993,12 @@ class Admin::CustomersController < Admin::ApplicationController
 
   private
 
+  # Reuses Customer's own mobile normalization (strips non-digits, drops a
+  # leading 91 country code) so lookups match how mobiles are actually stored.
+  def normalize_mobile_for_lookup(mobile)
+    Customer.new.send(:normalize_indian_mobile, mobile.to_s)
+  end
+
   # Generate a secure password for auto-creation
   def generate_secure_password
     # Generate password in format: first 4 letters of name + @ + current year
@@ -979,7 +1029,7 @@ class Admin::CustomersController < Admin::ApplicationController
       :birth_date, :gender, :marital_status, :pan_no, :gst_no,
       :company_name, :occupation, :annual_income,
       :emergency_contact_name, :emergency_contact_number, :blood_group,
-      :nationality, :preferred_language, :notes, :address, :status,
+      :nationality, :preferred_language, :notes, :address, :location_link, :status,
       :personal_image, :house_image, profile_image: []
     )
   end

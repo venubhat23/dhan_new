@@ -477,7 +477,7 @@
               <div class="row g-3">
                 <div class="col-md-3">
                   <div class="form-check">
-                    <%= f.radio_button :payment_method, 'cash', checked: true, class: 'form-check-input', id: 'payment_cash', onchange: 'selectPaymentMethod("cash")' %>
+                    <%= f.radio_button :payment_method, 'cash', class: 'form-check-input', id: 'payment_cash', onchange: 'selectPaymentMethod("cash")' %>
                     <label class="form-check-label" for="payment_cash">
                       <i class="bi bi-cash-stack me-1"></i>Cash Payment
                     </label>
@@ -495,7 +495,7 @@
 
                 <div class="col-md-3">
                   <div class="form-check">
-                    <%= f.radio_button :payment_method, 'upi', class: 'form-check-input', id: 'payment_upi', onchange: 'selectPaymentMethod("upi")' %>
+                    <%= f.radio_button :payment_method, 'upi', checked: true, class: 'form-check-input', id: 'payment_upi', onchange: 'selectPaymentMethod("upi")' %>
                     <label class="form-check-label" for="payment_upi">
                       <i class="bi bi-phone me-1"></i>UPI Payment
                     </label>
@@ -1872,7 +1872,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <% end %>
 
   // Set default payment method
-  selectPaymentMethod('cash');
+  selectPaymentMethod('upi');
 
   // Update checkout totals when discount changes
   const discountInput = document.getElementById('checkoutDiscount');

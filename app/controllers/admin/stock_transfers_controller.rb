@@ -1,26 +1,62 @@
 class Admin::StockTransfersController < Admin::ApplicationController
   before_action :set_transfer, only: [:show, :approve, :reject]
 
-  def index
-    scope = StockTransfer.includes(:product, :from_store, :to_store, :requested_by, :approved_by)
-    scope = scope.where(status: params[:status]) if params[:status].present?
-    all_transfers = scope.order(created_at: :desc)
+  # A single "request" (transfer_group_id) can contain hundreds of product
+  # line-items — rendering them all inline is what actually breaks the page.
+  # Cap what's shown per group on the index; "View full request" links to
+  # show_group for the rest.
+  GROUP_ITEM_INLINE_LIMIT = 20
 
-    # Pre-compute available stock per (product_id, from_store_id) to avoid N+1
-    transfer_list = all_transfers.to_a
-    stock_cache = {}
-    transfer_list.each do |t|
-      key = [t.product_id, t.from_store_id]
-      stock_cache[key] ||= StockBatch.available_for_product(t.product_id, store_id: t.from_store_id)
-                                     .sum(:quantity_remaining)
+  def index
+    base_scope = StockTransfer.all
+    base_scope = base_scope.where(status: params[:status]) if params[:status].present?
+
+    # Paginate by request-group, not raw row, so a multi-product request never
+    # gets split across pages. Determine group order with a light column-only
+    # query first (no associations, no full row hydration).
+    group_keys_ordered = []
+    seen = {}
+    base_scope.select(:id, :transfer_group_id, :created_at).order(created_at: :desc).each do |r|
+      key = r.transfer_group_id.presence || "single_#{r.id}"
+      unless seen[key]
+        seen[key] = true
+        group_keys_ordered << key
+      end
     end
 
-    # Group by transfer_group_id; ungrouped transfers get their own single-item group
-    @groups = transfer_list.group_by { |t| t.transfer_group_id.presence || "single_#{t.id}" }
-                           .map do |group_id, transfers|
+    per_page = SystemSetting.default_pagination_per_page || 20
+    paged_keys = Kaminari.paginate_array(group_keys_ordered).page(params[:page]).per(per_page)
+
+    assoc_scope = StockTransfer.includes(:product, :product_variant, :from_store, :to_store, :requested_by, :approved_by)
+    assoc_scope = assoc_scope.where(status: params[:status]) if params[:status].present?
+
+    stock_cache = {}
+
+    @groups = paged_keys.filter_map do |key|
+      if key.start_with?('single_')
+        transfers   = assoc_scope.where(id: key.delete_prefix('single_').to_i).to_a
+        total_count = transfers.size
+      else
+        total_count = StockTransfer.where(transfer_group_id: key).count
+        transfers   = assoc_scope.where(transfer_group_id: key)
+                                  .order(created_at: :desc)
+                                  .limit(GROUP_ITEM_INLINE_LIMIT)
+                                  .to_a
+      end
+      next if transfers.empty?
+
+      # Pre-compute available stock per (product_id, from_store_id) to avoid N+1 — only for what's shown
+      transfers.each do |t|
+        ck = [t.product_id, t.from_store_id]
+        stock_cache[ck] ||= StockBatch.available_for_product(t.product_id, store_id: t.from_store_id)
+                                       .sum(:quantity_remaining)
+      end
+
       {
-        group_id:     group_id,
+        group_id:     key,
         transfers:    transfers,
+        total_count:  total_count,
+        truncated:    total_count > transfers.size,
         status:       group_status(transfers),
         from_store:   transfers.first.from_store_name,
         to_store:     transfers.first.to_store&.name,
@@ -30,7 +66,40 @@ class Admin::StockTransfersController < Admin::ApplicationController
         stock_cache:  stock_cache
       }
     end
+
+    @page_data = paged_keys
     @pending_count = StockTransfer.pending.count
+  end
+
+  # Full, paginated item list for a single request (transfer_group_id) —
+  # linked from the index when a group has more items than fit inline.
+  def show_group
+    @group_id = params[:group_id]
+    per_page = SystemSetting.default_pagination_per_page || 20
+
+    scope = StockTransfer.includes(:product, :product_variant, :from_store, :to_store, :requested_by, :approved_by)
+                          .where(transfer_group_id: @group_id)
+                          .order(created_at: :desc)
+    @transfers = scope.page(params[:page]).per(per_page)
+
+    if @transfers.empty?
+      redirect_to admin_stock_transfers_path, alert: 'Transfer request not found.' and return
+    end
+
+    stock_cache = {}
+    @transfers.each do |t|
+      key = [t.product_id, t.from_store_id]
+      stock_cache[key] ||= StockBatch.available_for_product(t.product_id, store_id: t.from_store_id)
+                                     .sum(:quantity_remaining)
+    end
+    @stock_cache  = stock_cache
+    first         = @transfers.first
+    @status       = group_status(StockTransfer.where(transfer_group_id: @group_id).select(:status))
+    @from_store   = first.from_store_name
+    @to_store     = first.to_store&.name
+    @requested_by = first.requested_by
+    @created_at   = first.created_at
+    @notes        = first.notes
   end
 
   def show

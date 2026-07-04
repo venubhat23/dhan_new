@@ -104,13 +104,9 @@
           Login Credentials
         </h5>
         <% if @customer.email.present? %>
-          <%= form_with url: generate_password_admin_customer_path(@customer), method: :post, local: true, class: "d-inline" do |f| %>
-            <%= f.submit user ? "Generate New Password" : "Create User & Generate Password",
-                class: "btn btn-sm btn-success",
-                data: {
-                  confirm: user ? "This will update the existing user's password. Continue?" : "This will create a new user account with login credentials. Continue?"
-                } %>
-          <% end %>
+          <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
+            <i class="bi bi-key me-1"></i><%= user ? "Reset Password" : "Create User & Set Password" %>
+          </button>
         <% end %>
       </div>
       <% if user %>
@@ -169,7 +165,7 @@
           <i class="bi bi-info-circle me-2"></i>
           <strong>No User Account:</strong> This customer doesn't have login credentials yet.
           <% if @customer.email.present? %>
-            Click "Create User & Generate Password" above to create an account.
+            Click "Create User & Set Password" above to create an account.
           <% else %>
             Customer email is required to create a user account.
           <% end %>
@@ -178,8 +174,66 @@
       <% end %>
     </div>
 
+    <!-- Reset Password Modal -->
+    <% if @customer.email.present? %>
+    <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <%= form_with url: generate_password_admin_customer_path(@customer), method: :post, local: true do |f| %>
+            <div class="modal-header">
+              <h5 class="modal-title"><i class="bi bi-key me-2"></i>Reset Customer Password</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="password_mode" id="password_mode_auto" value="auto" checked onchange="toggleCustomPasswordFields(this)">
+                  <label class="form-check-label" for="password_mode_auto">Auto-generate a secure password</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="password_mode" id="password_mode_custom" value="custom" onchange="toggleCustomPasswordFields(this)">
+                  <label class="form-check-label" for="password_mode_custom">Set a custom password</label>
+                </div>
+              </div>
+
+              <div id="customPasswordFields" style="display: none;">
+                <div class="mb-3">
+                  <label class="form-label">New Password</label>
+                  <input type="password" name="custom_password" id="custom_password" class="form-control" minlength="6" placeholder="At least 6 characters">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Confirm Password</label>
+                  <input type="password" name="custom_password_confirmation" id="custom_password_confirmation" class="form-control" minlength="6" placeholder="Re-enter password">
+                </div>
+              </div>
+
+              <div class="alert alert-warning mb-0 small">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                This immediately overwrites the customer's current password<%= user ? " and their mobile login account" : "" %>.
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <%= f.submit user ? "Reset Password" : "Create User & Set Password", class: "btn btn-success" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function toggleCustomPasswordFields(radio) {
+        const fieldsDiv = document.getElementById('customPasswordFields');
+        const isCustom = document.getElementById('password_mode_custom').checked;
+        fieldsDiv.style.display = isCustom ? 'block' : 'none';
+        document.getElementById('custom_password').required = isCustom;
+        document.getElementById('custom_password_confirmation').required = isCustom;
+      }
+    </script>
+    <% end %>
+
     <!-- Address Information -->
-    <% if @customer.address.present? || @customer.latitude.present? || @customer.longitude.present? %>
+    <% if @customer.address.present? || @customer.latitude.present? || @customer.longitude.present? || @customer.location_link.present? %>
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-header bg-transparent border-0">
         <h5 class="mb-0">Address & Location</h5>
@@ -190,6 +244,13 @@
           <div class="col-12">
             <strong class="text-muted d-block">Address</strong>
             <%= @customer.address %>
+          </div>
+          <% end %>
+
+          <% if @customer.location_link.present? %>
+          <div class="col-12">
+            <strong class="text-muted d-block">Location Link</strong>
+            <%= link_to @customer.location_link, @customer.location_link, target: "_blank", rel: "noopener" %>
           </div>
           <% end %>
 

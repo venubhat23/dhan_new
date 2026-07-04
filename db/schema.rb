@@ -378,6 +378,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_04_120003) do
     t.boolean "is_registered_by_mobile"
     t.string "password_reset_token"
     t.datetime "password_reset_sent_at"
+    t.string "location_link"
     t.index ["latitude", "longitude"], name: "index_customers_on_location"
     t.index ["whatsapp_number"], name: "index_customers_on_whatsapp_number"
   end

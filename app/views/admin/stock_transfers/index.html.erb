@@ -183,9 +183,21 @@
               <% end %>
             </tbody>
           </table>
+          <% if group[:truncated] %>
+            <div class="text-center py-3 border-top">
+              <%= link_to show_group_admin_stock_transfers_path(group_id: group[:group_id]),
+                  class: "btn btn-outline-primary btn-sm" do %>
+                Showing <%= group[:transfers].size %> of <%= group[:total_count] %> products &mdash; View full request
+              <% end %>
+            </div>
+          <% end %>
         </div>
       </div>
     <% end %>
+  </div>
+
+  <div class="d-flex justify-content-center mt-4">
+    <%= paginate @page_data %>
   </div>
 <% else %>
   <div class="card border-0 shadow-sm text-center py-5" style="border-radius:14px;">

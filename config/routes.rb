@@ -201,6 +201,7 @@ Rails.application.routes.draw do
       collection do
         get :quick_new
         post :quick_create
+        get :check_mobile
         post :bulk_delete
       end
     end
@@ -391,6 +392,7 @@ Rails.application.routes.draw do
         patch :approve_group
         patch :reject_group
         patch :bulk_approve
+        get :show_group
       end
     end
 
