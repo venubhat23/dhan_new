@@ -533,15 +533,18 @@
 
               <div class="row g-3">
                 <div class="col-md-6">
-                  <div class="form-check form-switch">
-                    <%= f.check_box :payment_status,
-                        { class: "form-check-input", id: "paymentStatusToggle" },
-                        "paid", "unpaid" %>
-                    <%= f.label :payment_status, "Mark as Paid", class: "form-check-label", for: "paymentStatusToggle" %>
-                  </div>
+                  <label class="form-label" for="paymentStatusSelect">Payment Received</label>
+                  <%= f.select :payment_status,
+                      options_for_select([
+                        ['Unpaid', 'unpaid'],
+                        ['Partially Paid', 'partially_paid'],
+                        ['Paid', 'paid']
+                      ], 'unpaid'),
+                      {},
+                      { class: "form-select", id: "paymentStatusSelect" } %>
                   <div class="form-text">
                     <i class="bi bi-info-circle me-1"></i>
-                    Toggle this switch if payment has been received
+                    Choose whether payment has been fully received, partially received, or not yet received
                   </div>
                 </div>
 
@@ -1816,29 +1819,30 @@ function showProcessingOverlay() {
 
 // Initialize payment status functionality
 function initializePaymentStatus() {
-  const paymentStatusToggle = document.getElementById('paymentStatusToggle');
+  const paymentStatusSelect = document.getElementById('paymentStatusSelect');
   const paymentStatusAlert = document.getElementById('paymentStatusAlert');
 
-  if (!paymentStatusToggle || !paymentStatusAlert) {
+  if (!paymentStatusSelect || !paymentStatusAlert) {
     console.error('Payment status elements not found');
     return;
   }
 
   // Update payment status display
   function updatePaymentStatusDisplay() {
-    if (paymentStatusToggle.checked) {
-      // Paid status
+    if (paymentStatusSelect.value === 'paid') {
       paymentStatusAlert.className = 'alert alert-success border-success bg-success bg-opacity-10 d-flex align-items-center mb-0';
       paymentStatusAlert.innerHTML = '<i class="bi bi-check-circle text-success me-2"></i><span>Payment received ✓</span>';
+    } else if (paymentStatusSelect.value === 'partially_paid') {
+      paymentStatusAlert.className = 'alert alert-warning border-warning bg-warning bg-opacity-10 d-flex align-items-center mb-0';
+      paymentStatusAlert.innerHTML = '<i class="bi bi-clock-history text-warning me-2"></i><span>Payment partially received</span>';
     } else {
-      // Unpaid status
       paymentStatusAlert.className = 'alert alert-light border d-flex align-items-center mb-0';
       paymentStatusAlert.innerHTML = '<i class="bi bi-exclamation-triangle text-warning me-2"></i><span>Payment not received</span>';
     }
   }
 
   // Listen for changes
-  paymentStatusToggle.addEventListener('change', updatePaymentStatusDisplay);
+  paymentStatusSelect.addEventListener('change', updatePaymentStatusDisplay);
 
   // Initial display update
   updatePaymentStatusDisplay();

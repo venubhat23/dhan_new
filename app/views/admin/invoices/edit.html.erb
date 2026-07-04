@@ -83,15 +83,7 @@
                   <div class="col-md-5">
                     <label class="form-label">Product</label>
                     <select name="invoice[invoice_items_attributes][<%= index %>][product_id]" class="form-select product-select" data-current-product="<%= item.product_id %>" onchange="updateProductPrice(this)">
-                      <option value="">Select Product...</option>
-                      <% Product.active.includes(:category).order(:name).each do |product| %>
-                        <option value="<%= product.id %>"
-                                data-price="<%= product.selling_price %>"
-                                data-description="<%= product.name %>"
-                                <%= 'selected' if item.product_id == product.id %>>
-                          <%= product.name %> - ₹<%= product.selling_price %>/<%= product.unit_type %>
-                        </option>
-                      <% end %>
+                      <%= invoice_product_options(selected_product_id: item.product_id, selected_unit_price: item.unit_price) %>
                     </select>
                   </div>
                   <div class="col-md-2">
@@ -160,14 +152,7 @@
                   <div class="col-md-5">
                     <label class="form-label">Product</label>
                     <select name="" class="form-select product-select" onchange="updateProductPrice(this)">
-                      <option value="">Select Product...</option>
-                      <% Product.active.includes(:category).order(:name).each do |product| %>
-                        <option value="<%= product.id %>"
-                                data-price="<%= product.selling_price %>"
-                                data-description="<%= product.name %>">
-                          <%= product.name %> - ₹<%= product.selling_price %>/<%= product.unit_type %>
-                        </option>
-                      <% end %>
+                      <%= invoice_product_options %>
                     </select>
                   </div>
                   <div class="col-md-2">

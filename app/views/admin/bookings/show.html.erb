@@ -29,6 +29,14 @@
           Mark as Paid & Invoice
         <% end %>
       <% end %>
+      <% if @booking.payment_status_unpaid? %>
+        <%= button_to admin_booking_path(@booking, list_state: @list_state), method: :patch, class: "btn btn-outline-warning",
+              params: { booking: { payment_status: 'partially_paid' } },
+              data: { confirm: "Mark this booking as partially paid?" } do %>
+          <i class="bi bi-clock-history me-1"></i>
+          Mark as Partially Paid
+        <% end %>
+      <% end %>
     <% end %>
 
 
@@ -194,7 +202,7 @@
       <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Booking Summary</h5>
         <span class="badge bg-<%= @booking.payment_status == 'paid' ? 'success' : @booking.payment_status == 'partially_paid' ? 'warning' : 'danger' %>-subtle text-<%= @booking.payment_status == 'paid' ? 'success' : @booking.payment_status == 'partially_paid' ? 'warning' : 'danger' %>">
-          <%= @booking.payment_status&.humanize || 'Unpaid' %>
+          <%= @booking.payment_status_display %>
         </span>
       </div>
       <div class="card-body">
