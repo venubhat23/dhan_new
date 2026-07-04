@@ -452,7 +452,7 @@
     </div>
 
     <!-- Quick Access Section -->
-    <% if current_user.has_sidebar_permission?('customers') || current_user.has_sidebar_permission?('bookings') || current_user.has_sidebar_permission?('products') %>
+    <% if current_user.has_sidebar_permission?('customers') || current_user.has_sidebar_permission?('bookings') || current_user.has_sidebar_permission?('products') || current_user.has_sidebar_permission?('invoices') %>
     <div class="nav-section">
       <div class="nav-section-title">Quick Access</div>
       <ul class="nav-menu">
@@ -496,6 +496,21 @@
                 </div>
               </div>
               <span class="nav-text">Products</span>
+              <div class="nav-indicator"></div>
+            <% end %>
+          </li>
+        <% end %>
+
+        <!-- Invoices -->
+        <% if current_user.has_sidebar_permission?('invoices') %>
+          <li class="nav-item">
+            <%= link_to admin_invoices_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/invoices')}" do %>
+              <div class="nav-icon-modern">
+                <div class="icon-bg gradient-cyan">
+                  <i class="bi bi-receipt"></i>
+                </div>
+              </div>
+              <span class="nav-text">Invoices</span>
               <div class="nav-indicator"></div>
             <% end %>
           </li>
@@ -729,7 +744,7 @@
     </div>
 
     <!-- Subscription Section -->
-    <% if current_user.has_sidebar_permission?('customer_formats') || current_user.has_sidebar_permission?('subscriptions') || current_user.has_sidebar_permission?('invoices') || current_user.has_sidebar_permission?('notes') || current_user.has_sidebar_permission?('pending_amounts') || current_user.has_sidebar_permission?('invoice_check') %>
+    <% if current_user.has_sidebar_permission?('customer_formats') || current_user.has_sidebar_permission?('subscriptions') || current_user.has_sidebar_permission?('notes') || current_user.has_sidebar_permission?('pending_amounts') || current_user.has_sidebar_permission?('invoice_check') %>
     <div class="nav-section">
       <div class="nav-section-title">Subscription</div>
       <ul class="nav-menu">
@@ -758,21 +773,6 @@
               </div>
             </div>
             <span class="nav-text">Subscriptions</span>
-            <div class="nav-indicator"></div>
-          <% end %>
-        </li>
-        <% end %>
-
-        <!-- Invoices -->
-        <% if current_user.has_sidebar_permission?('invoices') %>
-        <li class="nav-item">
-          <%= link_to admin_invoices_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/invoices')}" do %>
-            <div class="nav-icon-modern">
-              <div class="icon-bg gradient-cyan">
-                <i class="bi bi-receipt"></i>
-              </div>
-            </div>
-            <span class="nav-text">Invoices</span>
             <div class="nav-indicator"></div>
           <% end %>
         </li>
