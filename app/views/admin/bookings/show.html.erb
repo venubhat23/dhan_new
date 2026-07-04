@@ -157,14 +157,14 @@
       <div class="col-md-4">
         <% if @booking.can_cancel? %>
           <h6 class="text-muted mb-2">Quick Actions:</h6>
-          <%= form_with url: cancel_order_admin_booking_path(@booking), method: :patch, local: true, class: "mb-2" do |f| %>
+          <%= form_with url: cancel_order_admin_booking_path(@booking, list_state: @list_state), method: :patch, local: true, class: "mb-2" do |f| %>
             <%= f.text_field :reason, placeholder: "Cancellation reason (optional)", class: "form-control form-control-sm mb-2" %>
             <%= f.submit "Cancel Order", class: "btn btn-danger btn-sm w-100", confirm: "Are you sure you want to cancel this order?" %>
           <% end %>
         <% end %>
 
         <% if @booking.out_for_delivery? %>
-          <%= link_to mark_delivered_admin_booking_path(@booking), method: :patch,
+          <%= link_to mark_delivered_admin_booking_path(@booking, list_state: @list_state), method: :patch,
               class: "btn btn-success btn-sm w-100 mb-2",
               confirm: "Mark this order as delivered?" do %>
             <i class="bi bi-check-circle me-1"></i>
@@ -173,7 +173,7 @@
         <% end %>
 
         <% if @booking.delivered? %>
-          <%= link_to mark_completed_admin_booking_path(@booking), method: :patch,
+          <%= link_to mark_completed_admin_booking_path(@booking, list_state: @list_state), method: :patch,
               class: "btn btn-primary btn-sm w-100",
               confirm: "Mark this order as completed?" do %>
             <i class="bi bi-check-all me-1"></i>
