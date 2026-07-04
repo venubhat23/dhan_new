@@ -253,7 +253,8 @@
       end
 
       total_tax       = total_cgst + total_sgst + total_igst
-      final_total     = subtotal_amount
+      delivery_charge = @booking.shipping_charges.to_f
+      final_total     = subtotal_amount + delivery_charge
       business_settings = @business
     %>
 
@@ -364,6 +365,13 @@
         <span>₹ <%= number_with_delimiter(subtotal_amount.round(2), delimiter: ',') %></span>
       </div>
 
+      <% if delivery_charge > 0 %>
+        <div class="inv-subtotal">
+          <span>DELIVERY CHARGE</span>
+          <span>₹ <%= number_with_delimiter(delivery_charge.round(2), delimiter: ',') %></span>
+        </div>
+      <% end %>
+
       <!-- Bank details + Tax summary -->
       <div class="inv-details">
         <!-- Bank details -->
@@ -452,7 +460,7 @@
             <div class="tax-total-block">
               <div class="tax-row" style="font-weight:bold;">
                 <span>TOTAL AMOUNT</span>
-                <span class="tax-val">₹ <%= number_with_delimiter(subtotal_amount.round(2), delimiter: ',') %></span>
+                <span class="tax-val">₹ <%= number_with_delimiter(final_total.round(2), delimiter: ',') %></span>
               </div>
               <div class="tax-row" style="font-size:10px;">
                 <span>Received Amount</span>
@@ -472,7 +480,7 @@
                 r+=ones[n]+" " if n>0
                 r.strip
               end
-              amt=subtotal_amount.to_i; words=""
+              amt=final_total.to_i; words=""
               if amt>=10000000; words+=conv_h(amt/10000000,ones,teens,tens)+" Crore "; amt%=10000000; end
               if amt>=100000;   words+=conv_h(amt/100000,ones,teens,tens)+" Lakh "; amt%=100000; end
               if amt>=1000;     words+=conv_h(amt/1000,ones,teens,tens)+" Thousand "; amt%=1000; end
