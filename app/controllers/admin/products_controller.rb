@@ -1,7 +1,8 @@
 class Admin::ProductsController < Admin::ApplicationController
   include LocationHelper
 
-  before_action :set_product, only: [:show, :edit, :update, :destroy, :toggle_status, :detail, :dependencies]
+  before_action :set_product, only: [:show, :edit, :update, :destroy, :toggle_status, :detail, :dependencies,
+                                      :manage_images, :upload_main_image, :upload_additional_image, :destroy_gallery_image]
   before_action :authenticate_user!
 
   def index
@@ -431,6 +432,61 @@ class Admin::ProductsController < Admin::ApplicationController
         format.json { render json: { error: "Deletion failed: #{e.message}" }, status: :internal_server_error }
       end
     end
+  end
+
+  # Dedicated page for viewing/editing/deleting a single product's images
+  def manage_images
+    @variants = @product.product_variants.ordered
+    @gallery = @product.image_gallery
+  end
+
+  def upload_main_image
+    if params[:image].blank?
+      redirect_to manage_images_admin_product_path(@product), alert: 'Please choose an image to upload.' and return
+    end
+
+    result = R2Service.upload(params[:image], folder: 'products')
+
+    if result[:error]
+      redirect_to manage_images_admin_product_path(@product), alert: "Upload failed: #{result[:error]}"
+    else
+      old_url = @product.r2_image_url
+      @product.update!(r2_image_url: result[:public_url])
+
+      if old_url.present?
+        old_key = extract_r2_key_from_url(old_url)
+        R2Service.delete(old_key) if old_key
+      end
+
+      redirect_to manage_images_admin_product_path(@product), notice: 'Main image updated successfully.'
+    end
+  end
+
+  def upload_additional_image
+    if params[:image].blank?
+      redirect_to manage_images_admin_product_path(@product), alert: 'Please choose an image to upload.' and return
+    end
+
+    result = R2Service.upload(params[:image], folder: 'products')
+
+    if result[:error]
+      redirect_to manage_images_admin_product_path(@product), alert: "Upload failed: #{result[:error]}"
+    else
+      @product.add_additional_r2_image(result[:public_url])
+      @product.save!
+      redirect_to manage_images_admin_product_path(@product), notice: 'Image added successfully.'
+    end
+  end
+
+  def destroy_gallery_image
+    removed_url = @product.remove_gallery_image!(params[:gallery_id])
+
+    if removed_url.present?
+      removed_key = extract_r2_key_from_url(removed_url)
+      R2Service.delete(removed_key) if removed_key
+    end
+
+    redirect_to manage_images_admin_product_path(@product), notice: 'Image removed successfully.'
   end
 
   private

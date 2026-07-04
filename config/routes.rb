@@ -21,6 +21,13 @@ Rails.application.routes.draw do
       end
     end
     resources :stock_transfers, only: [:index, :new, :create]
+    resources :staff_members do
+      member do
+        patch :toggle_status
+      end
+    end
+    resources :staff_attendances, only: [:create, :destroy]
+    resources :staff_payments, only: [:create, :destroy]
   end
 
   # Vendor invoice public view
@@ -386,6 +393,15 @@ Rails.application.routes.draw do
       end
     end
 
+    # Staff Payout Management
+    resources :staff_members do
+      member do
+        patch :toggle_status
+      end
+    end
+    resources :staff_attendances, only: [:create, :destroy]
+    resources :staff_payments, only: [:create, :destroy]
+
     # Customer Format Management
     resources :customer_formats do
       member do
@@ -720,6 +736,10 @@ Rails.application.routes.draw do
         post :bulk_action
         get :detail
         get :dependencies
+        get :manage_images
+        post :upload_main_image
+        post :upload_additional_image
+        delete :destroy_gallery_image
       end
       collection do
         get :search
@@ -818,6 +838,7 @@ Rails.application.routes.draw do
       patch :system, to: 'system#update'
       put :system, to: 'system#update'
       post 'system/generate_qr_code', to: 'system#generate_qr_code', as: :system_generate_qr_code
+      post 'system/upload_logo', to: 'system#upload_logo', as: :system_upload_logo
     end
   end
 

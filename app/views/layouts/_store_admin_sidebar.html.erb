@@ -189,6 +189,16 @@
         <span class="nav-text">Stock Transfers</span>
       <% end %>
     <% end %>
+
+    <div class="nav-section-title">
+      <i class="fas fa-users me-2"></i>HR
+    </div>
+
+    <%= link_to store_admin_staff_members_path,
+        class: "nav-link-modern #{'active' if controller_name == 'staff_members'}" do %>
+      <div class="icon-bg"><i class="bi bi-person-badge"></i></div>
+      <span class="nav-text">Staff Payout</span>
+    <% end %>
   </div>
 
   <div class="sidebar-footer">

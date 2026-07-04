@@ -1,0 +1,152 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1 fw-bold"><i class="bi bi-person-badge me-2"></i>Staff Payout</h4>
+    <small class="text-muted">Staff, attendance and monthly payments across all stores</small>
+  </div>
+  <%= link_to new_admin_staff_member_path, class: "btn btn-primary" do %>
+    <i class="bi bi-person-plus me-2"></i>Add Staff
+  <% end %>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #3b82f6 !important;">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="card-title mb-2" style="color: #2d3748; font-weight: 600;">Total Staff</h6>
+          <div style="color: #1a202c; font-weight: 800; font-size: 1.8rem;"><%= @total_count %></div>
+        </div>
+        <i class="bi bi-people" style="color: rgba(45,55,72,0.2); font-size: 3rem;"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #10b981 !important;">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="card-title mb-2" style="color: #2d3748; font-weight: 600;">Active</h6>
+          <div style="color: #1a202c; font-weight: 800; font-size: 1.8rem;"><%= @active_count %></div>
+        </div>
+        <i class="bi bi-check-circle" style="color: rgba(45,55,72,0.2); font-size: 3rem;"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #6c757d !important;">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="card-title mb-2" style="color: #2d3748; font-weight: 600;">Inactive</h6>
+          <div style="color: #1a202c; font-weight: 800; font-size: 1.8rem;"><%= @inactive_count %></div>
+        </div>
+        <i class="bi bi-x-circle" style="color: rgba(45,55,72,0.2); font-size: 3rem;"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #dc3545 !important;">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="card-title mb-2" style="color: #2d3748; font-weight: 600;">Pending This Month</h6>
+          <div style="color: #1a202c; font-weight: 800; font-size: 1.5rem;">₹<%= number_with_delimiter(@total_pending.round(0)) %></div>
+        </div>
+        <i class="bi bi-cash-coin" style="color: rgba(45,55,72,0.2); font-size: 3rem;"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Store filter -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <%= form_tag admin_staff_members_path, method: :get, local: true, class: "row g-3 align-items-end" do %>
+      <div class="col-md-4">
+        <label class="form-label small">Store</label>
+        <%= select_tag :store_id,
+            options_for_select([["All Stores", ""]] + @stores.map { |s| [s.name, s.id] }, params[:store_id]),
+            class: "form-select form-select-sm" %>
+      </div>
+      <div class="col-md-3">
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i>Filter</button>
+          <%= link_to admin_staff_members_path, class: "btn btn-outline-secondary btn-sm" do %>
+            <i class="bi bi-x me-1"></i>Clear
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-0">
+    <h6 class="mb-0"><i class="bi bi-list me-2"></i>Staff List</h6>
+  </div>
+  <div class="card-body p-0">
+    <% if @staff_members.any? %>
+      <% today = Date.current %>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>Store</th>
+              <th>Designation</th>
+              <th>Mobile</th>
+              <th>Monthly Salary</th>
+              <th>Paid (<%= today.strftime('%b') %>)</th>
+              <th>Pending (<%= today.strftime('%b') %>)</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @staff_members.each do |staff| %>
+              <tr>
+                <td><strong><%= staff.name %></strong></td>
+                <td><%= staff.store.name %></td>
+                <td><%= staff.designation.presence || '—' %></td>
+                <td><%= staff.mobile.presence || '—' %></td>
+                <td>₹<%= number_with_delimiter(staff.monthly_salary.to_f.round(2)) %></td>
+                <td class="text-success">₹<%= number_with_delimiter(staff.paid_for(today.month, today.year).round(2)) %></td>
+                <td class="<%= staff.pending_for(today.month, today.year) > 0 ? 'text-danger' : 'text-muted' %>">
+                  ₹<%= number_with_delimiter(staff.pending_for(today.month, today.year).round(2)) %>
+                </td>
+                <td>
+                  <% if staff.active? %>
+                    <span class="badge bg-success-subtle text-success">Active</span>
+                  <% else %>
+                    <span class="badge bg-secondary-subtle text-secondary">Inactive</span>
+                  <% end %>
+                </td>
+                <td>
+                  <div class="btn-group" role="group">
+                    <%= link_to admin_staff_member_path(staff), class: "btn btn-sm btn-outline-primary" do %>
+                      <i class="bi bi-eye"></i>
+                    <% end %>
+                    <%= link_to edit_admin_staff_member_path(staff), class: "btn btn-sm btn-outline-secondary" do %>
+                      <i class="bi bi-pencil"></i>
+                    <% end %>
+                    <%= link_to toggle_status_admin_staff_member_path(staff),
+                        data: { confirm: "#{staff.active? ? 'Disable' : 'Enable'} #{staff.name}?", turbo_method: :patch },
+                        class: "btn btn-sm #{staff.active? ? 'btn-outline-danger' : 'btn-outline-success'}" do %>
+                      <i class="bi bi-<%= staff.active? ? 'slash-circle' : 'check-circle' %>"></i>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="text-center py-5">
+        <i class="bi bi-people fs-1 text-muted mb-3"></i>
+        <h5 class="text-muted">No Staff Found</h5>
+        <%= link_to "Add First Staff", new_admin_staff_member_path, class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  </div>
+</div>

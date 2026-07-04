@@ -418,6 +418,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             Edit Product
                           <% end %>
                         </li>
+                        <li>
+                          <%= link_to manage_images_admin_product_path(product), class: "dropdown-item" do %>
+                            <i class="bi bi-image me-2"></i>
+                            Change Image
+                          <% end %>
+                        </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                           <button type="button"

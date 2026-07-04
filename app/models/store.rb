@@ -7,6 +7,7 @@ class Store < ApplicationRecord
   has_many :stock_batches, foreign_key: :store_id, dependent: :nullify
   has_many :stock_transfers_received, class_name: 'StockTransfer', foreign_key: :to_store_id, dependent: :destroy
   has_many :stock_transfers_sent, class_name: 'StockTransfer', foreign_key: :from_store_id, dependent: :destroy
+  has_many :staff_members, dependent: :destroy
 
   # Virtual attributes for store creation form
   attr_accessor :admin_username, :admin_email, :admin_password, :admin_first_name, :admin_last_name, :admin_mobile

@@ -115,7 +115,9 @@ class Admin::Settings::SystemController < Admin::Settings::BaseController
           account_number: params[:account_number],
           ifsc_code: params[:ifsc_code],
           upi_id: params[:upi_id],
-          terms_and_conditions: params[:terms_and_conditions]
+          terms_and_conditions: params[:terms_and_conditions],
+          website: params[:website],
+          logo_url: params[:logo_url]
         }
 
         @business_setting = SystemSetting.update_business_settings(business_params)
@@ -204,6 +206,33 @@ class Admin::Settings::SystemController < Admin::Settings::BaseController
       redirect_to admin_settings_system_path, notice: success_messages.join(' ')
     else
       redirect_to admin_settings_system_path, alert: 'Please enter valid values to update.'
+    end
+  end
+
+  # POST /admin/settings/system/upload_logo
+  def upload_logo
+    respond_to do |format|
+      if params[:logo].present?
+        begin
+          result = R2Service.upload(params[:logo], folder: 'business_logo')
+
+          if result[:error]
+            format.json { render json: { error: result[:error] }, status: :unprocessable_entity }
+          else
+            format.json { render json: {
+              key: result[:key],
+              filename: result[:filename],
+              public_url: result[:public_url],
+              size: result[:size]
+            } }
+          end
+        rescue => e
+          Rails.logger.error "Logo R2 upload exception: #{e.message}"
+          format.json { render json: { error: "Upload failed: #{e.message}" }, status: :internal_server_error }
+        end
+      else
+        format.json { render json: { error: "No logo file provided" }, status: :bad_request }
+      end
     end
   end
 

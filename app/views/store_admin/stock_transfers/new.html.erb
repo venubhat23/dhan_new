@@ -37,14 +37,14 @@
           <button type="button" class="btn btn-outline-primary" id="stInStockBtn" onclick="stStockFilter('instock')">In Stock</button>
         </div>
       </div>
-      <div class="col-auto d-flex gap-2 align-items-center ms-md-auto">
-        <button type="button" class="btn btn-sm btn-outline-success" onclick="stSelectAllVisible()">
-          <i class="bi bi-check2-square me-1"></i>Select All
-        </button>
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="stDeselectAllVisible()">
-          <i class="bi bi-square me-1"></i>Deselect All
-        </button>
-      </div>
+    </div>
+    <div class="d-flex justify-content-end gap-2 mt-2 pt-2 border-top">
+      <button type="button" class="btn btn-sm fw-semibold" style="background:linear-gradient(135deg,#1C7C54,#10b981);color:#fff;border:none;border-radius:6px;" onclick="stSelectAllVisible()">
+        <i class="bi bi-check2-square me-1"></i>Select All (incl. variants)
+      </button>
+      <button type="button" class="btn btn-sm fw-semibold" style="background:#fff;color:#dc3545;border:1px solid #dc3545;border-radius:6px;" onclick="stDeselectAllVisible()">
+        <i class="bi bi-square me-1"></i>Deselect All
+      </button>
     </div>
   </div>
 </div>
@@ -321,26 +321,42 @@ function stClearAll() {
   stRender();
 }
 
-// Adds every currently-visible (filtered) non-variant, in-stock product to the cart at qty 1
+// Adds every currently-visible (filtered), in-stock product to the cart.
+// Products with variants get EVERY in-stock variant added as its own line.
 function stSelectAllVisible() {
-  let added = 0, skippedVariant = 0;
+  let addedLines = 0;
   document.querySelectorAll('.st-item').forEach(el => {
     if (el.style.display === 'none') return;
     const id = parseInt(el.dataset.id);
-    const stock = parseFloat(el.dataset.stock) || 0;
-    const hasVariant = !!document.getElementById('st-variant-' + id);
-    if (hasVariant) { skippedVariant++; return; }
-    if (stock <= 0) return;
-    const key = stCartKey(id, null);
-    if (stCart.find(i => i.key === key)) return;
-    stCart.push({ key, productId: id, variantId: null, variantLabel: null, name: el.dataset.pname, sku: el.dataset.psku, stock, qty: 1 });
-    stSetCardState(id, true);
-    added++;
+    const name = el.dataset.pname;
+    const sku = el.dataset.psku;
+    const sel = document.getElementById('st-variant-' + id);
+
+    if (sel) {
+      let any = false;
+      Array.from(sel.options).forEach(opt => {
+        if (!opt.value) return; // skip the "— Select variant —" placeholder
+        const variantId = parseInt(opt.value);
+        const variantStock = parseFloat(opt.dataset.stock) || 0;
+        if (variantStock <= 0) return;
+        const key = stCartKey(id, variantId);
+        if (stCart.find(i => i.key === key)) return;
+        stCart.push({ key, productId: id, variantId, variantLabel: opt.dataset.label, name, sku, stock: variantStock, qty: 1 });
+        any = true;
+        addedLines++;
+      });
+      if (any) stSetCardState(id, true);
+    } else {
+      const stock = parseFloat(el.dataset.stock) || 0;
+      if (stock <= 0) return;
+      const key = stCartKey(id, null);
+      if (stCart.find(i => i.key === key)) return;
+      stCart.push({ key, productId: id, variantId: null, variantLabel: null, name, sku, stock, qty: 1 });
+      stSetCardState(id, true);
+      addedLines++;
+    }
   });
   stRender();
-  if (skippedVariant > 0) {
-    alert(`Added ${added} product(s) to the request.\n${skippedVariant} product(s) need a variant — please add those manually.`);
-  }
 }
 
 function stDeselectAllVisible() {

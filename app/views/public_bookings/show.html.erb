@@ -270,7 +270,7 @@
 
       <!-- Header: logo + company -->
       <div class="inv-header">
-        <img class="inv-logo" src="/logo.jpeg" alt="Logo" />
+        <img class="inv-logo" src="<%= business_settings&.logo_display_url || '/logo.jpeg' %>" alt="Logo" />
         <div>
           <div class="inv-company-name"><%= business_settings&.business_name || 'Dhanvantari Naturals' %></div>
           <div class="inv-company-info">
@@ -279,6 +279,9 @@
             <strong>GSTIN:</strong> <%= business_settings&.gstin || '29AOIPT8113K1ZC' %><br/>
             <strong>PAN:</strong> <%= business_settings&.pan_number || 'AOIPT8113K' %> &nbsp;
             <strong>Email:</strong> <%= business_settings&.email || 'Dhanvantarinaturalsfarm@gmail.com' %>
+            <% if business_settings&.website.present? %>
+              &nbsp; <strong>Website:</strong> <%= business_settings.website %>
+            <% end %>
           </div>
         </div>
       </div>

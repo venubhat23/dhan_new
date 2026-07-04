@@ -80,6 +80,7 @@ class Customer::InvoicesController < Customer::BaseController
   def set_booking_invoice
     # Ensure customer can only access their own invoice bookings
     @invoice = current_customer.bookings.where.not(invoice_number: [nil, '']).find(params[:id])
+    @business_settings = SystemSetting.business_settings
   rescue ActiveRecord::RecordNotFound
     redirect_to customer_invoices_path, alert: 'Invoice not found.'
   end

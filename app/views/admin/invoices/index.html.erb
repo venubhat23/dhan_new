@@ -325,7 +325,7 @@
                       <% end %>
                     <% end %>
                     <% if respond_to?(:download_pdf_admin_invoice_path) %>
-                      <%= link_to download_pdf_admin_invoice_path(model_object),
+                      <%= link_to download_pdf_admin_invoice_path(model_object, format: :pdf),
                                  class: "btn btn-sm btn-outline-info", target: "_blank",
                                  title: "Download PDF", data: { bs_toggle: "tooltip" } do %>
                         <i class="bi bi-download"></i>

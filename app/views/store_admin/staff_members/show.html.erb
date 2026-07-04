@@ -1,0 +1,213 @@
+<% content_for :page_title, @staff_member.name %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1">
+      <%= @staff_member.name %>
+      <% if @staff_member.active? %>
+        <span class="badge bg-success-subtle text-success align-middle">Active</span>
+      <% else %>
+        <span class="badge bg-secondary-subtle text-secondary align-middle">Inactive</span>
+      <% end %>
+    </h4>
+    <small class="text-muted"><%= @staff_member.designation.presence || 'Staff' %> &bull; <%= @current_store.name %></small>
+  </div>
+  <div class="d-flex gap-2">
+    <%= link_to edit_store_admin_staff_member_path(@staff_member), class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-pencil me-1"></i>Edit
+    <% end %>
+    <%= link_to toggle_status_store_admin_staff_member_path(@staff_member),
+        data: { confirm: "#{@staff_member.active? ? 'Disable' : 'Enable'} #{@staff_member.name}?", turbo_method: :patch },
+        class: "btn #{@staff_member.active? ? 'btn-outline-danger' : 'btn-outline-success'}" do %>
+      <i class="bi bi-<%= @staff_member.active? ? 'slash-circle' : 'check-circle' %> me-1"></i><%= @staff_member.active? ? 'Disable' : 'Enable' %>
+    <% end %>
+    <%= link_to store_admin_staff_members_path, class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-arrow-left me-1"></i>Back
+    <% end %>
+  </div>
+</div>
+
+<!-- Contact / basic info -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-3"><small class="text-muted d-block">Mobile</small><strong><%= @staff_member.mobile.presence || '—' %></strong></div>
+      <div class="col-md-3"><small class="text-muted d-block">Email</small><strong><%= @staff_member.email.presence || '—' %></strong></div>
+      <div class="col-md-3"><small class="text-muted d-block">Joining Date</small><strong><%= @staff_member.joining_date&.strftime('%d %b %Y') || '—' %></strong></div>
+      <div class="col-md-3"><small class="text-muted d-block">Monthly Salary</small><strong>₹<%= number_with_delimiter(@staff_member.monthly_salary.to_f.round(2)) %></strong></div>
+    </div>
+    <% if @staff_member.notes.present? %>
+      <hr>
+      <small class="text-muted d-block">Notes</small>
+      <%= @staff_member.notes %>
+    <% end %>
+  </div>
+</div>
+
+<!-- Month navigator -->
+<% current_period = Date.new(@year, @month, 1) %>
+<% prev_period = current_period.prev_month %>
+<% next_period = current_period.next_month %>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <%= link_to store_admin_staff_member_path(@staff_member, month: prev_period.month, year: prev_period.year), class: "btn btn-outline-secondary btn-sm" do %>
+    <i class="bi bi-chevron-left"></i> <%= prev_period.strftime('%b %Y') %>
+  <% end %>
+  <h5 class="mb-0"><%= current_period.strftime('%B %Y') %></h5>
+  <%= link_to store_admin_staff_member_path(@staff_member, month: next_period.month, year: next_period.year), class: "btn btn-outline-secondary btn-sm" do %>
+    <%= next_period.strftime('%b %Y') %> <i class="bi bi-chevron-right"></i>
+  <% end %>
+</div>
+
+<!-- Pay + attendance summary for the month -->
+<div class="row mb-4">
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #10b981 !important;">
+      <div class="card-body">
+        <h6 class="card-title mb-2" style="color:#2d3748;font-weight:600;">Paid</h6>
+        <div style="color:#1a202c;font-weight:800;font-size:1.5rem;">₹<%= number_with_delimiter(@paid.round(2)) %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #dc3545 !important;">
+      <div class="card-body">
+        <h6 class="card-title mb-2" style="color:#2d3748;font-weight:600;">Pending</h6>
+        <div style="color:#1a202c;font-weight:800;font-size:1.5rem;">₹<%= number_with_delimiter(@pending.round(2)) %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 mb-3">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <h6 class="card-title mb-2" style="color:#2d3748;font-weight:600;">Attendance</h6>
+        <div class="d-flex gap-3">
+          <span class="text-success">Present: <strong><%= @attendance_summary['present'] %></strong></span>
+          <span class="text-danger">Absent: <strong><%= @attendance_summary['absent'] %></strong></span>
+          <span class="text-warning">Half-day: <strong><%= @attendance_summary['half_day'] %></strong></span>
+          <span class="text-muted">Leave: <strong><%= @attendance_summary['leave'] %></strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Attendance -->
+  <div class="col-lg-6 mb-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-0">
+        <h6 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Attendance</h6>
+      </div>
+      <div class="card-body">
+        <%= form_with url: store_admin_staff_attendances_path, method: :post, local: true, class: "row g-2 align-items-end mb-3" do |f| %>
+          <%= hidden_field_tag "staff_attendance[staff_member_id]", @staff_member.id %>
+          <%= hidden_field_tag :month, @month %>
+          <%= hidden_field_tag :year, @year %>
+          <div class="col-md-4">
+            <label class="form-label small mb-1">Date</label>
+            <%= date_field_tag "staff_attendance[attendance_date]", Date.current, class: "form-control form-control-sm", required: true %>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small mb-1">Status</label>
+            <%= select_tag "staff_attendance[status]",
+                options_for_select([['Present', 'present'], ['Absent', 'absent'], ['Half Day', 'half_day'], ['Leave', 'leave']]),
+                class: "form-select form-select-sm" %>
+          </div>
+          <div class="col-md-4">
+            <button type="submit" class="btn btn-primary btn-sm w-100">Mark</button>
+          </div>
+        <% end %>
+
+        <% if @attendances.any? %>
+          <div class="table-responsive" style="max-height:300px;overflow-y:auto;">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light">
+                <tr><th>Date</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody>
+                <% @attendances.each do |a| %>
+                  <tr>
+                    <td><%= a.attendance_date.strftime('%d %b %Y') %></td>
+                    <td>
+                      <% badge = { 'present' => 'success', 'absent' => 'danger', 'half_day' => 'warning', 'leave' => 'secondary' }[a.status] %>
+                      <span class="badge bg-<%= badge %>-subtle text-<%= badge %>"><%= a.status.humanize %></span>
+                    </td>
+                    <td class="text-end">
+                      <%= link_to store_admin_staff_attendance_path(a, staff_member_id: @staff_member.id),
+                          data: { confirm: "Remove this attendance record?", turbo_method: :delete },
+                          class: "btn btn-sm btn-outline-danger" do %>
+                        <i class="bi bi-trash"></i>
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <p class="text-muted text-center mb-0 py-3">No attendance records for this month.</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payments -->
+  <div class="col-lg-6 mb-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-0">
+        <h6 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Payments</h6>
+      </div>
+      <div class="card-body">
+        <%= form_with url: store_admin_staff_payments_path, method: :post, local: true, class: "row g-2 align-items-end mb-3" do |f| %>
+          <%= hidden_field_tag "staff_payment[staff_member_id]", @staff_member.id %>
+          <%= hidden_field_tag "staff_payment[month]", @month %>
+          <%= hidden_field_tag "staff_payment[year]", @year %>
+          <div class="col-md-5">
+            <label class="form-label small mb-1">Amount</label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">₹</span>
+              <%= number_field_tag "staff_payment[amount]", nil, class: "form-control", step: 0.01, min: 0.01, required: true %>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small mb-1">Date</label>
+            <%= date_field_tag "staff_payment[payment_date]", Date.current, class: "form-control form-control-sm", required: true %>
+          </div>
+          <div class="col-md-3">
+            <button type="submit" class="btn btn-primary btn-sm w-100">Add</button>
+          </div>
+          <div class="col-12">
+            <small class="text-muted">Recorded against <%= current_period.strftime('%B %Y') %></small>
+          </div>
+        <% end %>
+
+        <% if @payments.any? %>
+          <div class="table-responsive" style="max-height:260px;overflow-y:auto;">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light">
+                <tr><th>Date</th><th>Amount</th><th></th></tr>
+              </thead>
+              <tbody>
+                <% @payments.each do |p| %>
+                  <tr>
+                    <td><%= p.payment_date.strftime('%d %b %Y') %></td>
+                    <td class="text-success">₹<%= number_with_delimiter(p.amount.to_f.round(2)) %></td>
+                    <td class="text-end">
+                      <%= link_to store_admin_staff_payment_path(p, staff_member_id: @staff_member.id),
+                          data: { confirm: "Remove this payment record?", turbo_method: :delete },
+                          class: "btn btn-sm btn-outline-danger" do %>
+                        <i class="bi bi-trash"></i>
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <p class="text-muted text-center mb-0 py-3">No payments recorded for this month.</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

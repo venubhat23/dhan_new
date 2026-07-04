@@ -1,0 +1,123 @@
+<div class="mb-3">
+  <div class="d-flex justify-content-between align-items-center">
+    <h4 class="mb-0">
+      <i class="bi bi-image me-2"></i>Manage Images &mdash; <%= @product.name %>
+    </h4>
+    <div class="d-flex gap-2">
+      <%= link_to admin_products_path, class: "btn btn-outline-secondary btn-sm" do %>
+        <i class="bi bi-arrow-left me-1"></i>Back to Products
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Main Image -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white">
+        <strong><i class="bi bi-star-fill text-warning me-1"></i>Main Image</strong>
+      </div>
+      <div class="card-body">
+        <% main_entry = @gallery.find { |img| img[:role] == 'main' } %>
+        <% if main_entry %>
+          <img src="<%= main_entry[:url] %>" class="img-thumbnail w-100 mb-2" style="height: 220px; object-fit: cover;">
+          <div class="text-muted small mb-3">Source: <%= main_entry[:source] %></div>
+          <%= button_to destroy_gallery_image_admin_product_path(@product, gallery_id: main_entry[:id]),
+                        method: :delete,
+                        class: "btn btn-outline-danger btn-sm w-100",
+                        form: { data: { turbo_confirm: "Delete the main image?" } } do %>
+            <i class="bi bi-trash me-1"></i>Delete Main Image
+          <% end %>
+        <% else %>
+          <div class="text-center text-muted py-5">
+            <i class="bi bi-image display-4 d-block mb-2"></i>
+            No main image set
+          </div>
+        <% end %>
+
+        <hr>
+
+        <%= form_with url: upload_main_image_admin_product_path(@product), method: :post, local: true, html: { multipart: true } do |f| %>
+          <label class="form-label small">
+            <i class="bi bi-pencil-square me-1"></i><%= main_entry ? "Replace main image" : "Upload main image" %>
+          </label>
+          <div class="input-group">
+            <%= f.file_field :image, class: "form-control form-control-sm", accept: "image/*", required: true %>
+            <%= f.submit "Upload", class: "btn btn-primary btn-sm" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional Images -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong><i class="bi bi-images me-1"></i>Additional Images</strong>
+        <%= form_with url: upload_additional_image_admin_product_path(@product), method: :post, local: true, html: { multipart: true, class: "d-flex gap-2" } do |f| %>
+          <%= f.file_field :image, class: "form-control form-control-sm", accept: "image/*", required: true %>
+          <%= f.submit "Add", class: "btn btn-outline-primary btn-sm text-nowrap" %>
+        <% end %>
+      </div>
+      <div class="card-body">
+        <% additional_entries = @gallery.select { |img| img[:role] == 'additional' } %>
+        <% if additional_entries.any? %>
+          <div class="row g-3">
+            <% additional_entries.each do |img| %>
+              <div class="col-lg-3 col-md-4 col-sm-6">
+                <div class="position-relative">
+                  <img src="<%= img[:url] %>" class="img-thumbnail w-100" style="height: 140px; object-fit: cover;">
+                  <span class="badge bg-secondary position-absolute top-0 start-0 m-1"><%= img[:source] %></span>
+                  <%= button_to destroy_gallery_image_admin_product_path(@product, gallery_id: img[:id]),
+                                method: :delete,
+                                class: "btn btn-danger btn-sm position-absolute top-0 end-0 m-1",
+                                form: { data: { turbo_confirm: "Delete this image?" } } do %>
+                    <i class="bi bi-trash"></i>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center text-muted py-5">
+            <i class="bi bi-images display-4 d-block mb-2"></i>
+            No additional images
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% if @variants.any? %>
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white">
+      <strong><i class="bi bi-boxes me-1"></i>Variants (<%= @variants.count %>)</strong>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-info small mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        This product's variants do not have separate images &mdash; they all use the main product image shown above.
+      </div>
+      <div class="row g-3">
+        <% @variants.each do |variant| %>
+          <div class="col-lg-2 col-md-3 col-sm-4 col-6 text-center">
+            <% if main_entry %>
+              <img src="<%= main_entry[:url] %>" class="img-thumbnail w-100 mb-1" style="height: 90px; object-fit: cover;">
+            <% else %>
+              <div class="border rounded d-flex align-items-center justify-content-center mb-1 bg-light" style="height: 90px;">
+                <i class="bi bi-image text-muted"></i>
+              </div>
+            <% end %>
+            <small class="d-block"><%= variant.label %></small>
+            <% if variant.is_default? %>
+              <span class="badge bg-primary-subtle text-primary">Default</span>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>

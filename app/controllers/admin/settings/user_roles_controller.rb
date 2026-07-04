@@ -166,6 +166,9 @@ class Admin::Settings::UserRolesController < Admin::Settings::BaseController
         { key: 'bookings', name: 'Bookings' },
         { key: 'stores', name: 'Stores' }
       ],
+      'HR' => [
+        { key: 'staff_payout', name: 'Staff Payout' }
+      ],
       'Subscription' => [
         { key: 'customer_formats', name: 'Customer Format' },
         { key: 'subscriptions', name: 'Subscriptions' },

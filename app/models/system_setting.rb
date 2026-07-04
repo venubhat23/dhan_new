@@ -129,10 +129,16 @@ class SystemSetting < ApplicationRecord
       account_number: params[:account_number],
       ifsc_code: params[:ifsc_code],
       upi_id: params[:upi_id],
-      terms_and_conditions: params[:terms_and_conditions]
+      terms_and_conditions: params[:terms_and_conditions],
+      website: params[:website],
+      logo_url: params[:logo_url].presence || setting.logo_url
     )
 
     setting
+  end
+
+  def logo_display_url
+    logo_url.presence || '/logo.jpeg'
   end
 
   def formatted_terms_and_conditions

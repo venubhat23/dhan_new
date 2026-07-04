@@ -705,7 +705,7 @@
       <table class="invoice-header-table">
         <tr>
           <td class="logo-cell">
-            <img class="logo" src="/logo.jpeg" alt="Dhanvantari Naturals Logo" />
+            <img class="logo" src="<%= business_settings&.logo_display_url || '/logo.jpeg' %>" alt="Dhanvantari Naturals Logo" />
           </td>
           <td class="company-info-cell">
             <div class="company-name"><%= business_settings&.business_name || 'Dhanvantari Naturals' %></div>
@@ -717,6 +717,9 @@
               <span class="highlight">GSTIN:</span> <%= business_settings&.gstin || '29AOIPT8113K1ZC' %> &nbsp;&nbsp;
               <span class="highlight">PAN Number:</span> <%= business_settings&.pan_number || 'AOIPT8113K' %><br />
               <span class="highlight">Email:</span> <%= business_settings&.email || 'Dhanvantari Naturalsfarm@gmail.com' %>
+              <% if business_settings&.website.present? %>
+                &nbsp;&nbsp;<span class="highlight">Website:</span> <%= business_settings.website %>
+              <% end %>
             </div>
           </td>
         </tr>

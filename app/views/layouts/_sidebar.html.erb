@@ -663,6 +663,27 @@
       </ul>
     </div>
 
+    <!-- HR Section -->
+    <% if current_user.has_sidebar_permission?('staff_payout') %>
+    <div class="nav-section">
+      <div class="nav-section-title">HR</div>
+      <ul class="nav-menu">
+        <!-- Staff Payout -->
+        <li class="nav-item">
+          <%= link_to admin_staff_members_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/staff_members')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-teal">
+                <i class="bi bi-person-badge"></i>
+              </div>
+            </div>
+            <span class="nav-text">Staff Payout</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+      </ul>
+    </div>
+    <% end %>
+
     <!-- Store Analytics Section -->
     <div class="nav-section">
       <div class="nav-section-title">Store Analytics</div>

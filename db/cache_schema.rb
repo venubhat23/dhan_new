@@ -10,19 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_01_034135) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_04_120002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
-  create_table "active_storage_attachments", force: :cascade do |t|
-    t.string "name", null: false
-    t.string "record_type", null: false
-    t.bigint "record_id", null: false
-    t.bigint "blob_id", null: false
-    t.datetime "created_at", null: false
-    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
-    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
-  end
+# Could not dump table "active_storage_attachments" because of following ActiveRecord::ConnectionFailed
+#   PQconsumeInput() could not receive data from server: Network is unreachable
+SSL SYSCALL error: Network is unreachable
+
 
   create_table "active_storage_blobs", force: :cascade do |t|
     t.string "key", null: false
@@ -1071,6 +1066,33 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_01_034135) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "staff_attendances", force: :cascade do |t|
+    t.bigint "staff_member_id", null: false
+    t.date "attendance_date", null: false
+    t.string "status", default: "present", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["staff_member_id", "attendance_date"], name: "index_staff_attendances_on_member_and_date", unique: true
+    t.index ["staff_member_id"], name: "index_staff_attendances_on_staff_member_id"
+  end
+
+  create_table "staff_members", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.string "name", null: false
+    t.string "mobile"
+    t.string "email"
+    t.string "designation"
+    t.decimal "monthly_salary", precision: 10, scale: 2, default: "0.0", null: false
+    t.date "joining_date"
+    t.string "status", default: "active", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status"], name: "index_staff_members_on_status"
+    t.index ["store_id"], name: "index_staff_members_on_store_id"
+  end
+
   create_table "stock_batches", force: :cascade do |t|
     t.bigint "product_id", null: false
     t.bigint "vendor_id", null: false
@@ -1248,6 +1270,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_01_034135) do
     t.boolean "low_stock_alert_enabled", default: false
     t.integer "low_stock_alert_threshold", default: 10
     t.string "low_stock_alert_email"
+    t.string "logo_url"
+    t.string "website"
     t.index ["key"], name: "index_system_settings_on_key", unique: true
   end
 
@@ -1494,6 +1518,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_01_034135) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "staff_attendances", "staff_members"
+  add_foreign_key "staff_members", "stores"
   add_foreign_key "stock_batches", "products"
   add_foreign_key "stock_batches", "stores"
   add_foreign_key "stock_batches", "vendor_purchases"

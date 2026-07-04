@@ -1,7 +1,7 @@
 require 'set'
 
 class Admin::InvoicesController < Admin::ApplicationController
-  before_action :set_invoice, only: [:show, :edit, :update, :destroy, :mark_as_paid]
+  before_action :set_invoice, only: [:show, :edit, :update, :destroy, :mark_as_paid, :download_pdf]
 
   def index
     # Show only regular invoices by default (exclude booking invoices)
@@ -172,6 +172,35 @@ class Admin::InvoicesController < Admin::ApplicationController
 
   def show
     @invoice_items = @invoice&.invoice_items&.includes(:product, :milk_delivery_task) || []
+  end
+
+  def download_pdf
+    @invoice_items = @invoice&.invoice_items&.includes(:product, :milk_delivery_task) || []
+
+    respond_to do |format|
+      format.pdf do
+        pdf = WickedPdf.new.pdf_from_string(
+          render_to_string(template: 'admin/invoices/show', layout: false),
+          page_size: 'A4',
+          margin: {
+            top: '0.5in',
+            bottom: '0.5in',
+            left: '0.5in',
+            right: '0.5in'
+          },
+          dpi: 300,
+          encoding: 'UTF-8',
+          disable_smart_shrinking: true,
+          print_media_type: true,
+          orientation: 'Portrait'
+        )
+
+        send_data pdf,
+                  filename: "invoice-#{@invoice.invoice_number}.pdf",
+                  type: 'application/pdf',
+                  disposition: 'attachment'
+      end
+    end
   end
 
   def edit

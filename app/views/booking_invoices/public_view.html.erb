@@ -731,7 +731,7 @@
     <!-- Header -->
     <div class="invoice-header">
       <div class="logo-section">
-        <img class="logo" src="https://marketincer-assets.s3.us-east-1.amazonaws.com/WhatsApp+Image+2025-06-25+at+8.04.23+AM.jpeg" alt="Logo" />
+        <img class="logo" src="<%= @business_settings&.logo_display_url || '/logo.jpeg' %>" alt="Logo" />
       </div>
       <div class="company-section">
         <div class="company-name">
@@ -750,6 +750,9 @@
           <% end %>
           <% if @business_settings&.pan_number.present? %>
             <span class="highlight">PAN:</span> <%= @business_settings.pan_number %>
+          <% end %>
+          <% if @business_settings&.website.present? %>
+            &nbsp; <span class="highlight">Website:</span> <%= @business_settings.website %>
           <% end %>
         </div>
       </div>
