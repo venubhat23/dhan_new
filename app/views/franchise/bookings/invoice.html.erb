@@ -634,8 +634,9 @@
         end
       end
 
-      total_tax = total_cgst + total_sgst + total_igst
-      final_total = subtotal_amount
+      total_tax       = total_cgst + total_sgst + total_igst
+      delivery_charge = @booking.shipping_charges.to_f
+      final_total     = subtotal_amount + delivery_charge
     %>
 
     <%
@@ -794,6 +795,20 @@
             </table>
           </td>
         </tr>
+        <% if delivery_charge > 0 %>
+          <tr class="section-border">
+            <td>DELIVERY CHARGE</td>
+            <td>-</td>
+            <td style="width: 40%;">
+              <table class="subtotal-values-table">
+                <tr>
+                  <td></td>
+                  <td>₹ <%= number_with_delimiter(delivery_charge.round(2), delimiter: ',') %></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        <% end %>
       </table>
 
       <!-- Details section -->
@@ -914,7 +929,7 @@
               <div class="total">
                 <div class="tax-line">
                   <span class="tax-label">TOTAL AMOUNT</span>
-                  <span class="tax-amount">₹ <%= number_with_delimiter(subtotal_amount.round(2), delimiter: ',') %></span>
+                  <span class="tax-amount">₹ <%= number_with_delimiter(final_total.round(2), delimiter: ',') %></span>
                 </div>
                 <div class="tax-line" style="font-weight: normal; font-size: 10px;">
                   <span class="tax-label">Received Amount</span>
@@ -925,7 +940,7 @@
                 <h3>Total Amount (in words)</h3>
                 <%
                   # Convert number to words - enhanced implementation
-                  total_amount_int = subtotal_amount.to_i
+                  total_amount_int = final_total.to_i
                   ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"]
                   teens = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"]
                   tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"]
