@@ -589,13 +589,12 @@
       total_igst = 0
 
       (@booking.booking_items || []).each do |item|
-        # Base amount (quantity × price)
+        # Base amount (quantity × price). Price is stored INCLUSIVE of GST
+        # (matches Booking#calculate_totals), so tax is extracted from within
+        # this amount rather than added on top of it.
         base_amount = item.quantity * (item.price || 0)
 
         if item.product&.gst_enabled
-          # Only add to taxable amount if GST is enabled
-          taxable_amount += base_amount
-
           # Calculate total GST first, then split to avoid rounding issues
           if item.product.cgst_percentage.present? && item.product.sgst_percentage.present?
             cgst_rate = item.product.cgst_percentage
@@ -643,9 +642,11 @@
           total_sgst += sgst_amount
           total_igst += igst_amount
 
-          # Add base amount + taxes to get final amount for this item
-          item_total = base_amount + cgst_amount + sgst_amount + igst_amount
-          subtotal_amount += item_total
+          # Taxable (pre-tax) value is the inclusive amount minus the tax embedded within it
+          taxable_amount += base_amount - (cgst_amount + sgst_amount + igst_amount)
+
+          # base_amount is already tax-inclusive, so it IS this item's final total
+          subtotal_amount += base_amount
         else
           # For non-GST items, just add base amount (not to taxable_amount)
           subtotal_amount += base_amount
@@ -653,8 +654,9 @@
       end
 
       total_tax = total_cgst + total_sgst + total_igst
+      discount_amount = @booking.discount_amount.to_f
       delivery_charge = @booking.shipping_charges.to_f
-      grand_total = subtotal_amount + delivery_charge
+      grand_total = subtotal_amount + delivery_charge - discount_amount
       final_total = grand_total
     %>
 
@@ -783,19 +785,9 @@
               </td>
               <td class="right-align">
                 <%
-                  # Calculate final amount: base amount + tax amount
-                  base_amount = item.quantity * (item.price || 0)
-                  if item.product&.gst_enabled
-                    if item.product.cgst_percentage.present? || item.product.sgst_percentage.present?
-                      total_gst_rate = (item.product.cgst_percentage || 0) + (item.product.sgst_percentage || 0) + (item.product.igst_percentage || 0)
-                    else
-                      total_gst_rate = item.product.gst_percentage || 0
-                    end
-                    tax_amount = (base_amount * total_gst_rate) / 100
-                    final_amount = base_amount + tax_amount
-                  else
-                    final_amount = base_amount
-                  end
+                  # Price is stored inclusive of GST, so the item's final amount
+                  # is just quantity × price — tax is embedded, not added on top.
+                  final_amount = item.quantity * (item.price || 0)
                 %>
                 ₹<%= number_with_delimiter(final_amount.round(2), delimiter: ',') %>
               </td>
@@ -939,6 +931,12 @@
                 <div class="tax-line">
                   <span class="tax-label">DELIVERY CHARGES</span>
                   <span class="tax-amount">₹ <%= number_with_delimiter(delivery_charge.round(2), delimiter: ',') %></span>
+                </div>
+              <% end %>
+              <% if discount_amount > 0 %>
+                <div class="tax-line">
+                  <span class="tax-label">DISCOUNT</span>
+                  <span class="tax-amount">- ₹ <%= number_with_delimiter(discount_amount.round(2), delimiter: ',') %></span>
                 </div>
               <% end %>
               <div class="total">
