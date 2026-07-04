@@ -37,6 +37,14 @@
           <button type="button" class="btn btn-outline-primary" id="stInStockBtn" onclick="stStockFilter('instock')">In Stock</button>
         </div>
       </div>
+      <div class="col-auto d-flex gap-2 align-items-center ms-md-auto">
+        <button type="button" class="btn btn-sm btn-outline-success" onclick="stSelectAllVisible()">
+          <i class="bi bi-check2-square me-1"></i>Select All
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="stDeselectAllVisible()">
+          <i class="bi bi-square me-1"></i>Deselect All
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -52,6 +60,8 @@
                data-id="<%= product.id %>"
                data-name="<%= product.name.downcase %>"
                data-sku="<%= product.sku.to_s.downcase %>"
+               data-pname="<%= product.name %>"
+               data-psku="<%= product.sku %>"
                data-category="<%= product.category_id %>"
                data-stock="<%= stock %>">
             <div class="card h-100 st-card" id="st-card-<%= product.id %>"
@@ -125,14 +135,21 @@
     <div class="container-fluid px-4 py-3">
 
       <%# Panel Header %>
-      <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div class="fw-bold">
           <i class="bi bi-cart3 me-2" style="color:#1C7C54;"></i>
           Transfer Request — <span id="stItemCount">0</span> product(s) selected
         </div>
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="stClearAll()">
-          <i class="bi bi-x me-1"></i>Clear All
-        </button>
+        <div class="d-flex align-items-center gap-2">
+          <div class="input-group input-group-sm" style="width:190px;">
+            <span class="input-group-text">Set qty</span>
+            <input type="number" class="form-control" id="stBulkQty" min="1" step="1" placeholder="e.g. 10">
+            <button type="button" class="btn btn-outline-primary" onclick="stApplyBulkQty()">Apply to All</button>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="stClearAll()">
+            <i class="bi bi-x me-1"></i>Clear All
+          </button>
+        </div>
       </div>
 
       <%= form_tag store_admin_stock_transfers_path, method: :post, id: "stForm" do %>
@@ -301,6 +318,45 @@ function stRemoveByKey(key) {
 function stClearAll() {
   stCart.forEach(item => stSetCardState(item.productId, false));
   stCart = [];
+  stRender();
+}
+
+// Adds every currently-visible (filtered) non-variant, in-stock product to the cart at qty 1
+function stSelectAllVisible() {
+  let added = 0, skippedVariant = 0;
+  document.querySelectorAll('.st-item').forEach(el => {
+    if (el.style.display === 'none') return;
+    const id = parseInt(el.dataset.id);
+    const stock = parseFloat(el.dataset.stock) || 0;
+    const hasVariant = !!document.getElementById('st-variant-' + id);
+    if (hasVariant) { skippedVariant++; return; }
+    if (stock <= 0) return;
+    const key = stCartKey(id, null);
+    if (stCart.find(i => i.key === key)) return;
+    stCart.push({ key, productId: id, variantId: null, variantLabel: null, name: el.dataset.pname, sku: el.dataset.psku, stock, qty: 1 });
+    stSetCardState(id, true);
+    added++;
+  });
+  stRender();
+  if (skippedVariant > 0) {
+    alert(`Added ${added} product(s) to the request.\n${skippedVariant} product(s) need a variant — please add those manually.`);
+  }
+}
+
+function stDeselectAllVisible() {
+  document.querySelectorAll('.st-item').forEach(el => {
+    if (el.style.display === 'none') return;
+    const id = parseInt(el.dataset.id);
+    stCart = stCart.filter(i => i.productId !== id);
+    stSetCardState(id, false);
+  });
+  stRender();
+}
+
+function stApplyBulkQty() {
+  const val = parseInt(document.getElementById('stBulkQty').value, 10);
+  if (!val || val < 1) { alert('Enter a valid quantity first.'); return; }
+  stCart.forEach(item => { item.qty = Math.max(1, Math.min(val, Math.floor(item.stock))); });
   stRender();
 }
 
