@@ -771,36 +771,11 @@ function loadCustomersAndShowForm() {
       return Promise.all(responses.map(response => response.json()));
     })
     .then(([customers, deliveryPersons]) => {
-      // Populate customer checkboxes
-      const customerCheckboxList = document.getElementById('customers_checkbox_list');
-      if (customerCheckboxList) {
-        customerCheckboxList.innerHTML = '';
-
-        if (customers.length === 0) {
-          customerCheckboxList.innerHTML = `
-            <div class="text-muted text-center py-3">
-              <i class="bi bi-person-x fs-3 d-block mb-2"></i>
-              No customers found
-            </div>
-          `;
-        } else {
-          customers.forEach(customer => {
-            const checkboxDiv = document.createElement('div');
-            checkboxDiv.className = 'form-check customer-checkbox-item';
-            checkboxDiv.innerHTML = `
-              <input class="form-check-input customer-checkbox" type="checkbox"
-                     value="${customer.id}" id="customer_${customer.id}"
-                     onchange="updateSelectedCustomers()">
-              <label class="form-check-label" for="customer_${customer.id}">
-                <strong>${customer.display_name}</strong>
-                ${customer.email ? `<br><small class="text-muted">${customer.email}</small>` : ''}
-                ${customer.mobile ? `<br><small class="text-muted">${customer.mobile}</small>` : ''}
-              </label>
-            `;
-            customerCheckboxList.appendChild(checkboxDiv);
-          });
-        }
-      }
+      // Populate customer checkboxes (rendering is capped — see renderCustomerCheckboxList —
+      // building hundreds of DOM nodes up front is what made this modal feel frozen/unclickable)
+      window.selectedCustomerIds = window.selectedCustomerIds || new Set();
+      window.allCustomers = customers;
+      renderCustomerCheckboxList(customers);
 
       // Populate delivery persons dropdown
       const deliveryPersonSelect = document.getElementById('delivery_person_select');
@@ -817,7 +792,6 @@ function loadCustomersAndShowForm() {
       }
 
       // Store data globally for search functionality
-      window.allCustomers = customers;
       window.allDeliveryPersons = deliveryPersons;
 
       // Show form content and hide loading
@@ -892,48 +866,93 @@ function initializeFormListeners() {
 }
 
 // Customer checkbox functions
-function selectAllCustomers() {
-  const checkboxes = document.querySelectorAll('.customer-checkbox');
-  const visibleCheckboxes = Array.from(checkboxes).filter(checkbox =>
-    checkbox.closest('.customer-checkbox-item').style.display !== 'none'
-  );
+//
+// Rendering all customers (can be 500+) as DOM checkboxes up front is what made
+// this modal feel frozen/unclickable. Only a capped number is ever rendered;
+// selection state lives in window.selectedCustomerIds (a Set) so it survives
+// re-renders when searching, rather than being read off the DOM each time.
+const CUSTOMER_RENDER_CAP = 100;
 
-  visibleCheckboxes.forEach(checkbox => {
-    checkbox.checked = true;
+function customerMatchesSearch(customer, searchTerm) {
+  if (!searchTerm) return true;
+  const text = `${customer.display_name || ''} ${customer.email || ''} ${customer.mobile || ''}`.toLowerCase();
+  return text.includes(searchTerm);
+}
+
+function renderCustomerCheckboxList(customers) {
+  const container = document.getElementById('customers_checkbox_list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (customers.length === 0) {
+    container.innerHTML = `
+      <div class="text-muted text-center py-3">
+        <i class="bi bi-person-x fs-3 d-block mb-2"></i>
+        No customers found
+      </div>
+    `;
+    return;
+  }
+
+  const shown = customers.slice(0, CUSTOMER_RENDER_CAP);
+  shown.forEach(customer => {
+    const checkboxDiv = document.createElement('div');
+    checkboxDiv.className = 'form-check customer-checkbox-item';
+    const checkedAttr = window.selectedCustomerIds.has(String(customer.id)) ? 'checked' : '';
+    checkboxDiv.innerHTML = `
+      <input class="form-check-input customer-checkbox" type="checkbox"
+             value="${customer.id}" id="customer_${customer.id}" ${checkedAttr}
+             onchange="toggleCustomerSelection(this)">
+      <label class="form-check-label" for="customer_${customer.id}">
+        <strong>${customer.display_name}</strong>
+        ${customer.email ? `<br><small class="text-muted">${customer.email}</small>` : ''}
+        ${customer.mobile ? `<br><small class="text-muted">${customer.mobile}</small>` : ''}
+      </label>
+    `;
+    container.appendChild(checkboxDiv);
   });
+
+  if (customers.length > CUSTOMER_RENDER_CAP) {
+    const notice = document.createElement('div');
+    notice.className = 'text-muted text-center py-2 small border-top mt-2';
+    notice.textContent = `Showing ${CUSTOMER_RENDER_CAP} of ${customers.length} matching customers — refine your search to see more.`;
+    container.appendChild(notice);
+  }
+}
+
+function toggleCustomerSelection(checkboxEl) {
+  const id = String(checkboxEl.value);
+  if (checkboxEl.checked) {
+    window.selectedCustomerIds.add(id);
+  } else {
+    window.selectedCustomerIds.delete(id);
+  }
+  updateSelectedCustomers();
+}
+
+function selectAllCustomers() {
+  const searchTerm = (document.getElementById('customerSearch')?.value || '').toLowerCase();
+  const matching = (window.allCustomers || []).filter(c => customerMatchesSearch(c, searchTerm));
+
+  matching.forEach(c => window.selectedCustomerIds.add(String(c.id)));
+  renderCustomerCheckboxList(matching);
   updateSelectedCustomers();
 }
 
 function deselectAllCustomers() {
-  const checkboxes = document.querySelectorAll('.customer-checkbox');
-  checkboxes.forEach(checkbox => {
-    checkbox.checked = false;
-  });
+  window.selectedCustomerIds.clear();
+  filterCustomers();
   updateSelectedCustomers();
 }
 
 function filterCustomers() {
-  const searchTerm = document.getElementById('customerSearch').value.toLowerCase();
-  const customerItems = document.querySelectorAll('.customer-checkbox-item');
-
-  customerItems.forEach(item => {
-    const label = item.querySelector('label');
-    const text = label.textContent.toLowerCase();
-
-    if (text.includes(searchTerm)) {
-      item.style.display = 'block';
-    } else {
-      item.style.display = 'none';
-    }
-  });
-
-  // Update count after filtering
-  updateSelectedCustomers();
+  const searchTerm = (document.getElementById('customerSearch')?.value || '').toLowerCase();
+  const matching = (window.allCustomers || []).filter(c => customerMatchesSearch(c, searchTerm));
+  renderCustomerCheckboxList(matching);
 }
 
 function updateSelectedCustomers() {
-  const selectedCheckboxes = document.querySelectorAll('.customer-checkbox:checked');
-  const selectedCount = selectedCheckboxes.length;
+  const selectedCount = window.selectedCustomerIds.size;
 
   // Update the count badge
   const countBadge = document.getElementById('selected_count');
@@ -947,11 +966,11 @@ function updateSelectedCustomers() {
   if (selectedInputsContainer) {
     selectedInputsContainer.innerHTML = '';
 
-    selectedCheckboxes.forEach(checkbox => {
+    window.selectedCustomerIds.forEach(id => {
       const hiddenInput = document.createElement('input');
       hiddenInput.type = 'hidden';
       hiddenInput.name = 'customer_ids[]';
-      hiddenInput.value = checkbox.value;
+      hiddenInput.value = id;
       selectedInputsContainer.appendChild(hiddenInput);
     });
   }
@@ -981,32 +1000,12 @@ function loadCustomersForDeliveryPerson(deliveryPersonId) {
       return response.json();
     })
     .then(customers => {
-      customerCheckboxList.innerHTML = '';
+      window.allCustomers = customers;
+      window.selectedCustomerIds = new Set(); // reset selection when the delivery person changes
+      const searchInput = document.getElementById('customerSearch');
+      if (searchInput) searchInput.value = '';
 
-      if (customers.length === 0) {
-        customerCheckboxList.innerHTML = `
-          <div class="text-muted text-center py-3">
-            <i class="bi bi-person-x fs-3 d-block mb-2"></i>
-            No customers found for this delivery person
-          </div>
-        `;
-      } else {
-        customers.forEach(customer => {
-          const checkboxDiv = document.createElement('div');
-          checkboxDiv.className = 'form-check customer-checkbox-item';
-          checkboxDiv.innerHTML = `
-            <input class="form-check-input customer-checkbox" type="checkbox"
-                   value="${customer.id}" id="customer_${customer.id}"
-                   onchange="updateSelectedCustomers()">
-            <label class="form-check-label" for="customer_${customer.id}">
-              <strong>${customer.display_name}</strong>
-              ${customer.email ? `<br><small class="text-muted">${customer.email}</small>` : ''}
-              ${customer.mobile ? `<br><small class="text-muted">${customer.mobile}</small>` : ''}
-            </label>
-          `;
-          customerCheckboxList.appendChild(checkboxDiv);
-        });
-      }
+      renderCustomerCheckboxList(customers);
 
       // Show the customer dropdown section when customers are loaded
       const customerDropdownSection = document.getElementById('customer_dropdown_section');
