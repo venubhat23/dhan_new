@@ -148,13 +148,15 @@
     </table>
   </div>
 
+  <% delivery_charge = @booking.shipping_charges.to_f %>
+
   <!-- Amount Summary Section -->
   <div class="amount-summary">
     <div class="row">
       <div class="col-8">
         <div class="amount-words-box">
           <p class="mb-0"><strong>Total Amount (in words):</strong></p>
-          <p class="amount-words"><%= amount_in_words(subtotal + total_cgst + total_sgst) %> Only</p>
+          <p class="amount-words"><%= amount_in_words(subtotal + total_cgst + total_sgst + delivery_charge) %> Only</p>
         </div>
       </div>
       <div class="col-4">
@@ -171,9 +173,15 @@
             <td>Add: SGST:</td>
             <td class="text-end">₹ <%= number_with_precision(total_sgst, precision: 2) %></td>
           </tr>
+          <% if delivery_charge > 0 %>
+            <tr>
+              <td>Add: Delivery Charges:</td>
+              <td class="text-end">₹ <%= number_with_precision(delivery_charge, precision: 2) %></td>
+            </tr>
+          <% end %>
           <tr class="grand-total-row">
             <td><strong>Total Amount After Tax:</strong></td>
-            <td class="text-end"><strong>₹ <%= number_with_precision(subtotal + total_cgst + total_sgst, precision: 2) %></strong></td>
+            <td class="text-end"><strong>₹ <%= number_with_precision(subtotal + total_cgst + total_sgst + delivery_charge, precision: 2) %></strong></td>
           </tr>
         </table>
       </div>

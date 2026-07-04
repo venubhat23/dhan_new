@@ -121,6 +121,18 @@ class Admin::BookingsController < Admin::ApplicationController
       @booking.discount_amount = 0
     end
 
+    # Clean and validate delivery/shipping charge
+    shipping_value = params[:booking][:shipping_charges] if params[:booking]
+
+    if shipping_value.present?
+      cleaned_shipping = shipping_value.to_s.gsub(/\s+/, '').strip
+      shipping_charges = cleaned_shipping.to_f
+      @booking.shipping_charges = shipping_charges > 0 ? shipping_charges : 0
+      Rails.logger.info "Applied delivery charge: #{@booking.shipping_charges}"
+    else
+      @booking.shipping_charges = 0
+    end
+
     # Store payment status value for after save (to avoid enum conflicts during validation)
     @payment_status_from_form = params[:booking][:payment_status]
     Rails.logger.info "Payment status from form: #{@payment_status_from_form}"
@@ -783,7 +795,7 @@ class Admin::BookingsController < Admin::ApplicationController
   def booking_params
     params.require(:booking).permit(
       :customer_id, :customer_name, :customer_email, :customer_phone,
-      :payment_method, :payment_status, :discount_amount, :notes,
+      :payment_method, :payment_status, :discount_amount, :shipping_charges, :notes,
       :delivery_address, :cash_received, :change_amount, :status, :store_id,
       :booking_date, :is_b2b, booking_items_attributes: [:id, :product_id, :product_variant_id, :quantity, :price, :_destroy]
     )

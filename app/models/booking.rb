@@ -158,7 +158,7 @@ class Booking < ApplicationRecord
 
     self.subtotal = items_total.round(2)
     self.tax_amount = total_gst.round(2)
-    self.total_amount = (items_total + total_gst - current_discount).round(2)
+    self.total_amount = (items_total + total_gst - current_discount + shipping_charges.to_f).round(2)
   end
 
   def calculate_totals!
@@ -198,7 +198,7 @@ class Booking < ApplicationRecord
   def calculated_total_amount
     return total_amount if total_amount.present?
 
-    (calculated_subtotal + calculated_tax_amount - (discount_amount || 0)).round(2)
+    (calculated_subtotal + calculated_tax_amount - (discount_amount || 0) + shipping_charges.to_f).round(2)
   end
 
   def amount_in_words

@@ -577,6 +577,9 @@
             <%# Hidden field for discount amount %>
             <%= f.hidden_field :discount_amount, value: 0, id: 'hiddenDiscountAmount' %>
 
+            <%# Hidden field for delivery charges %>
+            <%= f.hidden_field :shipping_charges, value: 0, id: 'hiddenDeliveryCharge' %>
+
             <%# Action Buttons %>
             <div class="d-flex gap-2 justify-content-end">
               <button type="button" class="btn btn-outline-secondary" onclick="showProductsView()">
@@ -618,10 +621,23 @@
               <span>GST</span>
               <span>₹<span id="checkoutTax">0</span></span>
             </div>
-            <div class="d-flex justify-content-between mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-2">
               <span>Discount</span>
+              <div class="d-flex align-items-center gap-2">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Discount type">
+                  <button type="button" class="btn btn-outline-secondary active" id="discountTypeAmountBtn" onclick="setDiscountType('amount')">₹</button>
+                  <button type="button" class="btn btn-outline-secondary" id="discountTypePercentBtn" onclick="setDiscountType('percent')">%</button>
+                </div>
+                <input type="number" id="checkoutDiscount" value="0" min="0" max="999999" step="0.01" class="form-control form-control-sm d-inline-block w-auto" style="width: 80px;" onchange="updateCheckoutTotals()" oninput="updateCheckoutTotals()">
+              </div>
+            </div>
+            <div class="d-flex justify-content-end mb-2" id="discountAmountPreviewRow" style="display: none;">
+              <small class="text-muted">= ₹<span id="discountAmountPreview">0.00</span> off</small>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span><i class="bi bi-truck me-1"></i>Delivery Charges</span>
               <span>
-                ₹<input type="number" id="checkoutDiscount" value="0" min="0" max="999999" step="0.01" class="form-control form-control-sm d-inline-block w-auto" style="width: 80px;" onchange="updateCheckoutTotals()" oninput="updateCheckoutTotals()">
+                ₹<input type="number" id="checkoutDeliveryCharge" value="0" min="0" max="999999" step="0.01" class="form-control form-control-sm d-inline-block w-auto" style="width: 80px;" onchange="updateCheckoutTotals()" oninput="updateCheckoutTotals()">
               </span>
             </div>
             <div class="d-flex justify-content-between border-top pt-2 mb-0">
@@ -694,6 +710,22 @@
 // Shopping Cart System
 let cart = {};
 let currentView = 'products';
+let discountType = 'amount'; // 'amount' or 'percent'
+
+// Toggle discount entry between a flat rupee amount and a percentage
+function setDiscountType(type) {
+  discountType = type;
+  document.getElementById('discountTypeAmountBtn').classList.toggle('active', type === 'amount');
+  document.getElementById('discountTypePercentBtn').classList.toggle('active', type === 'percent');
+
+  const discountInput = document.getElementById('checkoutDiscount');
+  if (discountInput) {
+    discountInput.max = type === 'percent' ? 100 : 999999;
+    discountInput.value = 0;
+  }
+
+  updateCheckoutTotals();
+}
 
 // Initialize cart
 function initializeCart() {
@@ -1191,23 +1223,62 @@ function updateCheckoutTotals() {
     }
   }
 
-  let discount = parseFloat(document.getElementById('checkoutDiscount')?.value || 0);
-
-  // Validate discount doesn't exceed subtotal + GST
-  const maxDiscount = subtotal + totalGST;
-  if (discount > maxDiscount) {
-    discount = maxDiscount;
-    document.getElementById('checkoutDiscount').value = discount;
+  const discountInputEl = document.getElementById('checkoutDiscount');
+  let discountInputValue = parseFloat(discountInputEl?.value || 0);
+  if (isNaN(discountInputValue) || discountInputValue < 0) {
+    discountInputValue = 0;
   }
 
-  // Update the hidden field with the discount value
+  const maxDiscount = subtotal + totalGST;
+  let discount = 0;
+
+  if (discountType === 'percent') {
+    // Percentage discount is capped at 100%
+    if (discountInputValue > 100) {
+      discountInputValue = 100;
+      discountInputEl.value = discountInputValue;
+    }
+    discount = maxDiscount * discountInputValue / 100;
+  } else {
+    // Flat amount discount doesn't exceed subtotal + GST
+    discount = discountInputValue;
+    if (discount > maxDiscount) {
+      discount = maxDiscount;
+      discountInputEl.value = discount;
+    }
+  }
+
+  // Show the computed rupee amount when discount is entered as a percentage
+  const discountAmountPreviewRow = document.getElementById('discountAmountPreviewRow');
+  const discountAmountPreview = document.getElementById('discountAmountPreview');
+  if (discountAmountPreviewRow && discountAmountPreview) {
+    if (discountType === 'percent' && discountInputValue > 0) {
+      discountAmountPreviewRow.style.display = 'flex';
+      discountAmountPreview.textContent = discount.toFixed(2);
+    } else {
+      discountAmountPreviewRow.style.display = 'none';
+    }
+  }
+
+  // Update the hidden field with the computed discount amount (backend only stores a rupee amount)
   const hiddenDiscountField = document.getElementById('hiddenDiscountAmount');
   if (hiddenDiscountField) {
     hiddenDiscountField.value = discount;
     console.log('Updated hidden discount field to:', discount);
   }
 
-  const total = subtotal + totalGST - discount; // Final total after discount
+  let deliveryCharge = parseFloat(document.getElementById('checkoutDeliveryCharge')?.value || 0);
+  if (deliveryCharge < 0 || isNaN(deliveryCharge)) {
+    deliveryCharge = 0;
+  }
+
+  // Update the hidden field with the delivery charge value
+  const hiddenDeliveryChargeField = document.getElementById('hiddenDeliveryCharge');
+  if (hiddenDeliveryChargeField) {
+    hiddenDeliveryChargeField.value = deliveryCharge;
+  }
+
+  const total = subtotal + totalGST - discount + deliveryCharge; // Final total after discount and delivery charge
 
   // Update display
   document.getElementById('checkoutSubtotal').textContent = subtotal.toFixed(2);
@@ -1837,20 +1908,15 @@ document.addEventListener('DOMContentLoaded', function() {
         return false;
       }
 
-      // Clean discount input and update hidden field before submission
+      // Clean discount input and recompute the hidden discount amount before submission
+      // (updateCheckoutTotals converts a percentage entry into the actual rupee amount the backend expects)
       const discountInput = document.getElementById('checkoutDiscount');
-      const hiddenDiscountField = document.getElementById('hiddenDiscountAmount');
-
-      if (discountInput && hiddenDiscountField) {
-        // Clean the discount value - remove any whitespace/newlines
-        let discountValue = discountInput.value || 0;
-        const cleanedValue = discountValue.toString().replace(/\s+/g, '').trim();
-        const numericValue = parseFloat(cleanedValue) || 0;
-
-        discountInput.value = cleanedValue;
-        hiddenDiscountField.value = numericValue;
-        console.log('Final discount value before submission:', numericValue);
+      if (discountInput) {
+        const cleanedValue = (discountInput.value || '0').toString().replace(/\s+/g, '').trim();
+        discountInput.value = parseFloat(cleanedValue) || 0;
       }
+      updateCheckoutTotals();
+      console.log('Final discount amount before submission:', document.getElementById('hiddenDiscountAmount')?.value);
 
       // Check if status is selected
       const statusSelect = document.getElementById('booking_status');
