@@ -810,11 +810,13 @@ function bookingUpdateVariant(selectEl, productId) {
   // Update add button
   const btn = document.getElementById(`booking-add-btn-${productId}`);
   if (btn) {
+    const gstRateVal = parseFloat(btn.dataset.gstRate || 0);
+    const deflatedBasePrice = gstRateVal > 0 ? price / (1 + gstRateVal / 100) : price;
     btn.disabled = stock <= 0;
     btn.dataset.finalPrice = price;
-    btn.dataset.basePrice = price;
+    btn.dataset.basePrice = deflatedBasePrice;
     btn.onclick = function() {
-      bookingAddToCart(productId, btn.closest('.card')?.querySelector('.card-title')?.textContent?.trim() || '', price, stock, price, parseFloat(btn.dataset.gstRate || 0));
+      bookingAddToCart(productId, btn.closest('.card')?.querySelector('.card-title')?.textContent?.trim() || '', price, stock, deflatedBasePrice, gstRateVal);
     };
   }
 }
@@ -831,7 +833,8 @@ function bookingAddToCart(productId, productName, finalPrice, stock, basePrice, 
     const opt = variantSelect.options[variantSelect.selectedIndex];
     finalPrice = parseFloat(opt.dataset.price);
     stock = parseInt(opt.dataset.stock);
-    basePrice = finalPrice;
+    // finalPrice is GST-inclusive — deflate it to get the base (pre-GST) price
+    basePrice = gstRate > 0 ? finalPrice / (1 + gstRate / 100) : finalPrice;
   }
 
   addToCart(productId, productName, finalPrice, stock, basePrice, gstRate, variantId);
@@ -875,15 +878,19 @@ function updateCartDisplay() {
   const sortedItems = Object.entries(cart).sort((a, b) => a[1].name.localeCompare(b[1].name));
 
   for (const [productId, item] of sortedItems) {
-    const itemBasePrice = item.basePrice || item.price;
     const itemGSTRate = item.gstRate || 0;
+    // item.price is always GST-inclusive — derive the base price from it directly
+    // (smart-rounded, matching the checkout summary) rather than trusting a
+    // separately-stored basePrice, which can drift out of sync.
+    let itemBasePrice = item.price;
     let itemTotal;
 
     if (itemGSTRate > 0) {
-      // Product has GST - calculate base price subtotal separately
-      const itemSubtotal = itemBasePrice * item.quantity;
-      subtotal += itemSubtotal;
+      const roundedFinal = Math.round(item.price);
+      const roundedGST = roundedFinal * itemGSTRate / 100;
+      itemBasePrice = roundedFinal - roundedGST;
       itemTotal = item.price * item.quantity; // Full price for display
+      subtotal += itemBasePrice * item.quantity;
     } else {
       // Product has no GST
       itemTotal = item.price * item.quantity;

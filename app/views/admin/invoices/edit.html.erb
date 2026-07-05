@@ -91,10 +91,11 @@
                     <input type="number"
                            name="invoice[invoice_items_attributes][<%= index %>][quantity]"
                            value="<%= item.quantity %>"
-                           min="1"
-                           step="1"
+                           min="0.01"
+                           step="0.01"
                            class="form-control quantity-input"
                            onchange="calculateLineTotal(this)"
+                           oninput="calculateLineTotal(this)"
                            required>
                   </div>
                   <div class="col-md-2">
@@ -160,10 +161,11 @@
                     <input type="number"
                            name=""
                            value="1"
-                           min="1"
-                           step="1"
+                           min="0.01"
+                           step="0.01"
                            class="form-control quantity-input"
                            onchange="calculateLineTotal(this)"
+                           oninput="calculateLineTotal(this)"
                            required>
                   </div>
                   <div class="col-md-2">

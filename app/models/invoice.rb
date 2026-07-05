@@ -16,6 +16,7 @@ class Invoice < ApplicationRecord
   before_validation :calculate_total_from_items
   before_create :generate_share_token
   after_update :sync_booking_payment_status, if: :saved_change_to_payment_status?
+  after_update :sync_booking_delivery_charge, if: :saved_change_to_delivery_charge?
 
   scope :for_month, ->(month, year) { where(invoice_date: Date.new(year, month).beginning_of_month..Date.new(year, month).end_of_month) }
 
@@ -34,6 +35,18 @@ class Invoice < ApplicationRecord
                      end
 
     booking.update(payment_status: target_status) unless booking.payment_status == target_status
+  end
+
+  # Keeps the originating Booking's shipping_charges in sync when the delivery charge is
+  # edited from the invoice screen, mirroring Booking#sync_invoice_delivery_charge.
+  def sync_booking_delivery_charge
+    return if invoice_number.blank?
+
+    booking = Booking.find_by(invoice_number: invoice_number)
+    return unless booking
+    return if booking.shipping_charges.to_f == delivery_charge.to_f
+
+    booking.update(shipping_charges: delivery_charge)
   end
 
   # Get customer display name (customer or walk-in from booking)

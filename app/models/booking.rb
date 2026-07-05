@@ -64,6 +64,7 @@ class Booking < ApplicationRecord
   after_validation :ensure_total_amount_present
   after_update :allocate_inventory, if: :saved_change_to_status?
   after_update :sync_invoice_payment_status, if: :saved_change_to_payment_status?
+  after_update :sync_invoice_delivery_charge, if: :saved_change_to_shipping_charges?
   after_commit :bust_mobile_customer_cache
 
   def bust_mobile_customer_cache
@@ -90,6 +91,18 @@ class Booking < ApplicationRecord
       return if invoice.payment_status == 'unpaid'
       invoice.update(payment_status: :unpaid, paid_at: nil, paid_amount: 0)
     end
+  end
+
+  # Keeps the already-generated Invoice's delivery_charge in step with the booking's
+  # shipping_charges, so editing it on either screen updates both totals.
+  def sync_invoice_delivery_charge
+    return unless invoice_generated? && invoice_number.present?
+
+    invoice = Invoice.find_by(invoice_number: invoice_number)
+    return unless invoice
+    return if invoice.delivery_charge.to_f == shipping_charges.to_f
+
+    invoice.update(delivery_charge: shipping_charges)
   end
 
   scope :recent, -> { order(created_at: :desc) }
@@ -753,6 +766,7 @@ class Booking < ApplicationRecord
       status: :sent,
       payment_status: payment_status_paid? ? :fully_paid : :unpaid,
       paid_at: payment_status_paid? ? Time.current : nil,
+      delivery_charge: shipping_charges.to_f,
       quick_invoice: true
     )
 
@@ -784,7 +798,7 @@ class Booking < ApplicationRecord
       )
     end
 
-    invoice.total_amount = invoice_total
+    invoice.total_amount = invoice_total + shipping_charges.to_f
 
     if invoice.save
       update_columns(
