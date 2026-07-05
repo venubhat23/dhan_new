@@ -185,7 +185,7 @@ class Invoice < ApplicationRecord
         end
       end
 
-      self.total_amount = new_total if new_total > 0
+      self.total_amount = new_total + delivery_charge.to_f if new_total > 0
     end
   end
 end

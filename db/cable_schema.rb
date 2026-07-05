@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_04_120003) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_04_173841) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -543,6 +543,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_04_120003) do
     t.string "share_token"
     t.boolean "quick_invoice", default: false
     t.decimal "paid_amount", precision: 10, scale: 2, default: "0.0"
+    t.decimal "delivery_charge", precision: 10, scale: 2, default: "0.0"
     t.index ["invoice_number"], name: "index_invoices_on_invoice_number", unique: true
     t.index ["share_token"], name: "index_invoices_on_share_token", unique: true
   end

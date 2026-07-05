@@ -257,6 +257,14 @@
           </div>
 
           <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-muted">Delivery Charge</span>
+            <div class="input-group input-group-sm" style="max-width: 130px;">
+              <span class="input-group-text">₹</span>
+              <%= f.number_field :delivery_charge, step: 0.01, min: 0, class: "form-control text-end", id: "delivery_charge_field", oninput: "updateInvoiceTotal()" %>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mb-3">
             <span class="text-muted">Tax</span>
             <span class="fw-medium">₹0.00</span>
           </div>
@@ -439,6 +447,10 @@ function updateInvoiceTotal() {
     subtotal += value;
   });
 
+  const deliveryChargeInput = document.getElementById('delivery_charge_field');
+  const deliveryCharge = deliveryChargeInput ? (parseFloat(deliveryChargeInput.value) || 0) : 0;
+  const total = subtotal + deliveryCharge;
+
   // Update display
   const subtotalDisplay = document.getElementById('subtotal-display');
   const totalDisplay = document.getElementById('total-display');
@@ -449,11 +461,11 @@ function updateInvoiceTotal() {
   }
 
   if (totalDisplay) {
-    totalDisplay.textContent = `₹${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    totalDisplay.textContent = `₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   if (totalField) {
-    totalField.value = subtotal.toFixed(2);
+    totalField.value = total.toFixed(2);
   }
 }
 

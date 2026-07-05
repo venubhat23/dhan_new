@@ -262,7 +262,7 @@ class Admin::InvoicesController < Admin::ApplicationController
       return
     end
 
-    @invoice.total_amount = new_total
+    @invoice.total_amount = new_total + @invoice.delivery_charge.to_f
 
     if @invoice.save
       # Update stock for products after successful save
@@ -763,7 +763,7 @@ class Admin::InvoicesController < Admin::ApplicationController
   end
 
   def invoice_params
-    params.require(:invoice).permit(:invoice_date, :due_date, :status, :payment_status, :total_amount,
+    params.require(:invoice).permit(:invoice_date, :due_date, :status, :payment_status, :total_amount, :delivery_charge,
                                    invoice_items_attributes: [:id, :product_id, :description, :quantity, :unit_price, :total_amount, :_destroy])
   end
 
