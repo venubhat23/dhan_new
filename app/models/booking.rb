@@ -65,6 +65,7 @@ class Booking < ApplicationRecord
   after_update :allocate_inventory, if: :saved_change_to_status?
   after_update :sync_invoice_payment_status, if: :saved_change_to_payment_status?
   after_update :sync_invoice_delivery_charge, if: :saved_change_to_shipping_charges?
+  after_save :sync_invoice_items_from_booking
   after_commit :bust_mobile_customer_cache
 
   def bust_mobile_customer_cache
@@ -103,6 +104,103 @@ class Booking < ApplicationRecord
     return if invoice.delivery_charge.to_f == shipping_charges.to_f
 
     invoice.update(delivery_charge: shipping_charges)
+  end
+
+  # Keeps the already-generated Invoice's invoice_items in step with this booking's
+  # booking_items (products/quantities/prices), so editing line items on either
+  # screen propagates to the other. Mirrors Invoice#sync_booking_items_from_invoice.
+  def sync_invoice_items_from_booking
+    return unless invoice_generated? && invoice_number.present?
+
+    invoice = Invoice.find_by(invoice_number: invoice_number)
+    return unless invoice
+
+    invoice.rebuild_items_from_booking!(self)
+  rescue => e
+    Rails.logger.error "Failed to sync invoice items from booking ##{id}: #{e.message}"
+  end
+
+  # Rebuilds this booking's booking_items from an invoice's current invoice_items.
+  # Booking items have stock side effects (allocation/restoration on create/update/
+  # destroy), so matched products are updated in place rather than destroyed and
+  # recreated, to avoid spurious stock churn. Called by Invoice#sync_booking_items_from_invoice.
+  def rebuild_items_from_invoice!(invoice)
+    return if items_match_invoice?(invoice)
+
+    transaction do
+      target_rows = invoice.invoice_items.includes(:product).filter_map do |ii|
+        next unless ii.product
+        { product: ii.product, quantity: ii.quantity, price: final_price_for(ii.product, ii.unit_price) }
+      end
+
+      existing_by_product = booking_items.index_by(&:product_id)
+      seen_product_ids = []
+
+      target_rows.each do |row|
+        seen_product_ids << row[:product].id
+        existing = existing_by_product[row[:product].id]
+
+        if existing
+          unless existing.quantity.to_f.round(3) == row[:quantity].to_f.round(3) &&
+                 existing.price.to_f.round(2) == row[:price].round(2)
+            existing.update!(quantity: row[:quantity], price: row[:price])
+          end
+        else
+          booking_items.create!(product: row[:product], quantity: row[:quantity], price: row[:price])
+        end
+      end
+
+      if seen_product_ids.any?
+        booking_items.where.not(product_id: seen_product_ids).destroy_all
+      else
+        booking_items.destroy_all
+      end
+
+      update!(shipping_charges: invoice.delivery_charge.to_f)
+    end
+  rescue => e
+    Rails.logger.error "Failed to rebuild booking ##{id} items from invoice ##{invoice.id}: #{e.message}"
+  end
+
+  def items_match_invoice?(invoice)
+    current = booking_items.map { |bi| [bi.product_id, bi.quantity.to_f.round(3), bi.price.to_f.round(2)] }.sort
+    target = invoice.invoice_items.filter_map do |ii|
+      next unless ii.product_id
+      [ii.product_id, ii.quantity.to_f.round(3), final_price_for(ii.product, ii.unit_price).round(2)]
+    end.sort
+
+    current == target && shipping_charges.to_f.round(2) == invoice.delivery_charge.to_f.round(2)
+  end
+
+  # Tax-inclusive price derived from an invoice's base unit_price, matching the
+  # tax-inclusive-price convention used by booking_item.price.
+  def final_price_for(product, base_unit_price)
+    return base_unit_price.to_f unless product&.gst_enabled? && product.gst_percentage.present?
+
+    base_unit_price.to_f * (1 + product.gst_percentage.to_f / 100)
+  end
+
+  # Base (pre-GST) price extracted from an actually-charged, tax-inclusive price.
+  def base_unit_price_for(product, charged_price)
+    return charged_price.to_f unless product&.gst_enabled? && product.gst_percentage.present?
+
+    charged_price.to_f / (1 + product.gst_percentage.to_f / 100)
+  end
+
+  # Base (pre-GST), discount-adjusted unit price for a booking_item, used when
+  # generating/syncing this booking's invoice line items. Shared by
+  # generate_quick_invoice! and Invoice#rebuild_items_from_booking! so the two
+  # paths never disagree on how a line's price is derived. GST is extracted from
+  # the price actually charged on the item (not the product's current master
+  # price), so later product price changes don't retroactively alter old invoices.
+  def invoice_unit_price_for(booking_item)
+    unit_price = base_unit_price_for(booking_item.product, booking_item.price)
+
+    if discount_amount.to_f > 0 && total_amount.to_f > 0
+      unit_price = unit_price * (1 - discount_amount.to_f / total_amount.to_f)
+    end
+
+    unit_price.to_f
   end
 
   scope :recent, -> { order(created_at: :desc) }
@@ -776,16 +874,7 @@ class Booking < ApplicationRecord
       product = item.product
       next unless product
 
-      unit_price = if product.gst_enabled? && product.gst_percentage.present?
-        product.calculate_base_price || item.price
-      else
-        item.price || product.selling_price
-      end
-
-      if discount_amount.to_f > 0 && total_amount.to_f > 0
-        unit_price = unit_price * (1 - discount_amount.to_f / total_amount.to_f)
-      end
-
+      unit_price = invoice_unit_price_for(item)
       item_total = item.quantity * unit_price
       invoice_total += item_total
 

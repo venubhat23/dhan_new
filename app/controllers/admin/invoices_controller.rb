@@ -14,8 +14,14 @@ class Admin::InvoicesController < Admin::ApplicationController
     regular_invoices = build_regular_invoices_query
     @all_invoices.concat(regular_invoices.map { |inv| prepare_invoice_data(inv, 'regular') })
 
-    # Sort invoices by created_at descending
-    @all_invoices.sort_by! { |inv| inv[:created_at] }.reverse!
+    # Sort invoices: when searching, rank customer-name matches by relevance
+    # (name/word starting with the search term ranks above a mid-name match),
+    # then fall back to newest first within the same relevance tier.
+    if params[:search].present?
+      @all_invoices.sort_by! { |inv| [name_match_rank(inv[:customer_name], params[:search]), -(inv[:created_at]&.to_i || 0)] }
+    else
+      @all_invoices.sort_by! { |inv| inv[:created_at] }.reverse!
+    end
 
     # Apply pagination
     limit = params[:limit]&.to_i || 50
@@ -489,10 +495,12 @@ class Admin::InvoicesController < Admin::ApplicationController
       base_query = base_query.joins(:customer)
                             .where("#{table_name}.invoice_number ILIKE ? OR
                                     customers.first_name ILIKE ? OR
+                                    customers.middle_name ILIKE ? OR
                                     customers.last_name ILIKE ? OR
+                                    CONCAT_WS(' ', customers.first_name, customers.middle_name, customers.last_name) ILIKE ? OR
                                     customers.email ILIKE ? OR
                                     customers.mobile ILIKE ?",
-                                   search_term, search_term, search_term, search_term, search_term)
+                                   search_term, search_term, search_term, search_term, search_term, search_term, search_term)
     end
 
     # Apply delivery person filter based on milk subscriptions
@@ -551,10 +559,12 @@ class Admin::InvoicesController < Admin::ApplicationController
       base_query = base_query.joins(:customer)
                             .where("#{table_name}.invoice_number ILIKE ? OR
                                     customers.first_name ILIKE ? OR
+                                    customers.middle_name ILIKE ? OR
                                     customers.last_name ILIKE ? OR
+                                    CONCAT_WS(' ', customers.first_name, customers.middle_name, customers.last_name) ILIKE ? OR
                                     customers.email ILIKE ? OR
                                     customers.mobile ILIKE ?",
-                                   search_term, search_term, search_term, search_term, search_term)
+                                   search_term, search_term, search_term, search_term, search_term, search_term, search_term)
     end
 
     # Apply delivery person filter based on milk subscriptions
@@ -605,6 +615,20 @@ class Admin::InvoicesController < Admin::ApplicationController
 
     # No limit here - we need all records for accurate stats
     base_query
+  end
+
+  # Lower rank = higher up the results. Full-name match beats a word starting
+  # with the term, which beats the term merely appearing somewhere in the name.
+  def name_match_rank(customer_name, search)
+    name = customer_name.to_s.downcase
+    term = search.to_s.strip.downcase
+    return 3 if term.blank?
+
+    return 0 if name.start_with?(term)
+    return 1 if name.split(/\s+/).any? { |word| word.start_with?(term) }
+    return 2 if name.include?(term)
+
+    3
   end
 
   def prepare_invoice_data(invoice, type)

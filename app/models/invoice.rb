@@ -17,6 +17,7 @@ class Invoice < ApplicationRecord
   before_create :generate_share_token
   after_update :sync_booking_payment_status, if: :saved_change_to_payment_status?
   after_update :sync_booking_delivery_charge, if: :saved_change_to_delivery_charge?
+  after_save :sync_booking_items_from_invoice
 
   scope :for_month, ->(month, year) { where(invoice_date: Date.new(year, month).beginning_of_month..Date.new(year, month).end_of_month) }
 
@@ -122,6 +123,58 @@ class Invoice < ApplicationRecord
 
   def partially_paid?
     payment_status == 'partially_paid' || (paid_amount && paid_amount > 0 && paid_amount < total_amount)
+  end
+
+  # Keeps the originating Booking's booking_items in step with this invoice's
+  # invoice_items (products/quantities/prices), so editing line items from either
+  # screen propagates to the other. Mirrors Booking#sync_invoice_items_from_booking.
+  def sync_booking_items_from_invoice
+    return if invoice_number.blank?
+
+    booking = Booking.find_by(invoice_number: invoice_number)
+    return unless booking
+
+    booking.rebuild_items_from_invoice!(self)
+  rescue => e
+    Rails.logger.error "Failed to sync booking items from invoice ##{id}: #{e.message}"
+  end
+
+  # Rebuilds this invoice's line items from a booking's current booking_items.
+  # Invoice items carry no stock side effects, so a full destroy/recreate is safe.
+  # Called by Booking#sync_invoice_items_from_booking.
+  def rebuild_items_from_booking!(booking)
+    return if items_match_booking?(booking)
+
+    transaction do
+      invoice_items.destroy_all
+
+      booking.booking_items.includes(:product).each do |bi|
+        next unless bi.product
+
+        unit_price = booking.invoice_unit_price_for(bi)
+        invoice_items.create!(
+          product: bi.product,
+          quantity: bi.quantity,
+          unit_price: unit_price,
+          total_amount: bi.quantity.to_f * unit_price,
+          description: "#{bi.product.name} - Booking ##{booking.booking_number} (#{booking.booking_date.strftime('%d %b %Y')})"
+        )
+      end
+
+      update!(delivery_charge: booking.shipping_charges.to_f)
+    end
+  rescue => e
+    Rails.logger.error "Failed to rebuild invoice ##{id} items from booking ##{booking.id}: #{e.message}"
+  end
+
+  def items_match_booking?(booking)
+    current = invoice_items.map { |i| [i.product_id, i.quantity.to_f.round(3), i.unit_price.to_f.round(2)] }.sort
+    target = booking.booking_items.filter_map do |bi|
+      next unless bi.product_id
+      [bi.product_id, bi.quantity.to_f.round(3), booking.invoice_unit_price_for(bi).round(2)]
+    end.sort
+
+    current == target && delivery_charge.to_f.round(2) == booking.shipping_charges.to_f.round(2)
   end
 
   private

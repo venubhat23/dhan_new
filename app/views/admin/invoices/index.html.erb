@@ -1290,21 +1290,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Auto-search functionality (optional - uncomment to enable)
-  /*
+  // Auto-search as you type (debounced) - no need to click the Search button
   if (searchInput) {
+    let lastSubmittedValue = searchInput.value;
     searchInput.addEventListener('input', function() {
       clearTimeout(searchTimeout);
 
       searchTimeout = setTimeout(() => {
-        if (this.value.length >= 3 || this.value.length === 0) {
+        if (this.value !== lastSubmittedValue) {
+          lastSubmittedValue = this.value;
           searchForm.classList.add('loading');
-          searchForm.submit();
+          searchForm.requestSubmit ? searchForm.requestSubmit() : searchForm.submit();
         }
-      }, 500);
+      }, 400);
     });
   }
-  */
 
   // Quick status filter
   const statusSelect = document.querySelector('select[name="status"]');
@@ -1429,6 +1429,14 @@ document.addEventListener('DOMContentLoaded', function() {
   // Add keyboard shortcut hints to search input
   if (searchInput) {
     searchInput.setAttribute('title', 'Tip: Press Ctrl+K to quickly focus search');
+
+    // Restore focus/cursor after an auto-search reload so typing can continue uninterrupted
+    if (new URLSearchParams(window.location.search).get('search')) {
+      searchInput.focus();
+      const val = searchInput.value;
+      searchInput.value = '';
+      searchInput.value = val;
+    }
   }
 });
 
