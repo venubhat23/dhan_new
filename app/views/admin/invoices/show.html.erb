@@ -583,24 +583,20 @@
 
     <%# WhatsApp Thank You button %>
     <%
+      @invoice.generate_share_token! if @invoice.share_token.blank?
       wa_phone = @invoice.customer_mobile.to_s.gsub(/\D/, '')
       wa_phone = "91#{wa_phone}" if wa_phone.length == 10
       wa_cname  = @invoice.customer_display_name
       wa_amount = number_with_delimiter(@invoice.total_amount.to_f)
       wa_idate  = @invoice.invoice_date&.strftime('%d %b %Y')
-      wa_related_booking = Booking.find_by(invoice_number: @invoice.invoice_number)
-      wa_public_link = ""
-      if wa_related_booking
-        wa_related_booking.ensure_share_token!
-        wa_public_link = "\n📋 View your order: #{request.base_url}/booking/#{wa_related_booking.share_token}"
-      end
-      wa_thank_msg = "Dear #{wa_cname},\n\nThank you for your order with Dhanvantari Naturals! 🌿\n\nInvoice #: #{@invoice.invoice_number}\nDate: #{wa_idate}\nAmount: ₹#{wa_amount}#{wa_public_link}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
+      wa_invoice_link = "\n📋 View your invoice: #{public_invoice_by_token_url(token: @invoice.share_token)}"
+      wa_thank_msg = "Dear #{wa_cname},\n\nThank you for your order with Dhanvantari Naturals! 🌿\n\nInvoice #: #{@invoice.invoice_number}\nDate: #{wa_idate}\nAmount: ₹#{wa_amount}#{wa_invoice_link}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
     %>
     <% if wa_phone.length >= 10 %>
       <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
          target="_blank" class="whatsapp-thanks-button"
          title="Send Thank You on WhatsApp">
-        Thanks
+        Thank You
       </a>
     <% end %>
 
