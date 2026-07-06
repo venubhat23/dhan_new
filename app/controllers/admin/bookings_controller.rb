@@ -82,7 +82,7 @@ class Admin::BookingsController < Admin::ApplicationController
 
     # Only count central/main inventory (store_id IS NULL) so transferred stock is not double-counted
     @products = Product.active
-                       .includes(:category, :product_variants, image_attachment: :blob)
+                       .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
                        .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND stock_batches.store_id IS NULL")
                        .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock")
                        .group("products.id")

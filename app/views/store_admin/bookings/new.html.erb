@@ -490,11 +490,12 @@ function saUpdateBadge() {
 }
 
 function saFilterProducts() {
-  const q = document.getElementById('saProductSearch').value.toLowerCase();
+  const words = document.getElementById('saProductSearch').value.toLowerCase().split(/\s+/).filter(Boolean);
   const cat = document.getElementById('saCategoryFilter').value;
   let visible = 0;
   document.querySelectorAll('.sa-product-item').forEach(item => {
-    const matchQ = !q || item.dataset.name.includes(q) || item.dataset.sku.includes(q);
+    const haystack = (item.dataset.name || '') + ' ' + (item.dataset.sku || '');
+    const matchQ = words.every(word => haystack.includes(word));
     const matchC = !cat || item.dataset.category === cat;
     const stock = parseFloat(item.dataset.stock) || 0;
     const matchS = saStockMode === 'all' || (saStockMode === 'instock' && stock > 0);

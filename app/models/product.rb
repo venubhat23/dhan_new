@@ -771,6 +771,8 @@ class Product < ApplicationRecord
 
   # Helper method to get all images (Cloudinary + Active Storage) for views
   def images
+    return @images if defined?(@images)
+
     all_images = []
 
     # Add R2 main image with highest priority
@@ -803,7 +805,7 @@ class Product < ApplicationRecord
       all_images.concat(additional_images.to_a) if additional_images.attached?
     end
 
-    all_images
+    @images = all_images
   end
 
   # Helper method with metadata for admin views

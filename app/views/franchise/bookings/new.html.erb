@@ -1194,7 +1194,7 @@ function performCustomerSearch(query) {
   setTimeout(() => {
     const filteredCustomers = customers.filter(customer =>
       customer.name.toLowerCase().includes(query.toLowerCase()) ||
-      customer.mobile.includes(query) ||
+      (customer.mobile && customer.mobile.includes(query)) ||
       (customer.email && customer.email.toLowerCase().includes(query.toLowerCase()))
     ).slice(0, 10); // Limit to 10 results
 
@@ -1393,7 +1393,7 @@ function setupSearch() {
   const searchInput = document.getElementById('productSearch');
   if (searchInput) {
     searchInput.addEventListener('input', function() {
-      const searchTerm = this.value.toLowerCase();
+      const words = this.value.toLowerCase().split(/\s+/).filter(Boolean);
       document.querySelectorAll('.product-grid-item').forEach(card => {
         const name = card.querySelector('h6')?.textContent?.toLowerCase() || '';
         const categoryElement = card.querySelector('small');
@@ -1402,14 +1402,10 @@ function setupSearch() {
         // Get the SKU from the second small element (SKU: xxx format)
         const skuElement = card.querySelectorAll('small')[1];
         const sku = skuElement?.textContent?.toLowerCase() || '';
+        const haystack = name + ' ' + category + ' ' + sku;
 
-        if (name.includes(searchTerm) ||
-            category.includes(searchTerm) ||
-            sku.includes(searchTerm)) {
-          card.style.display = 'block';
-        } else {
-          card.style.display = 'none';
-        }
+        const matches = words.every(word => haystack.includes(word));
+        card.style.display = matches ? 'block' : 'none';
       });
     });
   }

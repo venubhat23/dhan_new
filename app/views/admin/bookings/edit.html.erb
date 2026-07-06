@@ -384,6 +384,11 @@
             </div>
 
             <div class="col-12">
+              <label class="form-label"><i class="bi bi-truck me-1"></i>Delivery Charge</label>
+              <%= f.number_field :shipping_charges, value: @booking.shipping_charges.to_f, min: 0, step: '0.01', class: 'form-control', oninput: 'calculateTotals()' %>
+            </div>
+
+            <div class="col-12">
               <label class="form-label fw-bold">Total Amount</label>
               <%= f.number_field :total_amount, class: 'form-control fw-bold text-success', step: '0.01', readonly: true %>
             </div>
@@ -577,8 +582,11 @@ function calculateTotals() {
     if (discountPreview) discountPreview.classList.add('d-none');
   }
 
-  // item price is GST-inclusive, so the total is simply subtotal minus discount — no tax is added on top
-  const totalAmount = subtotal - discountAmount;
+  const shippingChargesEl = document.querySelector('input[name="booking[shipping_charges]"]');
+  const shippingCharges = parseFloat(shippingChargesEl?.value) || 0;
+
+  // item price is GST-inclusive, so the total is subtotal minus discount plus delivery charge — no tax is added on top
+  const totalAmount = subtotal - discountAmount + shippingCharges;
 
   // Update form fields
   document.querySelector('input[name="booking[subtotal]"]').value = subtotal.toFixed(2);

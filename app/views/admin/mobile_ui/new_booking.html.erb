@@ -526,9 +526,10 @@ function updateVariant(pid, sel) {
 
 // ── Product search ────────────────────────────────────────────────────
 document.getElementById('prodSearchInput').addEventListener('input', function() {
-  const q = this.value.toLowerCase();
+  const words = this.value.toLowerCase().split(/\s+/).filter(Boolean);
   document.querySelectorAll('#prodGrid .prod-card').forEach(c => {
-    const match = (c.dataset.name||'').includes(q) || (c.dataset.category||'').includes(q);
+    const haystack = (c.dataset.name||'') + ' ' + (c.dataset.category||'');
+    const match = words.every(word => haystack.includes(word));
     c.style.display = match ? '' : 'none';
   });
 });
@@ -618,7 +619,7 @@ function searchCustomer(q) {
     if (!q.trim()) { drop.classList.remove('show'); return; }
     const res = allCustomers.filter(c =>
       c.name.toLowerCase().includes(q.toLowerCase()) ||
-      c.mobile.includes(q)
+      (c.mobile && c.mobile.includes(q))
     ).slice(0, 8);
     if (!res.length) { drop.innerHTML = '<div class="cust-item" style="color:#aaa;">No customers found</div>'; }
     else {
