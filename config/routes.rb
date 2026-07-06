@@ -202,6 +202,7 @@ Rails.application.routes.draw do
         get :quick_new
         post :quick_create
         get :check_mobile
+        get :search_by_name
         post :bulk_delete
       end
     end

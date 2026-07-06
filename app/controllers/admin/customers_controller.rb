@@ -806,6 +806,24 @@ class Admin::CustomersController < Admin::ApplicationController
     end
   end
 
+  # GET /admin/customers/search_by_name
+  def search_by_name
+    query = params[:name].to_s.strip
+
+    if query.length >= 2
+      customers = Customer.where(
+        "first_name ILIKE :q OR last_name ILIKE :q OR CONCAT(first_name, ' ', last_name) ILIKE :q",
+        q: "%#{query}%"
+      ).limit(5)
+
+      render json: {
+        customers: customers.map { |c| { id: c.id, name: c.display_name, mobile: c.mobile, email: c.email } }
+      }
+    else
+      render json: { customers: [] }
+    end
+  end
+
   # POST /admin/customers/quick_create
   def quick_create
     # Safety net: if a customer with this mobile already exists (e.g. the

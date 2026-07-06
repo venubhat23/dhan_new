@@ -203,7 +203,7 @@
                           <option value="<%= v.id %>"
                                   data-price="<%= v.effective_price %>"
                                   data-stock="<%= v.available_stock %>"
-                                  data-label="<%= j(v.label) %>"
+                                  data-label="<%= v.label %>"
                                   <%= 'selected' if v.id == default_v.id %>>
                             <%= v.label %> — ₹<%= number_with_delimiter(v.effective_price) %>
                           </option>
@@ -270,12 +270,14 @@
                         cart_base_price = rounded_base
                         cart_gst_rate = gst_rate
                       %>
-                      <button class="btn btn-primary btn-sm w-100"
+                      <button class="btn btn-primary btn-sm w-100 booking-add-to-cart-btn"
                               id="booking-add-btn-<%= product.id %>"
-                              onclick="bookingAddToCart(<%= product.id %>, '<%= j(product.name) %>', <%= cart_final_price %>, <%= effective_stock %>, <%= cart_base_price %>, <%= cart_gst_rate %>)"
+                              data-product-id="<%= product.id %>"
+                              data-product-name="<%= product.name %>"
                               data-base-price="<%= cart_base_price %>"
                               data-gst-rate="<%= cart_gst_rate %>"
                               data-final-price="<%= cart_final_price %>"
+                              data-stock="<%= effective_stock %>"
                               data-has-variants="<%= product.has_multiple_quantities? ? 'true' : 'false' %>"
                               <%= 'disabled' if effective_stock <= 0 %>>
                         <i class="bi bi-cart-plus me-1"></i>Add to Cart
@@ -839,6 +841,21 @@ function bookingAddToCart(productId, productName, finalPrice, stock, basePrice, 
 
   addToCart(productId, productName, finalPrice, stock, basePrice, gstRate, variantId);
 }
+
+// Wire up "Add to Cart" buttons via data attributes instead of inline onclick,
+// so product names with quotes/apostrophes can't break the attribute markup.
+document.querySelectorAll('.booking-add-to-cart-btn').forEach(btn => {
+  btn.onclick = function() {
+    bookingAddToCart(
+      parseInt(btn.dataset.productId),
+      btn.dataset.productName || '',
+      parseFloat(btn.dataset.finalPrice) || 0,
+      parseFloat(btn.dataset.stock) || 0,
+      parseFloat(btn.dataset.basePrice) || 0,
+      parseFloat(btn.dataset.gstRate) || 0
+    );
+  };
+});
 
 // Update cart display
 function updateCartDisplay() {

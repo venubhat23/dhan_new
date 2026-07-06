@@ -192,11 +192,13 @@
                         cart_base_price = rounded_base
                         cart_gst_rate = gst_rate
                       %>
-                      <button class="btn btn-primary w-100"
-                              onclick="addToCart(<%= product.id %>, '<%= j(product.name) %>', <%= cart_final_price %>, <%= current_stock %>, <%= cart_base_price %>, <%= cart_gst_rate %>)"
+                      <button class="btn btn-primary w-100 add-to-cart-btn"
+                              data-product-id="<%= product.id %>"
+                              data-product-name="<%= product.name %>"
                               data-base-price="<%= cart_base_price %>"
                               data-gst-rate="<%= cart_gst_rate %>"
                               data-final-price="<%= cart_final_price %>"
+                              data-stock="<%= current_stock %>"
                               <%= 'disabled' if product.out_of_stock? %>>
                         <% if product.out_of_stock? %>
                           <i class="bi bi-x-circle me-2"></i>Out of Stock
@@ -641,6 +643,21 @@ function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate
   }
 
 }
+
+// Wire up "Add to Cart" buttons via data attributes instead of inline onclick,
+// so product names with quotes/apostrophes can't break the attribute markup.
+document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+  btn.onclick = function() {
+    addToCart(
+      parseInt(btn.dataset.productId),
+      btn.dataset.productName || '',
+      parseFloat(btn.dataset.finalPrice) || 0,
+      parseFloat(btn.dataset.stock) || 0,
+      parseFloat(btn.dataset.basePrice) || 0,
+      parseFloat(btn.dataset.gstRate) || 0
+    );
+  };
+});
 
 // Update cart display
 function updateCartDisplay() {

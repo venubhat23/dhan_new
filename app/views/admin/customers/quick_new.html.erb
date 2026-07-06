@@ -62,11 +62,25 @@
                   placeholder: "Enter customer full name",
                   required: true,
                   autofocus: true,
+                  autocomplete: "off",
+                  id: "quick_name",
                   value: @customer.first_name %>
             </div>
             <% if @customer.errors[:first_name].any? %>
               <div class="invalid-feedback d-block"><%= @customer.errors[:first_name].first %></div>
             <% end %>
+          </div>
+
+          <!-- Existing customer matches by name -->
+          <div id="nameMatchAlert" class="alert alert-warning border-0 mb-4" style="display: none;">
+            <div class="d-flex align-items-start">
+              <i class="bi bi-people-fill me-2 mt-1"></i>
+              <div class="flex-grow-1">
+                <h6 class="alert-heading mb-2">Customer(s) with this name already exist</h6>
+                <div id="nameMatchList" class="d-flex flex-column gap-2 mb-2"></div>
+                <p class="mb-0 small text-muted">Not the same person? Keep filling the form to create a new customer.</p>
+              </div>
+            </div>
           </div>
 
           <div class="mb-4">
@@ -195,5 +209,61 @@
   function hideExistingCustomerMatch() {
     existingAlert.style.display = 'none';
     createBtn.disabled = false;
+  }
+
+  const quickNameInput = document.getElementById('quick_name');
+  const nameMatchAlert = document.getElementById('nameMatchAlert');
+  const nameMatchList = document.getElementById('nameMatchList');
+  let nameCheckTimeout = null;
+
+  quickNameInput.addEventListener('input', function() {
+    const name = this.value.trim();
+    hideNameMatches();
+    clearTimeout(nameCheckTimeout);
+    if (name.length >= 2) {
+      nameCheckTimeout = setTimeout(() => checkExistingName(name), 400);
+    }
+  });
+
+  function checkExistingName(name) {
+    fetch(`<%= search_by_name_admin_customers_path %>?name=${encodeURIComponent(name)}`, {
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.customers && data.customers.length > 0) {
+          showNameMatches(data.customers);
+        } else {
+          hideNameMatches();
+        }
+      })
+      .catch(() => hideNameMatches());
+  }
+
+  function showNameMatches(customers) {
+    nameMatchList.innerHTML = '';
+    customers.forEach(function(customer) {
+      const row = document.createElement('div');
+      row.className = 'd-flex justify-content-between align-items-center bg-white bg-opacity-50 rounded p-2';
+
+      const info = document.createElement('span');
+      info.className = 'small';
+      info.textContent = `${customer.name} — ${customer.mobile}`;
+
+      const link = document.createElement('a');
+      link.className = 'btn btn-sm btn-outline-warning';
+      link.href = `<%= new_admin_booking_path %>?customer_id=${customer.id}`;
+      link.textContent = 'Proceed with this customer';
+
+      row.appendChild(info);
+      row.appendChild(link);
+      nameMatchList.appendChild(row);
+    });
+    nameMatchAlert.style.display = '';
+  }
+
+  function hideNameMatches() {
+    nameMatchAlert.style.display = 'none';
+    nameMatchList.innerHTML = '';
   }
 </script>

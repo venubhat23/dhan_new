@@ -191,12 +191,15 @@
                         <% end %>
                       </div>
 
-                      <button class="btn btn-primary w-100"
+                      <button class="btn btn-primary w-100 sa-add-to-cart-btn"
                               id="sa-addbtn-<%= product.id %>"
-                              onclick="saAddToCart(<%= product.id %>, '<%= j(product.name) %>', <%= rounded_price %>, <%= store_stock %>, <%= rounded_base %>, <%= gst_rate %>, <%= product.has_multiple_quantities? %>)"
+                              data-product-id="<%= product.id %>"
+                              data-product-name="<%= product.name %>"
                               data-base-price="<%= rounded_base %>"
                               data-gst-rate="<%= gst_rate %>"
-                              data-final-price="<%= rounded_price %>">
+                              data-final-price="<%= rounded_price %>"
+                              data-stock="<%= store_stock %>"
+                              data-has-variants="<%= product.has_multiple_quantities? %>">
                         <i class="bi bi-cart-plus me-2"></i>Add to Cart
                       </button>
                     <% else %>
@@ -423,6 +426,22 @@ function saAddToCart(productId, name, price, stock, basePrice, gstRate, hasVaria
     setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('btn-success'); btn.classList.add('btn-primary'); }, 1200);
   }
 }
+
+// Wire up "Add to Cart" buttons via data attributes instead of inline onclick,
+// so product names with quotes/apostrophes can't break the attribute markup.
+document.querySelectorAll('.sa-add-to-cart-btn').forEach(btn => {
+  btn.onclick = function() {
+    saAddToCart(
+      parseInt(btn.dataset.productId),
+      btn.dataset.productName || '',
+      parseFloat(btn.dataset.finalPrice) || 0,
+      parseFloat(btn.dataset.stock) || 0,
+      parseFloat(btn.dataset.basePrice) || 0,
+      parseFloat(btn.dataset.gstRate) || 0,
+      btn.dataset.hasVariants === 'true'
+    );
+  };
+});
 
 function saRemoveItem(idx) {
   saCart = saCart.filter(i => i.index !== idx);

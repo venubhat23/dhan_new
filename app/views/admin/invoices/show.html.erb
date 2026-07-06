@@ -513,9 +513,32 @@
         text-decoration: none;
       }
 
+      .whatsapp-thanks-button {
+        position: fixed;
+        top: 20px;
+        left: 190px;
+        background-color: #25d366;
+        color: white;
+        padding: 10px 20px;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      }
+
+      .whatsapp-thanks-button:hover {
+        background-color: #1ebe5b;
+        color: white;
+        text-decoration: none;
+      }
+
       /* Print styles */
       @media print {
         .back-button {
+          display: none;
+        }
+        .whatsapp-thanks-button {
           display: none;
         }
         body {
@@ -556,6 +579,29 @@
     <!-- Back Button -->
     <%= link_to admin_invoices_path, class: "back-button" do %>
       ← Back to Invoices
+    <% end %>
+
+    <%# WhatsApp Thank You button %>
+    <%
+      wa_phone = @invoice.customer_mobile.to_s.gsub(/\D/, '')
+      wa_phone = "91#{wa_phone}" if wa_phone.length == 10
+      wa_cname  = @invoice.customer_display_name
+      wa_amount = number_with_delimiter(@invoice.total_amount.to_f)
+      wa_idate  = @invoice.invoice_date&.strftime('%d %b %Y')
+      wa_related_booking = Booking.find_by(invoice_number: @invoice.invoice_number)
+      wa_public_link = ""
+      if wa_related_booking
+        wa_related_booking.ensure_share_token!
+        wa_public_link = "\n📋 View your order: #{request.base_url}/booking/#{wa_related_booking.share_token}"
+      end
+      wa_thank_msg = "Dear #{wa_cname},\n\nThank you for your order with Dhanvantari Naturals! 🌿\n\nInvoice #: #{@invoice.invoice_number}\nDate: #{wa_idate}\nAmount: ₹#{wa_amount}#{wa_public_link}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
+    %>
+    <% if wa_phone.length >= 10 %>
+      <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
+         target="_blank" class="whatsapp-thanks-button"
+         title="Send Thank You on WhatsApp">
+        Thanks
+      </a>
     <% end %>
 
 

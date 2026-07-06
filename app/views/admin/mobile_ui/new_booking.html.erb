@@ -250,8 +250,12 @@
           <% if out %>
             <button class="add-btn" disabled>Out of Stock</button>
           <% else %>
-            <button class="add-btn" id="add-btn-<%= product.id %>"
-                    onclick="addProduct(<%= product.id %>, '<%= j(product.name) %>', <%= price %>, <%= effective_stock %>, <%= has_variants ? (default_v&.id || 'null') : 'null' %>)">
+            <button class="add-btn add-product-btn" id="add-btn-<%= product.id %>"
+                    data-product-id="<%= product.id %>"
+                    data-product-name="<%= product.name %>"
+                    data-price="<%= price %>"
+                    data-stock="<%= effective_stock %>"
+                    data-variant-id="<%= has_variants ? default_v&.id : '' %>">
               <i class="bi bi-cart-plus me-1"></i>Add
             </button>
           <% end %>
@@ -445,6 +449,21 @@ function addProduct(pid, name, price, stock, variantId) {
   renderCartControls(pid, key);
   updateCartBar();
 }
+
+// Wire up "Add" buttons via data attributes instead of inline onclick,
+// so product names with quotes/apostrophes can't break the attribute markup.
+document.querySelectorAll('.add-product-btn').forEach(btn => {
+  btn.onclick = function() {
+    const variantId = btn.dataset.variantId || null;
+    addProduct(
+      parseInt(btn.dataset.productId),
+      btn.dataset.productName || '',
+      parseFloat(btn.dataset.price) || 0,
+      parseFloat(btn.dataset.stock) || 0,
+      variantId
+    );
+  };
+});
 
 function changeQty(key, delta) {
   if (!cart[key]) return;
