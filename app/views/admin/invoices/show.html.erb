@@ -492,18 +492,22 @@
         font-weight: bold;
       }
 
-      /* Back button styling */
+      /* Action button bar (Back / WhatsApp) - flows above the invoice, not fixed,
+         so it can't get hidden behind the admin layout's sidebar/topbar. */
+      .invoice-action-bar {
+        max-width: 800px;
+        margin: 0 auto 10px auto;
+        display: flex;
+        gap: 10px;
+      }
+
       .back-button {
-        position: fixed;
-        top: 20px;
-        left: 20px;
         background-color: #5a4ec9;
         color: white;
         padding: 10px 20px;
         text-decoration: none;
         border-radius: 5px;
         font-weight: bold;
-        z-index: 1000;
         box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       }
 
@@ -514,16 +518,12 @@
       }
 
       .whatsapp-thanks-button {
-        position: fixed;
-        top: 20px;
-        left: 190px;
         background-color: #25d366;
         color: white;
         padding: 10px 20px;
         text-decoration: none;
         border-radius: 5px;
         font-weight: bold;
-        z-index: 1000;
         box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       }
 
@@ -535,10 +535,7 @@
 
       /* Print styles */
       @media print {
-        .back-button {
-          display: none;
-        }
-        .whatsapp-thanks-button {
+        .invoice-action-bar {
           display: none;
         }
         body {
@@ -576,30 +573,6 @@
     </style>
   </head>
   <body>
-    <!-- Back Button -->
-    <%= link_to admin_invoices_path, class: "back-button" do %>
-      ← Back to Invoices
-    <% end %>
-
-    <%# WhatsApp Thank You button %>
-    <%
-      @invoice.generate_share_token! if @invoice.share_token.blank?
-      wa_phone = @invoice.customer_mobile.to_s.gsub(/\D/, '')
-      wa_phone = "91#{wa_phone}" if wa_phone.length == 10
-      wa_cname  = @invoice.customer_display_name
-      wa_amount = number_with_delimiter(@invoice.total_amount.to_f)
-      wa_idate  = @invoice.invoice_date&.strftime('%d %b %Y')
-      wa_invoice_link = "\n📋 View your invoice: #{public_invoice_by_token_url(token: @invoice.share_token)}"
-      wa_thank_msg = "Dear #{wa_cname},\n\nThank you for your order with Dhanvantari Naturals! 🌿\n\nInvoice #: #{@invoice.invoice_number}\nDate: #{wa_idate}\nAmount: ₹#{wa_amount}#{wa_invoice_link}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
-    %>
-    <% if wa_phone.length >= 10 %>
-      <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
-         target="_blank" class="whatsapp-thanks-button"
-         title="Send Thank You on WhatsApp">
-        Thank You
-      </a>
-    <% end %>
-
 
     <%
       # FIXED: Load items directly from the invoice to bypass any variable issues
@@ -662,6 +635,29 @@
       # Get business settings
       business_settings = SystemSetting.business_settings
     %>
+
+    <%
+      @invoice.generate_share_token! if @invoice.share_token.blank?
+      wa_phone = @invoice.customer_mobile.to_s.gsub(/\D/, '')
+      wa_phone = "91#{wa_phone}" if wa_phone.length == 10
+      wa_cname  = @invoice.customer_display_name
+      wa_amount = number_with_delimiter(@invoice.total_amount.to_f)
+      wa_idate  = @invoice.invoice_date&.strftime('%d %b %Y')
+      wa_invoice_link = "\n📋 View your invoice: #{public_invoice_by_token_url(token: @invoice.share_token)}"
+      wa_thank_msg = "Dear #{wa_cname},\n\nThank you for your order with Dhanvantari Naturals! 🌿\n\nInvoice #: #{@invoice.invoice_number}\nDate: #{wa_idate}\nAmount: ₹#{wa_amount}#{wa_invoice_link}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
+    %>
+    <div class="invoice-action-bar">
+      <%= link_to admin_invoices_path, class: "back-button" do %>
+        ← Back to Invoices
+      <% end %>
+      <% if wa_phone.length >= 10 %>
+        <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
+           target="_blank" class="whatsapp-thanks-button"
+           title="Send Thank You on WhatsApp">
+          <span aria-hidden="true">&#9993;</span> Thank You
+        </a>
+      <% end %>
+    </div>
 
     <div class="invoice-container">
       <!-- Tax label and original recipient -->
