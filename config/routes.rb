@@ -392,6 +392,8 @@ Rails.application.routes.draw do
         patch :approve_group
         patch :reject_group
         patch :bulk_approve
+        patch :bulk_reject
+        get :bulk_progress
         get :show_group
       end
     end

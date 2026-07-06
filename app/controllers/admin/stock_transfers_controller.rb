@@ -121,75 +121,73 @@ class Admin::StockTransfersController < Admin::ApplicationController
     redirect_to admin_stock_transfers_path
   end
 
-  # Approve all pending transfers in a group
+  # Approve all pending transfers in a group. Queued as a background job so a
+  # request with many line-items can't hang the web request past the
+  # platform timeout. The index page polls bulk_progress with the returned
+  # token to show a live percentage while it runs.
   def approve_group
-    group_id = params[:group_id]
-    transfers = StockTransfer.pending.where(transfer_group_id: group_id)
-
-    if transfers.empty?
-      flash[:alert] = 'No pending transfers found for this request.'
-      redirect_to admin_stock_transfers_path and return
-    end
-
-    approved = 0
-    errors   = []
-    transfers.each do |t|
-      t.approve!(current_user)
-      approved += 1
-    rescue => e
-      errors << "#{t.product&.name}: #{e.message}"
-    end
-
-    if errors.any?
-      flash[:alert] = "#{approved} approved, #{errors.size} failed — #{errors.join(' | ')}"
-    else
-      flash[:notice] = "#{approved} transfer(s) approved successfully."
-    end
-    redirect_to admin_stock_transfers_path
+    enqueue_bulk_action([params[:group_id]], 'approve')
   end
 
   # Reject all pending transfers in a group
   def reject_group
-    group_id = params[:group_id]
-    reason   = params[:rejection_reason].to_s.strip
-    transfers = StockTransfer.pending.where(transfer_group_id: group_id)
-
-    if transfers.empty?
-      flash[:alert] = 'No pending transfers found for this request.'
-      redirect_to admin_stock_transfers_path and return
-    end
-
-    transfers.each { |t| t.reject!(current_user, reason) }
-    flash[:notice] = "#{transfers.size} transfer(s) rejected."
-    redirect_to admin_stock_transfers_path
+    enqueue_bulk_action([params[:group_id]], 'reject', params[:rejection_reason].to_s.strip)
   end
 
   # Bulk approve multiple groups at once
   def bulk_approve
-    group_ids = Array(params[:group_ids])
-    if group_ids.empty?
-      flash[:alert] = 'No requests selected.'
-      redirect_to admin_stock_transfers_path and return
+    enqueue_bulk_action(Array(params[:group_ids]), 'approve')
+  end
+
+  # Bulk reject multiple groups at once
+  def bulk_reject
+    enqueue_bulk_action(Array(params[:group_ids]), 'reject', params[:rejection_reason].to_s.strip)
+  end
+
+  # Polled by the index page's progress bar while a bulk approve/reject job runs.
+  def bulk_progress
+    progress = Rails.cache.read("stock_transfer_bulk_progress:#{params[:token]}")
+    if progress.nil?
+      render json: { done: true, missing: true, total: 0, processed: 0, failed: 0, percent: 100 }
+      return
     end
 
-    approved = 0
-    errors   = []
-    StockTransfer.pending.where(transfer_group_id: group_ids).each do |t|
-      t.approve!(current_user)
-      approved += 1
-    rescue => e
-      errors << "#{t.product&.name}: #{e.message}"
-    end
-
-    if errors.any?
-      flash[:alert] = "#{approved} approved, #{errors.size} failed — #{errors.join(' | ')}"
-    else
-      flash[:notice] = "#{approved} transfer(s) approved across #{group_ids.size} request(s)."
-    end
-    redirect_to admin_stock_transfers_path
+    percent = progress[:total].zero? ? 100 : ((progress[:processed].to_f / progress[:total]) * 100).round
+    render json: progress.merge(percent: percent)
   end
 
   private
+
+  def enqueue_bulk_action(group_ids, action, reason = nil)
+    group_ids = Array(group_ids).reject(&:blank?)
+    return respond_bulk_error('No requests selected.') if group_ids.empty?
+
+    count = StockTransfer.pending.where(transfer_group_id: group_ids).count
+    return respond_bulk_error('No pending transfers found for this request.') if count.zero?
+
+    token = SecureRandom.hex(10)
+    StockTransferBulkActionJob.perform_later(group_ids, action, current_user.id, reason, token)
+
+    respond_to do |format|
+      format.json { render json: { token: token, total: count } }
+      format.html do
+        verb = action == 'approve' ? 'Approving' : 'Rejecting'
+        scope_msg = group_ids.size > 1 ? " across #{group_ids.size} request(s)" : ''
+        flash[:notice] = "#{verb} #{count} transfer(s)#{scope_msg} in the background — refresh in a few moments to see the result."
+        redirect_to admin_stock_transfers_path
+      end
+    end
+  end
+
+  def respond_bulk_error(message)
+    respond_to do |format|
+      format.json { render json: { error: message }, status: :unprocessable_entity }
+      format.html do
+        flash[:alert] = message
+        redirect_to admin_stock_transfers_path
+      end
+    end
+  end
 
   def set_transfer
     @transfer = StockTransfer.find(params[:id])

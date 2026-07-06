@@ -1,0 +1,123 @@
+<div class="modal fade" id="bulkProgressModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:16px; border:none;">
+      <div class="modal-body text-center p-4">
+        <div id="bulkProgressIcon" class="mb-3">
+          <i class="bi bi-arrow-repeat" style="font-size:2rem; color:#f0ad4e; display:inline-block; animation: bulk-progress-spin 1s linear infinite;"></i>
+        </div>
+        <h6 id="bulkProgressTitle" class="fw-semibold mb-3">Processing transfers&hellip;</h6>
+        <div class="progress mb-2" style="height:22px; border-radius:11px; background:#f1f3f5;">
+          <div id="bulkProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-warning"
+               role="progressbar" style="width:0%; border-radius:11px; font-weight:600; transition:width 0.3s ease;">0%</div>
+        </div>
+        <div id="bulkProgressCount" class="text-muted small">Starting&hellip;</div>
+        <div id="bulkProgressFailed" class="text-danger small mt-1" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes bulk-progress-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+</style>
+
+<script>
+(function() {
+  let modalInstance = null;
+  let pollTimer = null;
+
+  function getModal() {
+    if (!modalInstance) {
+      modalInstance = new bootstrap.Modal(document.getElementById('bulkProgressModal'));
+    }
+    return modalInstance;
+  }
+
+  function setIcon(html) {
+    document.getElementById('bulkProgressIcon').innerHTML = html;
+  }
+
+  const spinnerIcon = '<i class="bi bi-arrow-repeat" style="font-size:2rem; color:#f0ad4e; display:inline-block; animation: bulk-progress-spin 1s linear infinite;"></i>';
+  const doneIcon = '<i class="bi bi-check-circle-fill" style="font-size:2rem; color:#2f9e44;"></i>';
+
+  function updateProgress(data) {
+    const pct = data.percent || 0;
+    const bar = document.getElementById('bulkProgressBar');
+    bar.style.width = pct + '%';
+    bar.textContent = pct + '%';
+    document.getElementById('bulkProgressCount').textContent =
+      (data.processed || 0) + ' of ' + (data.total || 0) + ' processed';
+
+    const failedEl = document.getElementById('bulkProgressFailed');
+    if (data.failed > 0) {
+      failedEl.style.display = 'block';
+      failedEl.textContent = data.failed + ' failed — check the request afterwards for details.';
+    } else {
+      failedEl.style.display = 'none';
+    }
+  }
+
+  function poll(progressUrl, token) {
+    fetch(progressUrl + '?token=' + encodeURIComponent(token), { headers: { 'Accept': 'application/json' } })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        updateProgress(data);
+        if (data.done) {
+          clearInterval(pollTimer);
+          document.getElementById('bulkProgressBar').classList.remove('progress-bar-animated');
+          document.getElementById('bulkProgressTitle').textContent = 'Done!';
+          setIcon(doneIcon);
+          setTimeout(function() { window.location.reload(); }, 900);
+        }
+      })
+      .catch(function() { clearInterval(pollTimer); });
+  }
+
+  function startBulkAction(form, url, verb) {
+    const modal = getModal();
+    document.getElementById('bulkProgressTitle').textContent = verb + 'ing transfers…';
+    setIcon(spinnerIcon);
+    const bar = document.getElementById('bulkProgressBar');
+    bar.classList.add('progress-bar-animated');
+    bar.style.width = '0%';
+    bar.textContent = '0%';
+    document.getElementById('bulkProgressCount').textContent = 'Starting…';
+    document.getElementById('bulkProgressFailed').style.display = 'none';
+    modal.show();
+
+    fetch(url, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) {
+          modal.hide();
+          alert(data.error);
+          return;
+        }
+        updateProgress({ percent: 0, processed: 0, total: data.total, failed: 0 });
+        const progressUrl = form.dataset.bulkProgressUrl;
+        pollTimer = setInterval(function() { poll(progressUrl, data.token); }, 700);
+      })
+      .catch(function() {
+        modal.hide();
+        alert('Something went wrong starting the bulk action. Please try again.');
+      });
+  }
+
+  document.querySelectorAll('form[data-bulk-form]').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+      const submitter = e.submitter;
+      const url = (submitter && submitter.formAction) ? submitter.formAction : form.action;
+      const verb = (submitter && submitter.dataset.verb) || form.dataset.verb || 'Process';
+      e.preventDefault();
+      startBulkAction(form, url, verb);
+    });
+  });
+})();
+</script>
