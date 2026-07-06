@@ -13,7 +13,7 @@
   </div>
 </div>
 
-<%= form_with model: [:admin, @invoice], local: true, class: "invoice-edit-form" do |f| %>
+<%= form_with model: [:admin, @invoice], local: true, class: "invoice-edit-form", html: { novalidate: true } do |f| %>
   <% if @invoice.errors.any? %>
     <div class="alert alert-danger" role="alert">
       <h6 class="alert-heading">Please correct the following errors:</h6>
@@ -91,8 +91,8 @@
                     <input type="number"
                            name="invoice[invoice_items_attributes][<%= index %>][quantity]"
                            value="<%= item.quantity %>"
-                           min="0.001"
-                           step="any"
+                           min="1"
+                           step="1"
                            class="form-control quantity-input"
                            onchange="calculateLineTotal(this)"
                            oninput="calculateLineTotal(this)"
@@ -161,8 +161,8 @@
                     <input type="number"
                            name=""
                            value="1"
-                           min="0.001"
-                           step="any"
+                           min="1"
+                           step="1"
                            class="form-control quantity-input"
                            onchange="calculateLineTotal(this)"
                            oninput="calculateLineTotal(this)"
