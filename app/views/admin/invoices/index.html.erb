@@ -97,6 +97,7 @@
         <div class="col-lg-6 col-md-8">
           <%= f.text_field :search, value: params[:search], placeholder: "Search invoices, customers...",
                           class: "form-control", id: "searchInput" %>
+          <small class="text-muted d-none" id="searchHint">Please type at least 2 characters to search.</small>
         </div>
         <div class="col-lg-3 col-md-4">
           <%= f.select :status, options_for_select([
@@ -1290,11 +1291,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Auto-search as you type (debounced) - no need to click the Search button
+  // Auto-search as you type (debounced) - no need to click the Search button.
+  // Requires at least 2 characters before searching, to avoid overly broad
+  // single-letter matches; shows a hint below the field until then.
   if (searchInput) {
+    const searchHint = document.getElementById('searchHint');
     let lastSubmittedValue = searchInput.value;
     searchInput.addEventListener('input', function() {
       clearTimeout(searchTimeout);
+
+      const value = this.value.trim();
+      if (searchHint) searchHint.classList.toggle('d-none', value.length !== 1);
+
+      if (value.length === 1) return;
 
       searchTimeout = setTimeout(() => {
         if (this.value !== lastSubmittedValue) {
