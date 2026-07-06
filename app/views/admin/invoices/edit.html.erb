@@ -140,6 +140,7 @@
                   </div>
                 </div>
                 <input type="hidden" name="invoice[invoice_items_attributes][<%= index %>][id]" value="<%= item.id %>">
+                <input type="hidden" class="gst-rate-field" value="<%= invoice_gst_rate_for(item.product) %>">
               </div>
               <% unless index == @invoice_items.length - 1 %>
                 <hr class="my-3">
@@ -208,6 +209,7 @@
                            placeholder="Item description (optional)">
                   </div>
                 </div>
+                <input type="hidden" class="gst-rate-field" value="0">
               </div>
             </div>
           </div>
@@ -253,9 +255,16 @@
 
           <hr class="my-3">
 
+          <%
+            summary_subtotal = @invoice_items.sum { |item| item.quantity.to_f * item.unit_price.to_f }
+            summary_tax = @invoice_items.sum { |item| (item.quantity.to_f * item.unit_price.to_f) * invoice_gst_rate_for(item.product).to_f / 100 }
+            summary_delivery = @invoice.delivery_charge.to_f
+            summary_total = summary_subtotal + summary_tax + summary_delivery
+          %>
+
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="text-muted">Subtotal</span>
-            <span class="fw-medium" id="subtotal-display">₹<%= number_with_delimiter(@invoice.total_amount.to_i) %></span>
+            <span class="fw-medium" id="subtotal-display">₹<%= number_with_delimiter(sprintf('%.2f', summary_subtotal)) %></span>
           </div>
 
           <div class="d-flex justify-content-between align-items-center mb-3">
@@ -268,18 +277,18 @@
 
           <div class="d-flex justify-content-between align-items-center mb-3">
             <span class="text-muted">Tax</span>
-            <span class="fw-medium">₹0.00</span>
+            <span class="fw-medium" id="tax-display">₹<%= number_with_delimiter(sprintf('%.2f', summary_tax)) %></span>
           </div>
 
           <hr class="my-3">
 
           <div class="d-flex justify-content-between align-items-center mb-3">
             <span class="fw-bold text-dark">Total Amount</span>
-            <span class="fw-bold text-primary fs-5" id="total-display">₹<%= number_with_delimiter(@invoice.total_amount.to_i) %></span>
+            <span class="fw-bold text-primary fs-5" id="total-display">₹<%= number_with_delimiter(sprintf('%.2f', summary_total)) %></span>
           </div>
 
           <!-- Hidden field for total amount -->
-          <input type="hidden" name="invoice[total_amount]" id="total_amount_field" value="<%= @invoice.total_amount %>">
+          <input type="hidden" name="invoice[total_amount]" id="total_amount_field" value="<%= summary_total %>">
 
           <hr class="my-3">
 
@@ -409,19 +418,27 @@ function updateProductPrice(selectElement) {
   const lineItem = selectElement.closest('.line-item-row');
   const unitPriceInput = lineItem.querySelector('.unit-price-input');
   const descriptionInput = lineItem.querySelector('input[placeholder*="description"]');
+  const gstRateInput = lineItem.querySelector('.gst-rate-field');
 
   if (selectedOption.value) {
     const price = selectedOption.getAttribute('data-price');
     const description = selectedOption.getAttribute('data-description');
+    const gstRate = selectedOption.getAttribute('data-gst-rate');
 
     unitPriceInput.value = price || 0;
     if (descriptionInput && description) {
       descriptionInput.value = description;
     }
+    if (gstRateInput) {
+      gstRateInput.value = gstRate || 0;
+    }
 
     calculateLineTotal(unitPriceInput);
   } else {
     unitPriceInput.value = 0;
+    if (gstRateInput) {
+      gstRateInput.value = 0;
+    }
     calculateLineTotal(unitPriceInput);
   }
 }
@@ -442,24 +459,35 @@ function calculateLineTotal(changedElement) {
 // Update invoice total
 function updateInvoiceTotal() {
   let subtotal = 0;
+  let tax = 0;
 
-  // Sum all line totals
-  document.querySelectorAll('.line-item-row:not([style*="display: none"]) .line-total').forEach(input => {
-    const value = parseFloat(input.value) || 0;
-    subtotal += value;
+  // Sum all line totals and their GST
+  document.querySelectorAll('.line-item-row:not([style*="display: none"])').forEach(row => {
+    const lineTotalInput = row.querySelector('.line-total');
+    const gstRateInput = row.querySelector('.gst-rate-field');
+    const lineTotal = lineTotalInput ? (parseFloat(lineTotalInput.value) || 0) : 0;
+    const gstRate = gstRateInput ? (parseFloat(gstRateInput.value) || 0) : 0;
+
+    subtotal += lineTotal;
+    tax += lineTotal * gstRate / 100;
   });
 
   const deliveryChargeInput = document.getElementById('delivery_charge_field');
   const deliveryCharge = deliveryChargeInput ? (parseFloat(deliveryChargeInput.value) || 0) : 0;
-  const total = subtotal + deliveryCharge;
+  const total = subtotal + tax + deliveryCharge;
 
   // Update display
   const subtotalDisplay = document.getElementById('subtotal-display');
+  const taxDisplay = document.getElementById('tax-display');
   const totalDisplay = document.getElementById('total-display');
   const totalField = document.getElementById('total_amount_field');
 
   if (subtotalDisplay) {
     subtotalDisplay.textContent = `₹${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  if (taxDisplay) {
+    taxDisplay.textContent = `₹${tax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   if (totalDisplay) {

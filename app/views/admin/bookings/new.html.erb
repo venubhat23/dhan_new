@@ -910,17 +910,17 @@ function updateCartDisplay() {
               ${item.quantity >= item.stock - 2 ? `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Only ${item.stock} in stock</span>` : ''}
             </div>
           </div>
-          <button type="button" class="btn btn-sm btn-link text-danger p-1" onclick="removeFromCart(${productId})" title="Remove item">
+          <button type="button" class="btn btn-sm btn-link text-danger p-1" onclick="removeFromCart('${productId}')" title="Remove item">
             <i class="bi bi-x-lg"></i>
           </button>
         </div>
         <div class="d-flex justify-content-between align-items-center">
           <div class="input-group input-group-sm" style="width: 140px;">
-            <button class="btn btn-outline-secondary px-3" type="button" onclick="decreaseCartQuantity(${productId})" ${item.quantity <= 0.1 ? 'disabled' : ''}>
+            <button class="btn btn-outline-secondary px-3" type="button" onclick="decreaseCartQuantity('${productId}')" ${item.quantity <= 0.1 ? 'disabled' : ''}>
               <i class="bi bi-dash"></i>
             </button>
             <input type="text" class="form-control text-center fw-bold" value="${item.quantity}" readonly style="background: white;">
-            <button class="btn btn-outline-secondary px-3" type="button" onclick="increaseCartQuantity(${productId})" ${item.quantity >= item.stock ? 'disabled' : ''}>
+            <button class="btn btn-outline-secondary px-3" type="button" onclick="increaseCartQuantity('${productId}')" ${item.quantity >= item.stock ? 'disabled' : ''}>
               <i class="bi bi-plus"></i>
             </button>
           </div>
