@@ -121,9 +121,6 @@
     <div class="row mt-3">
       <div class="col-12">
         <div class="d-flex gap-2">
-          <button type="button" class="btn btn-outline-primary btn-sm" id="applyFilters">
-            <i class="bi bi-funnel me-1"></i>Apply Filters
-          </button>
           <button type="button" class="btn btn-outline-secondary btn-sm" id="clearFilters">
             <i class="bi bi-x-circle me-1"></i>Clear All
           </button>
@@ -451,11 +448,10 @@ function formatDeliveryPersonSelection(option) {
 
 // Setup filter functionality
 function setupFilterFunctionality() {
-  const applyFiltersBtn = document.getElementById('applyFilters');
   const clearFiltersBtn = document.getElementById('clearFilters');
 
-  // Apply filters
-  applyFiltersBtn?.addEventListener('click', function() {
+  // Apply filters as soon as a dropdown selection changes
+  function applyFilters() {
     const customerFilter = $('#customerFilter').val();
     const deliveryPersonFilter = $('#deliveryPersonFilter').val();
     const statusFilter = document.getElementById('statusFilter').value;
@@ -483,15 +479,15 @@ function setupFilterFunctionality() {
 
     // Navigate with filters
     window.location.href = `${window.location.pathname}?${params.toString()}`;
-  });
+  }
+
+  $('#customerFilter').on('change', applyFilters);
+  $('#deliveryPersonFilter').on('change', applyFilters);
+  document.getElementById('statusFilter')?.addEventListener('change', applyFilters);
 
   // Clear all filters
   clearFiltersBtn?.addEventListener('click', function() {
-    $('.customer-select2').val(null).trigger('change');
-    $('.delivery-person-select2').val(null).trigger('change');
-    document.getElementById('statusFilter').value = '';
-
-    // Navigate without parameters
+    // Navigate without parameters (page reload resets the widgets)
     window.location.href = window.location.pathname;
   });
 }

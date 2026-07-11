@@ -22,6 +22,11 @@
   .submit-btn:disabled { opacity:0.75; cursor:not-allowed; transform:none; }
   .page-top { padding:14px 12px 0; display:flex; align-items:center; gap:10px; }
   .back-btn { width:36px;height:36px;border-radius:10px;background:white;border:2px solid #e9ecef;display:flex;align-items:center;justify-content:center;color:#6f42c1;text-decoration:none;flex-shrink:0; }
+  .match-alert { background:#fff8e1; border:1px solid #ffe082; border-radius:10px; padding:10px 12px; margin-bottom:14px; font-size:0.82rem; color:#7a5c00; }
+  .match-alert .match-title { font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+  .match-row { display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.6); border-radius:8px; padding:8px 10px; margin-bottom:6px; }
+  .match-row:last-child { margin-bottom:0; }
+  .match-btn { background:#ffb300; color:#3a2a00; border:none; border-radius:8px; padding:6px 10px; font-size:0.78rem; font-weight:700; text-decoration:none; white-space:nowrap; }
 </style>
 
 <div class="page-top">
@@ -47,11 +52,17 @@
       <div class="field-label">Customer Name *</div>
       <div class="input-wrap">
         <i class="bi bi-person input-icon"></i>
-        <input type="text" name="customer[first_name]"
+        <input type="text" name="customer[first_name]" id="mob_name"
                class="mob-input <%= @customer.errors[:first_name].any? ? 'is-invalid' : '' %>"
                placeholder="Full name" required autofocus
+               autocomplete="off"
                value="<%= @customer.first_name %>">
       </div>
+    </div>
+
+    <div id="nameMatchAlert" class="match-alert" style="display:none;">
+      <div class="match-title"><i class="bi bi-people-fill"></i>Customer(s) with this name already exist</div>
+      <div id="nameMatchList"></div>
     </div>
 
     <div class="mb-3">
@@ -66,6 +77,14 @@
       <div style="font-size:0.75rem;color:#888;margin-top:4px;">
         <i class="bi bi-key me-1 text-warning"></i>
         App password: <strong id="pwdPreview">XXXX@123</strong>
+      </div>
+    </div>
+
+    <div id="existingCustomerAlert" class="match-alert" style="display:none;">
+      <div class="match-title"><i class="bi bi-person-check-fill"></i>This customer already exists</div>
+      <div class="match-row">
+        <span id="existingCustomerName"></span>
+        <a href="#" id="proceedWithExistingBtn" class="match-btn">Proceed to Booking</a>
       </div>
     </div>
 
@@ -92,10 +111,105 @@
 </div>
 
 <script>
-  document.getElementById('mob_mobile').addEventListener('input', function() {
+  const mobMobileInput = document.getElementById('mob_mobile');
+  const existingAlert = document.getElementById('existingCustomerAlert');
+  const existingName = document.getElementById('existingCustomerName');
+  const proceedBtn = document.getElementById('proceedWithExistingBtn');
+  const createBtn = document.getElementById('createCustomerBtn');
+  let mobileCheckTimeout = null;
+
+  mobMobileInput.addEventListener('input', function() {
     const d = this.value.replace(/\D/g,'');
     document.getElementById('pwdPreview').textContent = d.length >= 4 ? d.substring(0,4)+'@123' : 'XXXX@123';
+
+    hideExistingCustomerMatch();
+    clearTimeout(mobileCheckTimeout);
+    if (d.length === 10) {
+      mobileCheckTimeout = setTimeout(() => checkExistingCustomer(d), 400);
+    }
   });
+
+  function checkExistingCustomer(mobile) {
+    fetch(`<%= admin_mobile_ui_check_mobile_path %>?mobile=${mobile}`, {
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.exists) {
+          showExistingCustomerMatch(data.customer);
+        } else {
+          hideExistingCustomerMatch();
+        }
+      })
+      .catch(() => hideExistingCustomerMatch());
+  }
+
+  function showExistingCustomerMatch(customer) {
+    existingName.textContent = `${customer.name} (${customer.mobile})`;
+    proceedBtn.href = `<%= admin_mobile_ui_new_booking_path %>?customer_id=${customer.id}`;
+    existingAlert.style.display = '';
+    createBtn.disabled = true;
+  }
+
+  function hideExistingCustomerMatch() {
+    existingAlert.style.display = 'none';
+    createBtn.disabled = false;
+  }
+
+  const mobNameInput = document.getElementById('mob_name');
+  const nameMatchAlert = document.getElementById('nameMatchAlert');
+  const nameMatchList = document.getElementById('nameMatchList');
+  let nameCheckTimeout = null;
+
+  mobNameInput.addEventListener('input', function() {
+    const name = this.value.trim();
+    hideNameMatches();
+    clearTimeout(nameCheckTimeout);
+    if (name.length >= 2) {
+      nameCheckTimeout = setTimeout(() => checkExistingName(name), 400);
+    }
+  });
+
+  function checkExistingName(name) {
+    fetch(`<%= admin_mobile_ui_search_by_name_path %>?name=${encodeURIComponent(name)}`, {
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.customers && data.customers.length > 0) {
+          showNameMatches(data.customers);
+        } else {
+          hideNameMatches();
+        }
+      })
+      .catch(() => hideNameMatches());
+  }
+
+  function showNameMatches(customers) {
+    nameMatchList.innerHTML = '';
+    customers.forEach(function(customer) {
+      const row = document.createElement('div');
+      row.className = 'match-row';
+
+      const info = document.createElement('span');
+      info.textContent = `${customer.name} — ${customer.mobile}`;
+
+      const link = document.createElement('a');
+      link.className = 'match-btn';
+      link.href = `<%= admin_mobile_ui_new_booking_path %>?customer_id=${customer.id}`;
+      link.textContent = 'Use this';
+
+      row.appendChild(info);
+      row.appendChild(link);
+      nameMatchList.appendChild(row);
+    });
+    nameMatchAlert.style.display = '';
+  }
+
+  function hideNameMatches() {
+    nameMatchAlert.style.display = 'none';
+    nameMatchList.innerHTML = '';
+  }
 
   document.querySelector('form').addEventListener('submit', function(e) {
     if (!this.checkValidity()) return;

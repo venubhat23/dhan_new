@@ -129,6 +129,8 @@
 .icon-btn:active { transform: scale(0.9); }
 .icon-view  { background: #e3f2fd; color: #1976d2; }
 .icon-edit  { background: #e8f5e9; color: #2e7d32; }
+.icon-view-invoice { background: #f3e5f5; color: #7b1fa2; }
+.icon-edit-invoice { background: #fff3e0; color: #e65100; }
 .icon-wa    { background: #e8f8ee; color: #25d366; }
 .icon-wa:hover { background: #25d366; color: white; }
 
@@ -292,6 +294,16 @@
           <%# Edit %>
           <%= link_to admin_mobile_ui_edit_booking_path(booking), class: 'icon-btn icon-edit', title: 'Edit' do %>
             <i class="bi bi-pencil-fill"></i>
+          <% end %>
+
+          <%# Show / Edit Invoice — only when a regular Invoice exists for this booking %>
+          <% if booking.associated_invoice.present? %>
+            <%= link_to admin_invoice_path(booking.associated_invoice), class: 'icon-btn icon-view-invoice', title: 'Show Invoice', target: '_blank' do %>
+              <i class="bi bi-receipt"></i>
+            <% end %>
+            <%= link_to edit_admin_invoice_path(booking.associated_invoice), class: 'icon-btn icon-edit-invoice', title: 'Edit Invoice' do %>
+              <i class="bi bi-pencil-square"></i>
+            <% end %>
           <% end %>
 
           <%# WhatsApp Thanks button — for paid and unpaid bookings %>

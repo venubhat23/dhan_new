@@ -11,8 +11,9 @@ class Admin::InvoicesController < Admin::ApplicationController
     @all_invoices = []
 
     # Get only regular invoices
-    regular_invoices = build_regular_invoices_query
-    @all_invoices.concat(regular_invoices.map { |inv| prepare_invoice_data(inv, 'regular') })
+    regular_invoices = build_regular_invoices_query.to_a
+    booking_lookup = booking_numbers_lookup(regular_invoices)
+    @all_invoices.concat(regular_invoices.map { |inv| prepare_invoice_data(inv, 'regular', booking_lookup) })
 
     # Sort invoices: when searching, rank customer-name matches by relevance
     # (name/word starting with the search term ranks above a mid-name match),
@@ -469,8 +470,18 @@ class Admin::InvoicesController < Admin::ApplicationController
   private
 
   def build_regular_invoices_query
-    base_query = Invoice.includes(:customer, :invoice_items)
+    # invoice_items aren't rendered on the index list, so don't eager-load them
+    base_query = Invoice.includes(:customer)
     apply_search_filters(base_query, 'invoices')
+  end
+
+  # Batches the per-row Booking.find_by(invoice_number:) lookup that
+  # prepare_invoice_data used to do into a single query.
+  def booking_numbers_lookup(invoices)
+    invoice_numbers = invoices.select(&:quick_invoice?).map(&:invoice_number)
+    return {} if invoice_numbers.empty?
+
+    Booking.where(invoice_number: invoice_numbers).pluck(:invoice_number, :booking_number).to_h
   end
 
   def build_booking_invoices_query
@@ -631,12 +642,10 @@ class Admin::InvoicesController < Admin::ApplicationController
     3
   end
 
-  def prepare_invoice_data(invoice, type)
+  def prepare_invoice_data(invoice, type, booking_lookup = {})
     actual_type = (type == 'regular' && invoice.quick_invoice?) ? 'booking' : type
 
-    booking_number = if actual_type == 'booking'
-      Booking.find_by(invoice_number: invoice.invoice_number)&.booking_number
-    end
+    booking_number = booking_lookup[invoice.invoice_number] if actual_type == 'booking'
 
     {
       id: invoice.id,
@@ -656,16 +665,20 @@ class Admin::InvoicesController < Admin::ApplicationController
   end
 
   def calculate_regular_invoice_stats_only
-    # Calculate stats from regular invoices only (exclude booking invoices)
+    # Calculate stats from regular invoices only (exclude booking invoices).
+    # A single GROUP BY payment_status query (x2, for counts and sums) replaces
+    # what used to be 6 separate round trips against the same filtered query.
     regular_query = build_regular_invoices_query_for_stats
+    counts_by_status = regular_query.group(:payment_status).count
+    amounts_by_status = regular_query.group(:payment_status).sum(:total_amount)
 
     {
-      total_invoices: regular_query.count,
-      total_amount: regular_query.sum(:total_amount) || 0,
-      paid_amount: regular_query.where(payment_status: ['paid', 'fully_paid']).sum(:total_amount) || 0,
-      pending_amount: regular_query.where(payment_status: ['unpaid', 'partially_paid']).sum(:total_amount) || 0,
-      paid_count: regular_query.where(payment_status: ['paid', 'fully_paid']).count,
-      pending_count: regular_query.where(payment_status: ['unpaid', 'partially_paid']).count
+      total_invoices: counts_by_status.values.sum,
+      total_amount: amounts_by_status.values.sum,
+      paid_amount: amounts_by_status['fully_paid'] || 0,
+      pending_amount: amounts_by_status.values_at('unpaid', 'partially_paid').compact.sum,
+      paid_count: counts_by_status['fully_paid'] || 0,
+      pending_count: counts_by_status.values_at('unpaid', 'partially_paid').compact.sum
     }
   end
 

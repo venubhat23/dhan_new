@@ -739,9 +739,6 @@
               <td>
                 <div>
                   <%= item.product&.name || 'Product' %>
-                  <% if item.description.present? && item.description != (item.product&.name || 'Product') %>
-                    <br><span class="description"><%= item.description %></span>
-                  <% end %>
                 </div>
               </td>
               <td class="center-align"><%= item.product&.hsn_code || '-' %></td>

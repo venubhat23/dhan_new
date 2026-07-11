@@ -43,7 +43,7 @@
   <i class="bi bi-arrow-left"></i> Back to Booking
 </a>
 
-<%= form_with url: admin_mobile_ui_update_booking_path(@booking), method: :patch, local: true do |f| %>
+<%= form_with url: admin_mobile_ui_update_booking_path(@booking), scope: :booking, method: :patch, local: true do |f| %>
 
   <div class="eb-section">
     <div class="eb-section-header"><i class="bi bi-receipt"></i> #<%= @booking.booking_number %></div>

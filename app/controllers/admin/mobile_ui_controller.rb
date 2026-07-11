@@ -52,6 +52,7 @@ class Admin::MobileUiController < ActionController::Base
 
     @total = @bookings.count
     @bookings = @bookings.page(params[:page]).per(15)
+    preload_associated_invoices(@bookings)
   end
 
   # ── New Booking ───────────────────────────────────────────────────────────
@@ -153,7 +154,47 @@ class Admin::MobileUiController < ActionController::Base
     @back_url = params[:back_url].presence || admin_mobile_ui_bookings_path
   end
 
+  def check_mobile
+    mobile = normalize_mobile_for_lookup(params[:mobile])
+    customer = mobile.present? ? Customer.find_by(mobile: mobile) : nil
+
+    if customer
+      render json: {
+        exists: true,
+        customer: { id: customer.id, name: customer.display_name, mobile: customer.mobile, email: customer.email }
+      }
+    else
+      render json: { exists: false }
+    end
+  end
+
+  def search_by_name
+    query = params[:name].to_s.strip
+
+    if query.length >= 2
+      customers = Customer.where(
+        "first_name ILIKE :q OR last_name ILIKE :q OR CONCAT(first_name, ' ', last_name) ILIKE :q",
+        q: "%#{query}%"
+      ).limit(5)
+
+      render json: {
+        customers: customers.map { |c| { id: c.id, name: c.display_name, mobile: c.mobile, email: c.email } }
+      }
+    else
+      render json: { customers: [] }
+    end
+  end
+
   def create_customer
+    # Safety net: if a customer with this mobile already exists, proceed with
+    # them instead of hitting the mobile uniqueness validation and failing.
+    existing_customer = Customer.find_by(mobile: normalize_mobile_for_lookup(params[:customer][:mobile]))
+    if existing_customer
+      redirect_to admin_mobile_ui_new_booking_path(customer_id: existing_customer.id),
+                  notice: "A customer with this phone number already exists (#{existing_customer.display_name}). Proceeding with the existing customer."
+      return
+    end
+
     @customer = Customer.new
     @customer.first_name = params[:customer][:first_name].to_s.strip
     @customer.mobile     = params[:customer][:mobile].to_s.strip
@@ -174,6 +215,32 @@ class Admin::MobileUiController < ActionController::Base
   end
 
   private
+
+  # Batch-preload associated_invoice for bookings with no BookingInvoice,
+  # replacing up to N individual LIKE queries (one per booking) with a single query.
+  def preload_associated_invoices(bookings)
+    bookings_without_bi = bookings.select { |b| b.booking_invoices.empty? }
+    return if bookings_without_bi.empty?
+
+    numbers = bookings_without_bi.map(&:booking_number)
+    like_clauses = numbers.map { "invoice_items.description LIKE ?" }.join(" OR ")
+    matched = InvoiceItem.joins(:invoice)
+                         .eager_load(:invoice)
+                         .where(like_clauses, *numbers.map { |n| "%#{n}%" })
+
+    inv_by_number = {}
+    matched.each do |item|
+      numbers.each { |bn| inv_by_number[bn] ||= item.invoice if item.description.include?(bn) }
+    end
+
+    bookings_without_bi.each do |b|
+      b.instance_variable_set(:@associated_invoice, inv_by_number[b.booking_number])
+    end
+  end
+
+  def normalize_mobile_for_lookup(mobile)
+    Customer.new.send(:normalize_indian_mobile, mobile.to_s)
+  end
 
   def authenticate_mobile!
     redirect_to admin_mobile_ui_login_path unless session[:mobile_ui_auth]
