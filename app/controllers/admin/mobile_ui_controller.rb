@@ -135,7 +135,10 @@ class Admin::MobileUiController < ActionController::Base
   def edit_invoice
     @invoice = Invoice.find(params[:id])
     @invoice_items = @invoice.invoice_items.includes(:milk_delivery_task, product: :product_variants)
-    render template: 'admin/invoices/edit', layout: false, locals: { mobile_ui: true }
+    # admin/invoices/edit is a content fragment (unlike show, which is a full standalone
+    # document) — it needs the mobile_ui layout to supply Bootstrap CSS/JS, or it renders
+    # as unstyled white HTML.
+    render template: 'admin/invoices/edit', locals: { mobile_ui: true }
   end
 
   # ── Price List ────────────────────────────────────────────────────────────
