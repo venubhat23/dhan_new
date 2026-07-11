@@ -129,6 +129,8 @@ Rails.application.routes.draw do
     get  'mobile-ui/booking/:id',      to: 'mobile_ui#show_booking',    as: 'mobile_ui_show_booking'
     get  'mobile-ui/booking/:id/edit', to: 'mobile_ui#edit_booking',    as: 'mobile_ui_edit_booking'
     patch 'mobile-ui/booking/:id',     to: 'mobile_ui#update_booking',  as: 'mobile_ui_update_booking'
+    get  'mobile-ui/invoice/:id',      to: 'mobile_ui#show_invoice',    as: 'mobile_ui_show_invoice'
+    get  'mobile-ui/invoice/:id/edit', to: 'mobile_ui#edit_invoice',    as: 'mobile_ui_edit_invoice'
 
     # Bookings Management (Now handles complete order workflow)
     resources :bookings do

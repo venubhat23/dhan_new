@@ -122,6 +122,22 @@ class Admin::MobileUiController < ActionController::Base
     end
   end
 
+  # ── Invoice Show / Edit ────────────────────────────────────────────────────
+  # Reuses the exact admin/invoices show & edit templates (same GST/line-item
+  # logic as the desktop pages) but without the desktop admin layout, so the
+  # mobile UI never bounces users into the sidebar-wrapped admin chrome.
+  def show_invoice
+    @invoice = Invoice.find(params[:id])
+    @invoice_items = @invoice.invoice_items.includes(:product, :milk_delivery_task)
+    render template: 'admin/invoices/show', layout: false, locals: { mobile_ui: true }
+  end
+
+  def edit_invoice
+    @invoice = Invoice.find(params[:id])
+    @invoice_items = @invoice.invoice_items.includes(:milk_delivery_task, product: :product_variants)
+    render template: 'admin/invoices/edit', layout: false, locals: { mobile_ui: true }
+  end
+
   # ── Price List ────────────────────────────────────────────────────────────
   def price_list
     products = Product.joins(:category)

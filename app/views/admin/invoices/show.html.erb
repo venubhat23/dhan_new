@@ -647,8 +647,8 @@
       wa_thank_msg = "Dear #{wa_cname},\n\nThank you for your order with Dhanvantari Naturals! 🌿\n\nInvoice #: #{@invoice.invoice_number}\nDate: #{wa_idate}\nAmount: ₹#{wa_amount}#{wa_invoice_link}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
     %>
     <div class="invoice-action-bar">
-      <%= link_to admin_invoices_path, class: "back-button" do %>
-        ← Back to Invoices
+      <%= link_to (local_assigns[:mobile_ui] ? admin_mobile_ui_bookings_path : admin_invoices_path), class: "back-button" do %>
+        ← Back to <%= local_assigns[:mobile_ui] ? 'Bookings' : 'Invoices' %>
       <% end %>
       <% if wa_phone.length >= 10 %>
         <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"

@@ -298,10 +298,10 @@
 
           <%# Show / Edit Invoice — only when a regular Invoice exists for this booking %>
           <% if booking.associated_invoice.present? %>
-            <%= link_to admin_invoice_path(booking.associated_invoice), class: 'icon-btn icon-view-invoice', title: 'Show Invoice', target: '_blank' do %>
+            <%= link_to admin_mobile_ui_show_invoice_path(booking.associated_invoice), class: 'icon-btn icon-view-invoice', title: 'Show Invoice' do %>
               <i class="bi bi-receipt"></i>
             <% end %>
-            <%= link_to edit_admin_invoice_path(booking.associated_invoice), class: 'icon-btn icon-edit-invoice', title: 'Edit Invoice' do %>
+            <%= link_to admin_mobile_ui_edit_invoice_path(booking.associated_invoice), class: 'icon-btn icon-edit-invoice', title: 'Edit Invoice' do %>
               <i class="bi bi-pencil-square"></i>
             <% end %>
           <% end %>

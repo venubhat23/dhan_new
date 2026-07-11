@@ -4,16 +4,19 @@
     <p class="text-muted mb-0">Update invoice details and line items for <%= @invoice.customer&.display_name || @invoice.customer_display_name %></p>
   </div>
   <div>
-    <%= link_to admin_invoices_path, class: "btn btn-outline-secondary me-2" do %>
-      <i class="bi bi-arrow-left me-1"></i>Back to Invoices
+    <%= link_to (local_assigns[:mobile_ui] ? admin_mobile_ui_bookings_path : admin_invoices_path), class: "btn btn-outline-secondary me-2" do %>
+      <i class="bi bi-arrow-left me-1"></i>Back to <%= local_assigns[:mobile_ui] ? 'Bookings' : 'Invoices' %>
     <% end %>
-    <%= link_to admin_invoice_path(@invoice), class: "btn btn-outline-primary" do %>
+    <%= link_to (local_assigns[:mobile_ui] ? admin_mobile_ui_show_invoice_path(@invoice) : admin_invoice_path(@invoice)), class: "btn btn-outline-primary" do %>
       <i class="bi bi-eye me-1"></i>View Invoice
     <% end %>
   </div>
 </div>
 
 <%= form_with model: [:admin, @invoice], local: true, class: "invoice-edit-form", html: { novalidate: true } do |f| %>
+  <% if local_assigns[:mobile_ui] %>
+    <%= hidden_field_tag :mobile_ui, '1' %>
+  <% end %>
   <% if @invoice.errors.any? %>
     <div class="alert alert-danger" role="alert">
       <h6 class="alert-heading">Please correct the following errors:</h6>
@@ -308,7 +311,7 @@
       <div class="mt-4">
         <div class="d-grid gap-2">
           <%= f.submit "Update Invoice", class: "btn btn-primary btn-lg" %>
-          <%= link_to "Cancel", admin_invoice_path(@invoice), class: "btn btn-outline-secondary" %>
+          <%= link_to "Cancel", (local_assigns[:mobile_ui] ? admin_mobile_ui_show_invoice_path(@invoice) : admin_invoice_path(@invoice)), class: "btn btn-outline-secondary" %>
         </div>
       </div>
     </div>

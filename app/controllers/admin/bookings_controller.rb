@@ -40,7 +40,10 @@ class Admin::BookingsController < Admin::ApplicationController
 
     # Paginate with eager-loading only on the page being displayed
     @per_page = SystemSetting.default_pagination_per_page
-    @bookings = @bookings.includes(:customer, { user: :franchise }, :booking_items, :store, :booking_invoices)
+    # booking_items dropped from includes: the view only calls booking.booking_items.size
+    # (item count), which now reads the booking_items_count counter cache instead of
+    # preloading every item row for every booking on the page.
+    @bookings = @bookings.includes(:customer, { user: :franchise }, :store, :booking_invoices)
                          .page(params[:page]).per(@per_page)
 
     # Batch-preload associated_invoice for bookings with no BookingInvoice,
@@ -511,26 +514,29 @@ class Admin::BookingsController < Admin::ApplicationController
     end
   end
 
-  # Real-time data endpoint
+  # Real-time data endpoint — polled every 30s from admin/bookings#index
   def realtime_data
-    # Get fresh data for statistics
-    all_bookings = Booking.includes(:customer, :user, :booking_items)
+    base_scope = Booking.all
+
+    # Single GROUP BY replaces 7 separate COUNT queries
+    status_counts = base_scope.group(:status).count
 
     stats = {
-      draft: all_bookings.draft.count,
-      pending: all_bookings.ordered_and_delivery_pending.count,
-      processing: all_bookings.where(status: [:confirmed, :processing, :packed]).count,
-      shipped: all_bookings.where(status: [:shipped, :out_for_delivery]).count,
-      delivered: all_bookings.where(status: [:delivered, :completed]).count,
-      issues: all_bookings.where(status: [:cancelled, :returned]).count,
-      total: all_bookings.count,
-      today_bookings: all_bookings.where(created_at: Date.current.all_day).count,
-      total_revenue: all_bookings.where(status: [:completed, :delivered]).sum(:total_amount),
+      draft:      status_counts['draft'].to_i,
+      pending:    status_counts['ordered_and_delivery_pending'].to_i,
+      processing: status_counts.values_at('confirmed', 'processing', 'packed').compact.sum,
+      shipped:    status_counts.values_at('shipped', 'out_for_delivery').compact.sum,
+      delivered:  status_counts.values_at('delivered', 'completed').compact.sum,
+      issues:     status_counts.values_at('cancelled', 'returned').compact.sum,
+      total:      status_counts.values.sum,
+      today_bookings: base_scope.where(created_at: Date.current.all_day).count,
+      total_revenue: base_scope.where(status: [:completed, :delivered]).sum(:total_amount),
       last_updated: Time.current.strftime('%I:%M:%S %p')
     }
 
-    # Get recent bookings (last 5)
-    recent_bookings = all_bookings.recent.limit(5).includes(:customer, :booking_items).map do |booking|
+    # Get recent bookings (last 5) — booking_items_count counter cache avoids
+    # preloading every item row (or a per-row COUNT) just to display a number
+    recent_bookings = base_scope.recent.limit(5).includes(:customer).map do |booking|
       {
         id: booking.id,
         booking_number: booking.booking_number,
@@ -540,7 +546,7 @@ class Admin::BookingsController < Admin::ApplicationController
         status_icon: booking.status_icon,
         total_amount: booking.total_amount,
         created_at: booking.created_at.strftime('%d %b %Y %I:%M %p'),
-        items_count: booking.booking_items.count
+        items_count: booking.booking_items_count
       }
     end
 
@@ -558,8 +564,15 @@ class Admin::BookingsController < Admin::ApplicationController
 
   # AJAX endpoints
   def search_products
+    # cached_stock (COALESCE SUM) lets total_batch_stock/stock_status_enhanced/
+    # out_of_stock?/low_stock? read the preloaded value instead of each firing
+    # its own stock_batches query per product — was ~5-7 queries per result.
     @products = Product.active
                        .where("name ILIKE ? OR sku ILIKE ?", "%#{params[:q]}%", "%#{params[:q]}%")
+                       .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND stock_batches.store_id IS NULL")
+                       .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock")
+                       .group("products.id")
+                       .includes(image_attachment: :blob)
                        .limit(10)
 
     render json: @products.map { |p|

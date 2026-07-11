@@ -264,8 +264,7 @@ class Admin::InvoicesController < Admin::ApplicationController
     # If there are stock errors, don't save and show errors
     unless stock_errors.empty?
       @invoice.errors.add(:base, stock_errors.join(', '))
-      @invoice_items = @invoice.invoice_items.includes(:product, :milk_delivery_task)
-      render :edit, status: :unprocessable_entity
+      render_invoice_edit_with_errors
       return
     end
 
@@ -289,10 +288,13 @@ class Admin::InvoicesController < Admin::ApplicationController
       # Update related booking stock if invoice is connected to a booking
       update_related_booking_stock(original_quantities)
 
-      redirect_to admin_invoice_path(@invoice), notice: 'Invoice was successfully updated.'
+      if params[:mobile_ui].present?
+        redirect_to admin_mobile_ui_show_invoice_path(@invoice), notice: 'Invoice was successfully updated.'
+      else
+        redirect_to admin_invoice_path(@invoice), notice: 'Invoice was successfully updated.'
+      end
     else
-      @invoice_items = @invoice.invoice_items.includes(:product, :milk_delivery_task)
-      render :edit, status: :unprocessable_entity
+      render_invoice_edit_with_errors
     end
   end
 
@@ -468,6 +470,17 @@ class Admin::InvoicesController < Admin::ApplicationController
   end
 
   private
+
+  # Re-renders the edit form after a failed update, preserving whichever
+  # layout (desktop admin vs. mobile UI) the request came from.
+  def render_invoice_edit_with_errors
+    @invoice_items = @invoice.invoice_items.includes(:product, :milk_delivery_task)
+    if params[:mobile_ui].present?
+      render template: 'admin/invoices/edit', layout: false, locals: { mobile_ui: true }, status: :unprocessable_entity
+    else
+      render :edit, status: :unprocessable_entity
+    end
+  end
 
   def build_regular_invoices_query
     # invoice_items aren't rendered on the index list, so don't eager-load them
