@@ -17,8 +17,16 @@
   transition: border-color 0.2s;
 }
 .pl-search-input:focus { border-color: #6f42c1; }
+.pl-search-input { padding-right: 34px; }
 .pl-search-wrap { position: relative; }
 .pl-search-wrap .bi-search { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #aaa; font-size: 0.9rem; }
+.pl-clear-btn {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; padding: 0; line-height: 0;
+  color: #aaa; font-size: 1.05rem; cursor: pointer;
+  display: none; align-items: center;
+}
+.pl-clear-btn:hover { color: #6c757d; }
 
 .cat-pills { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0 2px; scrollbar-width: none; }
 .cat-pills::-webkit-scrollbar { display: none; }
@@ -126,6 +134,11 @@
       <%= f.text_field :search, value: params[:search], class: 'pl-search-input',
           placeholder: 'Search product name or SKU…', autocomplete: 'off',
           id: 'plSearch' %>
+      <button type="button" id="plClearSearch" class="pl-clear-btn"
+              style="<%= 'display:flex;' if params[:search].present? %>"
+              onclick="clearPlSearch()" aria-label="Clear search">
+        <i class="bi bi-x-circle-fill"></i>
+      </button>
     </div>
     <%= f.hidden_field :category_id, value: params[:category_id], id: 'catHidden' %>
     <div class="cat-pills">
@@ -169,45 +182,91 @@
         </thead>
         <tbody>
           <% products.each do |product| %>
-            <%
-              stock_qty   = product.cached_stock.to_i
-              low_thresh  = product.low_stock_threshold.to_i
-              low_thresh  = 5 if low_thresh == 0
+            <% variants = product.has_multiple_quantities? ? product.sorted_variants : [] %>
+            <% if variants.any? %>
+              <% variants.each_with_index do |variant, idx| %>
+                <%
+                  stock_qty  = variant.available_stock.to_i
+                  low_thresh = variant.low_stock_threshold.to_i
+                  low_thresh = 5 if low_thresh == 0
 
-              sell_price  = product.discount_price.present? && product.discount_price > 0 ? product.discount_price : product.price
-              cost_price  = product.buying_price || product.purchase_price
+                  if stock_qty <= 0
+                    stock_cls  = 'stock-out'
+                    stock_icon = 'bi-x-circle-fill'
+                    stock_lbl  = 'Out'
+                  elsif stock_qty <= low_thresh
+                    stock_cls  = 'stock-low'
+                    stock_icon = 'bi-exclamation-circle-fill'
+                    stock_lbl  = "#{stock_qty} Low"
+                  else
+                    stock_cls  = 'stock-in'
+                    stock_icon = 'bi-check-circle-fill'
+                    stock_lbl  = stock_qty.to_s
+                  end
+                %>
+                <tr>
+                  <td>
+                    <% if idx == 0 %>
+                      <div class="prod-name"><%= product.name %></div>
+                      <div class="prod-sku"><%= product.sku %></div>
+                    <% end %>
+                    <div class="prod-sku" style="margin-top:<%= idx == 0 ? '2px' : '0' %>;color:#6f42c1;font-weight:600;">
+                      <%= variant.label %><%= ' · Default' if variant.is_default? %>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="price-sell">₹<%= number_with_delimiter(variant.effective_price.to_f.round(2)) %></span>
+                    <% if variant.discount_enabled? && variant.discount_amount.present? && variant.discount_amount > 0 %>
+                      <br><span style="font-size:0.65rem;color:#aaa;text-decoration:line-through;">₹<%= number_with_delimiter(variant.selling_price.to_f.round(2)) %></span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <span class="stock-badge <%= stock_cls %>">
+                      <i class="bi <%= stock_icon %>"></i><%= stock_lbl %>
+                    </span>
+                  </td>
+                </tr>
+              <% end %>
+            <% else %>
+              <%
+                stock_qty   = product.cached_stock.to_i
+                low_thresh  = product.low_stock_threshold.to_i
+                low_thresh  = 5 if low_thresh == 0
 
-              if stock_qty <= 0
-                stock_cls  = 'stock-out'
-                stock_icon = 'bi-x-circle-fill'
-                stock_lbl  = 'Out'
-              elsif stock_qty <= low_thresh
-                stock_cls  = 'stock-low'
-                stock_icon = 'bi-exclamation-circle-fill'
-                stock_lbl  = "#{stock_qty} Low"
-              else
-                stock_cls  = 'stock-in'
-                stock_icon = 'bi-check-circle-fill'
-                stock_lbl  = stock_qty.to_s
-              end
-            %>
-            <tr>
-              <td>
-                <div class="prod-name"><%= product.name %></div>
-                <div class="prod-sku"><%= product.sku %></div>
-              </td>
-              <td>
-                <span class="price-sell">₹<%= number_with_delimiter(sell_price.to_f.round(2)) %></span>
-                <% if product.discount_price.present? && product.discount_price > 0 && product.price != product.discount_price %>
-                  <br><span style="font-size:0.65rem;color:#aaa;text-decoration:line-through;">₹<%= number_with_delimiter(product.price.to_f.round(2)) %></span>
-                <% end %>
-              </td>
-              <td>
-                <span class="stock-badge <%= stock_cls %>">
-                  <i class="bi <%= stock_icon %>"></i><%= stock_lbl %>
-                </span>
-              </td>
-            </tr>
+                sell_price  = product.discount_price.present? && product.discount_price > 0 ? product.discount_price : product.price
+
+                if stock_qty <= 0
+                  stock_cls  = 'stock-out'
+                  stock_icon = 'bi-x-circle-fill'
+                  stock_lbl  = 'Out'
+                elsif stock_qty <= low_thresh
+                  stock_cls  = 'stock-low'
+                  stock_icon = 'bi-exclamation-circle-fill'
+                  stock_lbl  = "#{stock_qty} Low"
+                else
+                  stock_cls  = 'stock-in'
+                  stock_icon = 'bi-check-circle-fill'
+                  stock_lbl  = stock_qty.to_s
+                end
+              %>
+              <tr>
+                <td>
+                  <div class="prod-name"><%= product.name %></div>
+                  <div class="prod-sku"><%= product.sku %></div>
+                </td>
+                <td>
+                  <span class="price-sell">₹<%= number_with_delimiter(sell_price.to_f.round(2)) %></span>
+                  <% if product.discount_price.present? && product.discount_price > 0 && product.price != product.discount_price %>
+                    <br><span style="font-size:0.65rem;color:#aaa;text-decoration:line-through;">₹<%= number_with_delimiter(product.price.to_f.round(2)) %></span>
+                  <% end %>
+                </td>
+                <td>
+                  <span class="stock-badge <%= stock_cls %>">
+                    <i class="bi <%= stock_icon %>"></i><%= stock_lbl %>
+                  </span>
+                </td>
+              </tr>
+            <% end %>
           <% end %>
         </tbody>
       </table>
@@ -230,8 +289,17 @@ function setCat(val) {
   document.getElementById('plSearch').closest('form').submit();
 }
 
+function clearPlSearch() {
+  const input = document.getElementById('plSearch');
+  input.value = '';
+  document.getElementById('plClearSearch').style.display = 'none';
+  showLoader('Loading…', 'Clearing search');
+  input.closest('form').submit();
+}
+
 let plSearchTimer;
 document.getElementById('plSearch').addEventListener('input', function() {
+  document.getElementById('plClearSearch').style.display = this.value ? 'flex' : 'none';
   clearTimeout(plSearchTimer);
   plSearchTimer = setTimeout(() => this.closest('form').submit(), 500);
 });

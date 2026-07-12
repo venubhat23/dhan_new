@@ -162,6 +162,8 @@ class Admin::MobileUiController < ActionController::Base
       products = products.where("products.name LIKE ? OR products.sku LIKE ?", q, q)
     end
 
+    products = products.includes(:product_variants)
+
     @categories = Category.order(:name)
     # Group by category_id so products sharing a category are correctly grouped
     @products_by_category = products.group_by { |p| [p.category_id, p.cat_name] }
