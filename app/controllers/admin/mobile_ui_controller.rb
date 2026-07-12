@@ -159,7 +159,7 @@ class Admin::MobileUiController < ActionController::Base
 
     if params[:search].present?
       q = "%#{params[:search]}%"
-      products = products.where("products.name LIKE ? OR products.sku LIKE ?", q, q)
+      products = products.where("products.name ILIKE ? OR products.sku ILIKE ?", q, q)
     end
 
     products = products.includes(:product_variants)
@@ -274,7 +274,7 @@ class Admin::MobileUiController < ActionController::Base
   def mobile_booking_params
     params.require(:booking).permit(
       :customer_id, :customer_name, :customer_email, :customer_phone,
-      :payment_method, :payment_status, :discount_amount, :notes,
+      :payment_method, :payment_status, :discount_amount, :shipping_charges, :notes,
       :delivery_address, :cash_received, :change_amount, :status, :booking_date,
       booking_items_attributes: [:product_id, :product_variant_id, :quantity, :price]
     )

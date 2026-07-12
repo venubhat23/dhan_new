@@ -295,6 +295,7 @@
     <%# Hidden item fields populated by JS %>
     <div id="itemFields"></div>
     <%= f.hidden_field :discount_amount, value: 0, id: 'hdnDiscount' %>
+    <%= f.hidden_field :shipping_charges, value: 0, id: 'hdnDeliveryCharge' %>
     <%= f.hidden_field :status, value: 'completed' %>
 
     <%# Customer ─────────────────────────────────────────── %>
@@ -355,9 +356,26 @@
       <div id="checkoutTotals" style="display:none;margin-top:12px;">
         <div class="total-row"><span>Subtotal</span><span>₹<span id="coSubtotal">0</span></span></div>
         <div class="total-row"><span>Tax</span><span>₹<span id="coTax">0</span></span></div>
-        <div class="total-row">
+        <div class="total-row" style="align-items:center;">
           <span>Discount</span>
-          <span>₹<input type="number" id="discountInput" value="0" min="0" step="0.01"
+          <span style="display:flex;align-items:center;gap:6px;">
+            <span style="display:inline-flex;border:1px solid #ddd;border-radius:6px;overflow:hidden;">
+              <button type="button" id="discTypeAmtBtn" onclick="setDiscountType('amount')"
+                      style="border:none;background:#6f42c1;color:white;font-size:0.72rem;font-weight:700;padding:3px 8px;cursor:pointer;">₹</button>
+              <button type="button" id="discTypePctBtn" onclick="setDiscountType('percent')"
+                      style="border:none;background:#f0f0f0;color:#555;font-size:0.72rem;font-weight:700;padding:3px 8px;cursor:pointer;">%</button>
+            </span>
+            <input type="number" id="discountInput" value="0" min="0" step="0.01"
+                   style="width:60px;border:1px solid #ddd;border-radius:6px;padding:2px 6px;font-size:0.85rem;"
+                   oninput="updateTotals()">
+          </span>
+        </div>
+        <div class="total-row" id="discPreviewRow" style="display:none;justify-content:flex-end;color:#888;font-size:0.75rem;">
+          <span>= ₹<span id="discPreview">0.00</span> off</span>
+        </div>
+        <div class="total-row">
+          <span><i class="bi bi-truck me-1"></i>Delivery Charge</span>
+          <span>₹<input type="number" id="deliveryChargeInput" value="0" min="0" step="0.01"
                  style="width:70px;border:1px solid #ddd;border-radius:6px;padding:2px 6px;font-size:0.85rem;"
                  oninput="updateTotals()"></span>
         </div>
@@ -585,16 +603,63 @@ function renderCheckout() {
   updateTotals();
 }
 
+// 'amount' (₹) or 'percent' (%) — toggled via setDiscountType()
+let discountType = 'amount';
+
+function setDiscountType(type) {
+  discountType = type;
+  document.getElementById('discTypeAmtBtn').style.background = type === 'amount' ? '#6f42c1' : '#f0f0f0';
+  document.getElementById('discTypeAmtBtn').style.color      = type === 'amount' ? 'white' : '#555';
+  document.getElementById('discTypePctBtn').style.background = type === 'percent' ? '#6f42c1' : '#f0f0f0';
+  document.getElementById('discTypePctBtn').style.color      = type === 'percent' ? 'white' : '#555';
+
+  const input = document.getElementById('discountInput');
+  input.max = type === 'percent' ? 100 : 999999;
+  input.value = 0;
+  updateTotals();
+}
+
 function updateTotals() {
   const items = Object.values(cart);
   const sub   = items.reduce((s,i)=>s+(i.price*i.qty),0);
   const tax   = 0; // GST handled server-side via model
-  const disc  = parseFloat(document.getElementById('discountInput')?.value)||0;
-  const total = Math.max(0, sub + tax - disc);
+  const maxDiscount = sub + tax;
+
+  let discInputVal = parseFloat(document.getElementById('discountInput')?.value) || 0;
+  if (discInputVal < 0) discInputVal = 0;
+
+  let disc = 0;
+  if (discountType === 'percent') {
+    if (discInputVal > 100) {
+      discInputVal = 100;
+      document.getElementById('discountInput').value = discInputVal;
+    }
+    disc = maxDiscount * discInputVal / 100;
+  } else {
+    disc = discInputVal;
+    if (disc > maxDiscount) {
+      disc = maxDiscount;
+      document.getElementById('discountInput').value = disc;
+    }
+  }
+
+  const previewRow = document.getElementById('discPreviewRow');
+  if (discountType === 'percent' && discInputVal > 0) {
+    previewRow.style.display = 'flex';
+    document.getElementById('discPreview').textContent = disc.toFixed(2);
+  } else {
+    previewRow.style.display = 'none';
+  }
+
+  let deliveryCharge = parseFloat(document.getElementById('deliveryChargeInput')?.value) || 0;
+  if (deliveryCharge < 0 || isNaN(deliveryCharge)) deliveryCharge = 0;
+
+  const total = Math.max(0, sub + tax - disc + deliveryCharge);
   document.getElementById('coSubtotal').textContent = sub.toFixed(2);
   document.getElementById('coTax').textContent = tax.toFixed(2);
   document.getElementById('coTotal').textContent  = total.toFixed(2);
   document.getElementById('hdnDiscount').value = disc;
+  document.getElementById('hdnDeliveryCharge').value = deliveryCharge;
   calcChange();
 }
 
@@ -710,8 +775,8 @@ function prepareSubmit() {
     i++;
   });
   if (i === 0) { alert('Cart is empty'); return false; }
-  // Sync discount
-  document.getElementById('hdnDiscount').value = parseFloat(document.getElementById('discountInput')?.value||0);
+  // Sync discount (converts % to ₹ if needed) and delivery charge into hidden fields
+  updateTotals();
   showLoader('Placing Order…', 'Saving your booking');
 }
 </script>
