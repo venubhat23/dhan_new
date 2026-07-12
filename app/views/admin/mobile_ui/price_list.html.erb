@@ -124,32 +124,61 @@
 
 .empty-state { text-align: center; padding: 60px 24px; color: #aaa; }
 .empty-state i { font-size: 3.5rem; display: block; margin-bottom: 12px; }
+
+.pl-top-row { display: flex; align-items: center; gap: 8px; }
+.pl-back-btn {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: #f8f9fa; border: 2px solid #e9ecef;
+  display: flex; align-items: center; justify-content: center;
+  color: #6f42c1; text-decoration: none; flex-shrink: 0;
+  font-size: 0.85rem;
+}
+.pl-clear-filters {
+  flex-shrink: 0;
+  border-radius: 20px;
+  border: 2px solid #6f42c1;
+  background: white;
+  color: #6f42c1;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  white-space: nowrap;
+  text-decoration: none;
+}
 </style>
 
 <%# Search & Category Filter %>
 <div class="pl-search-bar">
-  <%= form_with url: admin_mobile_ui_price_list_path, method: :get, local: true, data: { no_loader: '' } do |f| %>
-    <div class="pl-search-wrap mb-2">
-      <i class="bi bi-search"></i>
-      <%= f.text_field :search, value: params[:search], class: 'pl-search-input',
-          placeholder: 'Search product name or SKU…', autocomplete: 'off',
-          id: 'plSearch' %>
-      <button type="button" id="plClearSearch" class="pl-clear-btn"
-              style="<%= 'display:flex;' if params[:search].present? %>"
-              onclick="clearPlSearch()" aria-label="Clear search">
-        <i class="bi bi-x-circle-fill"></i>
-      </button>
-    </div>
-    <%= f.hidden_field :category_id, value: params[:category_id], id: 'catHidden' %>
-    <div class="cat-pills">
-      <a href="#" class="cat-pill <%= params[:category_id].blank? ? 'active' : '' %>"
-         onclick="setCat(''); return false;">All</a>
-      <% @categories.each do |cat| %>
-        <a href="#" class="cat-pill <%= params[:category_id].to_s == cat.id.to_s ? 'active' : '' %>"
-           onclick="setCat('<%= cat.id %>'); return false;"><%= cat.name %></a>
-      <% end %>
-    </div>
-  <% end %>
+  <div class="pl-top-row mb-2">
+    <%= link_to admin_mobile_ui_bookings_path, class: 'pl-back-btn', data: { no_loader: '' } do %>
+      <i class="bi bi-arrow-left"></i>
+    <% end %>
+    <%= form_with url: admin_mobile_ui_price_list_path, method: :get, local: true, data: { no_loader: '' }, class: 'flex-grow-1' do |f| %>
+      <div class="pl-search-wrap">
+        <i class="bi bi-search"></i>
+        <%= f.text_field :search, value: params[:search], class: 'pl-search-input',
+            placeholder: 'Search product name or SKU…', autocomplete: 'off',
+            id: 'plSearch' %>
+        <button type="button" id="plClearSearch" class="pl-clear-btn"
+                style="<%= 'display:flex;' if params[:search].present? %>"
+                onclick="clearPlSearch()" aria-label="Clear search">
+          <i class="bi bi-x-circle-fill"></i>
+        </button>
+      </div>
+      <%= f.hidden_field :category_id, value: params[:category_id], id: 'catHidden' %>
+    <% end %>
+    <% if params[:search].present? || params[:category_id].present? %>
+      <%= link_to 'Clear', admin_mobile_ui_price_list_path, class: 'pl-clear-filters', data: { no_loader: '' } %>
+    <% end %>
+  </div>
+  <div class="cat-pills">
+    <a href="#" class="cat-pill <%= params[:category_id].blank? ? 'active' : '' %>"
+       onclick="setCat(''); return false;">All</a>
+    <% @categories.each do |cat| %>
+      <a href="#" class="cat-pill <%= params[:category_id].to_s == cat.id.to_s ? 'active' : '' %>"
+         onclick="setCat('<%= cat.id %>'); return false;"><%= cat.name %></a>
+    <% end %>
+  </div>
 </div>
 
 <%# Summary bar %>
