@@ -48,6 +48,9 @@ class Admin::ProductsController < Admin::ApplicationController
       @product.category_id = category.id if category
     end
 
+    # Pre-fill name if provided (e.g. from a no-results product search)
+    @product.name = params[:name] if params[:name].present?
+
     @product.delivery_rules.build(rule_type: 'everywhere') # Default rule
     @categories = Category.active.ordered
   end
@@ -64,10 +67,24 @@ class Admin::ProductsController < Admin::ApplicationController
       # Handle automatic R2 uploads for regular file uploads
       handle_automatic_r2_uploads
 
-      redirect_to admin_product_path(@product), notice: 'Product was successfully created.'
+      respond_to do |format|
+        format.html { redirect_to admin_product_path(@product), notice: 'Product was successfully created.' }
+        format.json do
+          render json: {
+            success: true,
+            product: {
+              id: @product.id, name: @product.name, unit_type: @product.unit_type,
+              default_selling_price: @product.default_selling_price || 0
+            }
+          }
+        end
+      end
     else
       @categories = Category.active.ordered
-      render :new, status: :unprocessable_entity
+      respond_to do |format|
+        format.html { render :new, status: :unprocessable_entity }
+        format.json { render json: { success: false, errors: @product.errors.full_messages }, status: :unprocessable_entity }
+      end
     end
   end
 

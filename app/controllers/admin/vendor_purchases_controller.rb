@@ -261,6 +261,7 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
   def set_vendors_and_products
     @vendors = Vendor.active.order(:name)
     @products = Product.active.order(:name)
+    @categories = Category.active.ordered
   end
 
   def vendor_purchase_params

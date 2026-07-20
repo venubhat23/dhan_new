@@ -461,9 +461,17 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="mb-3">
           <i class="bi bi-box-seam fs-1 text-muted"></i>
         </div>
-        <h5 class="text-muted mb-3">No Products Found</h5>
-        <p class="text-muted mb-4">Start by adding your first product to build your catalog and manage inventory.</p>
-        <%= link_to "Add Product", new_admin_product_path, class: "btn btn-primary" %>
+        <% if params[:search].present? %>
+          <h5 class="text-muted mb-3">No products found for "<%= params[:search] %>"</h5>
+          <p class="text-muted mb-4">We couldn't find any matching products. You can create a new one instead.</p>
+          <%= link_to new_admin_product_path(name: params[:search]), class: "btn btn-primary" do %>
+            <i class="bi bi-plus-lg me-1"></i>Create "<%= params[:search] %>"
+          <% end %>
+        <% else %>
+          <h5 class="text-muted mb-3">No Products Found</h5>
+          <p class="text-muted mb-4">Start by adding your first product to build your catalog and manage inventory.</p>
+          <%= link_to "Add Product", new_admin_product_path, class: "btn btn-primary" %>
+        <% end %>
       </div>
     <% end %>
   </div>

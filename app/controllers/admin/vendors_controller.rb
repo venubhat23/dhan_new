@@ -32,10 +32,15 @@ class Admin::VendorsController < Admin::ApplicationController
     @vendor = Vendor.new(vendor_params)
 
     if @vendor.save
-      redirect_to admin_vendor_path(@vendor),
-                  notice: 'Vendor was successfully created.'
+      respond_to do |format|
+        format.html { redirect_to admin_vendor_path(@vendor), notice: 'Vendor was successfully created.' }
+        format.json { render json: { success: true, vendor: { id: @vendor.id, name: @vendor.name } } }
+      end
     else
-      render :new, status: :unprocessable_entity
+      respond_to do |format|
+        format.html { render :new, status: :unprocessable_entity }
+        format.json { render json: { success: false, errors: @vendor.errors.full_messages }, status: :unprocessable_entity }
+      end
     end
   end
 

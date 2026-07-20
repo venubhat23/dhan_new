@@ -74,7 +74,13 @@
   display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
 .qty-btn:active { background:#6f42c1;color:white; }
-.qty-val { font-weight:700;font-size:0.9rem;min-width:28px;text-align:center; }
+.qty-val {
+  font-weight:700;font-size:0.9rem;width:44px;text-align:center;
+  border:1px solid #ddd;border-radius:6px;padding:3px 2px;
+  -moz-appearance:textfield;
+}
+.qty-val::-webkit-outer-spin-button,
+.qty-val::-webkit-inner-spin-button { -webkit-appearance:none;margin:0; }
 
 /* ─── Cart bar (bottom) ───────────────────────────────────────────── */
 .cart-bar {
@@ -485,7 +491,7 @@ document.querySelectorAll('.add-product-btn').forEach(btn => {
 
 function changeQty(key, delta) {
   if (!cart[key]) return;
-  const newQty = cart[key].qty + delta;
+  const newQty = Math.round((cart[key].qty + delta) * 100) / 100;
   if (newQty <= 0) {
     delete cart[key];
     const pid = parseInt(key.split('_')[0]);
@@ -494,6 +500,24 @@ function changeQty(key, delta) {
     alert(`Max stock (${cart[key].stock}) reached`);
     return;
   } else {
+    cart[key].qty = newQty;
+  }
+  renderCartControls(parseInt(key.split('_')[0]), key);
+  updateCartBar();
+}
+
+function setQty(key, value) {
+  if (!cart[key]) return;
+  let newQty = Math.round((parseFloat(value) || 0) * 100) / 100;
+  if (newQty <= 0) {
+    delete cart[key];
+    const pid = parseInt(key.split('_')[0]);
+    resetAddBtn(pid, key);
+  } else {
+    if (newQty > cart[key].stock) {
+      alert(`Max stock (${cart[key].stock}) reached`);
+      newQty = cart[key].stock;
+    }
     cart[key].qty = newQty;
   }
   renderCartControls(parseInt(key.split('_')[0]), key);
@@ -510,7 +534,9 @@ function renderCartControls(pid, key) {
     area.innerHTML = `
       <div class="qty-row">
         <button type="button" class="qty-btn" onclick="changeQty('${key}',-1)"><i class="bi bi-dash"></i></button>
-        <span class="qty-val">${item.qty}</span>
+        <input type="number" inputmode="decimal" step="0.01" min="0.01" class="qty-val" value="${item.qty}"
+               onchange="setQty('${key}', this.value)"
+               onclick="this.select()">
         <button type="button" class="qty-btn" onclick="changeQty('${key}',1)"><i class="bi bi-plus"></i></button>
       </div>`;
   } else {

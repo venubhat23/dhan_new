@@ -26,8 +26,15 @@
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-4">
-          <%= f.label :vendor_id, "Vendor", class: "form-label" %>
-          <span class="text-danger">*</span>
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <%= f.label :vendor_id, "Vendor", class: "form-label mb-0" %>
+              <span class="text-danger">*</span>
+            </div>
+            <button type="button" class="btn btn-link btn-sm p-0 mb-1" data-bs-toggle="modal" data-bs-target="#newVendorModal">
+              <i class="bi bi-plus-circle me-1"></i>New Vendor
+            </button>
+          </div>
           <%= f.select :vendor_id,
               options_from_collection_for_select(@vendors, :id, :name, @vendor_purchase.vendor_id || params[:vendor_id]),
               { prompt: 'Select Vendor' },
@@ -65,10 +72,16 @@
           <i class="bi bi-cart me-2 text-primary"></i>
           <h5 class="mb-0 fw-semibold">Purchase Items</h5>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" id="add-product-btn">
-          <i class="bi bi-plus-lg me-1"></i>
-          Add Product
-        </button>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newProductModal">
+            <i class="bi bi-plus-circle me-1"></i>
+            New Product
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" id="add-product-btn">
+            <i class="bi bi-plus-lg me-1"></i>
+            Add Product
+          </button>
+        </div>
       </div>
     </div>
     <div class="card-body p-0">
@@ -136,6 +149,110 @@
   </div>
 
 <% end %>
+
+<!-- Quick Add Vendor Modal -->
+<div class="modal fade" id="newVendorModal" tabindex="-1" aria-labelledby="newVendorModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="newVendorModalLabel">Add New Vendor</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="newVendorErrors" class="alert alert-danger d-none"></div>
+        <div class="mb-3">
+          <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="newVendorName" required>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Phone</label>
+            <input type="text" class="form-control" id="newVendorPhone">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" id="newVendorEmail">
+          </div>
+        </div>
+        <div class="mb-3 mt-3">
+          <label class="form-label">Address</label>
+          <textarea class="form-control" id="newVendorAddress" rows="2"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Payment Type <span class="text-danger">*</span></label>
+          <select class="form-select" id="newVendorPaymentType" required>
+            <option value="Cash">Cash</option>
+            <option value="Credit">Credit</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveNewVendorBtn">
+          <i class="bi bi-check-lg me-1"></i>Save Vendor
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Add Product Modal -->
+<div class="modal fade" id="newProductModal" tabindex="-1" aria-labelledby="newProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="newProductModalLabel">Add New Product</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="newProductErrors" class="alert alert-danger d-none"></div>
+        <div class="mb-3">
+          <label class="form-label">Product Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="newProductName" required>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Category <span class="text-danger">*</span></label>
+            <select class="form-select" id="newProductCategory" required>
+              <option value="">Select Category</option>
+              <% @categories.each do |category| %>
+                <option value="<%= category.id %>"><%= category.name %></option>
+              <% end %>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Unit Type <span class="text-danger">*</span></label>
+            <select class="form-select" id="newProductUnitType" required>
+              <% Product::UNIT_TYPES.each do |label, value| %>
+                <option value="<%= value %>"><%= label %></option>
+              <% end %>
+            </select>
+          </div>
+        </div>
+        <div class="row g-3 mt-1">
+          <div class="col-md-4">
+            <label class="form-label">Buying Price (₹) <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="newProductBuyingPrice" step="0.01" min="0.01" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Selling Price (₹) <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="newProductPrice" step="0.01" min="0.01" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Opening Stock <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="newProductStock" step="0.01" min="0" required>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveNewProductBtn">
+          <i class="bi bi-check-lg me-1"></i>Save Product
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <style>
 /* Custom Select2 styling for vendor purchases */
@@ -546,5 +663,166 @@ document.addEventListener('DOMContentLoaded', function() {
       alert('Please fill in all required fields for each product.');
     }
   });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+  function showErrors(box, messages) {
+    box.innerHTML = Array.isArray(messages) ? messages.join('<br>') : messages;
+    box.classList.remove('d-none');
+  }
+
+  function hideErrors(box) {
+    box.classList.add('d-none');
+    box.innerHTML = '';
+  }
+
+  function appendVendorOption(vendor) {
+    const vendorSelect = document.getElementById('vendor_select');
+    if (!vendorSelect) return;
+
+    const option = document.createElement('option');
+    option.value = vendor.id;
+    option.textContent = vendor.name;
+    vendorSelect.appendChild(option);
+    vendorSelect.value = vendor.id;
+
+    if (window.jQuery) {
+      $(vendorSelect).trigger('change');
+    }
+    if (typeof window.calculateGrandTotal === 'function') {
+      window.calculateGrandTotal();
+    }
+  }
+
+  function appendProductOption(product) {
+    if (window.productData) {
+      window.productData.push(product);
+    }
+
+    document.querySelectorAll('.product-select').forEach(function(select) {
+      const option = document.createElement('option');
+      option.value = product.id;
+      option.textContent = product.name;
+      option.dataset.unitType = product.unit_type;
+      option.dataset.defaultPrice = product.default_selling_price;
+      select.appendChild(option);
+
+      if (window.jQuery) {
+        $(select).trigger('change.select2');
+      }
+    });
+  }
+
+  // Quick add vendor
+  const saveNewVendorBtn = document.getElementById('saveNewVendorBtn');
+  if (saveNewVendorBtn) {
+    saveNewVendorBtn.addEventListener('click', function() {
+      const nameField = document.getElementById('newVendorName');
+      const errorsBox = document.getElementById('newVendorErrors');
+      hideErrors(errorsBox);
+
+      const name = nameField.value.trim();
+      if (!name) {
+        showErrors(errorsBox, 'Vendor name is required.');
+        return;
+      }
+
+      saveNewVendorBtn.disabled = true;
+
+      fetch('<%= admin_vendors_path %>', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({
+          vendor: {
+            name: name,
+            phone: document.getElementById('newVendorPhone').value,
+            email: document.getElementById('newVendorEmail').value,
+            address: document.getElementById('newVendorAddress').value,
+            payment_type: document.getElementById('newVendorPaymentType').value,
+            status: true
+          }
+        })
+      })
+        .then(res => res.json().then(data => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+          if (ok && data.success) {
+            appendVendorOption(data.vendor);
+            bootstrap.Modal.getInstance(document.getElementById('newVendorModal'))?.hide();
+            ['newVendorName', 'newVendorPhone', 'newVendorEmail', 'newVendorAddress'].forEach(id => {
+              document.getElementById(id).value = '';
+            });
+          } else {
+            showErrors(errorsBox, data.errors || ['Something went wrong. Please try again.']);
+          }
+        })
+        .catch(() => showErrors(errorsBox, 'Something went wrong. Please try again.'))
+        .finally(() => { saveNewVendorBtn.disabled = false; });
+    });
+  }
+
+  // Quick add product
+  const saveNewProductBtn = document.getElementById('saveNewProductBtn');
+  if (saveNewProductBtn) {
+    saveNewProductBtn.addEventListener('click', function() {
+      const errorsBox = document.getElementById('newProductErrors');
+      hideErrors(errorsBox);
+
+      const name = document.getElementById('newProductName').value.trim();
+      const categoryId = document.getElementById('newProductCategory').value;
+      const unitType = document.getElementById('newProductUnitType').value;
+      const buyingPrice = document.getElementById('newProductBuyingPrice').value;
+      const price = document.getElementById('newProductPrice').value;
+      const stock = document.getElementById('newProductStock').value;
+
+      if (!name || !categoryId || !unitType || !buyingPrice || !price || !stock) {
+        showErrors(errorsBox, 'Please fill in all required fields.');
+        return;
+      }
+
+      saveNewProductBtn.disabled = true;
+
+      fetch('<%= admin_products_path %>', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({
+          product: {
+            name: name,
+            category_id: categoryId,
+            unit_type: unitType,
+            buying_price: buyingPrice,
+            price: price,
+            stock: stock,
+            status: 'active'
+          }
+        })
+      })
+        .then(res => res.json().then(data => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+          if (ok && data.success) {
+            appendProductOption(data.product);
+            bootstrap.Modal.getInstance(document.getElementById('newProductModal'))?.hide();
+            ['newProductName', 'newProductCategory', 'newProductUnitType', 'newProductBuyingPrice', 'newProductPrice', 'newProductStock'].forEach(id => {
+              document.getElementById(id).value = '';
+            });
+          } else {
+            showErrors(errorsBox, data.errors || ['Something went wrong. Please try again.']);
+          }
+        })
+        .catch(() => showErrors(errorsBox, 'Something went wrong. Please try again.'))
+        .finally(() => { saveNewProductBtn.disabled = false; });
+    });
+  }
 });
 </script>
