@@ -50,9 +50,16 @@ class Admin::MobileUiController < ActionController::Base
       @bookings = @bookings.where(status: params[:status])
     end
 
+    if params[:customer_id].present?
+      @bookings = @bookings.where(customer_id: params[:customer_id])
+    end
+
     @total = @bookings.count
     @bookings = @bookings.page(params[:page]).per(15)
     preload_associated_invoices(@bookings)
+
+    @customers = Customer.select(:id, :first_name, :middle_name, :last_name)
+                          .order(:first_name, :last_name)
   end
 
   # ── New Booking ───────────────────────────────────────────────────────────
