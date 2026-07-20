@@ -176,6 +176,74 @@ class Admin::MobileUiController < ActionController::Base
     @products_by_category = products.group_by { |p| [p.category_id, p.cat_name] }
   end
 
+  # ── Vendors ───────────────────────────────────────────────────────────────
+  def vendors
+    @vendors = Vendor.includes(:vendor_purchases, :stock_batches).order(created_at: :desc)
+    @vendors = @vendors.where('name ILIKE ?', "%#{params[:search]}%") if params[:search].present?
+    @vendors = @vendors.where(status: params[:status]) if params[:status].present?
+
+    @total_vendors  = Vendor.count
+    @active_vendors = Vendor.active.count
+    @total_outstanding = Vendor.all.sum(&:outstanding_balance)
+
+    @vendors = @vendors.page(params[:page]).per(15)
+  end
+
+  def new_vendor
+    @vendor = Vendor.new(payment_type: 'Cash', status: true)
+    @back_url = params[:back_url].presence || admin_mobile_ui_vendors_path
+  end
+
+  def create_vendor
+    @vendor = Vendor.new(vendor_params)
+    @vendor.status = true if @vendor.status.nil?
+
+    if @vendor.save
+      if params[:go_to_purchase] == '1'
+        redirect_to admin_mobile_ui_new_vendor_purchase_path(vendor_id: @vendor.id),
+                    notice: "Vendor '#{@vendor.name}' created! Now add the purchase."
+      else
+        redirect_to admin_mobile_ui_vendors_path, notice: "Vendor '#{@vendor.name}' created successfully!"
+      end
+    else
+      @back_url = params[:back_url].presence || admin_mobile_ui_vendors_path
+      flash.now[:error] = @vendor.errors.full_messages.join(', ')
+      render :new_vendor, status: :unprocessable_entity
+    end
+  end
+
+  def toggle_vendor_status
+    vendor = Vendor.find(params[:id])
+    vendor.update(status: !vendor.status)
+    redirect_to admin_mobile_ui_vendors_path(search: params[:search], status: params[:status]),
+                notice: "Vendor #{vendor.status? ? 'activated' : 'deactivated'}."
+  end
+
+  # ── Vendor Purchases ──────────────────────────────────────────────────────
+  def new_vendor_purchase
+    @vendor_purchase = VendorPurchase.new
+    @vendor_purchase.vendor_purchase_items.build
+    @vendors  = Vendor.active.order(:name)
+    @products = Product.active.order(:name)
+    @preselected_vendor_id = params[:vendor_id]
+  end
+
+  def create_vendor_purchase
+    @vendor_purchase = VendorPurchase.new(vendor_purchase_params)
+    @vendor_purchase.status = 'pending'
+
+    if @vendor_purchase.save
+      redirect_to admin_mobile_ui_vendors_path,
+                  notice: "Purchase ##{@vendor_purchase.purchase_number} created and stock batches generated!"
+    else
+      @vendors  = Vendor.active.order(:name)
+      @products = Product.active.order(:name)
+      @preselected_vendor_id = params.dig(:vendor_purchase, :vendor_id)
+      flash.now[:error] = @vendor_purchase.errors.full_messages.join(', ')
+      render :new_vendor_purchase, status: :unprocessable_entity
+    end
+  end
+
   # ── Quick Customer ────────────────────────────────────────────────────────
   def new_customer
     @customer = Customer.new
@@ -276,6 +344,17 @@ class Admin::MobileUiController < ActionController::Base
 
   def mobile_update_booking_params
     params.require(:booking).permit(:status, :payment_status, :payment_method, :notes, :discount_amount)
+  end
+
+  def vendor_params
+    params.require(:vendor).permit(:name, :phone, :email, :address, :payment_type, :opening_balance, :status)
+  end
+
+  def vendor_purchase_params
+    params.require(:vendor_purchase).permit(
+      :vendor_id, :purchase_date, :notes, :paid_amount,
+      vendor_purchase_items_attributes: [:id, :product_id, :quantity, :purchase_price, :selling_price, :_destroy]
+    )
   end
 
   def mobile_booking_params

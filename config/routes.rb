@@ -131,6 +131,12 @@ Rails.application.routes.draw do
     patch 'mobile-ui/booking/:id',     to: 'mobile_ui#update_booking',  as: 'mobile_ui_update_booking'
     get  'mobile-ui/invoice/:id',      to: 'mobile_ui#show_invoice',    as: 'mobile_ui_show_invoice'
     get  'mobile-ui/invoice/:id/edit', to: 'mobile_ui#edit_invoice',    as: 'mobile_ui_edit_invoice'
+    get  'mobile-ui/vendors',              to: 'mobile_ui#vendors',                as: 'mobile_ui_vendors'
+    get  'mobile-ui/vendors/new',          to: 'mobile_ui#new_vendor',             as: 'mobile_ui_new_vendor'
+    post 'mobile-ui/vendors',              to: 'mobile_ui#create_vendor',          as: 'mobile_ui_create_vendor'
+    patch 'mobile-ui/vendors/:id/toggle-status', to: 'mobile_ui#toggle_vendor_status', as: 'mobile_ui_toggle_vendor_status'
+    get  'mobile-ui/vendor-purchases/new', to: 'mobile_ui#new_vendor_purchase',    as: 'mobile_ui_new_vendor_purchase'
+    post 'mobile-ui/vendor-purchases',     to: 'mobile_ui#create_vendor_purchase', as: 'mobile_ui_create_vendor_purchase'
 
     # Bookings Management (Now handles complete order workflow)
     resources :bookings do

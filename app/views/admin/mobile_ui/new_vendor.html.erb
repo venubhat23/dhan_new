@@ -1,0 +1,116 @@
+<style>
+  .form-card { background:white; border-radius:16px; padding:20px; margin:12px; box-shadow:0 2px 12px rgba(0,0,0,0.08); }
+  .field-label { font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#666; margin-bottom:6px; }
+  .mob-input, .mob-select, .mob-textarea {
+    width:100%; border:2px solid #e9ecef; border-radius:12px;
+    padding:12px 14px; font-size:1rem; outline:none;
+    transition:border-color 0.2s; background:white;
+  }
+  .mob-input:focus, .mob-select:focus, .mob-textarea:focus { border-color:#6f42c1; }
+  .mob-input.is-invalid { border-color:#dc3545; }
+  .input-wrap { position:relative; }
+  .input-icon { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:#aaa; font-size:1rem; pointer-events:none; }
+  .input-wrap .mob-input { padding-left:38px; }
+  .submit-btn {
+    width:100%; background:linear-gradient(135deg,#6f42c1,#4a148c);
+    color:white; border:none; border-radius:12px; padding:14px;
+    font-size:1rem; font-weight:700; letter-spacing:0.3px;
+    box-shadow:0 4px 15px rgba(111,66,193,0.35);
+  }
+  .submit-btn:active { transform:scale(0.98); }
+  .page-top { padding:14px 12px 0; display:flex; align-items:center; gap:10px; }
+  .back-btn { width:36px;height:36px;border-radius:10px;background:white;border:2px solid #e9ecef;display:flex;align-items:center;justify-content:center;color:#6f42c1;text-decoration:none;flex-shrink:0; }
+  .payment-toggle { display:flex; gap:8px; }
+  .payment-opt {
+    flex:1; text-align:center; padding:10px; border-radius:12px; border:2px solid #e9ecef;
+    font-weight:600; font-size:0.88rem; color:#666; cursor:pointer;
+  }
+  .payment-opt.active { background:#6f42c1; border-color:#6f42c1; color:white; }
+</style>
+
+<div class="page-top">
+  <%= link_to @back_url, class: 'back-btn', data: { no_loader: '' } do %>
+    <i class="bi bi-arrow-left"></i>
+  <% end %>
+  <div>
+    <div style="font-weight:700;font-size:1rem;color:#222;">New Vendor</div>
+    <div style="font-size:0.78rem;color:#888;">Add a supplier / vendor</div>
+  </div>
+</div>
+
+<div class="form-card">
+  <% if @vendor.errors.any? %>
+    <div class="alert alert-danger rounded-3 mb-3 py-2 px-3" style="font-size:0.85rem;">
+      <i class="bi bi-exclamation-circle me-1"></i>
+      <%= @vendor.errors.full_messages.join(' · ') %>
+    </div>
+  <% end %>
+
+  <%= form_with model: @vendor, url: admin_mobile_ui_create_vendor_path, local: true do |f| %>
+    <%= hidden_field_tag :back_url, @back_url %>
+    <%= hidden_field_tag :go_to_purchase, params[:go_to_purchase] %>
+
+    <div class="mb-3">
+      <div class="field-label">Vendor Name *</div>
+      <div class="input-wrap">
+        <i class="bi bi-shop input-icon"></i>
+        <%= f.text_field :name, class: "mob-input #{@vendor.errors[:name].any? ? 'is-invalid' : ''}",
+            placeholder: 'Vendor / supplier name', required: true, autofocus: true, value: @vendor.name %>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <div class="field-label">Phone</div>
+      <div class="input-wrap">
+        <i class="bi bi-telephone input-icon"></i>
+        <%= f.text_field :phone, class: 'mob-input', placeholder: '10-digit mobile', value: @vendor.phone %>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <div class="field-label">Email</div>
+      <div class="input-wrap">
+        <i class="bi bi-envelope input-icon"></i>
+        <%= f.email_field :email, class: 'mob-input', placeholder: 'Email address (optional)', value: @vendor.email %>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <div class="field-label">Address</div>
+      <%= f.text_area :address, class: 'mob-textarea', rows: 2, placeholder: 'Vendor address (optional)' %>
+    </div>
+
+    <div class="mb-3">
+      <div class="field-label">Payment Type *</div>
+      <div class="payment-toggle">
+        <label class="payment-opt <%= @vendor.payment_type == 'Cash' ? 'active' : '' %>" id="payOptCash">
+          <%= f.radio_button :payment_type, 'Cash', checked: @vendor.payment_type == 'Cash', style: 'display:none;', onchange: "setPaymentType('Cash')" %>
+          Cash
+        </label>
+        <label class="payment-opt <%= @vendor.payment_type == 'Credit' ? 'active' : '' %>" id="payOptCredit">
+          <%= f.radio_button :payment_type, 'Credit', checked: @vendor.payment_type == 'Credit', style: 'display:none;', onchange: "setPaymentType('Credit')" %>
+          Credit
+        </label>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <div class="field-label">Opening Balance (₹)</div>
+      <div class="input-wrap">
+        <i class="bi bi-currency-rupee input-icon"></i>
+        <%= f.number_field :opening_balance, class: 'mob-input', step: '0.01', min: '0', placeholder: '0.00', value: @vendor.opening_balance %>
+      </div>
+    </div>
+
+    <button type="submit" class="submit-btn">
+      <i class="bi bi-check-circle me-2"></i>Create Vendor
+    </button>
+  <% end %>
+</div>
+
+<script>
+function setPaymentType(type) {
+  document.getElementById('payOptCash').classList.toggle('active', type === 'Cash');
+  document.getElementById('payOptCredit').classList.toggle('active', type === 'Credit');
+}
+</script>

@@ -1,0 +1,222 @@
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+
+<style>
+  .form-card { background:white; border-radius:16px; padding:16px; margin:12px; box-shadow:0 2px 12px rgba(0,0,0,0.08); }
+  .field-label { font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#666; margin-bottom:6px; }
+  .mob-input, .mob-select, .mob-textarea {
+    width:100%; border:2px solid #e9ecef; border-radius:12px;
+    padding:12px 14px; font-size:1rem; outline:none;
+    transition:border-color 0.2s; background:white;
+  }
+  .mob-input:focus, .mob-select:focus, .mob-textarea:focus { border-color:#6f42c1; }
+  .submit-btn {
+    width:100%; background:linear-gradient(135deg,#6f42c1,#4a148c);
+    color:white; border:none; border-radius:12px; padding:14px;
+    font-size:1rem; font-weight:700; letter-spacing:0.3px;
+    box-shadow:0 4px 15px rgba(111,66,193,0.35);
+  }
+  .submit-btn:disabled { opacity:0.6; }
+  .submit-btn:active { transform:scale(0.98); }
+  .page-top { padding:14px 12px 0; display:flex; align-items:center; gap:10px; justify-content:space-between; }
+  .page-top-left { display:flex; align-items:center; gap:10px; }
+  .back-btn { width:36px;height:36px;border-radius:10px;background:white;border:2px solid #e9ecef;display:flex;align-items:center;justify-content:center;color:#6f42c1;text-decoration:none;flex-shrink:0; }
+  .new-vendor-link { font-size:0.78rem; font-weight:600; color:#6f42c1; text-decoration:none; white-space:nowrap; }
+  .total-badge { background:#f0ebff; color:#4a148c; border-radius:12px; padding:12px 14px; text-align:center; font-weight:700; font-size:1.1rem; margin-bottom:16px; }
+  .item-card { background:#f8f9fa; border-radius:12px; padding:14px; margin-bottom:12px; border:1px solid #eee; position:relative; }
+  .item-row { display:flex; gap:8px; margin-top:8px; }
+  .item-row .mob-input { flex:1; }
+  .remove-item-btn { position:absolute; top:10px; right:10px; background:none; border:none; color:#dc3545; font-size:1.1rem; padding:0; }
+  .line-total { font-size:0.82rem; font-weight:700; color:#1a7f37; margin-top:8px; }
+  .add-item-btn {
+    width:100%; background:white; border:2px dashed #6f42c1; color:#6f42c1;
+    border-radius:12px; padding:12px; font-weight:600; font-size:0.9rem; margin-bottom:16px;
+  }
+  .select2-container--bootstrap-5 .select2-selection { border-radius:12px !important; border:2px solid #e9ecef !important; min-height:46px !important; }
+</style>
+
+<div class="page-top">
+  <div class="page-top-left">
+    <%= link_to admin_mobile_ui_vendors_path, class: 'back-btn', data: { no_loader: '' } do %>
+      <i class="bi bi-arrow-left"></i>
+    <% end %>
+    <div>
+      <div style="font-weight:700;font-size:1rem;color:#222;">New Purchase</div>
+      <div style="font-size:0.78rem;color:#888;">Record a vendor purchase</div>
+    </div>
+  </div>
+  <%= link_to admin_mobile_ui_new_vendor_path(back_url: request.fullpath, go_to_purchase: '1'), class: 'new-vendor-link' do %>
+    <i class="bi bi-plus-circle me-1"></i>New Vendor
+  <% end %>
+</div>
+
+<div class="form-card">
+  <% if @vendor_purchase.errors.any? %>
+    <div class="alert alert-danger rounded-3 mb-3 py-2 px-3" style="font-size:0.85rem;">
+      <i class="bi bi-exclamation-circle me-1"></i>
+      <%= @vendor_purchase.errors.full_messages.join(' · ') %>
+    </div>
+  <% end %>
+
+  <%= form_with model: @vendor_purchase, url: admin_mobile_ui_create_vendor_purchase_path, local: true, id: 'mob-purchase-form' do |f| %>
+    <%= f.hidden_field :paid_amount, value: @vendor_purchase.paid_amount || 0 %>
+
+    <div class="mb-3">
+      <div class="field-label">Vendor *</div>
+      <%= f.select :vendor_id,
+          options_from_collection_for_select(@vendors, :id, :name, @preselected_vendor_id),
+          { prompt: 'Select vendor' },
+          { class: 'mob-select', id: 'mobVendorSelect', required: true } %>
+    </div>
+
+    <div class="mb-3">
+      <div class="field-label">Purchase Date *</div>
+      <%= f.date_field :purchase_date, class: 'mob-input', value: Date.current.strftime('%Y-%m-%d'), required: true %>
+    </div>
+
+    <div class="total-badge">
+      Total: <span id="mobTotalAmount">₹0.00</span>
+    </div>
+
+    <div id="mobItemsContainer">
+      <%= f.fields_for :vendor_purchase_items do |item_form| %>
+        <%= render 'mobile_purchase_item_fields', f: item_form %>
+      <% end %>
+    </div>
+
+    <button type="button" class="add-item-btn" id="mobAddItemBtn">
+      <i class="bi bi-plus-lg me-1"></i>Add Product
+    </button>
+
+    <div class="mb-4">
+      <div class="field-label">Notes</div>
+      <%= f.text_area :notes, class: 'mob-textarea', rows: 2, placeholder: 'Optional notes' %>
+    </div>
+
+    <button type="submit" class="submit-btn" id="mobPurchaseSubmitBtn">
+      <i class="bi bi-check-circle me-2"></i>Create Purchase
+    </button>
+  <% end %>
+</div>
+
+<script>
+window.mobProductData = <%= raw @products.map { |p| { id: p.id, name: p.name, unit_type: p.unit_type || 'units', default_selling_price: p.default_selling_price || 0 } }.to_json %>;
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const container = document.getElementById('mobItemsContainer');
+  const addBtn = document.getElementById('mobAddItemBtn');
+  let itemIndex = <%= @vendor_purchase.vendor_purchase_items.length %>;
+
+  function productOptionsHtml() {
+    let html = '<option value="">Select product</option>';
+    window.mobProductData.forEach(p => {
+      html += `<option value="${p.id}" data-unit-type="${p.unit_type}" data-default-price="${p.default_selling_price}">${p.name}</option>`;
+    });
+    return html;
+  }
+
+  function itemHtml(index) {
+    return `
+      <div class="item-card">
+        <button type="button" class="remove-item-btn mob-remove-item"><i class="bi bi-trash"></i></button>
+        <div class="field-label">Product *</div>
+        <select name="vendor_purchase[vendor_purchase_items_attributes][${index}][product_id]" class="mob-select mob-product-select" required>
+          ${productOptionsHtml()}
+        </select>
+        <div class="item-row">
+          <div>
+            <div class="field-label">Qty *</div>
+            <input type="number" name="vendor_purchase[vendor_purchase_items_attributes][${index}][quantity]" class="mob-input mob-qty" placeholder="0" step="0.01" min="0.01" required>
+          </div>
+          <div>
+            <div class="field-label">Purchase ₹ *</div>
+            <input type="number" name="vendor_purchase[vendor_purchase_items_attributes][${index}][purchase_price]" class="mob-input mob-purchase-price" placeholder="0.00" step="0.01" min="0.01" required>
+          </div>
+          <div>
+            <div class="field-label">Selling ₹ *</div>
+            <input type="number" name="vendor_purchase[vendor_purchase_items_attributes][${index}][selling_price]" class="mob-input mob-selling-price" placeholder="0.00" step="0.01" min="0.01" required>
+          </div>
+        </div>
+        <div class="line-total">Line total: ₹0.00</div>
+      </div>
+    `;
+  }
+
+  function initRow(row) {
+    const select = row.querySelector('.mob-product-select');
+    const qty = row.querySelector('.mob-qty');
+    const purchasePrice = row.querySelector('.mob-purchase-price');
+    const sellingPrice = row.querySelector('.mob-selling-price');
+    const lineTotalEl = row.querySelector('.line-total');
+    const removeBtn = row.querySelector('.mob-remove-item');
+
+    $(select).select2({ theme: 'bootstrap-5', placeholder: 'Search product…', allowClear: true, width: '100%' });
+    $(select).on('select2:select', function() {
+      const opt = this.options[this.selectedIndex];
+      const defaultPrice = opt.dataset.defaultPrice;
+      if (defaultPrice && sellingPrice && !sellingPrice.value) sellingPrice.value = defaultPrice;
+      recalc();
+    });
+
+    [qty, purchasePrice, sellingPrice].forEach(el => el.addEventListener('input', recalc));
+
+    removeBtn.addEventListener('click', function() {
+      const s2 = $(select).data('select2');
+      if (s2) $(select).select2('destroy');
+      row.remove();
+      recalcGrandTotal();
+    });
+
+    function recalc() {
+      const q = parseFloat(qty.value) || 0;
+      const p = parseFloat(purchasePrice.value) || 0;
+      lineTotalEl.textContent = 'Line total: ₹' + (q * p).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      recalcGrandTotal();
+    }
+  }
+
+  function recalcGrandTotal() {
+    let total = 0;
+    container.querySelectorAll('.item-card').forEach(row => {
+      const q = parseFloat(row.querySelector('.mob-qty')?.value) || 0;
+      const p = parseFloat(row.querySelector('.mob-purchase-price')?.value) || 0;
+      total += q * p;
+    });
+    document.getElementById('mobTotalAmount').textContent = '₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  addBtn.addEventListener('click', function() {
+    const newIndex = new Date().getTime();
+    container.insertAdjacentHTML('beforeend', itemHtml(newIndex));
+    itemIndex++;
+    initRow(container.lastElementChild);
+  });
+
+  // Initialize any pre-rendered rows, else add one empty row
+  const existingRows = container.querySelectorAll('.item-card');
+  if (existingRows.length === 0) {
+    container.insertAdjacentHTML('beforeend', itemHtml(itemIndex));
+    itemIndex++;
+  }
+  container.querySelectorAll('.item-card').forEach(initRow);
+
+  $('#mobVendorSelect').select2({ theme: 'bootstrap-5', placeholder: 'Search vendor…', allowClear: true, width: '100%' });
+
+  recalcGrandTotal();
+
+  document.getElementById('mob-purchase-form').addEventListener('submit', function(e) {
+    if (container.querySelectorAll('.item-card').length === 0) {
+      e.preventDefault();
+      alert('Please add at least one product.');
+      return;
+    }
+    const btn = document.getElementById('mobPurchaseSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating…';
+  });
+});
+</script>

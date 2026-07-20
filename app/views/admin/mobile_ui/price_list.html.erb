@@ -20,6 +20,7 @@
 .pl-search-input { padding-right: 34px; }
 .pl-search-wrap { position: relative; }
 .pl-search-wrap .bi-search { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #aaa; font-size: 0.9rem; }
+.pl-search-hint { font-size: 0.75rem; color: #888; padding: 4px 4px 0; }
 .pl-clear-btn {
   position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
   background: none; border: none; padding: 0; line-height: 0;
@@ -165,6 +166,7 @@
           <i class="bi bi-x-circle-fill"></i>
         </button>
       </div>
+      <div id="plSearchHint" class="pl-search-hint" style="display:none;">Enter at least 3 letters to search</div>
       <%= f.hidden_field :category_id, value: params[:category_id], id: 'catHidden' %>
     <% end %>
     <% if params[:search].present? || params[:category_id].present? %>
@@ -327,9 +329,18 @@ function clearPlSearch() {
 }
 
 let plSearchTimer;
+const MIN_SEARCH_LEN = 3;
 document.getElementById('plSearch').addEventListener('input', function() {
+  const len = this.value.trim().length;
   document.getElementById('plClearSearch').style.display = this.value ? 'flex' : 'none';
   clearTimeout(plSearchTimer);
+
+  const hint = document.getElementById('plSearchHint');
+  if (len > 0 && len < MIN_SEARCH_LEN) {
+    hint.style.display = 'block';
+    return;
+  }
+  hint.style.display = 'none';
   plSearchTimer = setTimeout(() => this.closest('form').submit(), 500);
 });
 </script>
