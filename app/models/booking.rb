@@ -75,8 +75,14 @@ class Booking < ApplicationRecord
 
   # Keeps the already-generated Invoice's payment_status in step with the booking's,
   # so a booking marked paid after invoice creation doesn't leave a stale "unpaid" invoice.
+  # Some bookings (e.g. created unpaid via the mobile UI) never got an invoice generated
+  # at creation time — if one of those is later marked paid, generate the invoice now
+  # instead of silently no-op'ing.
   def sync_invoice_payment_status
-    return unless invoice_generated? && invoice_number.present?
+    unless invoice_generated? && invoice_number.present?
+      generate_quick_invoice! if payment_status_paid?
+      return
+    end
 
     invoice = Invoice.find_by(invoice_number: invoice_number)
     return unless invoice
@@ -890,6 +896,11 @@ class Booking < ApplicationRecord
     invoice.total_amount = invoice_total + shipping_charges.to_f
 
     if invoice.save
+      # total_amount may have been recalculated by Invoice's before_validation
+      # callback (tax-inclusive line totals), so paid_amount must be set from
+      # the final persisted total, not the pre-save estimate above.
+      invoice.update_column(:paid_amount, invoice.total_amount) if payment_status_paid?
+
       update_columns(
         invoice_generated: true,
         invoice_number: invoice.invoice_number,
