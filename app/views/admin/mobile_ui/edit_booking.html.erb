@@ -87,13 +87,13 @@
     <div class="eb-field">
       <div class="eb-label">Payment Method</div>
       <%= f.select :payment_method, [
-            ['Cash',          0],
-            ['Card',          1],
-            ['UPI',           2],
-            ['Bank Transfer', 3],
-            ['Online',        4],
-            ['COD',           5]
-          ], { selected: @booking.payment_method_before_type_cast, include_blank: '— Select —' }, class: 'eb-select' %>
+            ['Cash',          'cash'],
+            ['Card',          'card'],
+            ['UPI',           'upi'],
+            ['Bank Transfer', 'bank_transfer'],
+            ['Online',        'online'],
+            ['COD',           'cod']
+          ], { selected: @booking.payment_method, include_blank: '— Select —' }, class: 'eb-select' %>
     </div>
   </div>
 
