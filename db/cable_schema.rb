@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_11_092948) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_30_063622) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -531,10 +531,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_11_092948) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "product_id"
+    t.bigint "product_variant_id"
     t.index ["description"], name: "index_invoice_items_on_description_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["invoice_id"], name: "index_invoice_items_on_invoice_id"
     t.index ["milk_delivery_task_id"], name: "index_invoice_items_on_milk_delivery_task_id"
     t.index ["product_id"], name: "index_invoice_items_on_product_id"
+    t.index ["product_variant_id"], name: "index_invoice_items_on_product_variant_id"
   end
 
   create_table "invoices", force: :cascade do |t|
@@ -1522,6 +1524,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_11_092948) do
   add_foreign_key "franchises", "users"
   add_foreign_key "invoice_items", "invoices"
   add_foreign_key "invoice_items", "milk_delivery_tasks"
+  add_foreign_key "invoice_items", "product_variants"
   add_foreign_key "invoice_items", "products"
   add_foreign_key "milk_delivery_tasks", "customers"
   add_foreign_key "milk_delivery_tasks", "delivery_people"

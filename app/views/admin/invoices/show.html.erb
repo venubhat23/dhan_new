@@ -589,30 +589,56 @@
       total_igst = 0
 
       invoice_items.each do |item|
-        # Base amount (quantity × unit_price)
+        # Base amount (quantity × unit_price). unit_price is the pre-tax (base) price.
         base_amount = item.quantity * (item.unit_price || 0)
 
         if item.product&.gst_enabled
           # For GST applicable items, add to taxable amount and calculate GST
           taxable_amount += base_amount
 
-          # Calculate individual tax components based on base amount
+          # Calculate total GST first, then split to avoid rounding issues
           if item.product.cgst_percentage.present? && item.product.sgst_percentage.present?
             cgst_rate = item.product.cgst_percentage
             sgst_rate = item.product.sgst_percentage
             igst_rate = item.product.igst_percentage || 0
+            total_gst_rate = cgst_rate + sgst_rate + igst_rate
           elsif item.product.gst_percentage.present?
             # Split total GST equally for intra-state transactions
-            cgst_rate = item.product.gst_percentage / 2.0
-            sgst_rate = item.product.gst_percentage / 2.0
+            total_gst_rate = item.product.gst_percentage || 0
+            cgst_rate = total_gst_rate / 2.0
+            sgst_rate = total_gst_rate / 2.0
             igst_rate = 0
           else
-            cgst_rate = sgst_rate = igst_rate = 0
+            cgst_rate = sgst_rate = igst_rate = total_gst_rate = 0
           end
 
-          cgst_amount = (base_amount * cgst_rate / 100).round(2)
-          sgst_amount = (base_amount * sgst_rate / 100).round(2)
-          igst_amount = (base_amount * igst_rate / 100).round(2)
+          # Calculate total tax first to maintain consistency with the item row's TAX column
+          total_item_tax = (base_amount * total_gst_rate / 100)
+
+          # Split the total tax proportionally, then correct for rounding so the
+          # components always sum to exactly the rounded total (avoids e.g.
+          # 40.48 + 40.48 = 80.96 when the true tax is 80.95).
+          if total_gst_rate > 0
+            cgst_amount = (total_item_tax * cgst_rate / total_gst_rate).round(2)
+            sgst_amount = (total_item_tax * sgst_rate / total_gst_rate).round(2)
+            igst_amount = (total_item_tax * igst_rate / total_gst_rate).round(2)
+
+            calculated_sum = cgst_amount + sgst_amount + igst_amount
+            total_item_tax_rounded = total_item_tax.round(2)
+
+            if calculated_sum != total_item_tax_rounded
+              # Adjust the largest component to absorb the rounding difference
+              if cgst_amount >= sgst_amount && cgst_amount >= igst_amount
+                cgst_amount = total_item_tax_rounded - sgst_amount - igst_amount
+              elsif sgst_amount >= igst_amount
+                sgst_amount = total_item_tax_rounded - cgst_amount - igst_amount
+              else
+                igst_amount = total_item_tax_rounded - cgst_amount - sgst_amount
+              end
+            end
+          else
+            cgst_amount = sgst_amount = igst_amount = 0
+          end
 
           total_cgst += cgst_amount
           total_sgst += sgst_amount
