@@ -876,7 +876,7 @@ class Booking < ApplicationRecord
 
     invoice_total = 0
 
-    booking_items.includes(:product).each do |item|
+    booking_items.includes(:product, :product_variant).each do |item|
       product = item.product
       next unless product
 
@@ -889,7 +889,8 @@ class Booking < ApplicationRecord
         quantity: item.quantity,
         unit_price: unit_price,
         total_amount: item_total,
-        product: product
+        product: product,
+        product_variant: item.product_variant
       )
     end
 

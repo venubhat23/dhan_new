@@ -2,6 +2,7 @@ class InvoiceItem < ApplicationRecord
   belongs_to :invoice
   belongs_to :milk_delivery_task, optional: true
   belongs_to :product, optional: true
+  belongs_to :product_variant, optional: true
 
   validates :description, presence: true
   validates :quantity, presence: true, numericality: { greater_than: 0 }

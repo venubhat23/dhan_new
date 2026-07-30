@@ -148,12 +148,13 @@ class Invoice < ApplicationRecord
     transaction do
       invoice_items.destroy_all
 
-      booking.booking_items.includes(:product).each do |bi|
+      booking.booking_items.includes(:product, :product_variant).each do |bi|
         next unless bi.product
 
         unit_price = booking.invoice_unit_price_for(bi)
         invoice_items.create!(
           product: bi.product,
+          product_variant: bi.product_variant,
           quantity: bi.quantity,
           unit_price: unit_price,
           total_amount: bi.quantity.to_f * unit_price,
@@ -168,11 +169,11 @@ class Invoice < ApplicationRecord
   end
 
   def items_match_booking?(booking)
-    current = invoice_items.map { |i| [i.product_id, i.quantity.to_f.round(3), i.unit_price.to_f.round(2)] }.sort
+    current = invoice_items.map { |i| [i.product_id, i.product_variant_id, i.quantity.to_f.round(3), i.unit_price.to_f.round(2)] }.sort_by { |row| row.map(&:to_s) }
     target = booking.booking_items.filter_map do |bi|
       next unless bi.product_id
-      [bi.product_id, bi.quantity.to_f.round(3), booking.invoice_unit_price_for(bi).round(2)]
-    end.sort
+      [bi.product_id, bi.product_variant_id, bi.quantity.to_f.round(3), booking.invoice_unit_price_for(bi).round(2)]
+    end.sort_by { |row| row.map(&:to_s) }
 
     current == target && delivery_charge.to_f.round(2) == booking.shipping_charges.to_f.round(2)
   end

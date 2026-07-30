@@ -576,7 +576,7 @@
 
     <%
       # FIXED: Load items directly from the invoice to bypass any variable issues
-      invoice_items = @invoice&.invoice_items&.includes(:product) || []
+      invoice_items = @invoice&.invoice_items&.includes(:product, :product_variant) || []
 
       # Calculate if any product has GST (adapting for admin invoice structure)
       has_gst = invoice_items.any? { |item| item.product&.gst_enabled }
@@ -740,9 +740,12 @@
                 <div>
                   <%= item.product&.name || 'Product' %>
                 </div>
+                <% if item.product_variant.present? %>
+                  <div class="description"><%= item.product_variant.label %></div>
+                <% end %>
               </td>
               <td class="center-align"><%= item.product&.hsn_code || '-' %></td>
-              <td class="center-align"><%= item.quantity %> <%= item.product&.unit_type || 'PCS' %></td>
+              <td class="center-align"><%= item.quantity.to_f.to_s.sub(/\.0$/, '') %></td>
               <td class="right-align">
                 <%
                   # Display GST-inclusive unit price

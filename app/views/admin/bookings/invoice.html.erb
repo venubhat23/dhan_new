@@ -246,6 +246,12 @@
         color: #888;
       }
 
+      .description {
+        color: #666;
+        font-size: 10px;
+        font-style: italic;
+      }
+
       /* Subtotal section */
       .subtotal-table {
         width: 100%;
@@ -753,9 +759,12 @@
                 <div>
                   <%= item.product&.name || 'Product' %>
                 </div>
+                <% if item.product_variant.present? %>
+                  <div class="description"><%= item.product_variant.label %></div>
+                <% end %>
               </td>
               <td class="center-align"><%= item.product&.hsn_code || '-' %></td>
-              <td class="center-align"><%= item.quantity %> <%= item.product&.unit_type || 'PCS' %></td>
+              <td class="center-align"><%= item.quantity.to_f.to_s.sub(/\.0$/, '') %></td>
               <td class="right-align">
                 <%
                   # Display unit price (base price without GST)
