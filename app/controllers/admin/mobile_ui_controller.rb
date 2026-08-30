@@ -58,16 +58,16 @@ class Admin::MobileUiController < ActionController::Base
     @bookings = @bookings.page(params[:page]).per(15)
     preload_associated_invoices(@bookings)
 
-    @customers = Customer.select(:id, :first_name, :middle_name, :last_name)
-                          .order(:first_name, :last_name)
+    @customers = Customer.select(:id, :full_name)
+                          .order(:full_name)
   end
 
   # ── New Booking ───────────────────────────────────────────────────────────
   def new_booking
     @preselected_customer = Customer.find_by(id: params[:customer_id]) if params[:customer_id].present?
     @products = load_mobile_products
-    @customers = Customer.select(:id, :first_name, :middle_name, :last_name, :email, :mobile)
-                         .order(:first_name, :last_name)
+    @customers = Customer.select(:id, :full_name, :email, :mobile)
+                         .order(:full_name)
   end
 
   def create_booking
@@ -103,8 +103,8 @@ class Admin::MobileUiController < ActionController::Base
                   notice: "Booking ##{@booking.booking_number} created successfully!#{invoice_notice}"
     else
       @products = load_mobile_products
-      @customers = Customer.select(:id, :first_name, :middle_name, :last_name, :email, :mobile)
-                           .order(:first_name, :last_name)
+      @customers = Customer.select(:id, :full_name, :email, :mobile)
+                           .order(:full_name)
       @preselected_customer = Customer.find_by(id: mobile_booking_params[:customer_id])
       flash.now[:error] = @booking.errors.full_messages.join(', ')
       render :new_booking, status: :unprocessable_entity
@@ -268,10 +268,7 @@ class Admin::MobileUiController < ActionController::Base
     query = params[:name].to_s.strip
 
     if query.length >= 2
-      customers = Customer.where(
-        "first_name ILIKE :q OR last_name ILIKE :q OR CONCAT(first_name, ' ', last_name) ILIKE :q",
-        q: "%#{query}%"
-      ).limit(5)
+      customers = Customer.where("full_name ILIKE :q", q: "%#{query}%").limit(5)
 
       render json: {
         customers: customers.map { |c| { id: c.id, name: c.display_name, mobile: c.mobile, email: c.email } }
@@ -292,7 +289,7 @@ class Admin::MobileUiController < ActionController::Base
     end
 
     @customer = Customer.new
-    @customer.first_name = params[:customer][:first_name].to_s.strip
+    @customer.full_name  = params[:customer][:full_name].to_s.strip
     @customer.mobile     = params[:customer][:mobile].to_s.strip
     @customer.email      = params[:customer][:email].to_s.strip.presence
 

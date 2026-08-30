@@ -133,8 +133,8 @@ module ImportService
       errors_for_row = []
 
       # Required fields validation
-      if row['first_name'].blank?
-        errors_for_row << "First name is required"
+      if row['customer_name'].blank?
+        errors_for_row << "Customer name is required"
       end
 
       # Email validation - now optional
@@ -450,7 +450,7 @@ module ImportService
     def get_expected_headers
       case @import_type
       when 'customers'
-        ['first_name', 'last_name', 'mobile']  # Only truly required fields
+        ['customer_name', 'mobile']  # Only truly required fields
       when 'delivery_people'
         ['first_name', 'last_name', 'email', 'mobile', 'vehicle_type', 'vehicle_number',
          'license_number', 'address', 'city', 'state', 'pincode',

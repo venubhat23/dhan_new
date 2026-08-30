@@ -29,7 +29,7 @@ class Customer::RegistrationsController < Customer::BaseController
 
   def customer_params
     params.require(:customer).permit(
-      :first_name, :last_name, :middle_name, :email, :mobile,
+      :full_name, :email, :mobile,
       :whatsapp_number, :address, :longitude, :latitude
     )
   end

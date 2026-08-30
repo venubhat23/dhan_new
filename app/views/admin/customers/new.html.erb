@@ -52,13 +52,13 @@
       <div class="card-body pt-3">
         <div class="row g-3">
           <div class="col-md-6">
-            <%= form.label :first_name, "Customer Name", class: "form-label fw-medium" %>
+            <%= form.label :full_name, "Customer Name", class: "form-label fw-medium" %>
             <span class="text-danger ms-1">*</span>
             <div class="input-group">
               <span class="input-group-text bg-light border-end-0">
                 <i class="bi bi-person text-muted"></i>
               </span>
-              <%= form.text_field :first_name, class: "form-control border-start-0", placeholder: "Enter customer name", required: true %>
+              <%= form.text_field :full_name, class: "form-control border-start-0", placeholder: "Enter customer name", required: true %>
             </div>
           </div>
 
@@ -134,12 +134,33 @@
       <div class="card-body pt-3">
         <div class="row g-3">
           <div class="col-12">
-            <%= form.label :address, "Address", class: "form-label fw-medium" %>
+            <%= form.label :address, "Billing Address", class: "form-label fw-medium" %>
             <div class="input-group">
               <span class="input-group-text bg-light border-end-0">
                 <i class="bi bi-house text-muted"></i>
               </span>
-              <%= form.text_area :address, class: "form-control border-start-0", placeholder: "Enter complete address", rows: 2 %>
+              <%= form.text_area :address, class: "form-control border-start-0", placeholder: "Enter complete billing address", rows: 2 %>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <%= form.label :landmark, "Landmark", class: "form-label fw-medium" %>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-signpost text-muted"></i>
+              </span>
+              <%= form.text_field :landmark, class: "form-control border-start-0", placeholder: "Enter landmark near billing address" %>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <hr class="my-2">
+            <%= form.label :shipping_address, "Shipping Address", class: "form-label fw-medium" %>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-box-seam text-muted"></i>
+              </span>
+              <%= form.text_area :shipping_address, class: "form-control border-start-0", placeholder: "Enter complete shipping address", rows: 2 %>
             </div>
           </div>
 
@@ -321,12 +342,12 @@
 
           <div class="col-md-6">
             <%= form.label :password, "Password", class: "form-label fw-medium" %>
-            <span class="text-danger ms-1">*</span>
+            <span class="text-muted ms-1">(Optional)</span>
             <div class="input-group">
               <span class="input-group-text bg-light border-end-0">
                 <i class="bi bi-lock text-muted"></i>
               </span>
-              <%= form.password_field :password, class: "form-control border-start-0", placeholder: "Enter password or use auto-generate", required: true, id: "customerPassword" %>
+              <%= form.password_field :password, class: "form-control border-start-0", placeholder: "Leave blank to use default password", id: "customerPassword" %>
               <button type="button" class="btn btn-outline-muted" id="generatePasswordBtn" title="Generate random password">
                 <i class="bi bi-magic"></i>
               </button>
@@ -336,17 +357,18 @@
             </div>
             <div class="form-text">
               <span id="passwordStrength"></span>
+              <span id="defaultPasswordHint">If left blank, the default password "DHANVANTARI@" will be used.</span>
             </div>
           </div>
 
           <div class="col-md-6">
             <%= form.label :password_confirmation, "Confirm Password", class: "form-label fw-medium" %>
-            <span class="text-danger ms-1">*</span>
+            <span class="text-muted ms-1">(Optional)</span>
             <div class="input-group">
               <span class="input-group-text bg-light border-end-0">
                 <i class="bi bi-lock-fill text-muted"></i>
               </span>
-              <%= form.password_field :password_confirmation, class: "form-control border-start-0", placeholder: "Confirm password", required: true, id: "passwordConfirmation" %>
+              <%= form.password_field :password_confirmation, class: "form-control border-start-0", placeholder: "Confirm password", id: "passwordConfirmation" %>
             </div>
             <div id="passwordMatchStatus" class="form-text"></div>
           </div>

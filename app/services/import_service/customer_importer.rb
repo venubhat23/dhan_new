@@ -101,20 +101,20 @@ module ImportService
 
     def normalize_customer_data(row)
       customer_name = row['customer_name']&.to_s&.strip
-      name_parts    = customer_name.to_s.split(/\s+/, 2)
-      first_name    = name_parts[0].to_s.strip.presence
-      last_name     = name_parts[1].to_s.strip.presence
-      password      = generate_password(first_name || customer_name)
+      password      = generate_password(customer_name)
 
       {
-        first_name:       first_name,
-        last_name:        last_name,
+        full_name:        customer_name,
         email:            row['email']&.to_s&.downcase&.strip.presence,
         mobile:           row['mobile']&.to_s&.strip,
         whatsapp_number:  row['whatsapp_number']&.to_s&.strip.presence || row['mobile']&.to_s&.strip,
         gst_no:           row['gst_no']&.to_s&.strip&.upcase,
         address:          row['address']&.to_s&.strip,
-        notes:            row['notes']&.to_s&.strip,
+        landmark:         row['landmark']&.to_s&.strip,
+        shipping_address: row['shipping_address']&.to_s&.strip,
+        location_link:    row['location_link']&.to_s&.strip,
+        latitude:         row['latitude']&.to_s&.strip.presence,
+        longitude:        row['longitude']&.to_s&.strip.presence,
         status:           parse_boolean(row['status']),
         password_digest:  BCrypt::Password.create(password),
         auto_generated_password: password
@@ -122,7 +122,7 @@ module ImportService
     end
 
     def valid_row?(customer_data, row_number)
-      if customer_data[:first_name].blank? && customer_data[:last_name].blank?
+      if customer_data[:full_name].blank?
         @errors << "Row #{row_number}: customer_name is required"
         return false
       end
@@ -146,7 +146,21 @@ module ImportService
         customer_data[:mobile] = clean_mobile
       end
 
+      if customer_data[:latitude].present? && !valid_decimal?(customer_data[:latitude])
+        @errors << "Row #{row_number}: Invalid latitude format"
+        return false
+      end
+
+      if customer_data[:longitude].present? && !valid_decimal?(customer_data[:longitude])
+        @errors << "Row #{row_number}: Invalid longitude format"
+        return false
+      end
+
       true
+    end
+
+    def valid_decimal?(value)
+      value.to_s.match?(/\A-?\d+(\.\d+)?\z/)
     end
 
     def duplicate_customer?(customer_data)

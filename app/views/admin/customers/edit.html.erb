@@ -28,15 +28,11 @@
         <div class="card-body">
           <div class="row g-3">
             <div class="col-md-6">
-              <%= form.label :first_name, class: "form-label" do %>
+              <%= form.label :full_name, class: "form-label" do %>
                 Customer Name <span class="text-danger">*</span>
               <% end %>
-              <%= form.text_field :first_name, class: "form-control", placeholder: "Enter customer name", required: true %>
+              <%= form.text_field :full_name, class: "form-control", placeholder: "Enter customer name", required: true %>
               <div class="invalid-feedback">Please provide a customer name.</div>
-            </div>
-            <div class="col-md-6">
-              <%= form.label :middle_name, class: "form-label" %>
-              <%= form.text_field :middle_name, class: "form-control", placeholder: "Enter middle name" %>
             </div>
             <div class="col-md-6">
               <%= form.label :email, class: "form-label" do %>
@@ -73,8 +69,19 @@
         <div class="card-body">
           <div class="row g-3">
             <div class="col-12">
-              <%= form.label :address, class: "form-label" %>
-              <%= form.text_area :address, class: "form-control", placeholder: "Enter complete address", rows: 2 %>
+              <%= form.label :address, "Billing Address", class: "form-label" %>
+              <%= form.text_area :address, class: "form-control", placeholder: "Enter complete billing address", rows: 2 %>
+            </div>
+
+            <div class="col-12">
+              <%= form.label :landmark, "Landmark", class: "form-label" %>
+              <%= form.text_field :landmark, class: "form-control", placeholder: "Enter landmark near billing address" %>
+            </div>
+
+            <div class="col-12">
+              <hr class="my-2">
+              <%= form.label :shipping_address, "Shipping Address", class: "form-label" %>
+              <%= form.text_area :shipping_address, class: "form-control", placeholder: "Enter complete shipping address", rows: 2 %>
             </div>
 
             <div class="col-12">

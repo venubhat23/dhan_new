@@ -53,7 +53,7 @@
                 <label class="text-xs font-weight-bold text-gray-800 text-uppercase mb-1">Customer</label>
                 <p class="h5 mb-0">
                   <i class="bi bi-person text-primary"></i>
-                  <%= "#{@customer_format.customer.first_name} #{@customer_format.customer.last_name}".strip %>
+                  <%= @customer_format.customer.full_name.strip %>
                 </p>
                 <% if @customer_format.customer.mobile.present? %>
                   <small class="text-muted">

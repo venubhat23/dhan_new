@@ -93,7 +93,7 @@ class Invoice < ApplicationRecord
   end
 
   def customer_name
-    "#{customer&.first_name} #{customer&.last_name}".strip
+    customer&.full_name.to_s
   end
 
   def customer_phone

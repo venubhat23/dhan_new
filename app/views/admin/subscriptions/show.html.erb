@@ -52,7 +52,7 @@
               <table class="table table-borderless">
                 <tr>
                   <td><strong>Name:</strong></td>
-                  <td><%= "#{@subscription.customer.first_name} #{@subscription.customer.last_name}".strip %></td>
+                  <td><%= @subscription.customer.full_name %></td>
                 </tr>
                 <tr>
                   <td><strong>Mobile:</strong></td>
@@ -412,7 +412,7 @@
                     <div class="customer-info">
                       <h6 class="mb-1 text-dark">
                         <i class="bi bi-person-circle text-primary"></i>
-                        <%= "#{pattern.first_name} #{pattern.last_name}".strip %>
+                        <%= pattern.full_name %>
                       </h6>
                       <small class="text-muted">
                         <i class="bi bi-bookmark"></i> <%= pattern.total_subscriptions %> subscription<%= 's' if pattern.total_subscriptions != 1 %>

@@ -89,9 +89,9 @@
                 </tr>
               </thead>
               <tbody>
-                <% @top_customer_referrers.each do |(id, first_name, last_name), count| %>
+                <% @top_customer_referrers.each do |(id, full_name), count| %>
                   <tr>
-                    <td><%= "#{first_name} #{last_name}".strip.presence || 'Unknown' %></td>
+                    <td><%= full_name.presence || 'Unknown' %></td>
                     <td class="text-end"><span class="badge bg-primary"><%= count %></span></td>
                   </tr>
                 <% end %>

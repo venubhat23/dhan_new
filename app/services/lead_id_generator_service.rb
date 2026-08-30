@@ -2,7 +2,7 @@ class LeadIdGeneratorService
   def self.generate_for_customer(customer)
     # Extract first 3 characters of customer name
     customer_name_part = if customer.individual?
-      customer.first_name.to_s.strip.upcase[0, 3].ljust(3, 'X')
+      customer.full_name.to_s.strip.upcase[0, 3].ljust(3, 'X')
     else
       customer.company_name.to_s.strip.upcase[0, 3].ljust(3, 'X')
     end

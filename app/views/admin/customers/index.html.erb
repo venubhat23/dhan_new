@@ -75,7 +75,7 @@
         </label>
         <select id="customerFilter" class="form-select customer-select2">
           <option value="">All Customers</option>
-          <% Customer.order(:first_name, :last_name).each do |customer| %>
+          <% Customer.order(:full_name).each do |customer| %>
             <option value="<%= customer.id %>"
                     <%= 'selected' if params[:customer_id] == customer.id.to_s %>
                     data-name="<%= customer.display_name %>"

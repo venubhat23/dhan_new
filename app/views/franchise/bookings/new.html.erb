@@ -1117,9 +1117,7 @@ function calculateChange() {
 // Customer Search System
 let customers = <%= raw @customers.map { |c| {
   id: c.id,
-  name: c.respond_to?(:display_name) ? c.display_name : "#{c.first_name} #{c.last_name}".strip,
-  first_name: c.first_name,
-  last_name: c.last_name,
+  name: c.display_name,
   mobile: c.mobile,
   email: c.email,
   address: c.respond_to?(:address) ? c.address : ''

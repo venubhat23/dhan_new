@@ -332,7 +332,7 @@ class Customer::CheckoutController < Customer::BaseController
       booking_date: Time.current,
       status: 'confirmed',
       payment_method: payment_method_key,
-      customer_name: current_customer.full_name || current_customer.first_name,
+      customer_name: current_customer.full_name,
       customer_email: current_customer.email,
       customer_phone: current_customer.mobile,
       delivery_address: format_delivery_address

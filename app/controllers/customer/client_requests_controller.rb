@@ -20,7 +20,7 @@ class Customer::ClientRequestsController < Customer::BaseController
     if current_customer.present?
       @client_request = current_customer.client_requests.build(client_request_params)
       # Set customer information fields from current customer
-      @client_request.name = current_customer.display_name || "#{current_customer.first_name} #{current_customer.last_name}".strip
+      @client_request.name = current_customer.display_name
       @client_request.email = current_customer.email
       @client_request.phone_number = current_customer.mobile
     else

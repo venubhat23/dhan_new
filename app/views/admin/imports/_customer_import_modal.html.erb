@@ -16,9 +16,8 @@
             <i class="fas fa-info-circle me-2"></i>
             <strong>Customer Import Requirements:</strong>
             <ul class="mb-0 mt-2">
-              <li>Customer Type: 'individual' or 'corporate'</li>
-              <li>Individual: first_name, email, mobile required</li>
-              <li>Corporate: company_name, email, mobile required</li>
+              <li>Required: customer_name, mobile</li>
+              <li>Optional: email, whatsapp_number, gst_no, address, landmark, shipping_address, location_link, latitude, longitude</li>
               <li>Duplicate detection on email and mobile</li>
             </ul>
           </div>
@@ -48,22 +47,32 @@
               <table class="table table-sm table-bordered">
                 <thead class="table-dark">
                   <tr>
-                    <th>customer_type</th>
-                    <th>first_name</th>
-                    <th>last_name</th>
-                    <th>email</th>
+                    <th>customer_name</th>
                     <th>mobile</th>
-                    <th>city</th>
+                    <th>email</th>
+                    <th>whatsapp_number</th>
+                    <th>gst_no</th>
+                    <th>address</th>
+                    <th>landmark</th>
+                    <th>shipping_address</th>
+                    <th>location_link</th>
+                    <th>latitude</th>
+                    <th>longitude</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td>individual</td>
-                    <td>John</td>
-                    <td>Doe</td>
+                    <td>John Doe</td>
+                    <td>9876543210</td>
                     <td>john@example.com</td>
                     <td>9876543210</td>
-                    <td>Mumbai</td>
+                    <td></td>
+                    <td>123 Main Street, Mumbai</td>
+                    <td>Near City Mall</td>
+                    <td>123 Main Street, Mumbai</td>
+                    <td></td>
+                    <td>19.0760</td>
+                    <td>72.8777</td>
                   </tr>
                 </tbody>
               </table>

@@ -37,16 +37,8 @@
         <div class="row g-3">
           <% # All customers are treated as individual customers %>
             <div class="col-md-6">
-              <strong class="text-muted d-block">First Name</strong>
-              <%= @customer.first_name || '-' %>
-            </div>
-            <div class="col-md-6">
-              <strong class="text-muted d-block">Last Name</strong>
-              <%= @customer.last_name || '-' %>
-            </div>
-            <div class="col-md-6">
-              <strong class="text-muted d-block">Middle Name</strong>
-              <%= @customer.middle_name || '-' %>
+              <strong class="text-muted d-block">Full Name</strong>
+              <%= @customer.full_name || '-' %>
             </div>
             <div class="col-md-6">
               <strong class="text-muted d-block">WhatsApp Number</strong>

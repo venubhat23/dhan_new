@@ -56,18 +56,8 @@
       <div class="card-body">
         <div class="row g-3">
           <div class="col-md-6">
-            <label class="form-label fw-semibold text-muted">First Name</label>
-            <div class="fw-medium"><%= @customer.first_name.present? ? @customer.first_name : 'Not provided' %></div>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label fw-semibold text-muted">Middle Name</label>
-            <div class="fw-medium <%= 'text-muted fst-italic' unless @customer.middle_name.present? %>">
-              <%= @customer.middle_name.present? ? @customer.middle_name : 'Not provided' %>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label fw-semibold text-muted">Last Name</label>
-            <div class="fw-medium"><%= @customer.last_name.present? ? @customer.last_name : 'Not provided' %></div>
+            <label class="form-label fw-semibold text-muted">Full Name</label>
+            <div class="fw-medium"><%= @customer.full_name.present? ? @customer.full_name : 'Not provided' %></div>
           </div>
           <div class="col-md-6">
             <label class="form-label fw-semibold text-muted">Birth Date</label>

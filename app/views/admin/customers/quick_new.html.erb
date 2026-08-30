@@ -57,17 +57,17 @@
               <span class="input-group-text bg-light border-end-0">
                 <i class="bi bi-person text-muted"></i>
               </span>
-              <%= form.text_field "customer[first_name]",
-                  class: "form-control border-start-0 #{'is-invalid' if @customer.errors[:first_name].any?}",
+              <%= form.text_field "customer[full_name]",
+                  class: "form-control border-start-0 #{'is-invalid' if @customer.errors[:full_name].any?}",
                   placeholder: "Enter customer full name",
                   required: true,
                   autofocus: true,
                   autocomplete: "off",
                   id: "quick_name",
-                  value: @customer.first_name %>
+                  value: @customer.full_name %>
             </div>
-            <% if @customer.errors[:first_name].any? %>
-              <div class="invalid-feedback d-block"><%= @customer.errors[:first_name].first %></div>
+            <% if @customer.errors[:full_name].any? %>
+              <div class="invalid-feedback d-block"><%= @customer.errors[:full_name].first %></div>
             <% end %>
           </div>
 

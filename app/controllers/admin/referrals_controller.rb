@@ -155,7 +155,7 @@ class Admin::ReferralsController < ApplicationController
 
     # Top referrers
     @top_customer_referrers = Customer.joins(:referrals)
-                                    .group('customers.id', 'customers.first_name', 'customers.last_name')
+                                    .group('customers.id', 'customers.full_name')
                                     .order('COUNT(referrals.id) DESC')
                                     .limit(10)
                                     .count

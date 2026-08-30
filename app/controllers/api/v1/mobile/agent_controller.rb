@@ -133,7 +133,7 @@ class Api::V1::Mobile::AgentController < Api::V1::Mobile::BaseController
   # POST /api/v1/mobile/agent/customers
   def add_customer
     customer_params = params.permit(
-      :customer_type, :first_name, :last_name, :company_name, :email,
+      :customer_type, :full_name, :company_name, :email,
       :mobile, :gender, :birth_date, :address, :city, :state, :pincode,
       :pan_no, :gst_no, :occupation, :annual_income, :marital_status,
       :image_url, :password, :password_confirmation, :file1, :file2,
@@ -142,7 +142,7 @@ class Api::V1::Mobile::AgentController < Api::V1::Mobile::BaseController
 
     # Validation: Check required fields
     validation_errors = []
-    validation_errors << 'First name is required' if customer_params[:first_name].blank?
+    validation_errors << 'Full name is required' if customer_params[:full_name].blank?
     validation_errors << 'Mobile number is required' if customer_params[:mobile].blank?
     validation_errors << 'Email is required' if customer_params[:email].blank?
 
@@ -1852,7 +1852,7 @@ class Api::V1::Mobile::AgentController < Api::V1::Mobile::BaseController
   def generate_demo_password(customer)
     # Generate a consistent demo password based on customer data
     # Format: first_name + last 4 digits of mobile + "123"
-    first_name = customer.first_name&.downcase || 'customer'
+    first_name = customer.full_name.to_s.split(' ').first&.downcase || 'customer'
     mobile_suffix = customer.mobile&.last(4) || '0000'
     "#{first_name}#{mobile_suffix}123"
   end
@@ -2363,8 +2363,8 @@ class Api::V1::Mobile::AgentController < Api::V1::Mobile::BaseController
 
       # Create user account for customer
       user = User.new(
-        first_name: customer.first_name || 'Customer',
-        last_name: customer.last_name || 'User',
+        first_name: customer.full_name.to_s.split(' ').first.presence || 'Customer',
+        last_name: customer.full_name.to_s.split(' ')[1..-1]&.join(' ').presence || 'User',
         email: customer.email,
         password: password,
         password_confirmation: password,

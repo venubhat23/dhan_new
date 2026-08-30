@@ -453,7 +453,7 @@
 const allCustomers = <%= raw @customers.map { |c|
   {
     id: c.id,
-    name: [c.first_name, c.middle_name, c.last_name].compact.join(' ').strip,
+    name: c.full_name.to_s,
     mobile: c.mobile.to_s,
     email: c.email.to_s
   }

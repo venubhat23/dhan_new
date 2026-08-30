@@ -606,7 +606,7 @@
               <div class="dropdown">
                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
                   <i class="fas fa-user-circle me-2"></i>
-                  <span class="d-none d-sm-inline"><%= current_customer.first_name || 'Customer' %></span>
+                  <span class="d-none d-sm-inline"><%= current_customer.full_name || 'Customer' %></span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                   <li><%= link_to customer_profile_path, class: "dropdown-item" do %>

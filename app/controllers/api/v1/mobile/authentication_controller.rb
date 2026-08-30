@@ -135,9 +135,7 @@ class Api::V1::Mobile::AuthenticationController < Api::V1::BaseController
           email: customer.email,
           mobile: customer.mobile,
           profile: {
-            first_name: customer.first_name,
-            last_name: customer.last_name,
-            middle_name: customer.middle_name,
+            full_name: customer.full_name,
             gender: customer.gender,
             birth_date: customer.birth_date,
             address: customer.address,
@@ -444,9 +442,7 @@ class Api::V1::Mobile::AuthenticationController < Api::V1::BaseController
       ActiveRecord::Base.transaction do
         # Create Customer record (without password validations)
         customer = Customer.new(
-          first_name: customer_params[:first_name],
-          last_name: customer_params[:last_name],
-          middle_name: customer_params[:middle_name],
+          full_name: [customer_params[:first_name], customer_params[:middle_name], customer_params[:last_name]].compact_blank.join(' '),
           email: customer_params[:email],
           mobile: mobile_number, # Use formatted mobile number
           address: customer_params[:address],

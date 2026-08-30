@@ -14,7 +14,7 @@ class Admin::CustomerFormatsController < Admin::ApplicationController
     @customer_formats = @customer_formats.order(created_at: :desc).page(params[:page]).per(20)
 
     # For filter options
-    @customers = Customer.all.pluck(:first_name, :last_name, :id).map { |f, l, id| ["#{f} #{l}".strip, id] }
+    @customers = Customer.all.pluck(:full_name, :id)
     @products = Product.where(status: 'active').pluck(:name, :id)
     @delivery_people = DeliveryPerson.where(status: true).pluck(:first_name, :last_name, :id).map { |f, l, id| ["#{f} #{l}".strip, id] }
 
@@ -74,10 +74,10 @@ class Admin::CustomerFormatsController < Admin::ApplicationController
   # Search helpers for AJAX calls
   def search_customers
     term = params[:q]
-    customers = Customer.where("CONCAT(first_name, ' ', last_name) ILIKE ?", "%#{term}%")
+    customers = Customer.where("full_name ILIKE ?", "%#{term}%")
                        .limit(20)
-                       .pluck(:first_name, :last_name, :id)
-                       .map { |f, l, id| { id: id, text: "#{f} #{l}".strip } }
+                       .pluck(:full_name, :id)
+                       .map { |name, id| { id: id, text: name } }
     render json: { results: customers }
   end
 
@@ -185,7 +185,7 @@ class Admin::CustomerFormatsController < Admin::ApplicationController
   end
 
   def load_form_data
-    @customers = Customer.all.map { |c| ["#{c.first_name} #{c.last_name} - #{c.mobile}", c.id] }
+    @customers = Customer.all.map { |c| ["#{c.full_name} - #{c.mobile}", c.id] }
     @products = Product.where(status: 'active').map { |p| [p.name, p.id] }
     @delivery_people = DeliveryPerson.where(status: true).map { |dp| ["#{dp.first_name} #{dp.last_name}", dp.id] }
     @pattern_options = CustomerFormat::PATTERN_OPTIONS.map { |pattern| [pattern.humanize, pattern] }

@@ -36,7 +36,7 @@
           <div class="mb-3">
             <%= form.label :customer_id, "Customer", class: "form-label fw-bold" %>
             <%= form.select :customer_id,
-                options_for_select([['Select Customer...', '']] + @customers.map { |c| ["#{c.first_name} #{c.last_name} - #{c.mobile}", c.id] }, @customer_wallet.customer_id),
+                options_for_select([['Select Customer...', '']] + @customers.map { |c| ["#{c.full_name} - #{c.mobile}", c.id] }, @customer_wallet.customer_id),
                 {},
                 {
                   class: "form-select select2",

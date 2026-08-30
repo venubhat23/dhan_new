@@ -78,7 +78,7 @@ class PublicInvoicesController < ApplicationController
       # Use case-insensitive search that works across databases
       search_term = "%#{params[:customer_name].downcase}%"
       @invoices = @invoices.joins(:customer)
-                          .where("LOWER(customers.first_name) LIKE ? OR LOWER(customers.last_name) LIKE ? OR LOWER(CONCAT(customers.first_name, ' ', customers.last_name)) LIKE ?", search_term, search_term, search_term)
+                          .where("LOWER(customers.full_name) LIKE ?", search_term)
     end
 
     if params[:month].present? && params[:month] != 'all'

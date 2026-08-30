@@ -62,7 +62,7 @@
                 <!-- Current Customer Info Display -->
                 <div class="alert alert-info">
                   <h6 class="mb-2"><i class="bi bi-info-circle"></i> Current Customer</h6>
-                  <strong><%= "#{@subscription.customer.first_name} #{@subscription.customer.last_name}".strip %></strong><br>
+                  <strong><%= @subscription.customer.full_name %></strong><br>
                   <small class="text-muted">
                     <%= @subscription.customer.mobile %><br>
                     <%= @subscription.customer.address %>

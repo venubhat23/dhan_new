@@ -68,7 +68,7 @@ has_many :pending_amounts, dependent: :destroy
   end
 
   # Validations
-  validates :first_name, presence: true
+  validates :full_name, presence: true
   validates :email, uniqueness: { allow_blank: true }, format: { with: URI::MailTo::EMAIL_REGEXP, allow_blank: true }
   validates :mobile, presence: true, uniqueness: true
   validate :valid_mobile_format
@@ -96,16 +96,12 @@ has_many :pending_amounts, dependent: :destroy
 
   # Search
   pg_search_scope :search_customers,
-    against: [:first_name, :last_name, :email, :mobile],
+    against: [:full_name, :email, :mobile],
     using: {
       tsearch: { prefix: true, any_word: true }
     }
 
   # Instance methods
-  def full_name
-    "#{first_name} #{middle_name} #{last_name}".strip.squeeze(' ')
-  end
-
   def display_name
     full_name
   end

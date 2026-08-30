@@ -102,7 +102,7 @@ class Api::V1::CustomersController < Api::V1::ApplicationController
 
   def customer_params
     params.require(:customer).permit(
-      :customer_type, :first_name, :middle_name, :last_name, :company_name, :email, :mobile,
+      :customer_type, :full_name, :company_name, :email, :mobile,
       :address, :state, :city, :pincode, :pan_no, :gst_no, :birth_date,
       :gender, :occupation, :annual_income, :nominee_name, :nominee_relation,
       :nominee_date_of_birth, :status, :birth_place, :height_feet, :weight_kg, :education,
@@ -153,9 +153,7 @@ class Api::V1::CustomersController < Api::V1::ApplicationController
         basic_info: {
           profile_image: customer.profile_image.attached? ? url_for(customer.profile_image) : nil,
           sub_agent: customer.sub_agent,
-          first_name: customer.first_name,
-          middle_name: customer.middle_name,
-          last_name: customer.last_name,
+          full_name: customer.full_name,
           mobile: customer.mobile,
           email: customer.email
         },

@@ -524,7 +524,7 @@
     <div class="bill-ship-section">
       <div class="bill-box">
         <div class="section-title">BILL TO</div>
-        <div class="client-name"><%= @customer&.display_name || @customer&.first_name || 'Customer Name' %></div>
+        <div class="client-name"><%= @customer&.display_name || 'Customer Name' %></div>
         <div class="client-detail"><%= @customer&.address || 'Address' %></div>
         <% phone = @customer&.mobile %>
         <% if phone.present? %>
@@ -536,7 +536,7 @@
       </div>
       <div class="ship-box">
         <div class="section-title">SHIP TO</div>
-        <div class="client-name"><%= @customer&.display_name || @customer&.first_name || 'Customer Name' %></div>
+        <div class="client-name"><%= @customer&.display_name || 'Customer Name' %></div>
         <div class="client-detail"><%= @customer&.address || 'Address' %></div>
       </div>
     </div>

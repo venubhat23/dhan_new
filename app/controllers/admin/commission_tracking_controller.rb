@@ -526,7 +526,7 @@ class Admin::CommissionTrackingController < Admin::ApplicationController
             main_agent_commission_received: false,
             main_agent_commission_paid_date: nil,
             created_at: policy.created_at,
-            customer: OpenStruct.new(display_name: customer.display_name || "#{customer.first_name} #{customer.last_name}".strip),
+            customer: OpenStruct.new(display_name: customer.display_name || customer.full_name),
             try: ->(method) { policy.send(method) rescue nil }
           ),
           type: payout.policy_type,

@@ -52,7 +52,7 @@ class MilkDeliveryTask < ApplicationRecord
   end
 
   def customer_info
-    "#{customer.first_name} #{customer.last_name}".strip
+    customer.full_name
   end
 
   def delivery_address

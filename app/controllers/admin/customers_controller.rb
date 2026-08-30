@@ -3,6 +3,8 @@ require 'set'
 class Admin::CustomersController < Admin::ApplicationController
   include LocationData
   include ConfigurablePagination
+
+  DEFAULT_CUSTOMER_PASSWORD = "DHANVANTARI@"
   before_action :set_customer, only: [:show, :edit, :update, :destroy, :toggle_status, :policy_chart, :trace_commission, :product_selection, :generate_password]
   skip_before_action :ensure_admin, only: [:search_sub_agents]
   skip_before_action :authenticate_user!, only: [:search_sub_agents]
@@ -55,8 +57,8 @@ class Admin::CustomersController < Admin::ApplicationController
       # For statistics, use a simple where clause instead of pg_search to avoid GROUP BY issues
       search_term = params[:search].strip
       stats_scope = stats_scope.where(
-        "first_name ILIKE ? OR last_name ILIKE ? OR company_name ILIKE ? OR email ILIKE ? OR mobile ILIKE ? OR pan_number ILIKE ?",
-        "%#{search_term}%", "%#{search_term}%", "%#{search_term}%", "%#{search_term}%", "%#{search_term}%", "%#{search_term}%"
+        "full_name ILIKE ? OR company_name ILIKE ? OR email ILIKE ? OR mobile ILIKE ? OR pan_number ILIKE ?",
+        "%#{search_term}%", "%#{search_term}%", "%#{search_term}%", "%#{search_term}%", "%#{search_term}%"
       )
     end
 
@@ -376,9 +378,7 @@ class Admin::CustomersController < Admin::ApplicationController
 
       # Individual customer mapping
       if @lead.individual?
-        @customer.first_name = @lead.first_name
-        @customer.middle_name = @lead.middle_name
-        @customer.last_name = @lead.last_name
+        @customer.full_name = @lead.full_name
         # Most other columns don't exist in customers table
       # Corporate customer mapping
       elsif @lead.corporate?
@@ -386,8 +386,7 @@ class Admin::CustomersController < Admin::ApplicationController
         # Most other columns don't exist either
       else
         # Fallback for legacy data
-        @customer.first_name = extract_first_name(@lead.name)
-        @customer.last_name = extract_last_name(@lead.name)
+        @customer.full_name = @lead.name
       end
 
       # Most fields don't exist in customers table - removed assignments
@@ -404,6 +403,16 @@ class Admin::CustomersController < Admin::ApplicationController
     password = params[:customer][:password]
     password_confirmation = params[:customer][:password_confirmation]
     user_enter_password = params[:customer][:user_enter_password]
+
+    # Default password when admin leaves the field blank
+    password_defaulted = password.blank?
+    if password_defaulted
+      password = DEFAULT_CUSTOMER_PASSWORD
+      password_confirmation = DEFAULT_CUSTOMER_PASSWORD
+    elsif password_confirmation.blank?
+      # Confirmation isn't compulsory - if the admin only typed a password, mirror it
+      password_confirmation = password
+    end
 
     @customer = Customer.new(customer_params)
 
@@ -436,9 +445,8 @@ class Admin::CustomersController < Admin::ApplicationController
               if password == password_confirmation
                 generated_password = password
                 User.create!(
-                  first_name: @customer.first_name,
-                  last_name: @customer.last_name,
-                  middle_name: @customer.middle_name,
+                  first_name: extract_first_name(@customer.full_name),
+                  last_name: extract_last_name(@customer.full_name),
                   email: @customer.email,
                   mobile: @customer.mobile,
                   password: generated_password,
@@ -453,7 +461,12 @@ class Admin::CustomersController < Admin::ApplicationController
                   is_active: true,
                   is_verified: false
                 )
-                redirect_to admin_customer_path(@customer), notice: 'Customer and login account created successfully.'
+                notice = if password_defaulted
+                  "Customer and login account created successfully. Default password used: #{DEFAULT_CUSTOMER_PASSWORD}"
+                else
+                  'Customer and login account created successfully.'
+                end
+                redirect_to admin_customer_path(@customer), notice: notice
               else
                 @customer.destroy
                 @customer.errors.add(:password_confirmation, "doesn't match Password")
@@ -465,9 +478,8 @@ class Admin::CustomersController < Admin::ApplicationController
               # Auto-generate password if no password provided but user account creation requested
               generated_password = generate_secure_password
               User.create!(
-                first_name: @customer.first_name,
-                last_name: @customer.last_name,
-                middle_name: @customer.middle_name,
+                first_name: extract_first_name(@customer.full_name),
+                last_name: extract_last_name(@customer.full_name),
                 email: @customer.email,
                 mobile: @customer.mobile,
                 password: generated_password,
@@ -488,7 +500,12 @@ class Admin::CustomersController < Admin::ApplicationController
                          notice: "Customer created successfully. Auto-generated password: #{generated_password}"
             end
           else
-            redirect_to admin_customer_path(@customer), notice: 'Customer was successfully created.'
+            notice = if password_defaulted
+              "Customer was successfully created. Default password used: #{DEFAULT_CUSTOMER_PASSWORD}"
+            else
+              'Customer was successfully created.'
+            end
+            redirect_to admin_customer_path(@customer), notice: notice
           end
         else
           @sub_agents = SubAgent.active.order(:first_name, :last_name)
@@ -811,10 +828,7 @@ class Admin::CustomersController < Admin::ApplicationController
     query = params[:name].to_s.strip
 
     if query.length >= 2
-      customers = Customer.where(
-        "first_name ILIKE :q OR last_name ILIKE :q OR CONCAT(first_name, ' ', last_name) ILIKE :q",
-        q: "%#{query}%"
-      ).limit(5)
+      customers = Customer.where("full_name ILIKE :q", q: "%#{query}%").limit(5)
 
       render json: {
         customers: customers.map { |c| { id: c.id, name: c.display_name, mobile: c.mobile, email: c.email } }
@@ -837,7 +851,7 @@ class Admin::CustomersController < Admin::ApplicationController
     end
 
     @customer = Customer.new
-    @customer.first_name = params[:customer][:first_name].to_s.strip
+    @customer.full_name = params[:customer][:full_name].to_s.strip
     @customer.mobile = params[:customer][:mobile].to_s.strip
     @customer.email = params[:customer][:email].to_s.strip.presence
 
@@ -852,8 +866,8 @@ class Admin::CustomersController < Admin::ApplicationController
       begin
         if @customer.email.present?
           User.create!(
-            first_name: @customer.first_name,
-            last_name: @customer.last_name || '',
+            first_name: extract_first_name(@customer.full_name),
+            last_name: extract_last_name(@customer.full_name),
             email: @customer.email,
             mobile: @customer.mobile,
             password: generated_password,
@@ -922,9 +936,8 @@ class Admin::CustomersController < Admin::ApplicationController
           # Create new User account
           if @customer.email.present?
             User.create!(
-              first_name: @customer.first_name,
-              last_name: @customer.last_name,
-              middle_name: @customer.middle_name,
+              first_name: extract_first_name(@customer.full_name),
+              last_name: extract_last_name(@customer.full_name),
               email: @customer.email,
               mobile: @customer.mobile,
               password: new_password,
@@ -1022,11 +1035,11 @@ class Admin::CustomersController < Admin::ApplicationController
     # Generate password in format: first 4 letters of name + @ + current year
     # Example: PRAMOD becomes PRAM@2024
 
-    # Get first name - use first_name from customer
-    first_name = @customer.first_name.to_s.strip.upcase
+    # Get name - use full_name from customer
+    name = @customer.full_name.to_s.strip.upcase
 
     # Get first 4 characters of name, pad with 'X' if less than 4 characters
-    name_part = first_name[0..3].ljust(4, 'X')
+    name_part = name[0..3].ljust(4, 'X')
 
     # Use current year since birth_date column doesn't exist
     year_part = Date.current.year.to_s
@@ -1041,13 +1054,14 @@ class Admin::CustomersController < Admin::ApplicationController
   def customer_params
     # Only permit fields that actually exist in the customers table
     params.require(:customer).permit(
-      :first_name, :last_name, :middle_name, :email, :mobile,
+      :full_name, :email, :mobile,
       :longitude, :latitude, :whatsapp_number, :auto_generated_password,
       :location_obtained_at, :location_accuracy, :password, :password_confirmation,
       :birth_date, :gender, :marital_status, :pan_no, :gst_no,
       :company_name, :occupation, :annual_income,
       :emergency_contact_name, :emergency_contact_number, :blood_group,
-      :nationality, :preferred_language, :notes, :address, :location_link, :status,
+      :nationality, :preferred_language, :notes, :address, :landmark,
+      :shipping_address, :location_link, :status,
       :personal_image, :house_image, profile_image: []
     )
   end
@@ -1057,16 +1071,14 @@ class Admin::CustomersController < Admin::ApplicationController
 
     CSV.generate(headers: true) do |csv|
       csv << %w[
-        ID FirstName MiddleName LastName Email Mobile
+        ID FullName Email Mobile
         WhatsappNumber Longitude Latitude LocationAccuracy LocationObtainedAt CreatedAt
       ]
 
       customers.find_each do |customer|
         csv << [
           customer.id,
-          customer.first_name,
-          customer.middle_name,
-          customer.last_name,
+          customer.full_name,
           customer.email,
           customer.mobile,
           customer.whatsapp_number,
@@ -1089,7 +1101,7 @@ class Admin::CustomersController < Admin::ApplicationController
 
     # Headers
     headers = %w[
-      ID CustomerType FirstName LastName CompanyName Email Mobile
+      ID CustomerType FullName CompanyName Email Mobile
       Address State City Pincode BirthDate Gender Height Weight
       Education MaritalStatus Occupation JobName TypeOfDuty AnnualIncome
       PANNumber GSTNumber BirthPlace NomineeName NomineeRelation
@@ -1106,8 +1118,7 @@ class Admin::CustomersController < Admin::ApplicationController
       row = row_index + 1
       data = [
         customer.id,
-        customer.first_name,
-        customer.last_name,
+        customer.full_name,
         customer.company_name,
         customer.email,
         customer.mobile,

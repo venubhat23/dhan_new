@@ -14,7 +14,7 @@ class Admin::SubscriptionsController < Admin::ApplicationController
     @subscriptions = @subscriptions.order(created_at: :desc).page(params[:page]).per(20)
 
     # For filter options
-    @customers = Customer.all.pluck(:first_name, :last_name, :id).map { |f, l, id| ["#{f} #{l}".strip, id] }
+    @customers = Customer.all.pluck(:full_name, :id)
     @products = Product.where(product_type: 'milk').pluck(:name, :id)
     @delivery_people = DeliveryPerson.where(status: true).pluck(:first_name, :last_name, :id).map { |f, l, id| ["#{f} #{l}".strip, id] }
 
@@ -34,16 +34,16 @@ class Admin::SubscriptionsController < Admin::ApplicationController
     # Customer pattern data for sidebar
     @customer_patterns = MilkSubscription.joins(:customer)
                                         .joins("LEFT JOIN milk_delivery_tasks ON milk_subscriptions.id = milk_delivery_tasks.subscription_id AND DATE(milk_delivery_tasks.delivery_date) = DATE(NOW())")
-                                        .select("customers.first_name, customers.last_name, customers.id as customer_id,
+                                        .select("customers.full_name, customers.id as customer_id,
                                                COUNT(DISTINCT milk_subscriptions.id) as total_subscriptions,
                                                COUNT(milk_delivery_tasks.id) as daily_tasks_count")
-                                        .group("customers.id, customers.first_name, customers.last_name")
-                                        .order("customers.first_name")
+                                        .group("customers.id, customers.full_name")
+                                        .order("customers.full_name")
   end
 
   def new
     @subscription = MilkSubscription.new
-    @customers = Customer.all.map { |c| ["#{c.first_name} #{c.last_name} - #{c.mobile}", c.id] }
+    @customers = Customer.all.map { |c| ["#{c.full_name} - #{c.mobile}", c.id] }
     # Show all active products or products suitable for subscriptions
     @products = Product.where(status: 'active').map { |p| [p.name, p.id] }
     @delivery_people = DeliveryPerson.where(status: true).map { |dp| ["#{dp.first_name} #{dp.last_name}", dp.id] }
@@ -54,7 +54,7 @@ class Admin::SubscriptionsController < Admin::ApplicationController
 
     if products_data.empty?
       flash.now[:alert] = 'Please select at least one product for the subscription.'
-      @customers = Customer.all.map { |c| ["#{c.first_name} #{c.last_name} - #{c.mobile}", c.id] }
+      @customers = Customer.all.map { |c| ["#{c.full_name} - #{c.mobile}", c.id] }
       @products = Product.where(status: 'active').map { |p| [p.name, p.id] }
       @delivery_people = DeliveryPerson.where(status: true).map { |dp| ["#{dp.first_name} #{dp.last_name}", dp.id] }
       render :new
@@ -97,7 +97,7 @@ class Admin::SubscriptionsController < Admin::ApplicationController
 
     if errors.any?
       flash.now[:alert] = "Failed to create subscriptions: #{errors.join('; ')}"
-      @customers = Customer.all.map { |c| ["#{c.first_name} #{c.last_name} - #{c.mobile}", c.id] }
+      @customers = Customer.all.map { |c| ["#{c.full_name} - #{c.mobile}", c.id] }
       @products = Product.where(status: 'active').map { |p| [p.name, p.id] }
       @delivery_people = DeliveryPerson.where(status: true).map { |dp| ["#{dp.first_name} #{dp.last_name}", dp.id] }
       render :new
@@ -114,7 +114,7 @@ class Admin::SubscriptionsController < Admin::ApplicationController
   end
 
   def edit
-    @customers = Customer.all.map { |c| ["#{c.first_name} #{c.last_name} - #{c.mobile}", c.id] }
+    @customers = Customer.all.map { |c| ["#{c.full_name} - #{c.mobile}", c.id] }
     @products = Product.where(status: 'active').map { |p| [p.name, p.id] }
     @delivery_people = DeliveryPerson.where(status: true).map { |dp| ["#{dp.first_name} #{dp.last_name}", dp.id] }
   end
@@ -147,7 +147,7 @@ class Admin::SubscriptionsController < Admin::ApplicationController
         redirect_to admin_subscription_path(@subscription), notice: 'Subscription updated successfully!'
       end
     else
-      @customers = Customer.all.map { |c| ["#{c.first_name} #{c.last_name} - #{c.mobile}", c.id] }
+      @customers = Customer.all.map { |c| ["#{c.full_name} - #{c.mobile}", c.id] }
       @products = Product.where(status: 'active').map { |p| [p.name, p.id] }
       @delivery_people = DeliveryPerson.where(status: true).map { |dp| ["#{dp.first_name} #{dp.last_name}", dp.id] }
       render :edit
@@ -210,7 +210,7 @@ class Admin::SubscriptionsController < Admin::ApplicationController
 
     # Prepare data for JSON response
     subscription_data = {
-      customer_name: "#{@subscription.customer.first_name} #{@subscription.customer.last_name}".strip,
+      customer_name: @subscription.customer.full_name,
       product_name: @subscription.product.name,
       original_quantity: @subscription.quantity,
       current_avg_quantity: current_avg_quantity,

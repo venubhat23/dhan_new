@@ -57,9 +57,7 @@ module ImportService
     def process_customer_subscription_row(row, row_number)
       # Customer data
       customer_params = {
-        first_name: get_row_value(row, 'first_name'),
-        last_name: get_row_value(row, 'last_name'),
-        middle_name: get_row_value(row, 'middle_name'),
+        full_name: get_row_value(row, 'full_name') || [get_row_value(row, 'first_name'), get_row_value(row, 'middle_name'), get_row_value(row, 'last_name')].compact_blank.join(' ').presence,
         email: get_row_value(row, 'email'),
         mobile: get_row_value(row, 'mobile'),
         whatsapp_number: get_row_value(row, 'whatsapp_number'),
@@ -100,9 +98,8 @@ module ImportService
             customer.update!(auto_generated_password: generated_password)
 
             User.create!(
-              first_name: customer.first_name,
-              last_name: customer.last_name,
-              middle_name: customer.middle_name,
+              first_name: customer.full_name.to_s.split(' ').first.presence || 'Customer',
+              last_name: customer.full_name.to_s.split(' ')[1..-1]&.join(' ').presence || 'User',
               email: customer.email,
               mobile: customer.mobile,
               password: generated_password,

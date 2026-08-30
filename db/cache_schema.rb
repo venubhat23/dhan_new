@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_30_063622) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_29_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -388,6 +388,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_30_063622) do
     t.string "password_reset_token"
     t.datetime "password_reset_sent_at"
     t.string "location_link"
+    t.string "landmark"
+    t.text "shipping_address"
+    t.string "shipping_landmark"
     t.index ["latitude", "longitude"], name: "index_customers_on_location"
     t.index ["whatsapp_number"], name: "index_customers_on_whatsapp_number"
   end

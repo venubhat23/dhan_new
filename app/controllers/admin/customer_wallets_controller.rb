@@ -4,9 +4,9 @@ class Admin::CustomerWalletsController < Admin::ApplicationController
 
   def index
     @customer_wallets = CustomerWallet.joins(:customer).includes(:customer)
-    @customer_wallets = @customer_wallets.where("customers.first_name ILIKE ? OR customers.last_name ILIKE ? OR customers.email ILIKE ?",
-                                               "%#{params[:search]}%", "%#{params[:search]}%", "%#{params[:search]}%") if params[:search].present?
-    @customer_wallets = paginate_records(@customer_wallets.order('customers.first_name'))
+    @customer_wallets = @customer_wallets.where("customers.full_name ILIKE ? OR customers.email ILIKE ?",
+                                               "%#{params[:search]}%", "%#{params[:search]}%") if params[:search].present?
+    @customer_wallets = paginate_records(@customer_wallets.order('customers.full_name'))
 
     @stats = {
       total_wallets: CustomerWallet.count,
@@ -31,7 +31,7 @@ class Admin::CustomerWalletsController < Admin::ApplicationController
     if @customer_wallet.save
       redirect_to admin_customer_wallet_path(@customer_wallet), notice: 'Customer wallet was successfully created.'
     else
-      @customers = Customer.where.not(id: CustomerWallet.select(:customer_id)).order(:first_name)
+      @customers = Customer.where.not(id: CustomerWallet.select(:customer_id)).order(:full_name)
       render :new, status: :unprocessable_entity
     end
   end

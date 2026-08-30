@@ -298,13 +298,14 @@ class Admin::ImportsController < Admin::ApplicationController
     headers = [
       'customer_name*', 'mobile*',
       'email', 'whatsapp_number', 'gst_no',
-      'address', 'notes'
+      'address', 'landmark', 'shipping_address', 'location_link',
+      'latitude', 'longitude'
     ]
 
     sample_data = [
-      ['John Doe', '9876543210', 'john.doe@example.com', '9876543210', '', '123 Main Street, Mumbai', 'VIP Customer'],
-      ['Priya Sharma', '9876543211', 'priya.sharma@example.com', '9876543211', 'GSTIN1234567890', '456 Park Avenue, Delhi', ''],
-      ['Rajesh Patel', '9876543212', '', '9876543212', '', '789 Business Complex, Ahmedabad', 'Regular Customer']
+      ['John Doe', '9876543210', 'john.doe@example.com', '9876543210', '', '123 Main Street, Mumbai', 'Near City Mall', '123 Main Street, Mumbai', 'https://maps.google.com/?q=19.0760,72.8777', '19.0760', '72.8777'],
+      ['Priya Sharma', '9876543211', 'priya.sharma@example.com', '9876543211', 'GSTIN1234567890', '456 Park Avenue, Delhi', 'Opposite Metro Station', '789 Warehouse Road, Delhi', '', '', ''],
+      ['Rajesh Patel', '9876543212', '', '9876543212', '', '789 Business Complex, Ahmedabad', '', '', '', '', '']
     ]
 
     csv_data = CSV.generate(headers: true) do |csv|

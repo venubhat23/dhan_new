@@ -518,13 +518,10 @@ class Admin::InvoicesController < Admin::ApplicationController
       search_term = "%#{params[:search]}%"
       base_query = base_query.joins(:customer)
                             .where("#{table_name}.invoice_number ILIKE ? OR
-                                    customers.first_name ILIKE ? OR
-                                    customers.middle_name ILIKE ? OR
-                                    customers.last_name ILIKE ? OR
-                                    CONCAT_WS(' ', customers.first_name, customers.middle_name, customers.last_name) ILIKE ? OR
+                                    customers.full_name ILIKE ? OR
                                     customers.email ILIKE ? OR
                                     customers.mobile ILIKE ?",
-                                   search_term, search_term, search_term, search_term, search_term, search_term, search_term)
+                                   search_term, search_term, search_term, search_term)
     end
 
     # Apply delivery person filter based on milk subscriptions
@@ -582,13 +579,10 @@ class Admin::InvoicesController < Admin::ApplicationController
       search_term = "%#{params[:search]}%"
       base_query = base_query.joins(:customer)
                             .where("#{table_name}.invoice_number ILIKE ? OR
-                                    customers.first_name ILIKE ? OR
-                                    customers.middle_name ILIKE ? OR
-                                    customers.last_name ILIKE ? OR
-                                    CONCAT_WS(' ', customers.first_name, customers.middle_name, customers.last_name) ILIKE ? OR
+                                    customers.full_name ILIKE ? OR
                                     customers.email ILIKE ? OR
                                     customers.mobile ILIKE ?",
-                                   search_term, search_term, search_term, search_term, search_term, search_term, search_term)
+                                   search_term, search_term, search_term, search_term)
     end
 
     # Apply delivery person filter based on milk subscriptions
@@ -797,13 +791,13 @@ class Admin::InvoicesController < Admin::ApplicationController
 
     # Group by customer for breakdown
     customer_breakdown = pending_amounts.joins(:customer)
-                                       .group('customers.id', 'customers.first_name', 'customers.last_name')
-                                       .select('customers.id, customers.first_name, customers.last_name, COUNT(*) as count, SUM(amount) as total')
+                                       .group('customers.id', 'customers.full_name')
+                                       .select('customers.id, customers.full_name, COUNT(*) as count, SUM(amount) as total')
 
     customer_breakdown.each do |item|
       summary[:breakdown] << {
         customer_id: item.id,
-        customer_name: "#{item.first_name} #{item.last_name}".strip,
+        customer_name: item.full_name,
         pending_count: item.count,
         pending_amount: item.total
       }

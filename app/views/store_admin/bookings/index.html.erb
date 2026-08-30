@@ -109,7 +109,7 @@
                   <td><strong><%= booking.booking_number || "##{booking.id}" %></strong></td>
                   <td>
                     <% if booking.customer %>
-                      <%= booking.customer.full_name rescue "#{booking.customer.first_name} #{booking.customer.last_name}" %><br>
+                      <%= booking.customer.full_name %><br>
                       <small class="text-muted"><%= booking.customer.mobile %></small>
                     <% else %>
                       <span class="text-muted">Walk-in Customer</span>

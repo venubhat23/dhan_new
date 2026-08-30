@@ -52,11 +52,11 @@
       <div class="field-label">Customer Name *</div>
       <div class="input-wrap">
         <i class="bi bi-person input-icon"></i>
-        <input type="text" name="customer[first_name]" id="mob_name"
-               class="mob-input <%= @customer.errors[:first_name].any? ? 'is-invalid' : '' %>"
+        <input type="text" name="customer[full_name]" id="mob_name"
+               class="mob-input <%= @customer.errors[:full_name].any? ? 'is-invalid' : '' %>"
                placeholder="Full name" required autofocus
                autocomplete="off"
-               value="<%= @customer.first_name %>">
+               value="<%= @customer.full_name %>">
       </div>
     </div>
 

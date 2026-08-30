@@ -52,10 +52,10 @@ class LeadGeneratorService
 
     # Add customer type specific data
     if customer.individual?
+      name_parts = customer.full_name.to_s.split(' ')
       base_data.merge!(
-        first_name: customer.first_name,
-        middle_name: customer.middle_name,
-        last_name: customer.last_name,
+        first_name: name_parts.first,
+        last_name: name_parts[1..-1]&.join(' '),
         gender: customer.gender,
         birth_date: customer.birth_date,
         marital_status: customer.marital_status,

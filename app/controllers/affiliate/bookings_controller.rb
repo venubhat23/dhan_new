@@ -16,8 +16,8 @@ class Affiliate::BookingsController < Affiliate::BaseController
     if params[:search].present?
       search_term = "%#{params[:search]}%"
       @bookings = @bookings.where(
-        "booking_number ILIKE ? OR customers.first_name ILIKE ? OR customers.last_name ILIKE ? OR customers.email ILIKE ?",
-        search_term, search_term, search_term, search_term
+        "booking_number ILIKE ? OR customers.full_name ILIKE ? OR customers.email ILIKE ?",
+        search_term, search_term, search_term
       )
     end
 

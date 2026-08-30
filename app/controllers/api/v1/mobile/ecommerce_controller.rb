@@ -482,9 +482,6 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     profile_data = {
       id: customer.id,
       customer_type: "individual", # Default customer type since column doesn't exist
-      first_name: customer.first_name,
-      last_name: customer.last_name,
-      middle_name: customer.middle_name,
       full_name: customer.display_name,
       email: customer.email,
       mobile: customer.mobile,
@@ -540,7 +537,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     # Handle both 'customer' and 'ecommerce' parameter formats for flexibility
     profile_params = if params[:customer].present?
       params.require(:customer).permit(
-        :first_name, :last_name, :middle_name, :mobile, :whatsapp_number,
+        :full_name, :mobile, :whatsapp_number,
         :address, :gender, :marital_status, :birth_date, :pan_no, :gst_no,
         :company_name, :occupation, :annual_income, :nationality, :blood_group,
         :emergency_contact_name, :emergency_contact_number, :preferred_language,
@@ -548,7 +545,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       )
     elsif params[:ecommerce].present?
       params.require(:ecommerce).permit(
-        :first_name, :last_name, :middle_name, :mobile, :whatsapp_number,
+        :full_name, :mobile, :whatsapp_number,
         :address, :gender, :marital_status, :birth_date, :pan_no, :gst_no,
         :company_name, :occupation, :annual_income, :nationality, :blood_group,
         :emergency_contact_name, :emergency_contact_number, :preferred_language,
@@ -557,7 +554,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     else
       # Handle direct parameters (backwards compatibility)
       params.permit(
-        :first_name, :last_name, :middle_name, :mobile, :whatsapp_number,
+        :full_name, :mobile, :whatsapp_number,
         :address, :gender, :marital_status, :birth_date, :pan_no, :gst_no,
         :company_name, :occupation, :annual_income, :nationality, :blood_group,
         :emergency_contact_name, :emergency_contact_number, :preferred_language,
@@ -570,9 +567,6 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
         success: true,
         data: {
           id: customer.id,
-          first_name: customer.first_name,
-          last_name: customer.last_name,
-          middle_name: customer.middle_name,
           full_name: customer.display_name,
           email: customer.email,
           mobile: customer.mobile,

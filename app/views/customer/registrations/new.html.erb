@@ -18,34 +18,18 @@
   <% end %>
 
   <div class="row">
-    <div class="col-md-6">
+    <div class="col-md-12">
       <div class="form-group">
-        <%= f.label :first_name, "First Name", class: "form-label" %>
+        <%= f.label :full_name, "Full Name", class: "form-label" %>
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-person"></i></span>
-          <%= f.text_field :first_name,
-                          class: "form-control #{'is-invalid' if @customer&.errors&.[](:first_name)&.any?}",
-                          placeholder: "Enter first name",
+          <%= f.text_field :full_name,
+                          class: "form-control #{'is-invalid' if @customer&.errors&.[](:full_name)&.any?}",
+                          placeholder: "Enter full name",
                           required: true,
                           autofocus: true %>
           <div class="invalid-feedback">
-            <%= @customer&.errors&.[](:first_name)&.first || "Please enter your first name." %>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-6">
-      <div class="form-group">
-        <%= f.label :last_name, "Last Name", class: "form-label" %>
-        <div class="input-group">
-          <span class="input-group-text"><i class="bi bi-person-check"></i></span>
-          <%= f.text_field :last_name,
-                          class: "form-control #{'is-invalid' if @customer&.errors&.[](:last_name)&.any?}",
-                          placeholder: "Enter last name",
-                          required: true %>
-          <div class="invalid-feedback">
-            <%= @customer&.errors&.[](:last_name)&.first || "Please enter your last name." %>
+            <%= @customer&.errors&.[](:full_name)&.first || "Please enter your full name." %>
           </div>
         </div>
       </div>

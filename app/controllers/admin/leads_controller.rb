@@ -270,9 +270,7 @@ class Admin::LeadsController < Admin::ApplicationController
       if @lead.individual?
         # Individual customer attributes
         customer_attrs.merge!(
-          first_name: @lead.first_name || extract_first_name(@lead.name),
-          middle_name: @lead.middle_name.presence, # Use presence to convert empty strings to nil
-          last_name: @lead.last_name || extract_last_name(@lead.name),
+          full_name: @lead.full_name.presence || @lead.name,
           email: @lead.email.presence,
           birth_date: @lead.birth_date,
           gender: @lead.gender.presence,
@@ -313,7 +311,7 @@ class Admin::LeadsController < Admin::ApplicationController
 
       # Debug: Log the created customer attributes with all individual fields
       Rails.logger.info "Created customer #{customer.id} with attributes:"
-      Rails.logger.info "  - Name: #{customer.first_name} #{customer.middle_name} #{customer.last_name}"
+      Rails.logger.info "  - Name: #{customer.full_name}"
       Rails.logger.info "  - Birth date: #{customer.birth_date}"
       Rails.logger.info "  - Gender: #{customer.gender}"
       Rails.logger.info "  - Marital status: #{customer.marital_status}"

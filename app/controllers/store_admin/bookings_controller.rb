@@ -11,8 +11,8 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     if params[:search].present?
       search_term = "%#{params[:search]}%"
       @bookings = @bookings.joins(:customer)
-                           .where('customers.first_name ILIKE ? OR customers.last_name ILIKE ? OR bookings.booking_number ILIKE ?',
-                                  search_term, search_term, search_term)
+                           .where('customers.full_name ILIKE ? OR bookings.booking_number ILIKE ?',
+                                  search_term, search_term)
     end
 
     if params[:date_from].present? && params[:date_to].present?

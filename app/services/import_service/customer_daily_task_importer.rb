@@ -63,18 +63,12 @@ module ImportService
         raise "Missing required fields: Customer Name and Customer Number are required"
       end
 
-      # Parse customer name
-      name_parts = customer_name.strip.split(' ')
-      first_name = name_parts[0]
-      last_name = name_parts[1..-1].join(' ') if name_parts.length > 1
-
       # Find or create customer (skip email field entirely)
       customer = Customer.find_by(mobile: customer_number.strip)
 
       if customer.nil?
         customer = Customer.create!(
-          first_name: first_name,
-          last_name: last_name || '',
+          full_name: customer_name.strip,
           mobile: customer_number.strip,
           status: true
         )
