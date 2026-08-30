@@ -51,8 +51,10 @@ class Admin::ImportsController < Admin::ApplicationController
       return
     end
 
+    column_mapping = parse_column_mapping(params[:column_mapping])
+
     begin
-      import_result = ImportService::CustomerImporter.new(uploaded_file).import
+      import_result = ImportService::CustomerImporter.new(uploaded_file, column_mapping: column_mapping).import
 
       if import_result[:success]
         redirect_to admin_customers_path, notice: "Successfully imported #{import_result[:imported_count]} customers. #{import_result[:skipped_count]} records were skipped due to validation errors."
@@ -290,6 +292,20 @@ class Admin::ImportsController < Admin::ApplicationController
   end
 
   private
+
+  # Parses the JSON { csv_header => target_field } mapping submitted by the
+  # custom column-mapping UI on the customer import form. Returns nil when
+  # absent/blank/unparsable so the importer falls back to the standard template.
+  def parse_column_mapping(raw)
+    return nil if raw.blank?
+
+    parsed = JSON.parse(raw)
+    return nil unless parsed.is_a?(Hash)
+
+    parsed
+  rescue JSON::ParserError
+    nil
+  end
 
   # Template download methods
   def send_customer_template

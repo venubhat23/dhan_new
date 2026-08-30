@@ -6,11 +6,34 @@ module ImportService
   class CustomerImporter
     attr_reader :file, :imported_count, :skipped_count, :errors
 
-    def initialize(file)
+    # Customer fields the "custom column mapping" UI is allowed to target.
+    # Maps to the CSV header name used when no explicit mapping is supplied
+    # (i.e. the standard template).
+    DEFAULT_FIELD_HEADERS = {
+      'full_name'        => 'customer_name',
+      'email'            => 'email',
+      'mobile'           => 'mobile',
+      'whatsapp_number'  => 'whatsapp_number',
+      'gst_no'           => 'gst_no',
+      'address'          => 'address',
+      'landmark'         => 'landmark',
+      'shipping_address' => 'shipping_address',
+      'location_link'    => 'location_link',
+      'latitude'         => 'latitude',
+      'longitude'        => 'longitude',
+      'status'           => 'status'
+    }.freeze
+
+    # column_mapping: optional hash of { csv_header => target_customer_field },
+    # e.g. { "Name" => "full_name", "Phone" => "mobile" }. When supplied, the
+    # importer reads each row by the mapped CSV header instead of expecting
+    # the standard template's fixed header names.
+    def initialize(file, column_mapping: nil)
       @file = file
       @imported_count = 0
       @skipped_count = 0
       @errors = []
+      @field_headers = build_field_headers(column_mapping)
     end
 
     def import
@@ -45,6 +68,30 @@ module ImportService
 
     private
 
+    # Builds { target_field => csv_header }. With no mapping given, falls
+    # back to the standard template's fixed header names.
+    def build_field_headers(column_mapping)
+      return DEFAULT_FIELD_HEADERS if column_mapping.blank?
+
+      mapping = {}
+      column_mapping.each do |csv_header, target_field|
+        next if target_field.blank?
+        mapping[target_field.to_s] = csv_header.to_s
+      end
+      mapping
+    end
+
+    def custom_mapping?
+      @field_headers != DEFAULT_FIELD_HEADERS
+    end
+
+    # Reads a Customer field's value out of a parsed CSV/XLSX row, following
+    # whichever header it's mapped to (custom mapping, or the default template).
+    def mapped(row, field)
+      header = @field_headers[field.to_s]
+      header ? row[header] : nil
+    end
+
     def open_spreadsheet(file)
       case File.extname(file.original_filename)
       when '.csv'
@@ -59,6 +106,12 @@ module ImportService
     end
 
     def validate_headers(header)
+      if custom_mapping?
+        missing = %w[full_name mobile] - @field_headers.keys
+        raise "Please map a column to: #{missing.join(', ')}" if missing.any?
+        return
+      end
+
       clean_headers = header.map(&:to_s).map { |h| h.gsub('*', '').downcase.strip }
       required_headers = %w[customer_name mobile]
       missing_headers = required_headers - clean_headers
@@ -100,22 +153,23 @@ module ImportService
     end
 
     def normalize_customer_data(row)
-      customer_name = row['customer_name']&.to_s&.strip
+      customer_name = mapped(row, 'full_name')&.to_s&.strip
+      mobile        = mapped(row, 'mobile')&.to_s&.strip
       password      = generate_password(customer_name)
 
       {
         full_name:        customer_name,
-        email:            row['email']&.to_s&.downcase&.strip.presence,
-        mobile:           row['mobile']&.to_s&.strip,
-        whatsapp_number:  row['whatsapp_number']&.to_s&.strip.presence || row['mobile']&.to_s&.strip,
-        gst_no:           row['gst_no']&.to_s&.strip&.upcase,
-        address:          row['address']&.to_s&.strip,
-        landmark:         row['landmark']&.to_s&.strip,
-        shipping_address: row['shipping_address']&.to_s&.strip,
-        location_link:    row['location_link']&.to_s&.strip,
-        latitude:         row['latitude']&.to_s&.strip.presence,
-        longitude:        row['longitude']&.to_s&.strip.presence,
-        status:           parse_boolean(row['status']),
+        email:            mapped(row, 'email')&.to_s&.downcase&.strip.presence,
+        mobile:           mobile,
+        whatsapp_number:  mapped(row, 'whatsapp_number')&.to_s&.strip.presence || mobile,
+        gst_no:           mapped(row, 'gst_no')&.to_s&.strip&.upcase,
+        address:          mapped(row, 'address')&.to_s&.strip,
+        landmark:         mapped(row, 'landmark')&.to_s&.strip,
+        shipping_address: mapped(row, 'shipping_address')&.to_s&.strip,
+        location_link:    mapped(row, 'location_link')&.to_s&.strip,
+        latitude:         mapped(row, 'latitude')&.to_s&.strip.presence,
+        longitude:        mapped(row, 'longitude')&.to_s&.strip.presence,
+        status:           parse_boolean(mapped(row, 'status')),
         password_digest:  BCrypt::Password.create(password),
         auto_generated_password: password
       }.compact

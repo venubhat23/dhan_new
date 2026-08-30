@@ -64,6 +64,44 @@
               </div>
             </div>
 
+            <%= hidden_field_tag :column_mapping, '', id: 'column_mapping_input' %>
+
+            <!-- Column Mapping Section (CSV only) -->
+            <div id="column-mapping-section" class="mb-4" style="display: none;">
+              <div class="card border-primary border-opacity-25">
+                <div class="card-header bg-primary bg-opacity-10">
+                  <h6 class="mb-0">
+                    <i class="fas fa-random me-2"></i>
+                    Map Your Columns
+                  </h6>
+                  <small class="text-muted">Your file's own headers don't have to match our template &mdash; tell us which column is which.</small>
+                </div>
+                <div class="card-body">
+                  <div id="mapping-warning" class="alert alert-warning small mb-3" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    <span id="mapping-warning-text"></span>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th>Your Column</th>
+                          <th>Sample Value</th>
+                          <th>Maps To</th>
+                        </tr>
+                      </thead>
+                      <tbody id="mapping-table-body"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="excel-mapping-note" class="alert alert-secondary small mb-4" style="display: none;">
+              <i class="fas fa-info-circle me-1"></i>
+              Column mapping is only available for CSV files. This Excel file must use the exact template headers below.
+            </div>
+
             <!-- Import Options -->
             <div class="card bg-light border-0 mb-4">
               <div class="card-body">
@@ -320,6 +358,124 @@ document.addEventListener('DOMContentLoaded', function() {
   const form = document.querySelector('form');
   const submitBtn = document.getElementById('submit-btn');
 
+  // ---- Custom column mapping (CSV only) ----
+  const mappingSection = document.getElementById('column-mapping-section');
+  const mappingTableBody = document.getElementById('mapping-table-body');
+  const excelNote = document.getElementById('excel-mapping-note');
+  const columnMappingInput = document.getElementById('column_mapping_input');
+  const mappingWarning = document.getElementById('mapping-warning');
+  const mappingWarningText = document.getElementById('mapping-warning-text');
+
+  const MAPPING_FIELDS = [
+    { value: '', label: '-- Ignore this column --' },
+    { value: 'full_name', label: 'Full Name' },
+    { value: 'mobile', label: 'Mobile' },
+    { value: 'email', label: 'Email' },
+    { value: 'whatsapp_number', label: 'WhatsApp Number' },
+    { value: 'gst_no', label: 'GST Number' },
+    { value: 'address', label: 'Billing Address' },
+    { value: 'landmark', label: 'Landmark' },
+    { value: 'shipping_address', label: 'Shipping Address' },
+    { value: 'location_link', label: 'Location Link' },
+    { value: 'latitude', label: 'Latitude' },
+    { value: 'longitude', label: 'Longitude' },
+    { value: 'status', label: 'Status (active/inactive)' }
+  ];
+
+  function guessField(header) {
+    const h = header.toLowerCase();
+    if (h.includes('whatsapp')) return 'whatsapp_number';
+    if (h.includes('mobile') || h.includes('phone') || h.includes('contact')) return 'mobile';
+    if (h.includes('email') || h.includes('mail')) return 'email';
+    if (h.includes('gst')) return 'gst_no';
+    if (h.includes('shipping')) return 'shipping_address';
+    if (h.includes('landmark')) return 'landmark';
+    if (h.includes('address')) return 'address';
+    if (h.includes('location') || h.includes('map') || h.includes('link')) return 'location_link';
+    if (h.includes('latitude') || h === 'lat') return 'latitude';
+    if (h.includes('longitude') || h === 'lng' || h === 'long') return 'longitude';
+    if (h.includes('status') || h.includes('active')) return 'status';
+    if (h.includes('name')) return 'full_name';
+    return '';
+  }
+
+  // Minimal RFC4180-ish CSV line parser (handles quoted fields with commas/escaped quotes)
+  function parseCSVLine(line) {
+    const result = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (line[i + 1] === '"') { cur += '"'; i++; } else { inQuotes = false; }
+        } else {
+          cur += ch;
+        }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        result.push(cur); cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    result.push(cur);
+    return result.map(function(s) { return s.trim(); });
+  }
+
+  function renderMappingTable(headers, sampleRow) {
+    mappingTableBody.innerHTML = '';
+    const usedTargets = {};
+
+    headers.forEach(function(header, idx) {
+      const guessed = guessField(header);
+      const target = (guessed && !usedTargets[guessed]) ? guessed : '';
+      if (target) usedTargets[target] = true;
+
+      const tr = document.createElement('tr');
+
+      const headerTd = document.createElement('td');
+      const code = document.createElement('code');
+      code.textContent = header;
+      headerTd.appendChild(code);
+      tr.appendChild(headerTd);
+
+      const sampleTd = document.createElement('td');
+      sampleTd.className = 'text-muted small';
+      sampleTd.textContent = sampleRow[idx] || '';
+      tr.appendChild(sampleTd);
+
+      const selectTd = document.createElement('td');
+      const select = document.createElement('select');
+      select.className = 'form-select form-select-sm mapping-select';
+      select.dataset.header = header;
+      MAPPING_FIELDS.forEach(function(f) {
+        const opt = document.createElement('option');
+        opt.value = f.value;
+        opt.textContent = f.label;
+        if (f.value === target) opt.selected = true;
+        select.appendChild(opt);
+      });
+      selectTd.appendChild(select);
+      tr.appendChild(selectTd);
+
+      mappingTableBody.appendChild(tr);
+    });
+
+    mappingSection.style.display = 'block';
+    excelNote.style.display = 'none';
+    mappingWarning.style.display = 'none';
+  }
+
+  function buildMapping() {
+    const mapping = {};
+    document.querySelectorAll('.mapping-select').forEach(function(select) {
+      if (select.value) mapping[select.dataset.header] = select.value;
+    });
+    return mapping;
+  }
+
   // Handle file selection
   fileInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
@@ -334,14 +490,53 @@ document.addEventListener('DOMContentLoaded', function() {
       // Add visual feedback
       fileInput.classList.add('is-valid');
       fileInput.classList.remove('is-invalid');
+
+      if (/\.csv$/i.test(file.name)) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          const text = String(evt.target.result || '');
+          const lines = text.split(/\r\n|\n|\r/).filter(function(l) { return l.trim().length > 0; });
+          if (lines.length > 0) {
+            const headers = parseCSVLine(lines[0]);
+            const sampleRow = lines.length > 1 ? parseCSVLine(lines[1]) : [];
+            renderMappingTable(headers, sampleRow);
+          }
+        };
+        reader.readAsText(file);
+      } else {
+        mappingSection.style.display = 'none';
+        excelNote.style.display = 'block';
+        columnMappingInput.value = '';
+      }
     } else {
       filePreview.style.display = 'none';
       fileInput.classList.remove('is-valid');
+      mappingSection.style.display = 'none';
+      excelNote.style.display = 'none';
     }
   });
 
   // Form submission handling
   form.addEventListener('submit', function(e) {
+    if (mappingSection.style.display !== 'none') {
+      const mapping = buildMapping();
+      const mappedTargets = Object.values(mapping);
+      const missing = [];
+      if (mappedTargets.indexOf('full_name') === -1) missing.push('Full Name');
+      if (mappedTargets.indexOf('mobile') === -1) missing.push('Mobile');
+
+      if (missing.length > 0) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        mappingWarningText.textContent = 'Please map a column to: ' + missing.join(', ') + '.';
+        mappingWarning.style.display = 'block';
+        mappingWarning.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      columnMappingInput.value = JSON.stringify(mapping);
+    }
+
     // Add loading state
     submitBtn.classList.add('loading');
     submitBtn.disabled = true;
