@@ -118,14 +118,13 @@
                 <% if @customer.auto_generated_password.present? %>
                   <%= @customer.auto_generated_password %>
                 <% else %>
-                  <span class="text-muted">Set by customer</span>
+                  <span class="font-monospace">dhanvantari@123</span>
+                  <small class="text-muted">(default &ndash; unless the customer has changed it)</small>
                 <% end %>
               </span>
-              <% if @customer.auto_generated_password.present? %>
-                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= @customer.auto_generated_password %>')">
-                  <i class="bi bi-copy"></i>
-                </button>
-              <% end %>
+              <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= @customer.auto_generated_password.presence || 'dhanvantari@123' %>')">
+                <i class="bi bi-copy"></i>
+              </button>
             </div>
           </div>
           <div class="col-md-6">

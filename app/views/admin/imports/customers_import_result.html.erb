@@ -1,0 +1,144 @@
+<% content_for :page_title, "Import Results — Customers" %>
+<% content_for :page_subtitle, "Bulk Customer Import" %>
+
+<% imported   = @import_result[:imported_count].to_i %>
+<% failed_rows = (@import_result[:failed_rows].presence || []) %>
+<% skipped    = @import_result[:skipped_count].to_i %>
+<% total      = imported + skipped %>
+
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1"><i class="fas fa-clipboard-check me-2"></i>Import Results</h2>
+      <p class="text-muted mb-0">Summary of your customer import</p>
+    </div>
+    <div class="d-flex gap-2">
+      <%= link_to @retry_path, class: "btn btn-outline-primary" do %>
+        <i class="fas fa-redo me-1"></i> Import Again
+      <% end %>
+      <%= link_to admin_customers_path, class: "btn btn-success" do %>
+        <i class="fas fa-users me-1"></i> View Customers
+      <% end %>
+    </div>
+  </div>
+
+  <% if @import_result[:success] == false && imported.zero? && failed_rows.empty? %>
+    <%# Fatal error — nothing was processed at all %>
+    <div class="alert alert-danger d-flex align-items-center" role="alert">
+      <i class="fas fa-times-circle fa-2x me-3"></i>
+      <div>
+        <strong>Import failed.</strong> <%= @import_result[:error] %>
+      </div>
+    </div>
+  <% else %>
+    <% if @import_result[:error].present? %>
+      <div class="alert alert-warning d-flex align-items-center" role="alert">
+        <i class="fas fa-exclamation-triangle fa-lg me-2"></i>
+        <div>Import stopped early: <%= @import_result[:error] %>. Rows processed before the error are shown below.</div>
+      </div>
+    <% end %>
+
+    <%# Summary cards %>
+    <div class="row g-3 mb-4">
+      <div class="col-sm-4">
+        <div class="card border-0 shadow-sm text-center py-3">
+          <div class="card-body">
+            <div class="display-6 fw-bold text-primary"><%= imported %></div>
+            <div class="text-muted small mt-1"><i class="fas fa-check-circle text-success me-1"></i>Imported successfully</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="card border-0 shadow-sm text-center py-3">
+          <div class="card-body">
+            <div class="display-6 fw-bold <%= skipped > 0 ? 'text-danger' : 'text-muted' %>"><%= skipped %></div>
+            <div class="text-muted small mt-1"><i class="fas fa-exclamation-circle text-danger me-1"></i>Failed / skipped</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="card border-0 shadow-sm text-center py-3">
+          <div class="card-body">
+            <div class="display-6 fw-bold text-secondary"><%= total %></div>
+            <div class="text-muted small mt-1"><i class="fas fa-table text-secondary me-1"></i>Total rows processed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <% if imported > 0 && skipped.zero? %>
+      <div class="alert alert-success d-flex align-items-center">
+        <i class="fas fa-check-circle fa-lg me-2"></i>
+        All <%= imported %> customers were imported successfully.
+      </div>
+    <% end %>
+
+    <% if imported > 0 %>
+      <% users_created = @import_result[:users_created].to_i %>
+      <div class="alert alert-info small">
+        <i class="fas fa-key me-1"></i>
+        <%= pluralize(users_created, 'login account') %> created (only customers that have an email address get one).
+        Default password: <code>dhanvantari@123</code> &mdash; shown on each customer's page, where it can be reset.
+      </div>
+    <% end %>
+
+    <% notes = (@import_result[:notes].presence || []) %>
+    <% if notes.any? %>
+      <div class="alert alert-warning small">
+        <strong><i class="fas fa-info-circle me-1"></i>Notes</strong>
+        <ul class="mb-0 mt-1">
+          <% notes.each do |n| %><li><%= n %></li><% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <% if failed_rows.any? %>
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-danger text-white d-flex align-items-center justify-content-between">
+          <h5 class="mb-0">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Failed Rows (<%= failed_rows.size %>)
+          </h5>
+          <span class="badge bg-white text-danger fs-6"><%= failed_rows.size %> of <%= total %> rows failed</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th style="width:80px" class="text-center">CSV Row</th>
+                  <th style="width:220px">Customer Name</th>
+                  <th>Reason it was skipped</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% failed_rows.each do |fr| %>
+                  <tr>
+                    <td class="text-center">
+                      <span class="badge bg-danger rounded-pill">#<%= fr[:row] %></span>
+                    </td>
+                    <td class="fw-semibold text-truncate" style="max-width:200px" title="<%= fr[:name] %>">
+                      <%= fr[:name].presence || "(blank)" %>
+                    </td>
+                    <td>
+                      <span class="text-danger"><i class="fas fa-times-circle me-1"></i><%= fr[:error] %></span>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer text-muted small">
+          <i class="fas fa-info-circle me-1"></i>
+          Fix the issues above in your CSV file and re-upload. Only the failed rows need to be re-imported.
+        </div>
+      </div>
+    <% elsif skipped > 0 %>
+      <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-1"></i>
+        <%= skipped %> rows were skipped but no per-row reason was recorded.
+      </div>
+    <% end %>
+  <% end %>
+</div>

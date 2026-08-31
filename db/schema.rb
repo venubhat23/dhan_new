@@ -387,7 +387,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_29_000002) do
     t.string "location_link"
     t.string "landmark"
     t.text "shipping_address"
-    t.string "shipping_landmark"
     t.string "full_name"
     t.index ["latitude", "longitude"], name: "index_customers_on_location"
     t.index ["whatsapp_number"], name: "index_customers_on_whatsapp_number"

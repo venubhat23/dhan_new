@@ -4,7 +4,7 @@ require 'bcrypt'
 
 module ImportService
   class CustomerImporter
-    attr_reader :file, :imported_count, :skipped_count, :errors
+    attr_reader :file, :imported_count, :skipped_count, :errors, :failed_rows
 
     # Customer fields the "custom column mapping" UI is allowed to target.
     # Maps to the CSV header name used when no explicit mapping is supplied
@@ -28,11 +28,19 @@ module ImportService
     # e.g. { "Name" => "full_name", "Phone" => "mobile" }. When supplied, the
     # importer reads each row by the mapped CSV header instead of expecting
     # the standard template's fixed header names.
-    def initialize(file, column_mapping: nil)
+    #
+    # create_users: when true (the default, driven by the "Create user accounts
+    # automatically" checkbox), each imported customer that has an email also
+    # gets a linked User record (user_type: 'customer') so they can log in.
+    def initialize(file, column_mapping: nil, create_users: true)
       @file = file
+      @create_users = create_users
       @imported_count = 0
       @skipped_count = 0
+      @users_created = 0
       @errors = []
+      @notes = []
+      @failed_rows = []
       @field_headers = build_field_headers(column_mapping)
     end
 
@@ -43,8 +51,8 @@ module ImportService
 
         validate_headers(header)
 
+        clean_header = header.map { |h| normalize_header(h) }
         (2..spreadsheet.last_row).each do |i|
-          clean_header = header.map { |h| h.to_s.gsub('*', '').strip }
           row = Hash[[clean_header, spreadsheet.row(i)].transpose]
           process_row(row, i)
         end
@@ -53,7 +61,10 @@ module ImportService
           success: true,
           imported_count: @imported_count,
           skipped_count: @skipped_count,
-          errors: @errors
+          users_created: @users_created,
+          errors: @errors,
+          notes: @notes,
+          failed_rows: @failed_rows
         }
       rescue => e
         {
@@ -61,7 +72,10 @@ module ImportService
           error: e.message,
           imported_count: @imported_count,
           skipped_count: @skipped_count,
-          errors: @errors
+          users_created: @users_created,
+          errors: @errors,
+          notes: @notes,
+          failed_rows: @failed_rows
         }
       end
     end
@@ -70,15 +84,25 @@ module ImportService
 
     # Builds { target_field => csv_header }. With no mapping given, falls
     # back to the standard template's fixed header names.
+    #
+    # csv_header is normalised the same way the row hash keys are (asterisks
+    # stripped, trimmed) so a mapping built from a "customer_name*" column
+    # still resolves against the "customer_name" row key.
     def build_field_headers(column_mapping)
       return DEFAULT_FIELD_HEADERS if column_mapping.blank?
 
       mapping = {}
       column_mapping.each do |csv_header, target_field|
         next if target_field.blank?
-        mapping[target_field.to_s] = csv_header.to_s
+        mapping[target_field.to_s] = normalize_header(csv_header)
       end
       mapping
+    end
+
+    # Strips the "*" required-field marker and surrounding whitespace so header
+    # text from the template ("customer_name*") matches the mapping keys.
+    def normalize_header(value)
+      value.to_s.gsub('*', '').strip
     end
 
     def custom_mapping?
@@ -123,18 +147,19 @@ module ImportService
 
     def process_row(row, row_number)
       customer_data = normalize_customer_data(row)
+      display_name  = customer_data[:full_name].presence || '(blank)'
 
-      if !valid_row?(customer_data, row_number)
-        @skipped_count += 1
+      reason = validation_error(customer_data)
+      if reason
+        record_failure(row_number, display_name, reason)
         return
       end
 
       if duplicate_customer?(customer_data)
-        msg = "Row #{row_number}: Customer with mobile '#{customer_data[:mobile]}'"
-        msg += " or email '#{customer_data[:email]}'" if customer_data[:email].present?
-        msg += " already exists"
-        @errors << msg
-        @skipped_count += 1
+        reason = "Customer with mobile '#{customer_data[:mobile]}'"
+        reason += " or email '#{customer_data[:email]}'" if customer_data[:email].present?
+        reason += " already exists"
+        record_failure(row_number, display_name, reason)
         return
       end
 
@@ -142,13 +167,51 @@ module ImportService
 
       if customer.save
         @imported_count += 1
+        create_user_account(customer, row_number) if @create_users
       else
-        @errors << "Row #{row_number}: #{customer.errors.full_messages.join(', ')}"
-        @skipped_count += 1
+        record_failure(row_number, display_name, customer.errors.full_messages.join(', '))
       end
 
     rescue => e
-      @errors << "Row #{row_number}: #{e.message}"
+      record_failure(row_number, customer_data&.dig(:full_name).presence || '(unknown)', e.message)
+    end
+
+    # Mirrors the admin "create customer" flow: every customer with an email
+    # gets a linked User (user_type: 'customer') so they can log in. Failure
+    # here never rolls back the imported customer &mdash; it's recorded as a note.
+    def create_user_account(customer, row_number)
+      return if customer.email.blank?
+      return if User.exists?(email: customer.email)
+      return if customer.mobile.present? && User.exists?(mobile: customer.mobile)
+
+      names = customer.full_name.to_s.split(' ')
+
+      User.create!(
+        first_name:            names.first.presence || 'Unknown',
+        last_name:             (names[1..-1] || []).join(' ').presence || 'Unknown',
+        email:                 customer.email,
+        mobile:                customer.mobile,
+        password:              DEFAULT_CUSTOMER_PASSWORD,
+        password_confirmation: DEFAULT_CUSTOMER_PASSWORD,
+        user_type:             'customer',
+        address:               customer.address,
+        city:                  'Unknown',
+        state:                 'Unknown',
+        pincode:               '000000',
+        country:               'India',
+        status:                true,
+        is_active:             true,
+        is_verified:           false
+      )
+      @users_created += 1
+    rescue => e
+      Rails.logger.warn "CustomerImporter: could not create user account for #{customer.email}: #{e.message}"
+      @notes << "Row #{row_number}: '#{customer.full_name}' was imported, but a login account could not be created for '#{customer.email}' (#{e.message}). Use \"Create User & Set Password\" on the customer's page."
+    end
+
+    def record_failure(row_number, name, error_message)
+      @errors << "Row #{row_number}: #{error_message}"
+      @failed_rows << { row: row_number, name: name, error: error_message }
       @skipped_count += 1
     end
 
@@ -175,42 +238,31 @@ module ImportService
       }.compact
     end
 
-    def valid_row?(customer_data, row_number)
-      if customer_data[:full_name].blank?
-        @errors << "Row #{row_number}: customer_name is required"
-        return false
-      end
-
-      if customer_data[:mobile].blank?
-        @errors << "Row #{row_number}: mobile is required"
-        return false
-      end
+    # Returns a human-readable reason string when the row is invalid, or nil
+    # when it passes validation. Also normalises the mobile number in place.
+    def validation_error(customer_data)
+      return "customer_name is required" if customer_data[:full_name].blank?
+      return "mobile is required" if customer_data[:mobile].blank?
 
       if customer_data[:email].present? && !customer_data[:email].match?(URI::MailTo::EMAIL_REGEXP)
-        @errors << "Row #{row_number}: Invalid email format"
-        return false
+        return "Invalid email format ('#{customer_data[:email]}')"
       end
 
       if customer_data[:mobile].present?
         clean_mobile = customer_data[:mobile].gsub(/\D/, '')
-        unless clean_mobile.match?(/^\d{7,15}$/)
-          @errors << "Row #{row_number}: Invalid mobile number format"
-          return false
-        end
+        return "Invalid mobile number format ('#{customer_data[:mobile]}')" unless clean_mobile.match?(/^\d{7,15}$/)
         customer_data[:mobile] = clean_mobile
       end
 
       if customer_data[:latitude].present? && !valid_decimal?(customer_data[:latitude])
-        @errors << "Row #{row_number}: Invalid latitude format"
-        return false
+        return "Invalid latitude format ('#{customer_data[:latitude]}')"
       end
 
       if customer_data[:longitude].present? && !valid_decimal?(customer_data[:longitude])
-        @errors << "Row #{row_number}: Invalid longitude format"
-        return false
+        return "Invalid longitude format ('#{customer_data[:longitude]}')"
       end
 
-      true
+      nil
     end
 
     def valid_decimal?(value)
@@ -236,11 +288,13 @@ module ImportService
       end
     end
 
-    # Password: first 3 chars of first name (capitalized) + @DHAN
-    # e.g. "Rahul" → "Rah@DHAN", "Jo" → "Jo@DHAN"
-    def generate_password(first_name)
-      name_part = first_name.to_s.strip[0, 3].capitalize
-      "#{name_part}@DHAN"
+    # Every imported customer gets the same default login password, matching the
+    # admin "create customer" flow (Admin::CustomersController::DEFAULT_CUSTOMER_PASSWORD).
+    # It is stored in auto_generated_password so the admin UI can display/copy it.
+    DEFAULT_CUSTOMER_PASSWORD = "dhanvantari@123"
+
+    def generate_password(_first_name = nil)
+      DEFAULT_CUSTOMER_PASSWORD
     end
   end
 end

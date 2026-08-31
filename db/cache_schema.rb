@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_08_29_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_29_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -354,8 +354,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_29_000001) do
   end
 
   create_table "customers", force: :cascade do |t|
-    t.string "first_name"
-    t.string "last_name"
     t.string "email"
     t.string "mobile"
     t.datetime "created_at", null: false
@@ -367,7 +365,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_29_000001) do
     t.datetime "location_obtained_at"
     t.decimal "location_accuracy", precision: 8, scale: 2
     t.string "password_digest"
-    t.string "middle_name"
     t.text "address"
     t.date "birth_date"
     t.string "gender"
@@ -390,7 +387,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_29_000001) do
     t.string "location_link"
     t.string "landmark"
     t.text "shipping_address"
-    t.string "shipping_landmark"
+    t.string "full_name"
     t.index ["latitude", "longitude"], name: "index_customers_on_location"
     t.index ["whatsapp_number"], name: "index_customers_on_whatsapp_number"
   end

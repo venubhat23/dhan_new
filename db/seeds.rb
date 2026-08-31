@@ -80,17 +80,16 @@ puts "Created #{agents_data.count} Agents"
 
 # Create some Customers
 customers_data = [
-  { first_name: "Ravi", last_name: "Agarwal", email: "ravi.agarwal@gmail.com", mobile: "8765432101", customer_type: "individual", city: "Delhi", state: "Delhi" },
-  { first_name: "Sunita", last_name: "Mehta", email: "sunita.mehta@gmail.com", mobile: "8765432102", customer_type: "individual", city: "Mumbai", state: "Maharashtra" },
-  { first_name: "", last_name: "", company_name: "Tech Solutions Pvt Ltd", email: "info@techsolutions.com", mobile: "8765432103", customer_type: "corporate", city: "Bangalore", state: "Karnataka" },
-  { first_name: "Vikash", last_name: "Singh", email: "vikash.singh@gmail.com", mobile: "8765432104", customer_type: "individual", city: "Pune", state: "Maharashtra" },
-  { first_name: "Neha", last_name: "Gupta", email: "neha.gupta@gmail.com", mobile: "8765432105", customer_type: "individual", city: "Chennai", state: "Tamil Nadu" }
+  { full_name: "Ravi Agarwal", email: "ravi.agarwal@gmail.com", mobile: "8765432101", customer_type: "individual", city: "Delhi", state: "Delhi" },
+  { full_name: "Sunita Mehta", email: "sunita.mehta@gmail.com", mobile: "8765432102", customer_type: "individual", city: "Mumbai", state: "Maharashtra" },
+  { full_name: "", company_name: "Tech Solutions Pvt Ltd", email: "info@techsolutions.com", mobile: "8765432103", customer_type: "corporate", city: "Bangalore", state: "Karnataka" },
+  { full_name: "Vikash Singh", email: "vikash.singh@gmail.com", mobile: "8765432104", customer_type: "individual", city: "Pune", state: "Maharashtra" },
+  { full_name: "Neha Gupta", email: "neha.gupta@gmail.com", mobile: "8765432105", customer_type: "individual", city: "Chennai", state: "Tamil Nadu" }
 ]
 
 customers_data.each do |customer_data|
   Customer.find_or_create_by!(mobile: customer_data[:mobile]) do |customer|
-    customer.first_name = customer_data[:first_name]
-    customer.last_name = customer_data[:last_name]
+    customer.full_name = customer_data[:full_name]
     customer.company_name = customer_data[:company_name]
     customer.email = customer_data[:email]
     customer.customer_type = customer_data[:customer_type]

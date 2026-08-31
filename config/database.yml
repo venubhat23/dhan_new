@@ -6,16 +6,16 @@ default: &default
 development:
   primary:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://postgres:Dhan2026pg@localhost:5433/dhanvantari' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://dr_wise_db:LuJjGp3KAMz8jsBiE9PKVzwU8InrN00H@dpg-daammph5efls738seqm0-a.oregon-postgres.render.com/markettincer_db_k4v1' %>
   cable:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://postgres:Dhan2026pg@localhost:5433/dhanvantari' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://dr_wise_db:LuJjGp3KAMz8jsBiE9PKVzwU8InrN00H@dpg-daammph5efls738seqm0-a.oregon-postgres.render.com/markettincer_db_k4v1' %>
   queue:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://postgres:Dhan2026pg@localhost:5433/dhanvantari' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://dr_wise_db:LuJjGp3KAMz8jsBiE9PKVzwU8InrN00H@dpg-daammph5efls738seqm0-a.oregon-postgres.render.com/markettincer_db_k4v1' %>
   cache:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://postgres:Dhan2026pg@localhost:5433/dhanvantari' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://dr_wise_db:LuJjGp3KAMz8jsBiE9PKVzwU8InrN00H@dpg-daammph5efls738seqm0-a.oregon-postgres.render.com/markettincer_db_k4v1' %>
 
 test:
   primary:

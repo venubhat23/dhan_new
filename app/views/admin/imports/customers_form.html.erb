@@ -77,6 +77,10 @@
                   <small class="text-muted">Your file's own headers don't have to match our template &mdash; tell us which column is which.</small>
                 </div>
                 <div class="card-body">
+                  <div id="mapping-row-count" class="alert alert-success small mb-3" style="display: none;">
+                    <i class="fas fa-users me-1"></i>
+                    <span id="mapping-row-count-text"></span>
+                  </div>
                   <div id="mapping-warning" class="alert alert-warning small mb-3" style="display: none;">
                     <i class="fas fa-exclamation-triangle me-1"></i>
                     <span id="mapping-warning-text"></span>
@@ -86,7 +90,7 @@
                       <thead>
                         <tr>
                           <th>Your Column</th>
-                          <th>Sample Value</th>
+                          <th>Sample Values</th>
                           <th>Maps To</th>
                         </tr>
                       </thead>
@@ -229,8 +233,8 @@
 
           <div class="alert alert-info small mb-2">
             <i class="fas fa-key me-1"></i>
-            <strong>Auto Password:</strong> Generated as first 3 letters of name + <code>@DHAN</code><br>
-            e.g. <em>Rahul</em> → <strong>Rah@DHAN</strong>
+            <strong>Default Password:</strong> Every imported customer is given the login password
+            <code>dhanvantari@123</code> (shown on the customer's page, where it can be reset).
           </div>
 
           <div class="alert alert-warning small mb-0">
@@ -365,6 +369,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const columnMappingInput = document.getElementById('column_mapping_input');
   const mappingWarning = document.getElementById('mapping-warning');
   const mappingWarningText = document.getElementById('mapping-warning-text');
+  const mappingRowCount = document.getElementById('mapping-row-count');
+  const mappingRowCountText = document.getElementById('mapping-row-count-text');
 
   const MAPPING_FIELDS = [
     { value: '', label: '-- Ignore this column --' },
@@ -424,9 +430,16 @@ document.addEventListener('DOMContentLoaded', function() {
     return result.map(function(s) { return s.trim(); });
   }
 
-  function renderMappingTable(headers, sampleRow) {
+  function renderMappingTable(headers, dataRows) {
     mappingTableBody.innerHTML = '';
     const usedTargets = {};
+    const sampleRow = dataRows[0] || [];
+
+    // Show how many customer rows were found in the uploaded file.
+    const total = dataRows.length;
+    mappingRowCountText.textContent =
+      total + (total === 1 ? ' customer row' : ' customer rows') + ' found in this file — all of them will be imported.';
+    mappingRowCount.style.display = total > 0 ? 'block' : 'none';
 
     headers.forEach(function(header, idx) {
       const guessed = guessField(header);
@@ -443,7 +456,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const sampleTd = document.createElement('td');
       sampleTd.className = 'text-muted small';
-      sampleTd.textContent = sampleRow[idx] || '';
+      const samples = dataRows.slice(0, 3)
+        .map(function(r) { return (r[idx] || '').toString().trim(); })
+        .filter(function(v) { return v.length > 0; });
+      sampleTd.textContent = samples.length ? samples.join(', ') : (sampleRow[idx] || '');
+      if (dataRows.length > 3 && samples.length) sampleTd.textContent += ', …';
       tr.appendChild(sampleTd);
 
       const selectTd = document.createElement('td');
@@ -498,14 +515,15 @@ document.addEventListener('DOMContentLoaded', function() {
           const lines = text.split(/\r\n|\n|\r/).filter(function(l) { return l.trim().length > 0; });
           if (lines.length > 0) {
             const headers = parseCSVLine(lines[0]);
-            const sampleRow = lines.length > 1 ? parseCSVLine(lines[1]) : [];
-            renderMappingTable(headers, sampleRow);
+            const dataRows = lines.slice(1).map(parseCSVLine);
+            renderMappingTable(headers, dataRows);
           }
         };
         reader.readAsText(file);
       } else {
         mappingSection.style.display = 'none';
         excelNote.style.display = 'block';
+        mappingRowCount.style.display = 'none';
         columnMappingInput.value = '';
       }
     } else {
@@ -513,6 +531,7 @@ document.addEventListener('DOMContentLoaded', function() {
       fileInput.classList.remove('is-valid');
       mappingSection.style.display = 'none';
       excelNote.style.display = 'none';
+      mappingRowCount.style.display = 'none';
     }
   });
 

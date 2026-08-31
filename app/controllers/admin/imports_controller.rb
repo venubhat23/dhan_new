@@ -54,13 +54,13 @@ class Admin::ImportsController < Admin::ApplicationController
     column_mapping = parse_column_mapping(params[:column_mapping])
 
     begin
-      import_result = ImportService::CustomerImporter.new(uploaded_file, column_mapping: column_mapping).import
-
-      if import_result[:success]
-        redirect_to admin_customers_path, notice: "Successfully imported #{import_result[:imported_count]} customers. #{import_result[:skipped_count]} records were skipped due to validation errors."
-      else
-        redirect_back fallback_location: admin_imports_path, alert: "Import failed: #{import_result[:error]}"
-      end
+      @import_result = ImportService::CustomerImporter.new(
+        uploaded_file,
+        column_mapping: column_mapping,
+        create_users: params[:create_user_accounts].to_s == 'true'
+      ).import
+      @retry_path    = customers_form_admin_imports_path
+      render :customers_import_result
     rescue => e
       Rails.logger.error "Customer import error: #{e.message}"
       redirect_back fallback_location: admin_imports_path, alert: 'An error occurred during import. Please check your file format and try again.'
@@ -319,9 +319,9 @@ class Admin::ImportsController < Admin::ApplicationController
     ]
 
     sample_data = [
-      ['John Doe', '9876543210', 'john.doe@example.com', '9876543210', '', '123 Main Street, Mumbai', 'Near City Mall', '123 Main Street, Mumbai', 'https://maps.google.com/?q=19.0760,72.8777', '19.0760', '72.8777'],
-      ['Priya Sharma', '9876543211', 'priya.sharma@example.com', '9876543211', 'GSTIN1234567890', '456 Park Avenue, Delhi', 'Opposite Metro Station', '789 Warehouse Road, Delhi', '', '', ''],
-      ['Rajesh Patel', '9876543212', '', '9876543212', '', '789 Business Complex, Ahmedabad', '', '', '', '', '']
+      ['John Doe', '9800000001', 'john.doe@example.com', '9800000001', '', '123 Main Street, Mumbai', 'Near City Mall', '123 Main Street, Mumbai', 'https://maps.google.com/?q=19.0760,72.8777', '19.0760', '72.8777'],
+      ['Priya Sharma', '9800000002', 'priya.sharma@example.com', '9800000002', 'GSTIN1234567890', '456 Park Avenue, Delhi', 'Opposite Metro Station', '789 Warehouse Road, Delhi', '', '', ''],
+      ['Rajesh Patel', '9800000003', '', '9800000003', '', '789 Business Complex, Ahmedabad', '', '', '', '', '']
     ]
 
     csv_data = CSV.generate(headers: true) do |csv|

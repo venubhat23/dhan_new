@@ -4,7 +4,7 @@ class Admin::CustomersController < Admin::ApplicationController
   include LocationData
   include ConfigurablePagination
 
-  DEFAULT_CUSTOMER_PASSWORD = "DHANVANTARI@"
+  DEFAULT_CUSTOMER_PASSWORD = "dhanvantari@123"
   before_action :set_customer, only: [:show, :edit, :update, :destroy, :toggle_status, :policy_chart, :trace_commission, :product_selection, :generate_password]
   skip_before_action :ensure_admin, only: [:search_sub_agents]
   skip_before_action :authenticate_user!, only: [:search_sub_agents]
@@ -419,6 +419,9 @@ class Admin::CustomersController < Admin::ApplicationController
     # Set the password attributes manually
     @customer.password = password
     @customer.password_confirmation = password_confirmation
+    # Keep the plain-text password on the record so the admin UI can display/copy it
+    # (whether admin-supplied or the default). password_digest still holds the hash.
+    @customer.auto_generated_password = password
 
     begin
       ActiveRecord::Base.transaction do
@@ -860,6 +863,7 @@ class Admin::CustomersController < Admin::ApplicationController
     generated_password = "#{mobile_digits[0..3]}@123"
     @customer.password = generated_password
     @customer.password_confirmation = generated_password
+    @customer.auto_generated_password = generated_password
 
     if @customer.save
       # Create User account for mobile login
