@@ -1,16 +1,16 @@
 # One-shot stock seeder — BATCH 2 (groceries, spices, personal & home care).
 #   bin/rails runner scratch_seed_stock2.rb
 #
-# Behaves exactly like scratch_seed_stock.rb:
-# - Wipes ALL stock_batches, stock_movements, stock_transfers (catalog untouched).
-# - Re-inserts central + store stock from the sheet below.
+# Behaves like scratch_seed_stock.rb EXCEPT it does NOT wipe anything — it is a
+# continuation of scratch_seed_stock.rb and adds on top of what that seeded.
+# - Inserts central + store stock from the sheet below.
 # - Central stock -> product_variant.available_stock (+ a central StockBatch per positive qty)
 # - Store stock   -> StoreInventory row (+ a store StockBatch per positive qty)
 # - "store low stock" -> StoreInventory#low_stock_threshold (per variant)
 # Store = "Gandhi Bazar" if present, else the only store (when there is exactly one).
 #
-# NOTE: this wipes *all* stock like batch 1, so run whichever sheet is the source of
-# truth last. Two tweaks vs batch 1:
+# NOTE: run scratch_seed_stock.rb FIRST (it wipes + seeds batch 1), then this.
+# Tweaks vs batch 1:
 #   * a product that isn't in the catalog is logged and skipped (run is not aborted)
 #   * a blank category column leaves the product's category untouched
 #   * a blank weight/unit means the row targets the variant-less product itself
@@ -319,11 +319,8 @@ puts "Store: ##{store.id} #{store.name}   Vendor: ##{vendor.id} #{vendor.name}"
 log = []
 
 ActiveRecord::Base.transaction do
-  del_b = StockBatch.count; del_m = StockMovement.count; del_t = StockTransfer.count
-  StockTransfer.delete_all
-  StockBatch.delete_all
-  StockMovement.delete_all
-  puts "Deleted: #{del_b} batches, #{del_m} movements, #{del_t} transfers"
+  # BATCH 2 does NOT wipe — it adds on top of what scratch_seed_stock.rb seeded.
+  puts "No wipe. Existing: #{StockBatch.count} batches, #{StockMovement.count} movements, #{StockTransfer.count} transfers"
 
   SHEET.each do |name, weight, unit, store_low, store_qty_in, central, central_low, category_name|
     lookup = NAME_ALIAS[name.downcase] || name
