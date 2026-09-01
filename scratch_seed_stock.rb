@@ -1,0 +1,126 @@
+# One-shot stock seeder.
+#   bin/rails runner scratch_seed_stock.rb
+#
+# - Wipes ALL stock_batches, stock_movements, stock_transfers (catalog untouched).
+# - Re-inserts central + DVG-store stock from the sheet below.
+# - Central stock  -> product_variant.available_stock (+ a central StockBatch per positive qty)
+# - DVG store stock -> StoreInventory row (+ a store StockBatch per positive qty)
+# - "DVG store low stock" -> StoreInventory#low_stock_threshold (per variant)
+
+SHEET = [
+  # name,               weight, unit,   dvg_low, dvg, central, central_low, category
+  ["A2 Cow Ghee",         1,   "Liter",  1,   1,   nil, nil, "Ghee"],
+  ["A2 Cow Ghee",         500, "Ml",     3,   3,   2,   nil, "Ghee"],
+  ["A2 Cow Ghee",         250, "Gm",     2,   5,   7,   nil, "Ghee"],
+  ["Groundnut Oil",       1,   "Liter",  5,   6,   14,  nil, "Oils Cold Pressed"],
+  ["Groundnut Oil",       5,   "Liter",  1,   2,   4,   nil, "Oils Cold Pressed"],
+  ["Safflower Oil",       1,   "Ltr",    5,   7,   10,  nil, "Oils Cold Pressed"],
+  ["Sunflower Oil",       1,   "Ltr",    5,   10,  10,  nil, "Oils Cold Pressed"],
+  ["Mustard Oil",         1,   "Ltr",    2,   3,   1,   nil, "Oils Cold Pressed"],
+  ["Mustard Oil",         500, "Ml",     2,   4,   nil, nil, "Oils Cold Pressed"],
+  ["Sesame Oil",          1,   "Ltr",    2,   3,   nil, nil, "Oils Cold Pressed"],
+  ["Sesame Oil",          500, "Ml",     2,   4,   7,   nil, "Oils Cold Pressed"],
+  ["Castor Oil",          500, "Ml",     2,   5,   5,   nil, "Oils Cold Pressed"],
+  ["Coconut Oil",         1,   "Ltr",    2,   13,  3,   nil, "Oils Cold Pressed"],
+  ["Coconut Oil",         500, "Ltr",    2,   12,  nil, nil, "Oils Cold Pressed"], # "Ltr" is a typo -> 500 Ml
+  ["Safflower Oil",       5,   "Liter",  1,   1,   nil, nil, "Oils Cold Pressed"],
+  ["Sunflower Oil",       5,   "Liter",  1,   2,   nil, nil, "Oils Cold Pressed"],
+  ["Virgin Coconut Oil",  1,   "Ltr",    nil, 3,   1,   nil, "Oils Cold Pressed"],
+].freeze
+
+NAME_ALIAS = { "virgin coconut oil" => "virgin coconut oil" }
+UNIT_ALIAS = { "ltr" => "liter", "l" => "liter", "ltrs" => "liter",
+               "gm" => "gram", "g" => "gram", "gms" => "gram",
+               "ml" => "ml", "mls" => "ml", "liter" => "liter", "gram" => "gram" }
+
+def norm_unit(u) = UNIT_ALIAS[u.to_s.strip.downcase] || u.to_s.strip.downcase
+
+store  = Store.where("name ILIKE 'DVG%'").first or abort "DVG store not found"
+vendor = Vendor.find_by("name ILIKE 'System Default'") || Vendor.first or abort "no vendor"
+puts "Store: ##{store.id} #{store.name}   Vendor: ##{vendor.id} #{vendor.name}"
+
+log = []
+
+ActiveRecord::Base.transaction do
+  del_b = StockBatch.count; del_m = StockMovement.count; del_t = StockTransfer.count
+  StockTransfer.delete_all
+  StockBatch.delete_all
+  StockMovement.delete_all
+  puts "Deleted: #{del_b} batches, #{del_m} movements, #{del_t} transfers"
+
+  touched_variant_ids = []
+
+  SHEET.each do |name, weight, unit, dvg_low, dvg, central, central_low, category_name|
+    lookup = NAME_ALIAS[name.downcase] || name
+    product = Product.where("lower(name) = ?", lookup.downcase).first
+    raise "Product not found: #{name}" unless product
+
+    # category
+    cat = Category.find_by("lower(name) = ?", category_name.downcase)
+    if cat && product.category_id != cat.id
+      product.update_columns(category_id: cat.id, updated_at: Time.current)
+      log << "#{name}: category -> #{cat.name}"
+    end
+
+    # single-variant product -> make it behave like the multi-variant ones
+    if product.product_variants.count == 1 && !product.has_multiple_quantities?
+      product.update_columns(has_multiple_quantities: true, updated_at: Time.current)
+    end
+
+    wanted_u = norm_unit(unit)
+    variant = product.product_variants.detect { |v| v.weight.to_f == weight.to_f && norm_unit(v.unit) == wanted_u }
+    raise "Variant not found: #{name} #{weight} #{unit}" unless variant
+    touched_variant_ids << variant.id
+
+    sell = variant.selling_price.to_f
+    sell = product.price.to_f if sell <= 0
+    sell = 1 if sell <= 0
+    buy = variant.buying_price.to_f
+    buy = product.buying_price.to_f if buy <= 0
+    buy = sell if buy <= 0
+
+    # ---- central (admin app) ----
+    central_qty = central.to_i
+    variant.update_columns(
+      available_stock: central_qty,
+      low_stock_threshold: (central_low || variant.low_stock_threshold || 10),
+      updated_at: Time.current
+    )
+    if central_qty > 0
+      StockBatch.create!(product: product, product_variant: variant, vendor: vendor, store_id: nil,
+                         quantity_purchased: central_qty, quantity_remaining: central_qty,
+                         purchase_price: buy, selling_price: sell, batch_date: Date.current, status: "active")
+    end
+
+    # ---- DVG store ----
+    dvg_qty = dvg.to_i
+    si = StoreInventory.find_or_initialize_by(store_id: store.id, product_id: product.id, product_variant_id: variant.id)
+    si.quantity = dvg_qty
+    si.low_stock_threshold = (dvg_low || store.auto_transfer_threshold || 10)
+    si.save!
+    if dvg_qty > 0
+      StockBatch.create!(product: product, product_variant: variant, vendor: vendor, store_id: store.id,
+                         quantity_purchased: dvg_qty, quantity_remaining: dvg_qty,
+                         purchase_price: buy, selling_price: sell, batch_date: Date.current, status: "active")
+    end
+
+    log << format("%-20s %4s %-6s | central %-3s (low %s) | DVG %-3s (low %s)",
+                  name, weight, unit, central_qty, variant.low_stock_threshold,
+                  dvg_qty, si.low_stock_threshold)
+  end
+
+  # variants of these products NOT in the sheet -> zero them out (no batch)
+  product_ids = SHEET.map { |r| Product.where("lower(name) = ?", (NAME_ALIAS[r[0].downcase] || r[0]).downcase).first&.id }.compact.uniq
+  ProductVariant.where(product_id: product_ids).where.not(id: touched_variant_ids).each do |v|
+    v.update_columns(available_stock: 0, updated_at: Time.current)
+    StoreInventory.find_or_create_by!(store_id: store.id, product_id: v.product_id, product_variant_id: v.id) do |si|
+      si.quantity = 0
+      si.low_stock_threshold = store.auto_transfer_threshold || 10
+    end
+    log << "#{v.product.name} #{v.label}: NOT in sheet -> set to 0"
+  end
+end
+
+puts "\n=== RESULT ==="
+puts log.join("\n")
+puts "\nStockBatch=#{StockBatch.count} (central #{StockBatch.central.count}, DVG #{StockBatch.where.not(store_id: nil).count})  StoreInventory=#{StoreInventory.count}"

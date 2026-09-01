@@ -44,3 +44,4 @@ production:
   cache:
     <<: *default
     url: <%= ENV['DATABASE_URL'] || 'postgresql://postgres:Dhan2026pg@localhost:5433/dhanvantari' %>
+

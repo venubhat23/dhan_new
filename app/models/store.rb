@@ -5,6 +5,7 @@ class Store < ApplicationRecord
   has_many :store_staff, class_name: 'User', foreign_key: 'assigned_store_id', dependent: :nullify
   has_many :expenses, dependent: :destroy
   has_many :stock_batches, foreign_key: :store_id, dependent: :nullify
+  has_many :store_inventories, dependent: :destroy
   has_many :stock_transfers_received, class_name: 'StockTransfer', foreign_key: :to_store_id, dependent: :destroy
   has_many :stock_transfers_sent, class_name: 'StockTransfer', foreign_key: :from_store_id, dependent: :destroy
   has_many :staff_members, dependent: :destroy
@@ -74,6 +75,20 @@ class Store < ApplicationRecord
   end
 
   def store_inventory_summary
+    if store_inventories.exists?
+      products_with_stock = store_inventories.where('quantity > 0').select(:product_id).distinct.count
+      total_value = store_inventories.joins(:product).sum('store_inventories.quantity * products.price')
+      low_stock = store_inventories.low_stock.count
+      return {
+        total_products: products_with_stock,
+        total_stock_value: total_value.to_f.round(2),
+        low_stock_count: low_stock,
+        pending_incoming_transfers: stock_transfers_received.where(status: 'pending').count,
+        pending_outgoing_transfers: stock_transfers_sent.where(status: 'pending').count,
+        recent_bookings_count: bookings.where(created_at: 1.week.ago..Time.current).count
+      }
+    end
+
     batches = stock_batches.where(status: 'active').where('quantity_remaining > 0')
     products_with_stock = batches.select(:product_id).distinct.count
     total_value = batches.sum('quantity_remaining * selling_price')
@@ -92,6 +107,10 @@ class Store < ApplicationRecord
   end
 
   def low_stock_products(threshold = nil)
+    if store_inventories.exists?
+      return Product.where(id: store_inventories.low_stock.distinct.pluck(:product_id))
+    end
+
     threshold ||= auto_transfer_threshold || 10
     product_ids = stock_batches.where(status: 'active')
                                .group(:product_id)
@@ -108,8 +127,22 @@ class Store < ApplicationRecord
   end
 
   def available_stock_for(product_id)
+    inv = store_inventories.where(product_id: product_id)
+    return inv.sum(:quantity) if inv.exists?
+
     stock_batches.where(product_id: product_id, status: 'active')
                  .sum(:quantity_remaining)
+  end
+
+  # Per-product / per-variant low-stock threshold for this store.
+  # Falls back to the store-wide auto_transfer_threshold when no row exists.
+  def low_stock_threshold_for(product_id, product_variant_id = nil)
+    row = store_inventories.find_by(product_id: product_id, product_variant_id: product_variant_id)
+    row&.low_stock_threshold || auto_transfer_threshold || 10
+  end
+
+  def low_stock_store_inventories
+    store_inventories.includes(:product, :product_variant).low_stock
   end
 
   def self.main_inventory

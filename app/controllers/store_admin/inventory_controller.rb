@@ -13,12 +13,16 @@ class StoreAdmin::InventoryController < StoreAdmin::ApplicationController
     @inventory = @batches.group_by(&:product)
 
     # Low stock products
-    threshold = @current_store.auto_transfer_threshold || 10
-    @low_stock_product_ids = @current_store.stock_batches
-                                           .where(status: 'active')
-                                           .group(:product_id)
-                                           .having('SUM(quantity_remaining) <= ?', threshold)
-                                           .pluck(:product_id)
+    if @current_store.store_inventories.exists?
+      @low_stock_product_ids = @current_store.store_inventories.low_stock.distinct.pluck(:product_id)
+    else
+      threshold = @current_store.auto_transfer_threshold || 10
+      @low_stock_product_ids = @current_store.stock_batches
+                                             .where(status: 'active')
+                                             .group(:product_id)
+                                             .having('SUM(quantity_remaining) <= ?', threshold)
+                                             .pluck(:product_id)
+    end
 
     @summary = @current_store.store_inventory_summary
   end
