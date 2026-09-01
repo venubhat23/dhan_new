@@ -638,13 +638,16 @@ class DashboardController < ApplicationController
     @total_stores  = Store.count rescue 0
     @active_stores = Store.where(status: true).count rescue 0
 
-    # Inventory metrics — one "low stock" definition, used by every card, the
-    # chart and the detail table (products.stock, 1..5 units on hand).
+    # Inventory metrics — one "low stock" definition (Product::REAL_STOCK_SQL:
+    # variant stock for multi-qty products, active central batch stock
+    # otherwise) shared with the admin product list these cards link to, so the
+    # count and the filtered list always match.
     @total_stock_value     = Product.sum('price * stock').to_f
-    @low_stock_products    = Product.where('stock > 0 AND stock <= 5').count
+    @low_stock_products    = Product.real_low_stock.count
     @low_stock_count       = @low_stock_products
-    @low_stock_list        = Product.includes(:category).where('stock > 0 AND stock <= 5').order(:stock).limit(10)
-    @out_of_stock_products = Product.where(stock: 0).count
+    @low_stock_list        = Product.real_low_stock.with_real_stock_amount
+                                    .includes(:category).order(:name).limit(10)
+    @out_of_stock_products = Product.real_out_of_stock.count
     @top_categories = calculate_top_categories
 
     # Pending payments — real orders only (drafts are not unpaid orders)

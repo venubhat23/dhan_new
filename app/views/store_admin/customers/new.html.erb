@@ -1,0 +1,17 @@
+<% content_for :page_title, "New Customer" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1">Add New Customer</h4>
+    <small class="text-muted">Create a customer record for <%= @current_store.name %></small>
+  </div>
+  <%= link_to store_admin_customers_path, class: "btn btn-outline-secondary" do %>
+    <i class="bi bi-arrow-left me-2"></i>Back to Customers
+  <% end %>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <%= render "form" %>
+  </div>
+</div>

@@ -1,0 +1,129 @@
+<% content_for :page_title, "Invoices" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1">Store Invoices</h4>
+    <small class="text-muted">Invoices generated from bookings at <%= @current_store.name %></small>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #6366f1 !important;">
+      <div class="card-body">
+        <h6 class="card-title mb-2" style="color:#2d3748;font-weight:600;">Invoices</h6>
+        <div style="color:#1a202c;font-weight:800;font-size:1.6rem;"><%= number_with_delimiter(@stats[:count]) %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #0ea5e9 !important;">
+      <div class="card-body">
+        <h6 class="card-title mb-2" style="color:#2d3748;font-weight:600;">Total Value</h6>
+        <div style="color:#1a202c;font-weight:800;font-size:1.6rem;">₹<%= number_with_delimiter(@stats[:total].to_f.round(0)) %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #10b981 !important;">
+      <div class="card-body">
+        <h6 class="card-title mb-2" style="color:#2d3748;font-weight:600;">Paid</h6>
+        <div style="color:#1a202c;font-weight:800;font-size:1.6rem;">₹<%= number_with_delimiter(@stats[:paid].to_f.round(0)) %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #ef4444 !important;">
+      <div class="card-body">
+        <h6 class="card-title mb-2" style="color:#2d3748;font-weight:600;">Outstanding</h6>
+        <div style="color:#1a202c;font-weight:800;font-size:1.6rem;">₹<%= number_with_delimiter(@stats[:outstanding].to_f.round(0)) %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <%= form_tag store_admin_invoices_path, method: :get, local: true, class: "row g-3 align-items-end" do %>
+      <div class="col-md-3">
+        <label class="form-label small">Search</label>
+        <%= text_field_tag :search, params[:search], class: "form-control form-control-sm", placeholder: "Invoice # or customer" %>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">Payment</label>
+        <%= select_tag :payment_status, options_for_select([['All', ''], ['Unpaid', 'unpaid'], ['Partially Paid', 'partially_paid'], ['Fully Paid', 'fully_paid']], params[:payment_status]), class: "form-select form-select-sm" %>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">From</label>
+        <%= date_field_tag :date_from, params[:date_from], class: "form-control form-control-sm" %>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">To</label>
+        <%= date_field_tag :date_to, params[:date_to], class: "form-control form-control-sm" %>
+      </div>
+      <div class="col-md-3">
+        <%= submit_tag "Filter", class: "btn btn-primary btn-sm" %>
+        <%= link_to "Clear", store_admin_invoices_path, class: "btn btn-outline-secondary btn-sm" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-0">
+    <h6 class="mb-0"><i class="bi bi-receipt me-2"></i>Invoice List</h6>
+  </div>
+  <div class="card-body p-0">
+    <% if @invoices.any? %>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Invoice #</th>
+              <th>Booking</th>
+              <th>Customer</th>
+              <th>Date</th>
+              <th>Total</th>
+              <th>Payment</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @invoices.each do |invoice| %>
+              <tr>
+                <td><strong><%= invoice.invoice_number %></strong></td>
+                <td><small class="text-muted"><%= @booking_numbers[invoice.invoice_number] || "—" %></small></td>
+                <td><%= invoice.customer_display_name %></td>
+                <td><small><%= invoice.invoice_date&.strftime('%d %b %Y') %></small></td>
+                <td>₹<%= number_with_delimiter(invoice.total_amount.to_f.round(2)) %></td>
+                <td>
+                  <% badge = { 'fully_paid' => 'bg-success', 'partially_paid' => 'bg-warning text-dark', 'unpaid' => 'bg-danger' }[invoice.payment_status] || 'bg-secondary' %>
+                  <span class="badge <%= badge %>"><%= invoice.payment_status&.humanize %></span>
+                </td>
+                <td>
+                  <div class="btn-group" role="group">
+                    <%= link_to store_admin_invoice_path(invoice), class: "btn btn-sm btn-outline-primary" do %>
+                      <i class="bi bi-eye"></i>
+                    <% end %>
+                    <%= link_to edit_store_admin_invoice_path(invoice), class: "btn btn-sm btn-outline-secondary" do %>
+                      <i class="bi bi-pencil"></i>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <div class="p-3">
+        <%= paginate @invoices if @invoices.respond_to?(:current_page) %>
+      </div>
+    <% else %>
+      <div class="text-center py-5">
+        <i class="bi bi-receipt fs-1 text-muted mb-3"></i>
+        <h5 class="text-muted">No Invoices Found</h5>
+        <p class="text-muted small">Invoices appear here once bookings at this store are invoiced.</p>
+      </div>
+    <% end %>
+  </div>
+</div>

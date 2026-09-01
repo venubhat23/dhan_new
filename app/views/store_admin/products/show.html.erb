@@ -1,0 +1,75 @@
+<% content_for :page_title, "Product" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1"><%= @product.name %></h4>
+    <small class="text-muted">SKU <%= @product.sku %></small>
+  </div>
+  <div class="d-flex gap-2">
+    <%= link_to edit_store_admin_product_path(@product), class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-pencil me-2"></i>Edit
+    <% end %>
+    <%= link_to store_admin_products_path, class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-arrow-left me-2"></i>Back
+    <% end %>
+    <%= link_to store_admin_product_path(@product),
+        data: { confirm: "Delete this product?", turbo_method: :delete },
+        class: "btn btn-outline-danger" do %>
+      <i class="bi bi-trash me-2"></i>Delete
+    <% end %>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-5 mb-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0"><h6 class="mb-0">Details</h6></div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5">Category</dt><dd class="col-7"><%= @product.category&.name %></dd>
+          <dt class="col-5">Unit</dt><dd class="col-7"><%= @product.unit_type %></dd>
+          <dt class="col-5">Selling Price</dt><dd class="col-7">₹<%= number_with_delimiter(@product.price.to_f.round(2)) %></dd>
+          <dt class="col-5">Buying Price</dt><dd class="col-7">₹<%= number_with_delimiter(@product.buying_price.to_f.round(2)) %></dd>
+          <dt class="col-5">Discount Price</dt><dd class="col-7"><%= @product.discount_price.present? ? "₹#{number_with_delimiter(@product.discount_price.to_f.round(2))}" : "—" %></dd>
+          <dt class="col-5">HSN</dt><dd class="col-7"><%= @product.hsn_code.presence || "—" %></dd>
+          <dt class="col-5">Low Stock At</dt><dd class="col-7"><%= @product.low_stock_threshold %></dd>
+          <dt class="col-5">Status</dt><dd class="col-7"><%= @product.status&.humanize %></dd>
+          <dt class="col-5">Stock @ Store</dt><dd class="col-7"><strong><%= number_with_delimiter(@store_quantity.to_f) %></strong> <%= @product.unit_type %></dd>
+        </dl>
+        <% if @product.description.present? %>
+          <hr>
+          <p class="small text-muted mb-0"><%= simple_format(@product.description) %></p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7 mb-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0"><h6 class="mb-0">Recent bookings at this store</h6></div>
+      <div class="card-body p-0">
+        <% if @recent_bookings.any? %>
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr><th>Booking #</th><th>Date</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody>
+                <% @recent_bookings.each do |booking| %>
+                  <tr>
+                    <td><strong><%= booking.booking_number %></strong></td>
+                    <td><small><%= booking.created_at.strftime('%d %b %Y') %></small></td>
+                    <td><span class="badge bg-light text-dark"><%= booking.status&.humanize %></span></td>
+                    <td><%= link_to "View", store_admin_booking_path(booking), class: "btn btn-sm btn-outline-primary" %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <div class="text-center py-4 text-muted">No bookings for this product at this store.</div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

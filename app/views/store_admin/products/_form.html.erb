@@ -1,0 +1,84 @@
+<%= form_with model: [:store_admin, @product], local: true do |f| %>
+  <% if @product.errors.any? %>
+    <div class="alert alert-danger">
+      <ul class="mb-0">
+        <% @product.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <% if @product.has_multiple_quantities? %>
+    <div class="alert alert-warning">
+      This product has multiple quantity variants. Pricing and stock for its variants are managed in the main admin.
+    </div>
+  <% end %>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Name <span class="text-danger">*</span></label>
+      <%= f.text_field :name, class: "form-control", required: true %>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">SKU <span class="text-danger">*</span></label>
+      <%= f.text_field :sku, class: "form-control", required: true %>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Barcode</label>
+      <%= f.text_field :barcode, class: "form-control" %>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Category <span class="text-danger">*</span></label>
+      <%= f.collection_select :category_id, @categories, :id, :name, { prompt: "Select category" }, { class: "form-select", required: true } %>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Unit Type <span class="text-danger">*</span></label>
+      <%= f.select :unit_type, options_for_select(Product::UNIT_TYPES, @product.unit_type), { prompt: "Select unit" }, { class: "form-select", required: true } %>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Status</label>
+      <%= f.select :status, options_for_select([['Active', 'active'], ['Inactive', 'inactive'], ['Draft', 'draft']], @product.status), {}, class: "form-select" %>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Selling Price (₹) <%= "*" unless @product.has_multiple_quantities? %></label>
+      <%= f.number_field :price, class: "form-control", step: 0.01, min: 0, required: !@product.has_multiple_quantities? %>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Buying Price (₹)</label>
+      <%= f.number_field :buying_price, class: "form-control", step: 0.01, min: 0 %>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Purchase Price (₹)</label>
+      <%= f.number_field :purchase_price, class: "form-control", step: 0.01, min: 0 %>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Discount Price (₹)</label>
+      <%= f.number_field :discount_price, class: "form-control", step: 0.01, min: 0 %>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Stock <%= "*" unless @product.has_multiple_quantities? %></label>
+      <%= f.number_field :stock, class: "form-control", step: 1, min: 0, required: !@product.has_multiple_quantities? %>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Low Stock Threshold</label>
+      <%= f.number_field :low_stock_threshold, class: "form-control", step: 1, min: 0 %>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">HSN Code</label>
+      <%= f.text_field :hsn_code, class: "form-control" %>
+    </div>
+
+    <div class="col-12">
+      <label class="form-label">Description</label>
+      <%= f.text_area :description, class: "form-control", rows: 3 %>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-4">
+    <%= f.submit class: "btn btn-primary" %>
+    <%= link_to "Cancel", store_admin_products_path, class: "btn btn-outline-secondary" %>
+  </div>
+<% end %>

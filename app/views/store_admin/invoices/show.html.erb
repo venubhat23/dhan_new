@@ -1,0 +1,78 @@
+<% content_for :page_title, "Invoice" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1">Invoice <%= @invoice.invoice_number %></h4>
+    <small class="text-muted">
+      <%= @invoice.customer_display_name %>
+      <% if @booking %> · Booking <%= @booking.booking_number %><% end %>
+    </small>
+  </div>
+  <div class="d-flex gap-2">
+    <% unless @invoice.payment_status == 'fully_paid' %>
+      <%= button_to "Mark as Paid", mark_as_paid_store_admin_invoice_path(@invoice),
+          method: :patch, class: "btn btn-success",
+          data: { turbo_confirm: "Mark this invoice as fully paid?" } %>
+    <% end %>
+    <%= link_to edit_store_admin_invoice_path(@invoice), class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-pencil me-2"></i>Edit
+    <% end %>
+    <%= link_to store_admin_invoices_path, class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-arrow-left me-2"></i>Back
+    <% end %>
+    <%= link_to store_admin_invoice_path(@invoice),
+        data: { confirm: "Delete this invoice?", turbo_method: :delete },
+        class: "btn btn-outline-danger" do %>
+      <i class="bi bi-trash me-2"></i>Delete
+    <% end %>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-4 mb-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0"><h6 class="mb-0">Summary</h6></div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-6">Invoice Date</dt><dd class="col-6"><%= @invoice.invoice_date&.strftime('%d %b %Y') %></dd>
+          <dt class="col-6">Due Date</dt><dd class="col-6"><%= @invoice.due_date&.strftime('%d %b %Y') || "—" %></dd>
+          <dt class="col-6">Status</dt><dd class="col-6"><%= @invoice.status&.humanize %></dd>
+          <dt class="col-6">Payment</dt><dd class="col-6"><%= @invoice.payment_status&.humanize %></dd>
+          <dt class="col-6">Delivery Charge</dt><dd class="col-6">₹<%= number_with_delimiter(@invoice.delivery_charge.to_f.round(2)) %></dd>
+          <dt class="col-6">Total</dt><dd class="col-6"><strong>₹<%= number_with_delimiter(@invoice.total_amount.to_f.round(2)) %></strong></dd>
+          <dt class="col-6">Paid</dt><dd class="col-6">₹<%= number_with_delimiter(@invoice.paid_amount.to_f.round(2)) %></dd>
+          <dt class="col-6">Balance</dt><dd class="col-6">₹<%= number_with_delimiter(@invoice.remaining_amount.to_f.round(2)) %></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8 mb-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0"><h6 class="mb-0">Line Items</h6></div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead class="table-light">
+              <tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Amount</th></tr>
+            </thead>
+            <tbody>
+              <% @invoice_items.each do |item| %>
+                <tr>
+                  <td><%= item.description %></td>
+                  <td class="text-end"><%= item.quantity.to_f %></td>
+                  <td class="text-end">₹<%= number_with_delimiter(item.unit_price.to_f.round(2)) %></td>
+                  <td class="text-end">₹<%= number_with_delimiter(item.total_amount.to_f.round(2)) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+            <tfoot>
+              <tr><th colspan="3" class="text-end">Delivery Charge</th><th class="text-end">₹<%= number_with_delimiter(@invoice.delivery_charge.to_f.round(2)) %></th></tr>
+              <tr><th colspan="3" class="text-end">Total</th><th class="text-end">₹<%= number_with_delimiter(@invoice.total_amount.to_f.round(2)) %></th></tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -12,6 +12,14 @@ Rails.application.routes.draw do
       end
     end
     resources :expenses
+    resources :customers
+    resources :products
+    get 'store_inventory', to: 'store_inventory#index', as: 'store_inventory'
+    resources :invoices, only: [:index, :show, :edit, :update, :destroy] do
+      member do
+        patch :mark_as_paid
+      end
+    end
     resources :inventory, only: [:index, :new, :create] do
       collection do
         get :movements
@@ -126,6 +134,8 @@ Rails.application.routes.draw do
     get  'mobile-ui/price-list',       to: 'mobile_ui#price_list',      as: 'mobile_ui_price_list'
     get  'low_stock_alert',            to: 'low_stock_alert#index',     as: 'low_stock_alert'
     get  'low-stock-product',          to: 'low_stock_alert#index',     as: 'low_stock_product'
+    get   'product-summary',           to: 'product_summary#index',     as: 'product_summary'
+    patch 'product-summary',           to: 'product_summary#update'
     get  'mobile-ui/booking/:id',      to: 'mobile_ui#show_booking',    as: 'mobile_ui_show_booking'
     get  'mobile-ui/booking/:id/edit', to: 'mobile_ui#edit_booking',    as: 'mobile_ui_edit_booking'
     patch 'mobile-ui/booking/:id',     to: 'mobile_ui#update_booking',  as: 'mobile_ui_update_booking'

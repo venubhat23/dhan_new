@@ -9,23 +9,23 @@
 
 SHEET = [
   # name,               weight, unit,   dvg_low, dvg, central, central_low, category
-  ["A2 Cow Ghee",         1,   "Liter",  1,   1,   nil, nil, "Ghee"],
-  ["A2 Cow Ghee",         500, "Ml",     3,   3,   2,   nil, "Ghee"],
-  ["A2 Cow Ghee",         250, "Gm",     2,   5,   7,   nil, "Ghee"],
-  ["Groundnut Oil",       1,   "Liter",  5,   6,   14,  nil, "Oils Cold Pressed"],
-  ["Groundnut Oil",       5,   "Liter",  1,   2,   4,   nil, "Oils Cold Pressed"],
-  ["Safflower Oil",       1,   "Ltr",    5,   7,   10,  nil, "Oils Cold Pressed"],
-  ["Sunflower Oil",       1,   "Ltr",    5,   10,  10,  nil, "Oils Cold Pressed"],
-  ["Mustard Oil",         1,   "Ltr",    2,   3,   1,   nil, "Oils Cold Pressed"],
-  ["Mustard Oil",         500, "Ml",     2,   4,   nil, nil, "Oils Cold Pressed"],
-  ["Sesame Oil",          1,   "Ltr",    2,   3,   nil, nil, "Oils Cold Pressed"],
-  ["Sesame Oil",          500, "Ml",     2,   4,   7,   nil, "Oils Cold Pressed"],
+  ["A2 Cow Ghee",         1,   "Liter",  1,   1,   5,   nil, "Ghee"],
+  ["A2 Cow Ghee",         500, "Ml",     3,   3,   5,   nil, "Ghee"],
+  ["A2 Cow Ghee",         250, "Gm",     2,   5,   5,   nil, "Ghee"],
+  ["Groundnut Oil",       1,   "Liter",  5,   6,   5,   nil, "Oils Cold Pressed"],
+  ["Groundnut Oil",       5,   "Liter",  1,   2,   5,   nil, "Oils Cold Pressed"],
+  ["Safflower Oil",       1,   "Ltr",    5,   7,   5,   nil, "Oils Cold Pressed"],
+  ["Sunflower Oil",       1,   "Ltr",    5,   10,  5,   nil, "Oils Cold Pressed"],
+  ["Mustard Oil",         1,   "Ltr",    2,   3,   5,   nil, "Oils Cold Pressed"],
+  ["Mustard Oil",         500, "Ml",     2,   4,   5,   nil, "Oils Cold Pressed"],
+  ["Sesame Oil",          1,   "Ltr",    2,   3,   5,   nil, "Oils Cold Pressed"],
+  ["Sesame Oil",          500, "Ml",     2,   4,   5,   nil, "Oils Cold Pressed"],
   ["Castor Oil",          500, "Ml",     2,   5,   5,   nil, "Oils Cold Pressed"],
-  ["Coconut Oil",         1,   "Ltr",    2,   13,  3,   nil, "Oils Cold Pressed"],
-  ["Coconut Oil",         500, "Ltr",    2,   12,  nil, nil, "Oils Cold Pressed"], # "Ltr" is a typo -> 500 Ml
-  ["Safflower Oil",       5,   "Liter",  1,   1,   nil, nil, "Oils Cold Pressed"],
-  ["Sunflower Oil",       5,   "Liter",  1,   2,   nil, nil, "Oils Cold Pressed"],
-  ["Virgin Coconut Oil",  1,   "Ltr",    nil, 3,   1,   nil, "Oils Cold Pressed"],
+  ["Coconut Oil",         1,   "Ltr",    2,   13,  5,   nil, "Oils Cold Pressed"],
+  ["Coconut Oil",         500, "Ltr",    2,   12,  5,   nil, "Oils Cold Pressed"], # "Ltr" is a typo -> 500 Ml
+  ["Safflower Oil",       5,   "Liter",  1,   1,   5,   nil, "Oils Cold Pressed"],
+  ["Sunflower Oil",       5,   "Liter",  1,   2,   5,   nil, "Oils Cold Pressed"],
+  ["Virgin Coconut Oil",  1,   "Ltr",    nil, 3,   5,   nil, "Oils Cold Pressed"],
 ].freeze
 
 NAME_ALIAS = { "virgin coconut oil" => "virgin coconut oil" }
@@ -69,23 +69,37 @@ ActiveRecord::Base.transaction do
 
     wanted_u = norm_unit(unit)
     variant = product.product_variants.detect { |v| v.weight.to_f == weight.to_f && norm_unit(v.unit) == wanted_u }
-    raise "Variant not found: #{name} #{weight} #{unit}" unless variant
-    touched_variant_ids << variant.id
+    # No matching variant -> treat this row as the variant-less product itself.
+    if variant
+      touched_variant_ids << variant.id
+    else
+      log << "#{name} #{weight} #{unit}: no variant match -> using product ##{product.id} (no variant)"
+    end
 
-    sell = variant.selling_price.to_f
+    sell = (variant&.selling_price).to_f
     sell = product.price.to_f if sell <= 0
     sell = 1 if sell <= 0
-    buy = variant.buying_price.to_f
+    buy = (variant&.buying_price).to_f
     buy = product.buying_price.to_f if buy <= 0
     buy = sell if buy <= 0
 
     # ---- central (admin app) ----
     central_qty = central.to_i
-    variant.update_columns(
-      available_stock: central_qty,
-      low_stock_threshold: (central_low || variant.low_stock_threshold || 10),
-      updated_at: Time.current
-    )
+    if variant
+      variant.update_columns(
+        available_stock: central_qty,
+        low_stock_threshold: (central_low || variant.low_stock_threshold || 10),
+        updated_at: Time.current
+      )
+      central_low_val = variant.low_stock_threshold
+    else
+      product.update_columns(
+        stock: central_qty,
+        low_stock_threshold: (central_low || product.low_stock_threshold || 10),
+        updated_at: Time.current
+      )
+      central_low_val = product.low_stock_threshold
+    end
     if central_qty > 0
       StockBatch.create!(product: product, product_variant: variant, vendor: vendor, store_id: nil,
                          quantity_purchased: central_qty, quantity_remaining: central_qty,
@@ -94,7 +108,7 @@ ActiveRecord::Base.transaction do
 
     # ---- DVG store ----
     dvg_qty = dvg.to_i
-    si = StoreInventory.find_or_initialize_by(store_id: store.id, product_id: product.id, product_variant_id: variant.id)
+    si = StoreInventory.find_or_initialize_by(store_id: store.id, product_id: product.id, product_variant_id: variant&.id)
     si.quantity = dvg_qty
     si.low_stock_threshold = (dvg_low || store.auto_transfer_threshold || 10)
     si.save!
@@ -105,7 +119,7 @@ ActiveRecord::Base.transaction do
     end
 
     log << format("%-20s %4s %-6s | central %-3s (low %s) | DVG %-3s (low %s)",
-                  name, weight, unit, central_qty, variant.low_stock_threshold,
+                  name, weight, unit, central_qty, central_low_val,
                   dvg_qty, si.low_stock_threshold)
   end
 

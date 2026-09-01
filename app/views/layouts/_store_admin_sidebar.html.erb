@@ -160,11 +160,37 @@
       <span class="nav-text">Dashboard</span>
     <% end %>
 
+    <div class="nav-section-title">
+      <i class="fas fa-bolt me-2"></i>Quick Access
+    </div>
+
+    <%= link_to store_admin_customers_path,
+        class: "nav-link-modern #{'active' if controller_name == 'customers'}" do %>
+      <div class="icon-bg"><i class="bi bi-people-fill"></i></div>
+      <span class="nav-text">Customers</span>
+    <% end %>
+
     <%= link_to store_admin_bookings_path,
         class: "nav-link-modern #{'active' if controller_name == 'bookings'}" do %>
-      <div class="icon-bg"><i class="bi bi-cart-check"></i></div>
+      <div class="icon-bg"><i class="bi bi-cart-check-fill"></i></div>
       <span class="nav-text">Bookings</span>
     <% end %>
+
+    <%= link_to store_admin_products_path,
+        class: "nav-link-modern #{'active' if controller_name == 'products'}" do %>
+      <div class="icon-bg"><i class="bi bi-box-seam-fill"></i></div>
+      <span class="nav-text">Products</span>
+    <% end %>
+
+    <%= link_to store_admin_invoices_path,
+        class: "nav-link-modern #{'active' if controller_name == 'invoices'}" do %>
+      <div class="icon-bg"><i class="bi bi-receipt"></i></div>
+      <span class="nav-text">Invoices</span>
+    <% end %>
+
+    <div class="nav-section-title">
+      <i class="fas fa-store me-2"></i>Operations
+    </div>
 
     <%= link_to store_admin_expenses_path,
         class: "nav-link-modern #{'active' if controller_name == 'expenses'}" do %>
@@ -187,6 +213,12 @@
           class: "nav-link-modern #{'active' if controller_name == 'stock_transfers'}" do %>
         <div class="icon-bg"><i class="bi bi-arrow-left-right"></i></div>
         <span class="nav-text">Stock Transfers</span>
+      <% end %>
+
+      <%= link_to store_admin_store_inventory_path,
+          class: "nav-link-modern #{'active' if controller_name == 'store_inventory'}" do %>
+        <div class="icon-bg"><i class="bi bi-clipboard-data"></i></div>
+        <span class="nav-text">Store Inventory</span>
       <% end %>
     <% end %>
 

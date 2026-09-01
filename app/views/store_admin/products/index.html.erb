@@ -1,0 +1,103 @@
+<% content_for :page_title, "Products" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1">Store Products</h4>
+    <small class="text-muted">Products stocked or sold at <%= @current_store.name %></small>
+  </div>
+  <%= link_to new_store_admin_product_path, class: "btn btn-primary" do %>
+    <i class="bi bi-plus-circle me-2"></i>Add Product
+  <% end %>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-4 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #0ea5e9 !important;">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="card-title mb-2" style="color: #2d3748; font-weight: 600;">Products</h6>
+          <div style="color: #1a202c; font-weight: 800; font-size: 1.8rem;"><%= number_with_delimiter(@total_products) %></div>
+          <small class="text-muted">available at this store</small>
+        </div>
+        <i class="bi bi-box-seam" style="color: rgba(45,55,72,0.2); font-size: 3rem;"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <%= form_tag store_admin_products_path, method: :get, local: true, class: "row g-3 align-items-end" do %>
+      <div class="col-md-4">
+        <label class="form-label small">Search</label>
+        <%= text_field_tag :search, params[:search], class: "form-control form-control-sm", placeholder: "Name or SKU" %>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Status</label>
+        <%= select_tag :status, options_for_select([['All', ''], ['Active', 'active'], ['Inactive', 'inactive']], params[:status]), class: "form-select form-select-sm" %>
+      </div>
+      <div class="col-md-3">
+        <%= submit_tag "Filter", class: "btn btn-primary btn-sm" %>
+        <%= link_to "Clear", store_admin_products_path, class: "btn btn-outline-secondary btn-sm" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-0">
+    <h6 class="mb-0"><i class="bi bi-list me-2"></i>Product List</h6>
+  </div>
+  <div class="card-body p-0">
+    <% if @products.any? %>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>SKU</th>
+              <th>Category</th>
+              <th>Price</th>
+              <th>Stock @ Store</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @products.each do |product| %>
+              <tr>
+                <td><strong><%= product.name %></strong></td>
+                <td><small class="text-muted"><%= product.sku %></small></td>
+                <td><%= product.category&.name %></td>
+                <td>₹<%= number_with_delimiter(product.price.to_f.round(2)) %></td>
+                <td><%= number_with_delimiter(@store_stock[product.id].to_f) %> <%= product.unit_type %></td>
+                <td>
+                  <span class="badge <%= product.status == 'active' ? 'bg-success' : 'bg-secondary' %>"><%= product.status&.humanize %></span>
+                </td>
+                <td>
+                  <div class="btn-group" role="group">
+                    <%= link_to store_admin_product_path(product), class: "btn btn-sm btn-outline-primary" do %>
+                      <i class="bi bi-eye"></i>
+                    <% end %>
+                    <%= link_to edit_store_admin_product_path(product), class: "btn btn-sm btn-outline-secondary" do %>
+                      <i class="bi bi-pencil"></i>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <div class="p-3">
+        <%= paginate @products if @products.respond_to?(:current_page) %>
+      </div>
+    <% else %>
+      <div class="text-center py-5">
+        <i class="bi bi-box-seam fs-1 text-muted mb-3"></i>
+        <h5 class="text-muted">No Products Found</h5>
+        <%= link_to "Add Product", new_store_admin_product_path, class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  </div>
+</div>

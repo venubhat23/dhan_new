@@ -1,0 +1,17 @@
+<% content_for :page_title, "New Product" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1">Add New Product</h4>
+    <small class="text-muted">Create a product and carry it at <%= @current_store.name %></small>
+  </div>
+  <%= link_to store_admin_products_path, class: "btn btn-outline-secondary" do %>
+    <i class="bi bi-arrow-left me-2"></i>Back to Products
+  <% end %>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <%= render "form" %>
+  </div>
+</div>

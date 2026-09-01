@@ -1,0 +1,114 @@
+<% content_for :page_title, "Store Inventory" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1">Store Inventory</h4>
+    <small class="text-muted">Per-product and per-variant stock at <%= @current_store.name %></small>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-4 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #0ea5e9 !important;">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="card-title mb-2" style="color: #2d3748; font-weight: 600;">Rows</h6>
+          <div style="color: #1a202c; font-weight: 800; font-size: 1.8rem;"><%= number_with_delimiter(@rows.size) %></div>
+          <small class="text-muted">products / variants tracked</small>
+        </div>
+        <i class="bi bi-boxes" style="color: rgba(45,55,72,0.2); font-size: 3rem;"></i>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 mb-3">
+    <div class="card shadow-sm border-0" style="border-left: 4px solid #ef4444 !important;">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="card-title mb-2" style="color: #2d3748; font-weight: 600;">Low Stock</h6>
+          <div style="color: #1a202c; font-weight: 800; font-size: 1.8rem;"><%= number_with_delimiter(@low_stock_count) %></div>
+          <small class="text-muted">at or below threshold</small>
+        </div>
+        <i class="bi bi-exclamation-triangle" style="color: rgba(239,68,68,0.2); font-size: 3rem;"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <%= form_tag store_admin_store_inventory_path, method: :get, local: true, class: "row g-3 align-items-end" do %>
+      <div class="col-md-4">
+        <label class="form-label small">Search</label>
+        <%= text_field_tag :search, params[:search], class: "form-control form-control-sm", placeholder: "Name or SKU" %>
+      </div>
+      <div class="col-md-3">
+        <%= submit_tag "Filter", class: "btn btn-primary btn-sm" %>
+        <%= link_to "Clear", store_admin_store_inventory_path, class: "btn btn-outline-secondary btn-sm" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-0">
+    <h6 class="mb-0"><i class="bi bi-list me-2"></i>Inventory</h6>
+  </div>
+  <div class="card-body p-0">
+    <% if @rows.any? %>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Product</th>
+              <th>SKU</th>
+              <th>Category</th>
+              <th>Variant</th>
+              <th class="text-end">Stock</th>
+              <th class="text-end">Low Stock Threshold</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @rows.each do |row| %>
+              <% product = row[:product] %>
+              <tr class="<%= 'table-danger' if row[:low_stock] %>">
+                <td>
+                  <%= link_to product.name, store_admin_product_path(product), class: "fw-semibold text-decoration-none" %>
+                </td>
+                <td><small class="text-muted"><%= product.sku %></small></td>
+                <td><%= product.category&.name %></td>
+                <td>
+                  <% if row[:variant] %>
+                    <span class="badge bg-light text-dark border"><%= row[:variant].label %></span>
+                  <% else %>
+                    <span class="text-muted">&mdash;</span>
+                  <% end %>
+                </td>
+                <td class="text-end">
+                  <%= number_with_delimiter(row[:quantity].round(2)) %>
+                  <small class="text-muted"><%= row[:variant]&.unit || product.unit_type %></small>
+                </td>
+                <td class="text-end"><%= number_with_delimiter(row[:threshold].round(2)) %></td>
+                <td>
+                  <% if row[:quantity] <= 0 %>
+                    <span class="badge bg-danger">Out of Stock</span>
+                  <% elsif row[:low_stock] %>
+                    <span class="badge bg-warning text-dark">Low Stock</span>
+                  <% else %>
+                    <span class="badge bg-success">In Stock</span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="text-center py-5">
+        <i class="bi bi-boxes fs-1 text-muted mb-3"></i>
+        <h5 class="text-muted">No Inventory Found</h5>
+        <p class="text-muted">This store has no stocked or sold products yet.</p>
+      </div>
+    <% end %>
+  </div>
+</div>

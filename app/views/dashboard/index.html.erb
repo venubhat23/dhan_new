@@ -623,6 +623,7 @@
           </thead>
           <tbody>
             <% (@low_stock_list || []).each do |product| %>
+              <% qty = (product.respond_to?(:current_stock) ? product.current_stock : product.available_quantity).to_i %>
               <tr>
                 <td class="align-middle">
                   <div>
@@ -636,19 +637,19 @@
                   </span>
                 </td>
                 <td class="align-middle">
-                  <span class="badge bg-<%= product.stock < 3 ? 'danger' : 'warning' %>-subtle text-<%= product.stock < 3 ? 'danger' : 'warning' %> px-3 py-2">
-                    <%= product.stock %> units
+                  <span class="badge bg-<%= qty < 3 ? 'danger' : 'warning' %>-subtle text-<%= qty < 3 ? 'danger' : 'warning' %> px-3 py-2">
+                    <%= qty %> units
                   </span>
                 </td>
                 <td class="align-middle">
                   <h6 class="mb-0">₹<%= number_with_delimiter(product.price) %></h6>
                 </td>
                 <td class="align-middle">
-                  <h6 class="mb-0">₹<%= number_with_delimiter((product.price * product.stock).to_i) %></h6>
+                  <h6 class="mb-0">₹<%= number_with_delimiter((product.price.to_f * qty).to_i) %></h6>
                 </td>
                 <td class="align-middle">
-                  <span class="badge bg-<%= product.stock < 3 ? 'danger' : 'warning' %>">
-                    <%= product.stock < 3 ? 'Critical' : 'Low Stock' %>
+                  <span class="badge bg-<%= qty < 3 ? 'danger' : 'warning' %>">
+                    <%= qty < 3 ? 'Critical' : 'Low Stock' %>
                   </span>
                 </td>
               </tr>

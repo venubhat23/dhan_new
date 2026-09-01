@@ -1,0 +1,83 @@
+<% content_for :page_title, "Edit Invoice" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1">Edit Invoice <%= @invoice.invoice_number %></h4>
+    <small class="text-muted"><%= @invoice.customer_display_name %></small>
+  </div>
+  <%= link_to store_admin_invoice_path(@invoice), class: "btn btn-outline-secondary" do %>
+    <i class="bi bi-arrow-left me-2"></i>Back to Invoice
+  <% end %>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <%= form_with model: [:store_admin, @invoice], local: true do |f| %>
+      <% if @invoice.errors.any? %>
+        <div class="alert alert-danger">
+          <ul class="mb-0">
+            <% @invoice.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Invoice Date</label>
+          <%= f.date_field :invoice_date, class: "form-control" %>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Due Date</label>
+          <%= f.date_field :due_date, class: "form-control" %>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Status</label>
+          <%= f.select :status, options_for_select(Invoice.statuses.keys.map { |s| [s.humanize, s] }, @invoice.status), {}, class: "form-select" %>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Payment</label>
+          <%= f.select :payment_status, options_for_select(Invoice.payment_statuses.keys.map { |s| [s.humanize, s] }, @invoice.payment_status), {}, class: "form-select" %>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Delivery (₹)</label>
+          <%= f.number_field :delivery_charge, class: "form-control", step: 0.01, min: 0 %>
+        </div>
+      </div>
+
+      <h6 class="mt-4 mb-2">Line Items</h6>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead class="table-light">
+            <tr><th style="width:45%">Description</th><th>Qty</th><th>Unit Price (₹)</th><th>Remove</th></tr>
+          </thead>
+          <tbody>
+            <%= f.fields_for :invoice_items do |item_f| %>
+              <tr>
+                <td><%= item_f.text_field :description, class: "form-control form-control-sm" %></td>
+                <td><%= item_f.number_field :quantity, class: "form-control form-control-sm", step: 0.001, min: 0 %></td>
+                <td><%= item_f.number_field :unit_price, class: "form-control form-control-sm", step: 0.01, min: 0 %></td>
+                <td class="text-center">
+                  <% unless item_f.object.new_record? %>
+                    <div class="form-check">
+                      <%= item_f.check_box :_destroy, class: "form-check-input" %>
+                    </div>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <p class="small text-muted">
+        The invoice total is recalculated from the line items on save. Editing items also updates the linked booking.
+      </p>
+
+      <div class="d-flex gap-2 mt-3">
+        <%= f.submit "Save Invoice", class: "btn btn-primary" %>
+        <%= link_to "Cancel", store_admin_invoice_path(@invoice), class: "btn btn-outline-secondary" %>
+      </div>
+    <% end %>
+  </div>
+</div>

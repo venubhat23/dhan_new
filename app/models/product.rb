@@ -137,6 +137,31 @@ class Product < ApplicationRecord
       .group('products.id')
       .having('COALESCE(SUM(CASE WHEN stock_batches.status = ? THEN stock_batches.quantity_remaining ELSE 0 END), 0) = 0', 'active')
   }
+  # Real on-hand quantity, matching #available_quantity: total variant stock for
+  # multi-qty products, active central (store_id IS NULL) batch stock otherwise.
+  # The plain `stock` column is not maintained for multi-qty products, so the
+  # dashboard inventory cards and the product list they link to must both go
+  # through this to agree with each other.
+  REAL_STOCK_SQL = <<~SQL.squish.freeze
+    CASE WHEN products.has_multiple_quantities THEN
+      COALESCE((SELECT SUM(pv.available_stock) FROM product_variants pv
+                WHERE pv.product_id = products.id), 0)
+    ELSE
+      COALESCE((SELECT SUM(sb.quantity_remaining) FROM stock_batches sb
+                WHERE sb.product_id = products.id
+                  AND sb.status = 'active' AND sb.store_id IS NULL), 0)
+    END
+  SQL
+  scope :real_in_stock, -> { where(Arel.sql("(#{REAL_STOCK_SQL}) > 0")) }
+  scope :real_out_of_stock, -> { where(Arel.sql("(#{REAL_STOCK_SQL}) <= 0")) }
+  scope :real_low_stock, -> {
+    where(Arel.sql("(#{REAL_STOCK_SQL}) > 0 AND (#{REAL_STOCK_SQL}) <= COALESCE(products.low_stock_threshold, 5)"))
+  }
+  scope :real_at_or_below_threshold, -> {
+    where(Arel.sql("(#{REAL_STOCK_SQL}) <= COALESCE(products.low_stock_threshold, 5)"))
+  }
+  scope :with_real_stock_amount, -> { select(Arel.sql("products.*, (#{REAL_STOCK_SQL}) AS current_stock")) }
+
   scope :by_category, ->(category_id) { where(category_id: category_id) }
   scope :search, ->(query) {
     words = query.to_s.strip.split(/\s+/)

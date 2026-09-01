@@ -1,0 +1,76 @@
+<% content_for :page_title, "Customer" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1"><%= @customer.full_name %></h4>
+    <small class="text-muted">Customer at <%= @current_store.name %></small>
+  </div>
+  <div class="d-flex gap-2">
+    <%= link_to edit_store_admin_customer_path(@customer), class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-pencil me-2"></i>Edit
+    <% end %>
+    <%= link_to store_admin_customers_path, class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-arrow-left me-2"></i>Back
+    <% end %>
+    <% if @store_bookings.none? %>
+      <%= link_to store_admin_customer_path(@customer),
+          data: { confirm: "Delete this customer?", turbo_method: :delete },
+          class: "btn btn-outline-danger" do %>
+        <i class="bi bi-trash me-2"></i>Delete
+      <% end %>
+    <% end %>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-4 mb-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0"><h6 class="mb-0">Details</h6></div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5">Mobile</dt><dd class="col-7"><%= @customer.mobile %></dd>
+          <dt class="col-5">Email</dt><dd class="col-7"><%= @customer.placeholder_email? ? "—" : @customer.email.presence || "—" %></dd>
+          <dt class="col-5">WhatsApp</dt><dd class="col-7"><%= @customer.whatsapp_number.presence || "—" %></dd>
+          <dt class="col-5">Gender</dt><dd class="col-7"><%= @customer.gender.presence || "—" %></dd>
+          <dt class="col-5">Company</dt><dd class="col-7"><%= @customer.company_name.presence || "—" %></dd>
+          <dt class="col-5">GST No.</dt><dd class="col-7"><%= @customer.gst_no.presence || "—" %></dd>
+          <dt class="col-5">Address</dt><dd class="col-7"><%= @customer.address.presence || "—" %></dd>
+          <dt class="col-5">Status</dt><dd class="col-7"><%= @customer.status ? "Active" : "Inactive" %></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8 mb-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">Bookings at this store</h6>
+        <span class="fw-bold text-primary">₹<%= number_with_delimiter(@store_spend.to_f.round(2)) %> spent</span>
+      </div>
+      <div class="card-body p-0">
+        <% if @store_bookings.any? %>
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr><th>Booking #</th><th>Date</th><th>Status</th><th>Amount</th><th></th></tr>
+              </thead>
+              <tbody>
+                <% @store_bookings.each do |booking| %>
+                  <tr>
+                    <td><strong><%= booking.booking_number %></strong></td>
+                    <td><small><%= booking.created_at.strftime('%d %b %Y') %></small></td>
+                    <td><span class="badge bg-light text-dark"><%= booking.status&.humanize %></span></td>
+                    <td>₹<%= number_with_delimiter(booking.total_amount.to_f.round(2)) %></td>
+                    <td><%= link_to "View", store_admin_booking_path(booking), class: "btn btn-sm btn-outline-primary" %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <div class="text-center py-4 text-muted">No bookings at this store yet.</div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

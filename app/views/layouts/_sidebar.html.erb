@@ -499,6 +499,19 @@
               <div class="nav-indicator"></div>
             <% end %>
           </li>
+
+          <!-- Product Summary -->
+          <li class="nav-item">
+            <%= link_to admin_product_summary_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/product-summary')}" do %>
+              <div class="nav-icon-modern">
+                <div class="icon-bg gradient-teal">
+                  <i class="bi bi-table"></i>
+                </div>
+              </div>
+              <span class="nav-text">Product Summary</span>
+              <div class="nav-indicator"></div>
+            <% end %>
+          </li>
         <% end %>
 
         <!-- Invoices -->

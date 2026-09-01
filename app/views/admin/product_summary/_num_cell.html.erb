@@ -1,0 +1,16 @@
+<%
+  danger    = local_assigns[:danger]
+  editable  = local_assigns.fetch(:editable, false)
+  step      = local_assigns[:step] || 1
+  has_value = !value.nil?
+  num       = has_value ? (value.to_f == value.to_i ? value.to_i : value.to_f.round(2)) : nil
+%>
+<td class="text-center <%= 'table-danger' if danger %>">
+  <span class="pse-val"><%= has_value ? num : '—' %></span>
+  <% if editable %>
+    <input type="number" step="<%= step %>" min="0"
+           name="<%= name %>" value="<%= num %>"
+           class="pse-input form-control form-control-sm text-center d-inline-block"
+           style="width:74px;">
+  <% end %>
+</td>

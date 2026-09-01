@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="col-md-2">
           <label class="form-label small text-muted mb-1">Stock</label>
           <%= f.select :stock_status,
-                options_for_select([['All Stock', ''], ['In Stock', 'in_stock'], ['Out of Stock', 'out_of_stock']], params[:stock_status]),
+                options_for_select([['All Stock', ''], ['In Stock', 'in_stock'], ['Low Stock', 'low_stock'], ['Out of Stock', 'out_of_stock']], params[:stock_status]),
                 {},
                 class: "form-select" %>
         </div>

@@ -23,11 +23,11 @@ class Admin::ProductsController < Admin::ApplicationController
     if params[:stock_status].present?
       case params[:stock_status]
       when 'in_stock'
-        @products = @products.in_stock
+        @products = @products.real_in_stock
       when 'out_of_stock'
-        @products = @products.out_of_stock
+        @products = @products.real_out_of_stock
       when 'low_stock'
-        @products = @products.where('stock <= 5 AND stock > 0')
+        @products = @products.real_low_stock
       end
     end
 

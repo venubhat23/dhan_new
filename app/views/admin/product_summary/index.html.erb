@@ -1,0 +1,168 @@
+<% content_for :title, "Product Summary" %>
+
+<style>
+  .pse-form .pse-input { display: none; }
+  .pse-form.pse-editing .pse-input { display: inline-block; }
+  .pse-form.pse-editing .pse-val { display: none; }
+  #pse-table th, #pse-table td { white-space: nowrap; }
+  #pse-table thead th { position: sticky; top: 0; z-index: 2; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h2 class="mb-1">
+      <i class="bi bi-table text-primary me-2"></i>Product Summary
+    </h2>
+    <p class="text-muted mb-0">Main store &amp; per-store stock and low-stock thresholds for every product and variant</p>
+  </div>
+  <div class="d-flex gap-2">
+    <%= link_to admin_products_path, class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-box-seam me-1"></i>All Products
+    <% end %>
+    <button type="button" class="btn btn-primary" id="pse-edit-btn">
+      <i class="bi bi-pencil-square me-1"></i>Edit Table
+    </button>
+  </div>
+</div>
+
+<div class="alert alert-info py-2 px-3 small pse-edit-hint d-none">
+  <i class="bi bi-info-circle me-1"></i>
+  Increasing a <strong>Main Store</strong> stock value adds a new stock batch for the difference;
+  decreasing it draws the difference down from existing batches (FIFO). Store values are set directly.
+</div>
+
+<%= form_with url: admin_product_summary_path, method: :patch, local: true, html: { id: "pse-form", class: "pse-form" } do %>
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent d-flex justify-content-end gap-2 pse-actions d-none">
+      <button type="button" class="btn btn-outline-secondary btn-sm" id="pse-cancel-btn">Cancel</button>
+      <button type="submit" class="btn btn-success btn-sm">
+        <i class="bi bi-check-lg me-1"></i>Save Changes
+      </button>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive" style="max-height: 78vh;">
+        <table class="table table-hover table-bordered align-middle mb-0" id="pse-table" style="font-size: 0.83rem;">
+          <thead class="table-light">
+            <tr>
+              <th rowspan="2" class="ps-3">Product / Variant</th>
+              <th rowspan="2">SKU</th>
+              <th rowspan="2">Category</th>
+              <th colspan="2" class="text-center bg-primary-subtle">Main Store</th>
+              <% @stores.each do |store| %>
+                <th colspan="2" class="text-center bg-success-subtle"><%= store.name %></th>
+              <% end %>
+            </tr>
+            <tr>
+              <th class="text-center bg-primary-subtle">Stock</th>
+              <th class="text-center bg-primary-subtle">Low Threshold</th>
+              <% @stores.each do |_store| %>
+                <th class="text-center bg-success-subtle">Stock</th>
+                <th class="text-center bg-success-subtle">Low Threshold</th>
+              <% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <% @products.each do |product| %>
+              <%
+                variants   = product.sorted_variants
+                has_var    = variants.any?
+                main_stock = @main_stock[product.id].to_f
+                main_thr   = product.low_stock_threshold
+              %>
+              <tr>
+                <td class="ps-3 fw-semibold"><%= product.name %></td>
+                <td><%= product.sku %></td>
+                <td><%= product.category&.name %></td>
+
+                <%= render "num_cell",
+                      value: main_stock,
+                      name: "main_products[#{product.id}][stock]",
+                      editable: !has_var,
+                      danger: (main_thr && main_stock <= main_thr.to_f) %>
+                <%= render "num_cell",
+                      value: main_thr,
+                      name: "main_products[#{product.id}][threshold]",
+                      editable: true %>
+
+                <% @stores.each do |store| %>
+                  <% s_qty = @store_prod_qty[[store.id, product.id]] %>
+                  <% s_thr = @store_threshold[[store.id, product.id, nil]] %>
+                  <%= render "num_cell",
+                        value: s_qty,
+                        name: "store_products[#{store.id}][#{product.id}][qty]",
+                        editable: !has_var,
+                        danger: (s_qty && s_thr && s_qty <= s_thr.to_f) %>
+                  <%= render "num_cell",
+                        value: s_thr,
+                        name: "store_products[#{store.id}][#{product.id}][threshold]",
+                        editable: !has_var %>
+                <% end %>
+              </tr>
+
+              <% variants.each do |variant| %>
+                <%
+                  v_stock = variant.available_stock.to_f
+                  v_thr   = variant.low_stock_threshold
+                %>
+                <tr class="table-light">
+                  <td class="ps-4 text-muted">
+                    <i class="bi bi-arrow-return-right me-1"></i><%= variant.label %>
+                  </td>
+                  <td></td>
+                  <td></td>
+
+                  <%= render "num_cell",
+                        value: v_stock,
+                        name: "main_variants[#{variant.id}][stock]",
+                        editable: true,
+                        danger: (v_thr && v_stock <= v_thr.to_f) %>
+                  <%= render "num_cell",
+                        value: v_thr,
+                        name: "main_variants[#{variant.id}][threshold]",
+                        editable: true %>
+
+                  <% @stores.each do |store| %>
+                    <% sv_qty = @store_qty[[store.id, product.id, variant.id]] %>
+                    <% sv_thr = @store_threshold[[store.id, product.id, variant.id]] %>
+                    <%= render "num_cell",
+                          value: sv_qty,
+                          name: "store_variants[#{store.id}][#{variant.id}][qty]",
+                          editable: true,
+                          danger: (sv_qty && sv_thr && sv_qty.to_f <= sv_thr.to_f) %>
+                    <%= render "num_cell",
+                          value: sv_thr,
+                          name: "store_variants[#{store.id}][#{variant.id}][threshold]",
+                          editable: true %>
+                  <% end %>
+                </tr>
+              <% end %>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<script>
+  (function () {
+    var form   = document.getElementById('pse-form');
+    var editBtn = document.getElementById('pse-edit-btn');
+    var cancelBtn = document.getElementById('pse-cancel-btn');
+    var actions = document.querySelector('.pse-actions');
+    var hint    = document.querySelector('.pse-edit-hint');
+
+    function setEditing(on) {
+      form.classList.toggle('pse-editing', on);
+      actions.classList.toggle('d-none', !on);
+      hint.classList.toggle('d-none', !on);
+      editBtn.classList.toggle('d-none', on);
+    }
+
+    editBtn.addEventListener('click', function () { setEditing(true); });
+    cancelBtn.addEventListener('click', function () {
+      form.reset();
+      setEditing(false);
+    });
+  })();
+</script>
