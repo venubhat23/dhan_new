@@ -1,5 +1,5 @@
 class StoreAdmin::InvoicesController < StoreAdmin::ApplicationController
-  before_action :set_invoice, only: [:show, :edit, :update, :destroy, :mark_as_paid]
+  before_action :set_invoice, only: [:show, :edit, :update, :destroy, :mark_as_paid, :download_pdf]
 
   # Only invoices generated from bookings placed at the current store.
   def index
@@ -54,6 +54,30 @@ class StoreAdmin::InvoicesController < StoreAdmin::ApplicationController
     redirect_to store_admin_invoices_path, notice: 'Invoice deleted successfully.'
   rescue => e
     redirect_to store_admin_invoice_path(@invoice), alert: "Error deleting invoice: #{e.message}"
+  end
+
+  def download_pdf
+    @invoice_items = @invoice&.invoice_items&.includes(:product) || []
+
+    respond_to do |format|
+      format.pdf do
+        pdf = WickedPdf.new.pdf_from_string(
+          render_to_string(template: 'admin/invoices/show', formats: [:html], layout: false),
+          page_size: 'A4',
+          margin: { top: '0.5in', bottom: '0.5in', left: '0.5in', right: '0.5in' },
+          dpi: 300,
+          encoding: 'UTF-8',
+          disable_smart_shrinking: true,
+          print_media_type: true,
+          orientation: 'Portrait'
+        )
+        send_data pdf,
+                  filename: "invoice-#{@invoice.invoice_number}.pdf",
+                  type: 'application/pdf',
+                  disposition: 'attachment'
+      end
+      format.html { redirect_to store_admin_invoice_path(@invoice) }
+    end
   end
 
   def mark_as_paid

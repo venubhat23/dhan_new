@@ -12,6 +12,11 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
     end
 
     scope = scope.where(status: params[:status]) if params[:status].present?
+    scope = scope.where(category_id: params[:category_id]) if params[:category_id].present?
+
+    # Categories that actually have a product at this store, for the filter dropdown.
+    @filter_categories = Category.where(id: store_products.distinct.pluck(:category_id).compact)
+                                .order(:display_order, :name)
 
     @products = scope.includes(:category, :product_variants).order(:name)
     @products = @products.page(params[:page]).per(20) if @products.respond_to?(:page)
@@ -63,6 +68,7 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
 
   def update
     if @product.update(product_params)
+      @product.product_variants.destroy_all unless @product.has_multiple_quantities?
       carry_product_at_store(@product)
       redirect_to store_admin_product_path(@product), notice: 'Product updated successfully.'
     else
@@ -87,10 +93,12 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
   # Products with an active stock batch or store inventory row for this store,
   # plus anything this store has actually sold.
   def store_products
-    product_ids = @current_store.stock_batches.where(status: 'active').pluck(:product_id)
-    product_ids |= @current_store.store_inventories.pluck(:product_id)
-    product_ids |= BookingItem.where(booking_id: @current_store.bookings.select(:id)).pluck(:product_id)
-    Product.where(id: product_ids.compact.uniq)
+    @store_products ||= begin
+      product_ids = @current_store.stock_batches.where(status: 'active').pluck(:product_id)
+      product_ids |= @current_store.store_inventories.pluck(:product_id)
+      product_ids |= BookingItem.where(booking_id: @current_store.bookings.select(:id)).pluck(:product_id)
+      Product.where(id: product_ids.compact.uniq)
+    end
   end
 
   def set_product
@@ -116,6 +124,16 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
                             .sum(:quantity_remaining)
     row.quantity = on_hand.positive? ? on_hand : (initial_stock.to_f.positive? ? initial_stock.to_f : row.quantity.to_f)
     row.save
+
+    # Multi-quantity products: carry each variant at this store, keyed by the entered
+    # per-variant stock (variants track their own available_stock, not stock batches).
+    product.product_variants.reload.each do |variant|
+      vrow = @current_store.store_inventories
+                           .find_or_initialize_by(product_id: product.id, product_variant_id: variant.id)
+      vrow.low_stock_threshold = variant.low_stock_threshold || product.low_stock_threshold || 10 if vrow.new_record?
+      vrow.quantity = variant.available_stock.to_f
+      vrow.save
+    end
   rescue => e
     Rails.logger.error "carry_product_at_store failed for product #{product.id}: #{e.message}"
   end
@@ -128,7 +146,14 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
     params.require(:product).permit(
       :name, :sku, :barcode, :category_id, :description,
       :price, :buying_price, :purchase_price, :discount_price,
-      :unit_type, :status, :low_stock_threshold, :stock, :hsn_code
+      :unit_type, :status, :low_stock_threshold, :stock, :hsn_code,
+      :has_multiple_quantities,
+      product_variants_attributes: [
+        :id, :weight, :unit, :buying_price, :purchase_price, :selling_price,
+        :b2b_price, :b2b_percentage, :low_stock_threshold,
+        :discount_enabled, :discount_type, :discount_value, :discount_amount,
+        :available_stock, :is_default, :display_order, :_destroy
+      ]
     )
   end
 end

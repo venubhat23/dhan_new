@@ -28,11 +28,17 @@
 <div class="card border-0 shadow-sm mb-4">
   <div class="card-body py-3">
     <%= form_tag store_admin_products_path, method: :get, local: true, class: "row g-3 align-items-end" do %>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <label class="form-label small">Search</label>
         <%= text_field_tag :search, params[:search], class: "form-control form-control-sm", placeholder: "Name or SKU" %>
       </div>
       <div class="col-md-3">
+        <label class="form-label small">Category</label>
+        <%= select_tag :category_id,
+              options_from_collection_for_select(@filter_categories, :id, :name, params[:category_id]),
+              include_blank: "All categories", class: "form-select form-select-sm" %>
+      </div>
+      <div class="col-md-2">
         <label class="form-label small">Status</label>
         <%= select_tag :status, options_for_select([['All', ''], ['Active', 'active'], ['Inactive', 'inactive']], params[:status]), class: "form-select form-select-sm" %>
       </div>

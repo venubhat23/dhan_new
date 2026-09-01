@@ -108,6 +108,17 @@
                     <%= link_to edit_store_admin_invoice_path(invoice), class: "btn btn-sm btn-outline-secondary" do %>
                       <i class="bi bi-pencil"></i>
                     <% end %>
+                    <%= link_to download_pdf_store_admin_invoice_path(invoice, format: :pdf), class: "btn btn-sm btn-outline-secondary", title: "Download PDF" do %>
+                      <i class="bi bi-file-earmark-pdf"></i>
+                    <% end %>
+                    <% unless invoice.payment_status == 'fully_paid' %>
+                      <%= button_to mark_as_paid_store_admin_invoice_path(invoice), method: :patch,
+                            class: "btn btn-sm btn-outline-success", title: "Mark as Paid",
+                            form: { class: "d-inline" },
+                            data: { turbo_confirm: "Mark #{invoice.invoice_number} as fully paid?" } do %>
+                        <i class="bi bi-check2-circle"></i>
+                      <% end %>
+                    <% end %>
                   </div>
                 </td>
               </tr>

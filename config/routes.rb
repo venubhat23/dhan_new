@@ -18,6 +18,7 @@ Rails.application.routes.draw do
     resources :invoices, only: [:index, :show, :edit, :update, :destroy] do
       member do
         patch :mark_as_paid
+        get :download_pdf
       end
     end
     resources :inventory, only: [:index, :new, :create] do
