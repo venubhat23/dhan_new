@@ -54,4 +54,17 @@ module VendorAreaHelper
   def vn_bulk_mark_as_paid_vendor_purchases_path(*args)
     public_send("bulk_mark_as_paid_#{vendor_area}_vendor_purchases_path", *args)
   end
+
+  # ---- Cross-links out of the vendor screens ----
+  def vn_new_product_path(*args) = new_polymorphic_path([vendor_area, :product], *args)
+
+  def vn_dashboard_path
+    if vendor_area == :store_admin
+      store_admin_root_path
+    elsif respond_to?(:admin_root_path)
+      admin_root_path
+    else
+      root_path
+    end
+  end
 end

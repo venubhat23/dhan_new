@@ -1,11 +1,46 @@
 <% content_for :title, "Product Summary" %>
 
 <style>
-  .pse-form .pse-input { display: none; }
-  .pse-form.pse-editing .pse-input { display: inline-block; }
-  .pse-form.pse-editing .pse-val { display: none; }
   #pse-table th, #pse-table td { white-space: nowrap; }
   #pse-table thead th { position: sticky; top: 0; z-index: 2; }
+
+  /* Read-only by default: inputs look like plain text until you click the pencil */
+  .pse-cell { display: inline-flex; align-items: center; gap: 2px; }
+  .pse-input {
+    width: 58px;
+    padding: 1px 4px;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    cursor: default;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .pse-input::-webkit-outer-spin-button,
+  .pse-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .pse-input:read-only { pointer-events: none; }
+  .pse-input.pse-editing {
+    border-color: #86b7fe;
+    background: #fff;
+    box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .15);
+    cursor: text;
+  }
+  .pse-input.pse-dirty {
+    border-color: #ffc107;
+    background: #fff3cd;
+  }
+  .pse-edit-cell {
+    visibility: hidden;
+    border: 0;
+    background: none;
+    color: #6c757d;
+    line-height: 1;
+    padding: 0;
+    font-size: .78rem;
+  }
+  #pse-table td:hover .pse-edit-cell { visibility: visible; }
+  .pse-input.pse-editing + .pse-edit-cell,
+  .pse-input.pse-dirty + .pse-edit-cell { visibility: visible; color: #0d6efd; }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
@@ -19,14 +54,13 @@
     <%= link_to admin_products_path, class: "btn btn-outline-secondary" do %>
       <i class="bi bi-box-seam me-1"></i>All Products
     <% end %>
-    <button type="button" class="btn btn-primary" id="pse-edit-btn">
-      <i class="bi bi-pencil-square me-1"></i>Edit Table
-    </button>
   </div>
 </div>
 
-<div class="alert alert-info py-2 px-3 small pse-edit-hint d-none">
+<div class="alert alert-info py-2 px-3 small pse-edit-hint">
   <i class="bi bi-info-circle me-1"></i>
+  The table is read-only. Click the <i class="bi bi-pencil"></i> pencil on a cell to edit that one value, then
+  <strong>Save Changes</strong>.
   Increasing a <strong>Main Store</strong> stock value adds a new stock batch for the difference;
   decreasing it draws the difference down from existing batches (FIFO). Store values are set directly.
   For a product <strong>with variants</strong>, editing the parent row's Main Store stock applies the
@@ -36,7 +70,8 @@
 
 <%= form_with url: admin_product_summary_path, method: :patch, local: true, html: { id: "pse-form", class: "pse-form" } do %>
   <div class="card border-0 shadow-sm">
-    <div class="card-header bg-transparent d-flex justify-content-end gap-2 pse-actions d-none">
+    <div class="card-header bg-transparent d-flex justify-content-end align-items-center gap-2 pse-actions d-none">
+      <span class="small text-muted me-auto"><span class="pse-dirty-count">0</span> unsaved change(s)</span>
       <button type="button" class="btn btn-outline-secondary btn-sm" id="pse-cancel-btn">Cancel</button>
       <button type="submit" class="btn btn-success btn-sm">
         <i class="bi bi-check-lg me-1"></i>Save Changes
@@ -148,23 +183,59 @@
 
 <script>
   (function () {
-    var form   = document.getElementById('pse-form');
-    var editBtn = document.getElementById('pse-edit-btn');
+    var form      = document.getElementById('pse-form');
+    var table     = document.getElementById('pse-table');
+    var actions   = document.querySelector('.pse-actions');
     var cancelBtn = document.getElementById('pse-cancel-btn');
-    var actions = document.querySelector('.pse-actions');
-    var hint    = document.querySelector('.pse-edit-hint');
+    var counter   = document.querySelector('.pse-dirty-count');
 
-    function setEditing(on) {
-      form.classList.toggle('pse-editing', on);
-      actions.classList.toggle('d-none', !on);
-      hint.classList.toggle('d-none', !on);
-      editBtn.classList.toggle('d-none', on);
+    function refresh() {
+      var n = form.querySelectorAll('.pse-input.pse-dirty').length;
+      if (counter) counter.textContent = n;
+      actions.classList.toggle('d-none', n === 0);
     }
 
-    editBtn.addEventListener('click', function () { setEditing(true); });
-    cancelBtn.addEventListener('click', function () {
-      form.reset();
-      setEditing(false);
+    function startEditing(input) {
+      input.classList.add('pse-editing');
+      input.readOnly = false;
+      input.focus();
+      input.select();
+    }
+
+    function resetInput(input) {
+      input.value = input.dataset.original;
+      input.classList.remove('pse-editing', 'pse-dirty');
+      input.readOnly = true;
+    }
+
+    // Click the pencil -> make just that one cell editable
+    table.addEventListener('click', function (e) {
+      var btn = e.target.closest('.pse-edit-cell');
+      if (!btn) return;
+      var input = btn.parentElement.querySelector('.pse-input');
+      if (input) startEditing(input);
     });
+
+    table.addEventListener('input', function (e) {
+      var input = e.target;
+      if (!input.classList || !input.classList.contains('pse-input')) return;
+      var changed = String(input.value) !== String(input.dataset.original);
+      input.classList.toggle('pse-dirty', changed);
+      refresh();
+    });
+
+    // Leaving a field that wasn't changed puts it back to read-only
+    table.addEventListener('focusout', function (e) {
+      var input = e.target;
+      if (!input.classList || !input.classList.contains('pse-input')) return;
+      if (String(input.value) === String(input.dataset.original)) resetInput(input);
+    });
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function () {
+        form.querySelectorAll('.pse-input').forEach(resetInput);
+        refresh();
+      });
+    }
   })();
 </script>
