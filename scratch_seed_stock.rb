@@ -2,13 +2,14 @@
 #   bin/rails runner scratch_seed_stock.rb
 #
 # - Wipes ALL stock_batches, stock_movements, stock_transfers (catalog untouched).
-# - Re-inserts central + DVG-store stock from the sheet below.
-# - Central stock  -> product_variant.available_stock (+ a central StockBatch per positive qty)
-# - DVG store stock -> StoreInventory row (+ a store StockBatch per positive qty)
-# - "DVG store low stock" -> StoreInventory#low_stock_threshold (per variant)
+# - Re-inserts central + store stock from the sheet below.
+# - Central stock -> product_variant.available_stock (+ a central StockBatch per positive qty)
+# - Store stock   -> StoreInventory row (+ a store StockBatch per positive qty)
+# - "store low stock" -> StoreInventory#low_stock_threshold (per variant)
+# Store = "Gandhi Bazar" if present, else the only store (when there is exactly one).
 
 SHEET = [
-  # name,               weight, unit,   dvg_low, dvg, central, central_low, category
+  # name,               weight, unit,   store_low, store_qty, central, central_low, category
   ["A2 Cow Ghee",         1,   "Liter",  1,   1,   5,   nil, "Ghee"],
   ["A2 Cow Ghee",         500, "Ml",     3,   3,   5,   nil, "Ghee"],
   ["A2 Cow Ghee",         250, "Gm",     2,   5,   5,   nil, "Ghee"],
@@ -35,7 +36,9 @@ UNIT_ALIAS = { "ltr" => "liter", "l" => "liter", "ltrs" => "liter",
 
 def norm_unit(u) = UNIT_ALIAS[u.to_s.strip.downcase] || u.to_s.strip.downcase
 
-store  = Store.where("name ILIKE 'DVG%'").first or abort "DVG store not found"
+store  = Store.where("name ILIKE '%Gandhi%Baz%'").first ||
+         (Store.count == 1 ? Store.first : nil) or
+  abort "Gandhi Bazar store not found and there is not exactly one store"
 vendor = Vendor.find_by("name ILIKE 'System Default'") || Vendor.first or abort "no vendor"
 puts "Store: ##{store.id} #{store.name}   Vendor: ##{vendor.id} #{vendor.name}"
 
@@ -50,7 +53,7 @@ ActiveRecord::Base.transaction do
 
   touched_variant_ids = []
 
-  SHEET.each do |name, weight, unit, dvg_low, dvg, central, central_low, category_name|
+  SHEET.each do |name, weight, unit, store_low, store_qty_in, central, central_low, category_name|
     lookup = NAME_ALIAS[name.downcase] || name
     product = Product.where("lower(name) = ?", lookup.downcase).first
     raise "Product not found: #{name}" unless product
@@ -106,24 +109,24 @@ ActiveRecord::Base.transaction do
                          purchase_price: buy, selling_price: sell, batch_date: Date.current, status: "active")
     end
 
-    # ---- DVG store ----
-    dvg_qty = dvg.to_i
+    # ---- store ----
+    store_qty = store_qty_in.to_i
     si = StoreInventory.find_or_initialize_by(store_id: store.id, product_id: product.id, product_variant_id: variant&.id)
-    si.quantity = dvg_qty
-    si.low_stock_threshold = (dvg_low || store.auto_transfer_threshold || 10)
+    si.quantity = store_qty
+    si.low_stock_threshold = (store_low || store.auto_transfer_threshold || 10)
     si.save!
-    if dvg_qty > 0
+    if store_qty > 0
       StockBatch.create!(product: product, product_variant: variant, vendor: vendor, store_id: store.id,
-                         quantity_purchased: dvg_qty, quantity_remaining: dvg_qty,
+                         quantity_purchased: store_qty, quantity_remaining: store_qty,
                          purchase_price: buy, selling_price: sell, batch_date: Date.current, status: "active")
     end
 
-    log << format("%-20s %4s %-6s | central %-3s (low %s) | DVG %-3s (low %s)",
+    log << format("%-20s %4s %-6s | central %-3s (low %s) | %s %-3s (low %s)",
                   name, weight, unit, central_qty, central_low_val,
-                  dvg_qty, si.low_stock_threshold)
+                  store.name, store_qty, si.low_stock_threshold)
   end
 end
 
 puts "\n=== RESULT ==="
 puts log.join("\n")
-puts "\nStockBatch=#{StockBatch.count} (central #{StockBatch.central.count}, DVG #{StockBatch.where.not(store_id: nil).count})  StoreInventory=#{StoreInventory.count}"
+puts "\nStockBatch=#{StockBatch.count} (central #{StockBatch.central.count}, #{store.name} #{StockBatch.where.not(store_id: nil).count})  StoreInventory=#{StoreInventory.count}"
