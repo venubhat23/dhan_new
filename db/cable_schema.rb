@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_01_071746) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_01_100520) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1150,8 +1150,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_01_071746) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "store_id"
+    t.bigint "product_variant_id"
     t.index ["product_id", "store_id"], name: "index_stock_batches_on_product_id_and_store_id"
     t.index ["product_id"], name: "index_stock_batches_on_product_id"
+    t.index ["product_variant_id"], name: "index_stock_batches_on_product_variant_id"
     t.index ["store_id"], name: "index_stock_batches_on_store_id"
     t.index ["vendor_id"], name: "index_stock_batches_on_vendor_id"
     t.index ["vendor_purchase_id"], name: "index_stock_batches_on_vendor_purchase_id"
@@ -1199,6 +1201,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_01_071746) do
     t.index ["status"], name: "index_stock_transfers_on_status"
     t.index ["to_store_id"], name: "index_stock_transfers_on_to_store_id"
     t.index ["transfer_group_id"], name: "index_stock_transfers_on_transfer_group_id"
+  end
+
+  create_table "store_inventories", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.bigint "product_id", null: false
+    t.bigint "product_variant_id"
+    t.decimal "quantity", precision: 12, scale: 3, default: "0.0", null: false
+    t.integer "low_stock_threshold", default: 10, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id"], name: "index_store_inventories_on_product_id"
+    t.index ["product_variant_id"], name: "index_store_inventories_on_product_variant_id"
+    t.index ["store_id", "product_id", "product_variant_id"], name: "index_store_inventories_uniqueness", unique: true
+    t.index ["store_id"], name: "index_store_inventories_on_store_id"
   end
 
   create_table "stores", force: :cascade do |t|
@@ -1567,6 +1583,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_01_071746) do
   add_foreign_key "staff_attendances", "staff_members"
   add_foreign_key "staff_members", "stores"
   add_foreign_key "staff_payments", "staff_members"
+  add_foreign_key "stock_batches", "product_variants"
   add_foreign_key "stock_batches", "products"
   add_foreign_key "stock_batches", "stores"
   add_foreign_key "stock_batches", "vendor_purchases"
@@ -1577,6 +1594,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_01_071746) do
   add_foreign_key "stock_transfers", "stores", column: "to_store_id"
   add_foreign_key "stock_transfers", "users", column: "approved_by_id"
   add_foreign_key "stock_transfers", "users", column: "requested_by_id"
+  add_foreign_key "store_inventories", "product_variants"
+  add_foreign_key "store_inventories", "products"
+  add_foreign_key "store_inventories", "stores"
   add_foreign_key "subscription_templates", "customers"
   add_foreign_key "subscription_templates", "delivery_people"
   add_foreign_key "subscription_templates", "products"
