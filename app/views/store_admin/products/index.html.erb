@@ -57,6 +57,7 @@
               <th>Name</th>
               <th>SKU</th>
               <th>Category</th>
+              <th>Variant</th>
               <th>Price</th>
               <th>Stock @ Store</th>
               <th>Status</th>
@@ -65,12 +66,36 @@
           </thead>
           <tbody>
             <% @products.each do |product| %>
+              <% variants = product.product_variants.any? ? product.sorted_variants : [] %>
               <tr>
-                <td><strong><%= product.name %></strong></td>
+                <td>
+                  <%= link_to product.name, store_admin_product_path(product), class: "fw-semibold text-decoration-none" %>
+                </td>
                 <td><small class="text-muted"><%= product.sku %></small></td>
                 <td><%= product.category&.name %></td>
-                <td>₹<%= number_with_delimiter(product.price.to_f.round(2)) %></td>
-                <td><%= number_with_delimiter(@store_stock[product.id].to_f) %> <%= product.unit_type %></td>
+                <td>
+                  <% if variants.any? %>
+                    <%= link_to store_admin_product_path(product), class: "text-decoration-none" do %>
+                      <span class="badge bg-primary-subtle text-primary border"><%= pluralize(variants.size, 'variant') %></span>
+                    <% end %>
+                  <% else %>
+                    <span class="text-muted">No variant</span>
+                  <% end %>
+                </td>
+                <td>
+                  <% if variants.any? %>
+                    <span class="text-muted">₹<%= number_with_delimiter(variants.map(&:effective_price).min.to_f.round(2)) %>&ndash;<%= number_with_delimiter(variants.map(&:effective_price).max.to_f.round(2)) %></span>
+                  <% else %>
+                    ₹<%= number_with_delimiter(product.price.to_f.round(2)) %>
+                  <% end %>
+                </td>
+                <td>
+                  <% if variants.any? %>
+                    <span class="text-muted"><%= number_with_delimiter(variants.sum { |v| @variant_store_stock[v.id] || v.available_stock.to_f }.round(2)) %> total</span>
+                  <% else %>
+                    <%= number_with_delimiter(@store_stock[product.id].to_f) %> <%= product.unit_type %>
+                  <% end %>
+                </td>
                 <td>
                   <span class="badge <%= product.status == 'active' ? 'bg-success' : 'bg-secondary' %>"><%= product.status&.humanize %></span>
                 </td>

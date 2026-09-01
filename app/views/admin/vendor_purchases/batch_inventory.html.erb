@@ -7,11 +7,11 @@
     <p class="text-muted mb-0 fs-6">FIFO-based stock management system - Products sorted by latest additions</p>
   </div>
   <div class="d-flex gap-2">
-    <%= link_to new_admin_vendor_purchase_path, class: "btn btn-primary btn-lg shadow-sm" do %>
+    <%= link_to vn_new_vendor_purchase_path, class: "btn btn-primary btn-lg shadow-sm" do %>
       <i class="bi bi-plus-lg me-2"></i>
       New Purchase
     <% end %>
-    <%= link_to admin_vendor_purchases_path, class: "btn btn-outline-secondary btn-lg" do %>
+    <%= link_to vn_vendor_purchases_path, class: "btn btn-outline-secondary btn-lg" do %>
       <i class="bi bi-arrow-left me-2"></i>
       Back to Purchases
     <% end %>
@@ -83,7 +83,7 @@
         <p class="text-muted mb-0 small">Search and filter your inventory batches</p>
       </div>
     </div>
-    <%= form_with url: batch_inventory_admin_vendor_purchases_path, method: :get, local: true, class: "row g-3 align-items-end" do |form| %>
+    <%= form_with url: vn_batch_inventory_vendor_purchases_path, method: :get, local: true, class: "row g-3 align-items-end" do |form| %>
       <div class="col-md-4">
         <label class="form-label fw-medium text-muted mb-2">Search Products</label>
         <%= form.text_field :search, value: params[:search],
@@ -105,7 +105,7 @@
       <div class="col-md-3">
         <div class="d-flex gap-2">
           <%= form.submit "🔍 Filter", class: "btn btn-primary btn-lg px-4" %>
-          <%= link_to "🔄 Reset", batch_inventory_admin_vendor_purchases_path, class: "btn btn-outline-secondary btn-lg px-4" %>
+          <%= link_to "🔄 Reset", vn_batch_inventory_vendor_purchases_path, class: "btn btn-outline-secondary btn-lg px-4" %>
         </div>
       </div>
     <% end %>
@@ -308,12 +308,12 @@
                           <td>
                             <div class="d-flex gap-1 flex-wrap">
                               <% if batch.vendor_purchase.present? %>
-                                <%= link_to admin_vendor_purchase_path(batch.vendor_purchase),
+                                <%= link_to vn_vendor_purchase_path(batch.vendor_purchase),
                                     class: "btn btn-outline-primary btn-sm px-2 py-1", title: "View Purchase Record" do %>
                                   <i class="bi bi-receipt"></i>
                                 <% end %>
                               <% end %>
-                              <%= link_to admin_vendor_path(batch.vendor),
+                              <%= link_to vn_vendor_path(batch.vendor),
                                   class: "btn btn-outline-info btn-sm px-2 py-1", title: "View Vendor" do %>
                                 <i class="bi bi-building"></i>
                               <% end %>
@@ -348,7 +348,7 @@
       <i class="bi bi-inbox display-4 text-muted mb-3"></i>
       <h5 class="text-muted">No Batches Found</h5>
       <p class="text-muted mb-4">No stock batches match your current filters.</p>
-      <%= link_to "Reset Filters", batch_inventory_admin_vendor_purchases_path, class: "btn btn-outline-primary" %>
+      <%= link_to "Reset Filters", vn_batch_inventory_vendor_purchases_path, class: "btn btn-outline-primary" %>
     </div>
   </div>
 <% end %>

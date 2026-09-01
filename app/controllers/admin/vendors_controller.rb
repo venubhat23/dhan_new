@@ -33,7 +33,7 @@ class Admin::VendorsController < Admin::ApplicationController
 
     if @vendor.save
       respond_to do |format|
-        format.html { redirect_to admin_vendor_path(@vendor), notice: 'Vendor was successfully created.' }
+        format.html { redirect_to vendor_path_for(@vendor), notice: 'Vendor was successfully created.' }
         format.json { render json: { success: true, vendor: { id: @vendor.id, name: @vendor.name } } }
       end
     else
@@ -46,7 +46,7 @@ class Admin::VendorsController < Admin::ApplicationController
 
   def update
     if @vendor.update(vendor_params)
-      redirect_to admin_vendor_path(@vendor),
+      redirect_to vendor_path_for(@vendor),
                   notice: 'Vendor was successfully updated.'
     else
       render :edit, status: :unprocessable_entity
@@ -56,9 +56,9 @@ class Admin::VendorsController < Admin::ApplicationController
   def destroy
     if @vendor.can_be_deleted?
       @vendor.destroy
-      redirect_to admin_vendors_path, notice: 'Vendor was successfully deleted.'
+      redirect_to vendors_path_for, notice: 'Vendor was successfully deleted.'
     else
-      redirect_to admin_vendor_path(@vendor),
+      redirect_to vendor_path_for(@vendor),
                   alert: 'Cannot delete vendor with existing purchases.'
     end
   end
@@ -69,7 +69,7 @@ class Admin::VendorsController < Admin::ApplicationController
 
     respond_to do |format|
       format.html {
-        redirect_to admin_vendors_path,
+        redirect_to vendors_path_for,
         notice: "Vendor was successfully #{status_text}."
       }
       format.json {
@@ -83,6 +83,14 @@ class Admin::VendorsController < Admin::ApplicationController
   end
 
   private
+
+  # Namespace (:admin here, :store_admin in the subclass) so redirects land in the
+  # same login area the request came from.
+  def resource_area = :admin
+
+  def vendors_path_for = polymorphic_path([resource_area, :vendors])
+
+  def vendor_path_for(vendor) = polymorphic_path([resource_area, vendor])
 
   def set_vendor
     @vendor = Vendor.find(params[:id])

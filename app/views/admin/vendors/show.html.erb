@@ -5,7 +5,7 @@
     <nav aria-label="breadcrumb">
       <ol class="breadcrumb">
         <li class="breadcrumb-item"><%= link_to "Dashboard", admin_dashboard_path if defined?(admin_dashboard_path) %></li>
-        <li class="breadcrumb-item"><%= link_to "Vendors", admin_vendors_path %></li>
+        <li class="breadcrumb-item"><%= link_to "Vendors", vn_vendors_path %></li>
         <li class="breadcrumb-item active"><%= @vendor.name %></li>
       </ol>
     </nav>
@@ -16,9 +16,9 @@
         <p class="text-muted mb-0">Vendor Details & Purchase History</p>
       </div>
       <div class="d-flex gap-2">
-        <%= link_to "Edit Vendor", edit_admin_vendor_path(@vendor), class: "btn btn-warning" %>
-        <%= link_to "New Purchase", new_admin_vendor_purchase_path(vendor_id: @vendor.id), class: "btn btn-success" %>
-        <%= link_to "Back to Vendors", admin_vendors_path, class: "btn btn-outline-secondary" %>
+        <%= link_to "Edit Vendor", vn_edit_vendor_path(@vendor), class: "btn btn-warning" %>
+        <%= link_to "New Purchase", vn_new_vendor_purchase_path(vendor_id: @vendor.id), class: "btn btn-success" %>
+        <%= link_to "Back to Vendors", vn_vendors_path, class: "btn btn-outline-secondary" %>
       </div>
     </div>
   </div>
@@ -178,7 +178,7 @@
           <% end %>
 
           <div class="mt-3">
-            <%= link_to "View Batch Inventory", batch_inventory_admin_vendor_purchases_path(vendor_id: @vendor.id),
+            <%= link_to "View Batch Inventory", vn_batch_inventory_vendor_purchases_path(vendor_id: @vendor.id),
                 class: "btn btn-outline-primary btn-sm" %>
           </div>
         </div>
@@ -193,7 +193,7 @@
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="card-title mb-0">Recent Purchases</h5>
-          <%= link_to "View All Purchases", admin_vendor_purchases_path(vendor_id: @vendor.id),
+          <%= link_to "View All Purchases", vn_vendor_purchases_path(vendor_id: @vendor.id),
               class: "btn btn-outline-primary btn-sm" %>
         </div>
         <div class="card-body">
@@ -237,7 +237,7 @@
                         </span>
                       </td>
                       <td>
-                        <%= link_to "View", admin_vendor_purchase_path(purchase),
+                        <%= link_to "View", vn_vendor_purchase_path(purchase),
                             class: "btn btn-outline-primary btn-sm" %>
                       </td>
                     </tr>
@@ -250,7 +250,7 @@
               <i class="bi bi-cart display-4 text-muted"></i>
               <h5 class="mt-3">No Purchases Yet</h5>
               <p class="text-muted">This vendor has no purchase history.</p>
-              <%= link_to "Create First Purchase", new_admin_vendor_purchase_path(vendor_id: @vendor.id),
+              <%= link_to "Create First Purchase", vn_new_vendor_purchase_path(vendor_id: @vendor.id),
                   class: "btn btn-primary" %>
             </div>
           <% end %>

@@ -28,7 +28,7 @@ class StoreAdmin::StoreInventoryController < StoreAdmin::ApplicationController
 
     @rows = []
     @products.each do |product|
-      if product.has_multiple_quantities? && product.product_variants.any?
+      if product.product_variants.any?
         product.sorted_variants.each do |variant|
           row = @inv_by_key[[product.id, variant.id]]
           qty = row ? row.quantity.to_f : variant.available_stock.to_f

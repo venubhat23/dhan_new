@@ -1,4 +1,4 @@
-<%= form_with model: [:admin, @vendor], local: true, class: "row g-3" do |f| %>
+<%= form_with model: vendor_area_for(@vendor), local: true, class: "row g-3" do |f| %>
   <% if @vendor.errors.any? %>
     <div class="col-12">
       <div class="alert alert-danger">
@@ -74,10 +74,10 @@
     <div class="d-flex gap-2">
       <%= f.submit @vendor.new_record? ? "Create Vendor" : "Update Vendor",
           class: "btn btn-primary" %>
-      <%= link_to "Cancel", admin_vendors_path, class: "btn btn-outline-secondary" %>
+      <%= link_to "Cancel", vn_vendors_path, class: "btn btn-outline-secondary" %>
 
       <% unless @vendor.new_record? %>
-        <%= link_to "View Vendor", admin_vendor_path(@vendor), class: "btn btn-outline-info" %>
+        <%= link_to "View Vendor", vn_vendor_path(@vendor), class: "btn btn-outline-info" %>
       <% end %>
     </div>
   </div>

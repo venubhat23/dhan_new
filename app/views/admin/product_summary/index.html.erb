@@ -29,6 +29,9 @@
   <i class="bi bi-info-circle me-1"></i>
   Increasing a <strong>Main Store</strong> stock value adds a new stock batch for the difference;
   decreasing it draws the difference down from existing batches (FIFO). Store values are set directly.
+  For a product <strong>with variants</strong>, editing the parent row's Main Store stock applies the
+  change to its default variant, and editing a parent store value writes the product-level store row
+  (the parent figure shown is a roll-up, so it may not echo the exact number you typed).
 </div>
 
 <%= form_with url: admin_product_summary_path, method: :patch, local: true, html: { id: "pse-form", class: "pse-form" } do %>
@@ -65,7 +68,6 @@
             <% @products.each do |product| %>
               <%
                 variants   = product.sorted_variants
-                has_var    = variants.any?
                 main_stock = @main_stock[product.id].to_f
                 main_thr   = product.low_stock_threshold
               %>
@@ -77,7 +79,7 @@
                 <%= render "num_cell",
                       value: main_stock,
                       name: "main_products[#{product.id}][stock]",
-                      editable: !has_var,
+                      editable: true,
                       danger: (main_thr && main_stock <= main_thr.to_f) %>
                 <%= render "num_cell",
                       value: main_thr,
@@ -90,12 +92,12 @@
                   <%= render "num_cell",
                         value: s_qty,
                         name: "store_products[#{store.id}][#{product.id}][qty]",
-                        editable: !has_var,
+                        editable: true,
                         danger: (s_qty && s_thr && s_qty <= s_thr.to_f) %>
                   <%= render "num_cell",
                         value: s_thr,
                         name: "store_products[#{store.id}][#{product.id}][threshold]",
-                        editable: !has_var %>
+                        editable: true %>
                 <% end %>
               </tr>
 

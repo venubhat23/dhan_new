@@ -29,6 +29,31 @@ Rails.application.routes.draw do
       end
     end
     resources :stock_transfers, only: [:index, :new, :create]
+
+    # Vendor management (mirrors admin; controllers subclass the admin ones)
+    resources :vendors do
+      member do
+        patch :toggle_status
+      end
+    end
+
+    # Vendor Purchase management
+    resources :vendor_purchases do
+      member do
+        get :complete_purchase
+        patch :complete_purchase
+        post :complete_purchase
+        post :generate_invoice
+        get :mark_as_paid
+        patch :mark_as_paid
+      end
+      collection do
+        get :batch_inventory
+        get :products
+        post :bulk_mark_as_paid
+      end
+    end
+
     resources :staff_members do
       member do
         patch :toggle_status

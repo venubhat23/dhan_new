@@ -5,7 +5,7 @@
     <p class="text-muted mb-0">Manage your vendor relationships and partnerships</p>
   </div>
   <div class="d-flex gap-2 align-items-center">
-    <%= link_to new_admin_vendor_path, class: "btn btn-primary" do %>
+    <%= link_to vn_new_vendor_path, class: "btn btn-primary" do %>
       <i class="bi bi-plus-lg me-1"></i>
       Add New Vendor
     <% end %>
@@ -83,7 +83,7 @@
       <h5 class="mb-0">Vendor List</h5>
       <div class="d-flex gap-2">
         <!-- Filters -->
-        <%= form_with url: admin_vendors_path, method: :get, local: true, class: "d-flex gap-2 align-items-center" do |form| %>
+        <%= form_with url: vn_vendors_path, method: :get, local: true, class: "d-flex gap-2 align-items-center" do |form| %>
           <%= form.select :status,
               options_for_select([
                 ['All Status', ''],
@@ -200,7 +200,7 @@
                 <td class="align-middle">
                   <div class="d-flex gap-2 align-items-center">
                     <!-- View Button -->
-                    <%= link_to admin_vendor_path(vendor),
+                    <%= link_to vn_vendor_path(vendor),
                         class: "btn btn-sm btn-outline-primary",
                         title: "View Details" do %>
                       <i class="bi bi-eye"></i>
@@ -216,19 +216,19 @@
                           <i class="bi bi-tools me-1"></i>Vendor Actions
                         </li>
                         <li>
-                          <%= link_to edit_admin_vendor_path(vendor), class: "dropdown-item" do %>
+                          <%= link_to vn_edit_vendor_path(vendor), class: "dropdown-item" do %>
                             <i class="bi bi-pencil me-2"></i>
                             Edit Vendor
                           <% end %>
                         </li>
                         <li>
-                          <%= link_to new_admin_vendor_purchase_path(vendor_id: vendor.id), class: "dropdown-item" do %>
+                          <%= link_to vn_new_vendor_purchase_path(vendor_id: vendor.id), class: "dropdown-item" do %>
                             <i class="bi bi-cart-plus me-2 text-info"></i>
                             New Purchase
                           <% end %>
                         </li>
                         <li>
-                          <%= link_to toggle_status_admin_vendor_path(vendor), class: "dropdown-item", method: :patch do %>
+                          <%= link_to vn_toggle_status_vendor_path(vendor), class: "dropdown-item", method: :patch do %>
                             <i class="bi bi-<%= vendor.status ? 'pause' : 'play' %>-circle me-2 text-warning"></i>
                             <%= vendor.status ? 'Deactivate' : 'Activate' %>
                           <% end %>
@@ -238,7 +238,7 @@
 
                         <% if vendor.can_be_deleted? %>
                           <li>
-                            <%= link_to admin_vendor_path(vendor), method: :delete,
+                            <%= link_to vn_vendor_path(vendor), method: :delete,
                                 class: "dropdown-item text-danger",
                                 confirm: "Are you sure you want to delete this vendor?",
                                 data: {
@@ -286,7 +286,7 @@
         </div>
         <h5 class="text-muted mb-3">No Vendors Found</h5>
         <p class="text-muted mb-4">Start building your vendor network by adding your first vendor partner.</p>
-        <%= link_to "Add New Vendor", new_admin_vendor_path, class: "btn btn-primary" %>
+        <%= link_to "Add New Vendor", vn_new_vendor_path, class: "btn btn-primary" %>
       </div>
     <% end %>
   </div>

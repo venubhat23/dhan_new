@@ -1,4 +1,4 @@
-<%= form_with model: [:admin, @vendor_purchase], local: true, id: "vendor-purchase-form" do |f| %>
+<%= form_with model: vendor_area_for(@vendor_purchase), local: true, id: "vendor-purchase-form" do |f| %>
   <% if @vendor_purchase.errors.any? %>
     <div class="alert alert-danger mb-4">
       <div class="d-flex align-items-center">
@@ -31,7 +31,7 @@
               <%= f.label :vendor_id, "Vendor", class: "form-label mb-0" %>
               <span class="text-danger">*</span>
             </div>
-            <%= link_to new_admin_vendor_path, target: "_blank", rel: "noopener", class: "btn btn-link btn-sm p-0 mb-1" do %>
+            <%= link_to vn_new_vendor_path, target: "_blank", rel: "noopener", class: "btn btn-link btn-sm p-0 mb-1" do %>
               <i class="bi bi-plus-circle me-1"></i>New Vendor
             <% end %>
           </div>
@@ -137,7 +137,7 @@
           </small>
         </div>
         <div class="d-flex gap-2">
-          <%= link_to admin_vendor_purchases_path, class: "btn btn-outline-secondary" do %>
+          <%= link_to vn_vendor_purchases_path, class: "btn btn-outline-secondary" do %>
             <i class="bi bi-x-lg me-1"></i>
             Cancel
           <% end %>
@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Reload the product list (e.g. after adding a product in another tab) without
   // reloading the page, so in-progress form entries aren't lost. Repopulates every
   // product dropdown and keeps each row's current selection.
-  const PRODUCTS_URL = "<%= products_admin_vendor_purchases_path(format: :json) %>";
+  const PRODUCTS_URL = "<%= vn_products_vendor_purchases_path(format: :json) %>";
 
   async function refreshProductOptions(btn) {
     const icon = btn ? btn.querySelector('i') : null;

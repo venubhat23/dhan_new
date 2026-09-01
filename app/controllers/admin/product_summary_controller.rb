@@ -81,8 +81,14 @@ class Admin::ProductSummaryController < Admin::ApplicationController
         count += 1
       end
 
-      next if product.has_multiple_quantities? || attrs[:stock].blank?
+      next if attrs[:stock].blank?
       new_stock = attrs[:stock].to_f
+
+      if product.has_multiple_quantities?
+        count += apply_variant_product_main_stock(product, new_stock)
+        next
+      end
+
       old_stock = product.stock.to_f
       next if new_stock == old_stock
 
@@ -93,6 +99,37 @@ class Admin::ProductSummaryController < Admin::ApplicationController
       err ? (@errors << err) : (count += 1)
     end
     count
+  end
+
+  # Parent row of a variant product shows an aggregate Main Store stock. Editing
+  # it reconciles the delta against the default variant so the roll-up still adds
+  # up. Returns 1 on a successful change, 0 otherwise (errors go on @errors).
+  def apply_variant_product_main_stock(product, new_total)
+    target = product.sorted_variants.first
+    return 0 unless target
+
+    old_total = product.product_variants.sum { |v| v.available_stock.to_f }
+    delta = new_total - old_total
+    return 0 if delta.zero?
+
+    target_old = target.available_stock.to_f
+    target_new = target_old + delta
+    if target_new.negative?
+      @errors << "#{product.name}: can't lower Main Store stock below the other variants' total"
+      return 0
+    end
+
+    err = reconcile_stock(product, target, target_old, target_new,
+                          cost: target.buying_price || target.purchase_price || target.selling_price,
+                          sell: target.selling_price,
+                          label: "#{product.name} #{target.label}: main stock #{fmt(target_old)} → #{fmt(target_new)} (parent total edit)")
+    if err
+      @errors << err
+      0
+    else
+      target.update_column(:available_stock, target_new.to_i)
+      1
+    end
   end
 
   def apply_main_variant_changes
@@ -147,7 +184,7 @@ class Admin::ProductSummaryController < Admin::ApplicationController
           product_id, variant_id = variant.product_id, variant.id
         else
           product = @products.find { |p| p.id.to_s == rid.to_s }
-          next unless product && !product.has_multiple_quantities?
+          next unless product
           product_id, variant_id = product.id, nil
         end
 

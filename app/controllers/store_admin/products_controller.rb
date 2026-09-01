@@ -13,7 +13,7 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
 
     scope = scope.where(status: params[:status]) if params[:status].present?
 
-    @products = scope.includes(:category).order(:name)
+    @products = scope.includes(:category, :product_variants).order(:name)
     @products = @products.page(params[:page]).per(20) if @products.respond_to?(:page)
 
     # Store on-hand per product: prefer store_inventories, fall back to active batches.
@@ -21,11 +21,22 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
     batch_stock = @current_store.stock_batches.where(status: 'active')
                                 .group(:product_id).sum(:quantity_remaining)
     @store_stock = batch_stock.merge(inv_stock)
+
+    # Per-variant on-hand for this store, keyed by product_variant_id.
+    @variant_store_stock = @current_store.store_inventories
+                                         .where.not(product_variant_id: nil)
+                                         .group(:product_variant_id).sum(:quantity)
+
     @total_products = store_products.count
   end
 
   def show
     @store_quantity = @current_store.available_stock_for(@product.id)
+    @variants = @product.product_variants.ordered.to_a
+    @variant_store_stock = @current_store.store_inventories
+                                         .where(product_id: @product.id)
+                                         .where.not(product_variant_id: nil)
+                                         .group(:product_variant_id).sum(:quantity)
     @recent_bookings = @current_store.bookings
                                      .joins(:booking_items)
                                      .where(booking_items: { product_id: @product.id })

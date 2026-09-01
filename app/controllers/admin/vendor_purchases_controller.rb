@@ -33,7 +33,7 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
     @vendor_purchase.status = 'pending'
 
     if @vendor_purchase.save
-      redirect_to admin_vendor_purchase_path(@vendor_purchase),
+      redirect_to vendor_purchase_path_for(@vendor_purchase),
                   notice: 'Purchase was successfully created and stock batches have been generated.'
     else
       Rails.logger.error "VendorPurchase creation failed: #{@vendor_purchase.errors.full_messages.join(', ')}"
@@ -45,13 +45,13 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
   def update
     if @vendor_purchase.can_be_edited?
       if @vendor_purchase.update(vendor_purchase_params)
-        redirect_to admin_vendor_purchase_path(@vendor_purchase),
+        redirect_to vendor_purchase_path_for(@vendor_purchase),
                     notice: 'Purchase was successfully updated.'
       else
         render :edit, status: :unprocessable_entity
       end
     else
-      redirect_to admin_vendor_purchase_path(@vendor_purchase),
+      redirect_to vendor_purchase_path_for(@vendor_purchase),
                   alert: 'Cannot edit completed or cancelled purchases.'
     end
   end
@@ -61,9 +61,9 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
       # Mark associated stock batches as cancelled before deletion
       @vendor_purchase.stock_batches.update_all(status: 'cancelled')
       @vendor_purchase.destroy
-      redirect_to admin_vendor_purchases_path, notice: 'Purchase was successfully deleted.'
+      redirect_to vendor_purchases_path_for, notice: 'Purchase was successfully deleted.'
     else
-      redirect_to admin_vendor_purchase_path(@vendor_purchase),
+      redirect_to vendor_purchase_path_for(@vendor_purchase),
                   alert: 'Cannot delete completed purchases with stock movements.'
     end
   end
@@ -72,7 +72,7 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
     # Check if purchase can be completed
     unless @vendor_purchase.status == 'pending'
       respond_to do |format|
-        format.html { redirect_to admin_vendor_purchase_path(@vendor_purchase), alert: 'Purchase cannot be completed.' }
+        format.html { redirect_to vendor_purchase_path_for(@vendor_purchase), alert: 'Purchase cannot be completed.' }
         format.json { render json: { success: false, message: 'Purchase cannot be completed.' } }
       end
       return
@@ -81,12 +81,12 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
     # Complete the purchase - update status to 'completed'
     if @vendor_purchase.update(status: 'completed')
       respond_to do |format|
-        format.html { redirect_to admin_vendor_purchase_path(@vendor_purchase), notice: 'Purchase marked as completed successfully.' }
+        format.html { redirect_to vendor_purchase_path_for(@vendor_purchase), notice: 'Purchase marked as completed successfully.' }
         format.json { render json: { success: true, message: 'Purchase marked as completed successfully.' } }
       end
     else
       respond_to do |format|
-        format.html { redirect_to admin_vendor_purchase_path(@vendor_purchase), alert: 'Failed to complete purchase.' }
+        format.html { redirect_to vendor_purchase_path_for(@vendor_purchase), alert: 'Failed to complete purchase.' }
         format.json { render json: { success: false, message: 'Failed to complete purchase.' } }
       end
     end
@@ -96,7 +96,7 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
     # Check if purchase can be marked as paid
     if @vendor_purchase.payment_status == 'paid'
       respond_to do |format|
-        format.html { redirect_to admin_vendor_purchases_path, alert: 'Purchase is already fully paid.' }
+        format.html { redirect_to vendor_purchases_path_for, alert: 'Purchase is already fully paid.' }
         format.json { render json: { success: false, message: 'Purchase is already fully paid.' } }
       end
       return
@@ -105,12 +105,12 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
     # Mark as paid by setting paid_amount to total_amount
     if @vendor_purchase.update(paid_amount: @vendor_purchase.total_amount)
       respond_to do |format|
-        format.html { redirect_to admin_vendor_purchases_path, notice: 'Purchase marked as fully paid successfully.' }
+        format.html { redirect_to vendor_purchases_path_for, notice: 'Purchase marked as fully paid successfully.' }
         format.json { render json: { success: true, message: 'Purchase marked as fully paid successfully.' } }
       end
     else
       respond_to do |format|
-        format.html { redirect_to admin_vendor_purchases_path, alert: 'Failed to mark purchase as paid.' }
+        format.html { redirect_to vendor_purchases_path_for, alert: 'Failed to mark purchase as paid.' }
         format.json { render json: { success: false, message: 'Failed to mark purchase as paid.' } }
       end
     end
@@ -197,7 +197,7 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
         }
       }
       format.html {
-        redirect_to admin_vendor_purchase_path(@vendor_purchase),
+        redirect_to vendor_purchase_path_for(@vendor_purchase),
                     alert: "Error generating invoice: #{e.message}"
       }
     end
@@ -266,6 +266,14 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
   end
 
   private
+
+  # Namespace (:admin here, :store_admin in the subclass) so redirects land in the
+  # same login area the request came from.
+  def resource_area = :admin
+
+  def vendor_purchases_path_for = polymorphic_path([resource_area, :vendor_purchases])
+
+  def vendor_purchase_path_for(purchase) = polymorphic_path([resource_area, purchase])
 
   def set_vendor_purchase
     @vendor_purchase = VendorPurchase.find(params[:id])

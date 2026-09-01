@@ -25,11 +25,11 @@
     <% end %>
 
     <!-- Action Buttons -->
-    <%= link_to admin_vendor_purchase_path(@vendor_purchase), class: "btn btn-outline-info" do %>
+    <%= link_to vn_vendor_purchase_path(@vendor_purchase), class: "btn btn-outline-info" do %>
       <i class="bi bi-eye me-1"></i>
       View Purchase
     <% end %>
-    <%= link_to admin_vendor_purchases_path, class: "btn btn-outline-secondary" do %>
+    <%= link_to vn_vendor_purchases_path, class: "btn btn-outline-secondary" do %>
       <i class="bi bi-arrow-left me-1"></i>
       Back to Purchases
     <% end %>
@@ -85,7 +85,7 @@
               <i class="bi bi-check-circle-fill text-success me-2"></i>
               <%= @vendor_purchase.stock_batches.count %> stock batches created
             </p>
-            <%= link_to admin_vendor_purchase_batch_inventory_path,
+            <%= link_to vn_batch_inventory_vendor_purchases_path,
                        class: "btn btn-sm btn-outline-primary" do %>
               <i class="bi bi-boxes me-1"></i>
               View Stock Batches
@@ -116,7 +116,7 @@
               <i class="bi bi-exclamation-circle me-2"></i>
               No invoice generated yet
             </p>
-            <%= button_to generate_invoice_admin_vendor_purchase_path(@vendor_purchase),
+            <%= button_to vn_generate_invoice_vendor_purchase_path(@vendor_purchase),
                          method: :patch,
                          class: "btn btn-sm btn-outline-success",
                          form: { style: "display: inline;" },
@@ -142,7 +142,7 @@
         <div class="col-md-6">
           <h6 class="text-success mb-2">Complete Purchase</h6>
           <p class="small text-muted mb-3">Mark this purchase as completed and create stock batches</p>
-          <%= button_to complete_purchase_admin_vendor_purchase_path(@vendor_purchase),
+          <%= button_to vn_complete_purchase_vendor_purchase_path(@vendor_purchase),
                        method: :patch,
                        class: "btn btn-success",
                        form: { style: "display: inline;" },
@@ -155,7 +155,7 @@
         <div class="col-md-6">
           <h6 class="text-danger mb-2">Cancel Purchase</h6>
           <p class="small text-muted mb-3">Cancel and delete this purchase (cannot be undone)</p>
-          <%= button_to admin_vendor_purchase_path(@vendor_purchase),
+          <%= button_to vn_vendor_purchase_path(@vendor_purchase),
                        method: :delete,
                        class: "btn btn-outline-danger",
                        form: { style: "display: inline;" },

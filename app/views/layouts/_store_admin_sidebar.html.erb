@@ -220,6 +220,28 @@
         <div class="icon-bg"><i class="bi bi-clipboard-data"></i></div>
         <span class="nav-text">Store Inventory</span>
       <% end %>
+
+      <div class="nav-section-title">
+        <i class="fas fa-truck-loading me-2"></i>Procurement
+      </div>
+
+      <%= link_to store_admin_vendors_path,
+          class: "nav-link-modern #{'active' if controller_name == 'vendors'}" do %>
+        <div class="icon-bg"><i class="bi bi-building"></i></div>
+        <span class="nav-text">Vendors</span>
+      <% end %>
+
+      <%= link_to store_admin_vendor_purchases_path,
+          class: "nav-link-modern #{'active' if controller_name == 'vendor_purchases' && action_name != 'batch_inventory'}" do %>
+        <div class="icon-bg"><i class="bi bi-receipt-cutoff"></i></div>
+        <span class="nav-text">Vendor Purchase</span>
+      <% end %>
+
+      <%= link_to batch_inventory_store_admin_vendor_purchases_path,
+          class: "nav-link-modern #{'active' if controller_name == 'vendor_purchases' && action_name == 'batch_inventory'}" do %>
+        <div class="icon-bg"><i class="bi bi-boxes"></i></div>
+        <span class="nav-text">Batch Inventory</span>
+      <% end %>
     <% end %>
 
     <div class="nav-section-title">

@@ -35,6 +35,7 @@
           <dt class="col-5">Low Stock At</dt><dd class="col-7"><%= @product.low_stock_threshold %></dd>
           <dt class="col-5">Status</dt><dd class="col-7"><%= @product.status&.humanize %></dd>
           <dt class="col-5">Stock @ Store</dt><dd class="col-7"><strong><%= number_with_delimiter(@store_quantity.to_f) %></strong> <%= @product.unit_type %></dd>
+          <dt class="col-5">Variants</dt><dd class="col-7"><%= @variants.any? ? pluralize(@variants.size, 'variant') : 'No variant' %></dd>
         </dl>
         <% if @product.description.present? %>
           <hr>
@@ -73,3 +74,83 @@
     </div>
   </div>
 </div>
+
+<% if @variants.any? %>
+  <div class="card border-0 shadow-sm mt-2">
+    <div class="card-header bg-white border-0 d-flex align-items-center justify-content-between">
+      <h6 class="mb-0"><i class="bi bi-layers me-2 text-primary"></i>Quantity Variants (<%= @variants.size %>)</h6>
+      <%= link_to edit_store_admin_product_path(@product), class: "btn btn-sm btn-outline-primary" do %>
+        <i class="bi bi-pencil me-1"></i>Edit Variants
+      <% end %>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3">Variant</th>
+              <th>Buying Price</th>
+              <th>Selling Price</th>
+              <th>Discount</th>
+              <th>After Discount</th>
+              <th>GST %</th>
+              <th>GST ₹</th>
+              <th class="text-end">Stock @ Store</th>
+              <th class="text-end">Low Alert</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @variants.each do |v| %>
+              <% v_stock = (@variant_store_stock[v.id] || v.available_stock).to_f %>
+              <% v_threshold = v.low_stock_threshold || @product.low_stock_threshold || 10 %>
+              <tr>
+                <td class="ps-3">
+                  <span class="fw-semibold"><%= v.label %></span>
+                  <% if v.is_default? %>
+                    <span class="badge bg-primary-subtle text-primary ms-1">Default</span>
+                  <% end %>
+                </td>
+                <td><%= v.buying_price.present? ? "₹#{'%.2f' % v.buying_price}" : content_tag(:span, '—', class: 'text-muted') %></td>
+                <td class="fw-medium">₹<%= '%.2f' % v.selling_price %></td>
+                <td>
+                  <% if v.discount_enabled? && v.discount_amount.to_f > 0 %>
+                    <span class="text-success fw-medium">
+                      <%= v.discount_type == 'percentage' ? "#{v.discount_value}%" : "₹#{'%.2f' % v.discount_value}" %>
+                      <small class="text-muted">(−₹<%= '%.2f' % v.discount_amount %>)</small>
+                    </span>
+                  <% else %>
+                    <span class="text-muted">—</span>
+                  <% end %>
+                </td>
+                <td class="fw-semibold text-primary">₹<%= '%.2f' % v.effective_price %></td>
+                <td>
+                  <% if v.effective_gst_percentage.to_f > 0 %>
+                    <span class="badge bg-info-subtle text-info"><%= v.effective_gst_percentage %>%</span>
+                  <% else %>
+                    <span class="text-muted">—</span>
+                  <% end %>
+                </td>
+                <td><%= v.computed_gst_amount > 0 ? "₹#{'%.2f' % v.computed_gst_amount}" : content_tag(:span, '—', class: 'text-muted') %></td>
+                <td class="text-end">
+                  <span class="<%= v_stock > 0 ? 'text-success' : 'text-danger' %> fw-medium"><%= number_with_delimiter(v_stock.round(2)) %></span>
+                  <small class="text-muted"><%= v.unit %></small>
+                </td>
+                <td class="text-end"><span class="<%= v_stock <= v_threshold && v_stock > 0 ? 'text-warning fw-semibold' : 'text-muted' %>"><%= v_threshold %></span></td>
+                <td>
+                  <% if v_stock <= 0 %>
+                    <span class="badge bg-danger-subtle text-danger">Out of Stock</span>
+                  <% elsif v_stock <= v_threshold %>
+                    <span class="badge bg-warning-subtle text-dark">Low Stock</span>
+                  <% else %>
+                    <span class="badge bg-success-subtle text-success">In Stock</span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+<% end %>
