@@ -541,6 +541,7 @@ Rails.application.routes.draw do
       end
       collection do
         get :batch_inventory
+        get :products
         post :bulk_mark_as_paid
       end
     end
@@ -721,6 +722,7 @@ Rails.application.routes.draw do
         get :products_variant_form
         get :customer_subscriptions_form
         get :customer_daily_tasks_form
+        get :vendors_form
         get :download_template
         post :validate_csv
       end
@@ -738,6 +740,7 @@ Rails.application.routes.draw do
     post 'import/products_variant', to: 'imports#products_variant'
     post 'import/customer_subscriptions', to: 'imports#customer_subscriptions'
     post 'import/customer_daily_tasks', to: 'imports#customer_daily_tasks'
+    post 'import/vendors', to: 'imports#vendors'
     post 'import/agencies', to: 'imports#agencies'
 
     # E-commerce Management

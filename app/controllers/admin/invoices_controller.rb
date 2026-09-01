@@ -40,8 +40,8 @@ class Admin::InvoicesController < Admin::ApplicationController
   end
 
   def customers
-    @customers = Customer.order(:first_name, :last_name)
-                        .select(:id, :first_name, :middle_name, :last_name)
+    @customers = Customer.order(:full_name)
+                        .select(:id, :full_name)
                         .map { |c| { id: c.id, display_name: c.display_name } }
     render json: @customers
   end
@@ -82,8 +82,8 @@ class Admin::InvoicesController < Admin::ApplicationController
       all_customer_ids = (booking_customer_ids + subscription_customer_ids).uniq
 
       @customers = Customer.where(id: all_customer_ids)
-                          .order(:first_name, :last_name)
-                          .select(:id, :first_name, :middle_name, :last_name, :email, :mobile)
+                          .order(:full_name)
+                          .select(:id, :full_name, :email, :mobile)
                           .map { |c| {
                             id: c.id,
                             display_name: c.display_name,
@@ -808,7 +808,7 @@ class Admin::InvoicesController < Admin::ApplicationController
 
   def invoice_params
     params.require(:invoice).permit(:invoice_date, :due_date, :status, :payment_status, :total_amount, :delivery_charge,
-                                   invoice_items_attributes: [:id, :product_id, :description, :quantity, :unit_price, :total_amount, :_destroy])
+                                   invoice_items_attributes: [:id, :product_id, :description, :quantity, :unit_price, :total_amount, :discount_type, :discount_value, :original_unit_price, :_destroy])
   end
 
   def update_related_booking_stock(original_quantities)

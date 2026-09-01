@@ -344,7 +344,7 @@ class Admin::MobileUiController < ActionController::Base
   end
 
   def vendor_params
-    params.require(:vendor).permit(:name, :phone, :email, :address, :payment_type, :opening_balance, :status)
+    params.require(:vendor).permit(:name, :phone, :email, :address, :gst_no, :payment_type, :opening_balance, :status)
   end
 
   def vendor_purchase_params

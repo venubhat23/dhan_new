@@ -203,6 +203,19 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
     end
   end
 
+  # Fresh list of active products for the purchase form's product dropdown, so a
+  # product just added in another tab can be pulled in without reloading the page.
+  def products
+    render json: Product.active.order(:name).map { |p|
+      {
+        id: p.id,
+        name: p.name,
+        unit_type: p.unit_type || 'units',
+        default_selling_price: p.default_selling_price || 0
+      }
+    }
+  end
+
   def batch_inventory
     # Get all stock batches with filters
     stock_batches_query = StockBatch.includes(:product, :vendor, :vendor_purchase)

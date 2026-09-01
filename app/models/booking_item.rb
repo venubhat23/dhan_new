@@ -3,20 +3,57 @@ class BookingItem < ApplicationRecord
   belongs_to :product
   belongs_to :product_variant, optional: true
 
+  DISCOUNT_TYPES = %w[percentage fixed].freeze
+
   validates :quantity, presence: true, numericality: { greater_than: 0 }
   validates :price, presence: true, numericality: { greater_than_or_equal_to: 0 }
+  validates :discount_type, inclusion: { in: DISCOUNT_TYPES }, allow_nil: true, allow_blank: true
+  validates :discount_value, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validate :check_stock_availability
 
+  before_validation :normalize_discount
   before_save :calculate_total
   after_create :reduce_product_stock
   after_update :handle_quantity_change, if: :saved_change_to_quantity?
   after_destroy :restore_product_stock
 
+  # Gross (pre-line-discount) tax-inclusive total for this line.
+  def gross_line_total
+    (price.to_f * quantity.to_f).round(2)
+  end
+
+  # Rupee value taken off this line by its per-product discount (percentage or
+  # fixed), computed against the tax-inclusive gross and capped at that gross.
+  def line_discount_amount
+    return 0.0 if discount_type.blank? || discount_value.to_f <= 0
+
+    raw = case discount_type
+          when 'percentage' then gross_line_total * discount_value.to_f / 100.0
+          when 'fixed'      then discount_value.to_f
+          else 0.0
+          end
+
+    [raw, gross_line_total].min.round(2)
+  end
+
+  # Tax-inclusive unit price after the per-product discount is applied.
+  def discounted_unit_price
+    return price.to_f if quantity.to_f <= 0
+
+    (price.to_f - line_discount_amount / quantity.to_f)
+  end
+
   def calculate_total
-    self.total = quantity * price
+    self.discount_amount = line_discount_amount
+    self.total = (gross_line_total - discount_amount.to_f).round(2)
   end
 
   private
+
+  def normalize_discount
+    self.discount_type = nil if discount_type.blank?
+    self.discount_value = nil if discount_type.nil?
+  end
 
   def check_stock_availability
     return unless quantity.present? && product.present?

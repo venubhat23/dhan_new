@@ -76,6 +76,14 @@
     </div>
 
     <div class="mb-3">
+      <div class="field-label">GST Number</div>
+      <div class="input-wrap">
+        <i class="bi bi-receipt input-icon"></i>
+        <%= f.text_field :gst_no, class: 'mob-input', placeholder: 'GST number (optional)', value: @vendor.gst_no %>
+      </div>
+    </div>
+
+    <div class="mb-3">
       <div class="field-label">Address</div>
       <%= f.text_area :address, class: 'mob-textarea', rows: 2, placeholder: 'Vendor address (optional)' %>
     </div>

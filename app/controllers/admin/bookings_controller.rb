@@ -65,9 +65,34 @@ class Admin::BookingsController < Admin::ApplicationController
     end
 
     # Only load customers needed for the filter dropdown
-    @customers = Customer.select(:id, :first_name, :middle_name, :last_name, :email, :mobile)
-                         .order(:first_name, :last_name)
+    @customers = Customer.select(:id, :full_name, :email, :mobile)
+                         .order(:full_name)
                          .limit(500)
+  end
+
+  # Status-filtered index views. The routes (collection GETs in config/routes.rb)
+  # existed without actions, so links like `completed_admin_bookings_path` raised
+  # AbstractController::ActionNotFound. Each action just pre-sets the status
+  # filter and reuses #index.
+  STATUS_FILTER_ACTIONS = {
+    pending:          'ordered_and_delivery_pending',
+    confirmed:        'confirmed',
+    processing:       'processing',
+    packed:           'packed',
+    shipped:          'shipped',
+    out_for_delivery: 'out_for_delivery',
+    delivered:        'delivered',
+    completed:        'completed',
+    cancelled:        'cancelled',
+    returned:         'returned'
+  }.freeze
+
+  STATUS_FILTER_ACTIONS.each do |action_name, status_value|
+    define_method(action_name) do
+      params[:status] = status_value
+      index
+      render :index unless performed?
+    end
   end
 
   def new
@@ -92,8 +117,8 @@ class Admin::BookingsController < Admin::ApplicationController
                        .order(Arel.sql("CASE WHEN COALESCE(SUM(stock_batches.quantity_remaining), 0) > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
 
     @categories = Category.where(status: true).order(:name)
-    @customers = Customer.select(:id, :first_name, :middle_name, :last_name, :email, :mobile)
-                         .order(:first_name, :last_name)
+    @customers = Customer.select(:id, :full_name, :email, :mobile)
+                         .order(:full_name)
                          .limit(500)
   end
 
@@ -145,7 +170,7 @@ class Admin::BookingsController < Admin::ApplicationController
     # Validate stock availability before saving
     unless validate_stock_availability(@booking)
       @products = Product.active.includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
-      @customers = Customer.all.order(:first_name, :last_name)
+      @customers = Customer.all.order(:full_name)
       @stores = Store.where(status: true)
       render :new, status: :unprocessable_entity
       return
@@ -195,7 +220,7 @@ class Admin::BookingsController < Admin::ApplicationController
       Rails.logger.error "Booking items errors: #{@booking.booking_items.map(&:errors).map(&:full_messages).flatten.join(', ')}"
 
       @products = Product.active.includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
-      @customers = Customer.all.order(:first_name, :last_name)
+      @customers = Customer.all.order(:full_name)
       @stores = Store.where(status: true)
       flash.now[:alert] = @booking.errors.full_messages.join(', ')
       render :new, status: :unprocessable_entity
@@ -210,7 +235,7 @@ class Admin::BookingsController < Admin::ApplicationController
   def edit
     @list_state = list_state_params
     @products = Product.active.includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
-    @customers = Customer.all.order(:first_name, :last_name)
+    @customers = Customer.all.order(:full_name)
   end
 
   def update
@@ -219,7 +244,7 @@ class Admin::BookingsController < Admin::ApplicationController
     # Validate stock availability for updates
     unless validate_stock_availability(@booking, is_update: true)
       @products = Product.active.includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
-      @customers = Customer.all.order(:first_name, :last_name)
+      @customers = Customer.all.order(:full_name)
       render :edit, status: :unprocessable_entity
       return
     end
@@ -228,7 +253,7 @@ class Admin::BookingsController < Admin::ApplicationController
       redirect_to admin_bookings_path(@list_state), notice: 'Booking updated successfully!'
     else
       @products = Product.active.includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
-      @customers = Customer.all.order(:first_name, :last_name)
+      @customers = Customer.all.order(:full_name)
       render :edit
     end
   end
@@ -594,8 +619,8 @@ class Admin::BookingsController < Admin::ApplicationController
 
   def search_customers
     @customers = Customer.where(
-      "first_name ILIKE ? OR last_name ILIKE ? OR email ILIKE ? OR mobile ILIKE ?",
-      "%#{params[:q]}%", "%#{params[:q]}%", "%#{params[:q]}%", "%#{params[:q]}%"
+      "full_name ILIKE ? OR email ILIKE ? OR mobile ILIKE ?",
+      "%#{params[:q]}%", "%#{params[:q]}%", "%#{params[:q]}%"
     ).limit(10)
 
     render json: @customers.map { |c|
@@ -869,7 +894,7 @@ class Admin::BookingsController < Admin::ApplicationController
       :customer_id, :customer_name, :customer_email, :customer_phone,
       :payment_method, :payment_status, :discount_amount, :shipping_charges, :notes,
       :delivery_address, :cash_received, :change_amount, :status, :store_id,
-      :booking_date, :is_b2b, booking_items_attributes: [:id, :product_id, :product_variant_id, :quantity, :price, :_destroy]
+      :booking_date, :is_b2b, booking_items_attributes: [:id, :product_id, :product_variant_id, :quantity, :price, :discount_type, :discount_value, :_destroy]
     )
   end
 

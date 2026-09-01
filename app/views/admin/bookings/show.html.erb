@@ -297,6 +297,7 @@
                   <th class="border-0 fw-semibold">Product</th>
                   <th class="border-0 fw-semibold text-center">Quantity</th>
                   <th class="border-0 fw-semibold text-end">Unit Price</th>
+                  <th class="border-0 fw-semibold text-center">Discount</th>
                   <th class="border-0 fw-semibold text-end">Total</th>
                 </tr>
               </thead>
@@ -338,10 +339,26 @@
                       <small class="text-muted d-block">pcs</small>
                     </td>
                     <td class="align-middle text-end">
-                      <span class="fw-medium">₹<%= number_with_delimiter(item.price&.to_f || 0) %></span>
+                      <% if item.line_discount_amount > 0 %>
+                        <span class="text-muted"><s>₹<%= number_with_delimiter(item.price&.to_f || 0) %></s></span><br>
+                        <span class="fw-medium text-success">₹<%= number_with_delimiter(item.discounted_unit_price.round(2)) %></span>
+                      <% else %>
+                        <span class="fw-medium">₹<%= number_with_delimiter(item.price&.to_f || 0) %></span>
+                      <% end %>
+                    </td>
+                    <td class="align-middle text-center">
+                      <% if item.line_discount_amount > 0 %>
+                        <%= line_discount_badge(item) %>
+                        <small class="text-success d-block">−₹<%= number_with_delimiter(item.line_discount_amount.round(2)) %></small>
+                      <% else %>
+                        <span class="text-muted">—</span>
+                      <% end %>
                     </td>
                     <td class="align-middle text-end">
-                      <span class="fw-bold text-success">₹<%= number_with_delimiter((item.quantity * item.price)&.to_f || 0) %></span>
+                      <% if item.line_discount_amount > 0 %>
+                        <span class="text-muted small"><s>₹<%= number_with_delimiter((item.quantity * item.price).to_f.round(2)) %></s></span><br>
+                      <% end %>
+                      <span class="fw-bold text-success">₹<%= number_with_delimiter((item.quantity * item.price - item.line_discount_amount).to_f.round(2)) %></span>
                     </td>
                   </tr>
                 <% end %>
@@ -383,11 +400,14 @@
           total_tax_rate = 0
           total_base_amount = 0
           total_tax_amount = 0
-          @booking.booking_items.each do |item|
+          total_item_discount = 0
+          @booking_items.each do |item|
+            total_item_discount += item.line_discount_amount
             if item.product&.gst_enabled && item.product.gst_percentage.to_f > 0
               gst_rate = item.product.gst_percentage.to_f
-              # Apply smart rounding logic like in the shopping cart
-              final_price_per_unit = (item.price || 0)
+              # Apply smart rounding logic like in the shopping cart; per-product
+              # discount is baked into the unit price first.
+              final_price_per_unit = item.discounted_unit_price
               quantity = item.quantity
 
               # Smart rounding: round final price, then calculate base price from rounded value
@@ -400,12 +420,12 @@
               total_tax_rate += gst_rate
             else
               # No GST for this item
-              total_base_amount += (item.price || 0) * item.quantity
+              total_base_amount += item.discounted_unit_price * item.quantity
             end
           end
           # Calculate weighted average tax rate
-          avg_tax_rate = @booking.booking_items.any? { |item| item.product&.gst_enabled } ?
-            (total_tax_rate / @booking.booking_items.select { |item| item.product&.gst_enabled }.count rescue 0) : 0
+          avg_tax_rate = @booking_items.any? { |item| item.product&.gst_enabled } ?
+            (total_tax_rate / @booking_items.select { |item| item.product&.gst_enabled }.count rescue 0) : 0
           tax_display = avg_tax_rate.to_i == avg_tax_rate ? avg_tax_rate.to_i : avg_tax_rate.round(2)
         %>
 
@@ -414,9 +434,17 @@
           <span class="fw-medium">₹<%= number_with_delimiter(total_base_amount.round(2)) %></span>
         </div>
 
+        <% if total_item_discount > 0 %>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-success"><i class="bi bi-tags me-1"></i>Product Discounts applied:</span>
+            <span class="fw-medium text-success">−₹<%= number_with_delimiter(total_item_discount.round(2)) %></span>
+          </div>
+          <div class="text-muted small mb-2" style="margin-top:-4px;">(already reflected in the subtotal above)</div>
+        <% end %>
+
         <% if @booking.discount_amount.present? && @booking.discount_amount.to_f > 0 %>
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="text-muted">Discount:</span>
+            <span class="text-muted">Bulk Discount:</span>
             <span class="fw-medium text-success">-₹<%= number_with_delimiter(@booking.discount_amount.to_f) %></span>
           </div>
         <% end %>

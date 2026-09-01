@@ -22,7 +22,7 @@ class Admin::CustomerWalletsController < Admin::ApplicationController
 
   def new
     @customer_wallet = CustomerWallet.new
-    @customers = Customer.where.not(id: CustomerWallet.select(:customer_id)).order(:first_name)
+    @customers = Customer.where.not(id: CustomerWallet.select(:customer_id)).order(:full_name)
   end
 
   def create

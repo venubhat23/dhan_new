@@ -77,7 +77,8 @@
       <% users_created = @import_result[:users_created].to_i %>
       <div class="alert alert-info small">
         <i class="fas fa-key me-1"></i>
-        <%= pluralize(users_created, 'login account') %> created (only customers that have an email address get one).
+        <%= pluralize(users_created, 'login account') %> created. Customers with an email log in with it;
+        those without one log in with their mobile number.
         Default password: <code>dhanvantari@123</code> &mdash; shown on each customer's page, where it can be reset.
       </div>
     <% end %>

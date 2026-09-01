@@ -158,6 +158,10 @@ class Invoice < ApplicationRecord
           quantity: bi.quantity,
           unit_price: unit_price,
           total_amount: bi.quantity.to_f * unit_price,
+          original_unit_price: booking.base_unit_price_for(bi.product, bi.price),
+          discount_type: bi.discount_type.presence,
+          discount_value: bi.discount_type.present? ? bi.discount_value : nil,
+          discount_amount: bi.discount_amount,
           description: "#{bi.product.name} - Booking ##{booking.booking_number} (#{booking.booking_date.strftime('%d %b %Y')})"
         )
       end
@@ -169,10 +173,10 @@ class Invoice < ApplicationRecord
   end
 
   def items_match_booking?(booking)
-    current = invoice_items.map { |i| [i.product_id, i.product_variant_id, i.quantity.to_f.round(3), i.unit_price.to_f.round(2)] }.sort_by { |row| row.map(&:to_s) }
+    current = invoice_items.map { |i| [i.product_id, i.product_variant_id, i.quantity.to_f.round(3), i.unit_price.to_f.round(2), i.discount_type.presence, i.discount_value.to_f] }.sort_by { |row| row.map(&:to_s) }
     target = booking.booking_items.filter_map do |bi|
       next unless bi.product_id
-      [bi.product_id, bi.product_variant_id, bi.quantity.to_f.round(3), booking.invoice_unit_price_for(bi).round(2)]
+      [bi.product_id, bi.product_variant_id, bi.quantity.to_f.round(3), booking.invoice_unit_price_for(bi).round(2), bi.discount_type.presence, (bi.discount_type.present? ? bi.discount_value.to_f : 0.0)]
     end.sort_by { |row| row.map(&:to_s) }
 
     current == target && delivery_charge.to_f.round(2) == booking.shipping_charges.to_f.round(2)

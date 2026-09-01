@@ -30,7 +30,7 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
 
   def new
     @booking = @current_store.bookings.build
-    @customers = Customer.order(:first_name) rescue []
+    @customers = Customer.order(:full_name) rescue []
     @store_products = @current_store.store_products_with_inventory.includes(:product_variants).by_stock_availability
   end
 
@@ -62,20 +62,20 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     if @booking.save
       redirect_to store_admin_booking_path(@booking), notice: 'Booking created successfully.'
     else
-      @customers = Customer.order(:first_name) rescue []
+      @customers = Customer.order(:full_name) rescue []
       render :new, status: :unprocessable_entity
     end
   end
 
   def edit
-    @customers = Customer.order(:first_name) rescue []
+    @customers = Customer.order(:full_name) rescue []
   end
 
   def update
     if @booking.update(booking_params)
       redirect_to store_admin_booking_path(@booking), notice: 'Booking updated successfully.'
     else
-      @customers = Customer.order(:first_name) rescue []
+      @customers = Customer.order(:full_name) rescue []
       render :edit, status: :unprocessable_entity
     end
   end
@@ -107,7 +107,7 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
   def booking_params
     params.require(:booking).permit(
       :customer_id, :notes, :payment_method, :payment_status, :discount_amount, :status,
-      booking_items_attributes: [:id, :product_id, :product_variant_id, :quantity, :price, :_destroy]
+      booking_items_attributes: [:id, :product_id, :product_variant_id, :quantity, :price, :discount_type, :discount_value, :_destroy]
     )
   end
 

@@ -926,8 +926,9 @@ class Admin::CustomersController < Admin::ApplicationController
         @customer.auto_generated_password = new_password
         @customer.save!
 
-        # Find or create the linked User account (used for the separate mobile app login)
-        user = User.find_by(email: @customer.email, user_type: 'customer')
+        # Find or create the linked User account (used for the separate mobile app login).
+        # Matched by email when there's a real one, otherwise by mobile number.
+        user = @customer.linked_user
 
         if user
           # Update existing user password
@@ -937,12 +938,16 @@ class Admin::CustomersController < Admin::ApplicationController
           )
           message = "Password reset and updated for existing user account."
         else
-          # Create new User account
-          if @customer.email.present?
+          # Create new User account. Customers with no real email log in with
+          # their mobile number; User still needs a unique email, so use a
+          # non-deliverable placeholder keyed off the mobile.
+          login_email = @customer.real_email? ? @customer.email : @customer.placeholder_email
+
+          if login_email.present?
             User.create!(
               first_name: extract_first_name(@customer.full_name),
               last_name: extract_last_name(@customer.full_name),
-              email: @customer.email,
+              email: login_email,
               mobile: @customer.mobile,
               password: new_password,
               password_confirmation: new_password,
@@ -956,9 +961,10 @@ class Admin::CustomersController < Admin::ApplicationController
               is_active: true,
               is_verified: false
             )
-            message = "User account created with new password."
+            message = @customer.real_email? ? "User account created with new password." :
+                      "User account created. The customer logs in with their mobile number (#{@customer.mobile})."
           else
-            message = "Customer password reset. No email on file, so no separate login account was created."
+            message = "Customer password reset. No mobile or email on file, so no separate login account was created."
           end
         end
 

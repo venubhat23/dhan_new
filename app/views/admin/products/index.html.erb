@@ -263,7 +263,18 @@ document.addEventListener('DOMContentLoaded', function() {
             <tbody>
               <% @products.each do |product| %>
                 <tr data-product-id="<%= product.id %>"
-                    data-product='<%= { id: product.id, name: product.name, price: product.price.to_f, buying_price: product.buying_price.to_f, purchase_price: product.purchase_price.to_f, stock: product.stock.to_i, unit_type: product.unit_type, status: product.status, category_id: product.category_id }.to_json %>'>
+                    data-product='<%= {
+                      id: product.id, name: product.name, price: product.price.to_f,
+                      buying_price: product.buying_price.to_f, purchase_price: product.purchase_price.to_f,
+                      stock: product.stock.to_i, unit_type: product.unit_type, status: product.status,
+                      category_id: product.category_id,
+                      has_variants: product.has_multiple_quantities?,
+                      variants: product.product_variants.sort_by { |v| [v.display_order || 0, v.weight.to_f] }.map { |v|
+                        { id: v.id, label: v.label, unit: v.unit, weight: v.weight.to_f,
+                          selling_price: v.selling_price.to_f, buying_price: v.buying_price.to_f,
+                          purchase_price: v.purchase_price.to_f, available_stock: v.available_stock.to_i }
+                      }
+                    }.to_json %>'>
                   <td class="align-middle ps-3">
                     <input type="checkbox" name="product_ids[]" value="<%= product.id %>" class="form-check-input product-checkbox">
                   </td>
@@ -482,11 +493,16 @@ document.addEventListener('DOMContentLoaded', function() {
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body p-0">
+        <div class="alert alert-light border-0 rounded-0 mb-0 py-2 px-3 small text-muted">
+          <i class="bi bi-info-circle me-1"></i>
+          Products with variants show their variant rows below them — edit price &amp; stock there.
+          <strong>Increasing stock</strong> creates a FIFO stock batch for the added units (needs a Cost Price).
+        </div>
         <div class="table-responsive">
           <table class="table table-bordered align-middle mb-0" id="bulkEditTable">
             <thead class="sticky-top" style="background:#f1f3f5;">
               <tr>
-                <th style="min-width:160px;">Product Name</th>
+                <th style="min-width:160px;">Product / Variant</th>
                 <th style="min-width:100px;">Sell Price (₹)</th>
                 <th style="min-width:100px;">Cost Price (₹)</th>
                 <th style="min-width:110px;">Purchase Price (₹)</th>
@@ -541,6 +557,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const unitOptions  = UNIT_TYPES.map(u => [u, u]);
       const catOptions   = [['' , '— No Category —'], ...CATEGORIES];
+      const hasVariants  = p.has_variants && p.variants && p.variants.length > 0;
+      const dis          = hasVariants ? 'disabled' : '';
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -548,32 +566,68 @@ document.addEventListener('DOMContentLoaded', function() {
           <input type="text" name="products[${id}][name]"
                  class="form-control form-control-sm"
                  value="${escHtml(p.name)}" required>
+          ${hasVariants ? `<span class="badge bg-info-subtle text-info mt-1"><i class="bi bi-diagram-3 me-1"></i>${p.variants.length} variant${p.variants.length !== 1 ? 's' : ''} — edit below</span>` : ''}
         </td>
         <td>
           <input type="number" name="products[${id}][price]"
-                 class="form-control form-control-sm"
-                 value="${p.price}" min="0" step="0.01">
+                 class="form-control form-control-sm ${dis ? 'bg-light' : ''}"
+                 value="${p.price}" min="0" step="0.01" ${dis}
+                 ${dis ? 'title="Set on the variant rows below"' : ''}>
         </td>
         <td>
           <input type="number" name="products[${id}][buying_price]"
-                 class="form-control form-control-sm"
-                 value="${p.buying_price}" min="0" step="0.01">
+                 class="form-control form-control-sm ${dis ? 'bg-light' : ''}"
+                 value="${p.buying_price}" min="0" step="0.01" ${dis}>
         </td>
         <td>
           <input type="number" name="products[${id}][purchase_price]"
-                 class="form-control form-control-sm"
-                 value="${p.purchase_price}" min="0" step="0.01">
+                 class="form-control form-control-sm ${dis ? 'bg-light' : ''}"
+                 value="${p.purchase_price}" min="0" step="0.01" ${dis}>
         </td>
         <td>
           <input type="number" name="products[${id}][stock]"
-                 class="form-control form-control-sm"
-                 value="${p.stock}" min="0" step="1">
+                 class="form-control form-control-sm ${dis ? 'bg-light' : ''}"
+                 value="${p.stock}" min="0" step="1" ${dis}
+                 ${dis ? 'title="Set on the variant rows below"' : ''}>
         </td>
         <td>${buildSelect(`products[${id}][unit_type]`, unitOptions, p.unit_type)}</td>
         <td>${buildSelect(`products[${id}][status]`, STATUSES, p.status)}</td>
         <td>${buildSelect(`products[${id}][category_id]`, catOptions, p.category_id)}</td>
       `;
       tbody.appendChild(tr);
+
+      if (hasVariants) {
+        p.variants.forEach(v => {
+          const vtr = document.createElement('tr');
+          vtr.className = 'table-light';
+          vtr.innerHTML = `
+            <td class="ps-4">
+              <i class="bi bi-arrow-return-right text-muted me-1"></i>
+              <span class="fw-medium">${escHtml(v.label)}</span>
+              <input type="hidden" name="variants[${v.id}][unit]" value="${escHtml(v.unit)}">
+            </td>
+            <td>
+              <input type="number" name="variants[${v.id}][selling_price]"
+                     class="form-control form-control-sm" value="${v.selling_price}" min="0" step="0.01">
+            </td>
+            <td>
+              <input type="number" name="variants[${v.id}][buying_price]"
+                     class="form-control form-control-sm" value="${v.buying_price}" min="0" step="0.01">
+            </td>
+            <td>
+              <input type="number" name="variants[${v.id}][purchase_price]"
+                     class="form-control form-control-sm" value="${v.purchase_price}" min="0" step="0.01">
+            </td>
+            <td>
+              <input type="number" name="variants[${v.id}][available_stock]"
+                     class="form-control form-control-sm" value="${v.available_stock}" min="0" step="1">
+            </td>
+            <td class="text-muted small align-middle">${escHtml(v.unit)}</td>
+            <td colspan="2" class="text-muted small align-middle">Increasing stock adds a batch</td>
+          `;
+          tbody.appendChild(vtr);
+        });
+      }
     });
 
     new bootstrap.Modal(document.getElementById('bulkEditModal')).show();
@@ -597,9 +651,12 @@ document.addEventListener('DOMContentLoaded', function() {
       const container = document.getElementById('bulkEditFields');
       container.innerHTML = '';
       tbody.querySelectorAll('input, select').forEach(el => {
-        const clone = el.cloneNode(true);
-        clone.style.display = 'none';
-        container.appendChild(clone);
+        if (el.disabled || !el.name) return; // disabled = variant-driven, skip
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = el.name;
+        hidden.value = el.value;
+        container.appendChild(hidden);
       });
 
       document.getElementById('bulkEditForm').submit();

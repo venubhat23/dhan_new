@@ -775,14 +775,17 @@
               <td class="right-align">
                 <%
                   # Display GST-inclusive unit price
-                  if item.product&.gst_enabled
-                    gst_rate = item.product.gst_percentage || 0
-                    unit_price_with_gst = (item.unit_price || 0) * (1 + gst_rate/100)
-                  else
-                    unit_price_with_gst = item.unit_price || 0
-                  end
+                  gst_rate = item.product&.gst_enabled ? (item.product.gst_percentage || 0) : 0
+                  unit_price_with_gst = (item.unit_price || 0) * (1 + gst_rate/100)
+                  list_price_with_gst = (item.list_unit_price || 0) * (1 + gst_rate/100)
                 %>
+                <% if item.line_discount? %>
+                  <span style="text-decoration:line-through;color:#888;">₹<%= number_with_delimiter(sprintf('%.2f', list_price_with_gst), delimiter: ',') %></span><br />
+                <% end %>
                 ₹<%= number_with_delimiter(sprintf('%.2f', unit_price_with_gst), delimiter: ',') %>
+                <% if item.line_discount? %>
+                  <br /><span class="tax-rate" style="color:#1a7f37;"><%= item.discount_label %></span>
+                <% end %>
               </td>
               <td class="right-align">
                 <%
@@ -823,9 +826,24 @@
       </table>
 
       <!-- Subtotal section -->
+      <% total_product_discount = invoice_items.sum { |i| i.discount_amount.to_f } %>
       <table class="subtotal-table">
+        <% if total_product_discount > 0 %>
+          <tr class="section-border">
+            <td>PRODUCT DISCOUNTS</td>
+            <td>-</td>
+            <td style="width: 40%;">
+              <table class="subtotal-values-table">
+                <tr>
+                  <td></td>
+                  <td style="color:#1a7f37;">− ₹ <%= number_with_delimiter(total_product_discount.round(2), delimiter: ',') %></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        <% end %>
         <tr class="section-border">
-          <td>SUBTOTAL</td>
+          <td>SUBTOTAL<%= total_product_discount > 0 ? ' (after product discounts)' : '' %></td>
           <td>-</td>
           <td style="width: 40%;">
             <table class="subtotal-values-table">

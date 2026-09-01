@@ -299,6 +299,42 @@
       </div>
     </div>
   </div>
+
+  <!-- Vendor Import Card -->
+  <div class="col-xl-6 col-lg-6 mb-4">
+    <div class="card shadow-lg border-0 h-100 import-card">
+      <div class="card-header bg-gradient-purple text-white">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-truck-loading fa-2x me-3"></i>
+          <div>
+            <h5 class="mb-0 text-dark"><strong>Import Vendors</strong></h5>
+            <small class="text-dark-75"><strong>Bulk upload vendor / supplier records</strong></small>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-text text-muted mb-3">
+          Import vendors with every field the vendor form supports &mdash; phone, email, address,
+          payment type, opening balance, and status. Only <strong>name</strong> is required; all
+          other columns are optional.
+        </p>
+        <div class="mb-3">
+          <small class="text-muted"><strong>Columns:</strong> name*, phone, email, address, gst_no, payment_type (Cash/Credit), opening_balance, status</small>
+        </div>
+        <div class="d-flex justify-content-between align-items-center">
+          <%= link_to download_template_admin_imports_path(template_type: 'vendors'),
+                      class: "btn btn-outline-purple btn-sm",
+                      target: "_blank" do %>
+            <i class="fas fa-download me-1"></i> Download Template
+          <% end %>
+
+          <%= link_to vendors_form_admin_imports_path, class: "btn btn-purple" do %>
+            <i class="fas fa-upload me-1"></i> Import Vendors
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
   <!-- Import Guidelines -->

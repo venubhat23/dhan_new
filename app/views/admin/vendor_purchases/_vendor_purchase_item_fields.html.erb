@@ -1,8 +1,16 @@
 <div class="product-item border rounded p-3 mb-3 shadow-sm" style="background: #f8f9fa; border-radius: 8px !important;">
   <div class="row g-3 align-items-end">
     <div class="col-md-3">
-      <%= f.label :product_id, "Product", class: "form-label fw-semibold" %>
-      <span class="text-danger">*</span>
+      <div class="d-flex justify-content-between align-items-center">
+        <span>
+          <%= f.label :product_id, "Product", class: "form-label fw-semibold mb-0" %>
+          <span class="text-danger">*</span>
+        </span>
+        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none refresh-products-btn"
+                title="Reload product list (pick up newly added products)">
+          <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+      </div>
       <%= f.select :product_id,
           options_for_select(
             @products.map { |p|

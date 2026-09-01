@@ -39,8 +39,9 @@
           </div>
         </div>
         <div class="d-flex align-items-center mt-2">
-          <span class="badge bg-success-subtle text-success px-2 py-1 me-2">
-            <i class="bi bi-arrow-up me-1"></i><%= (@revenue_growth || 0).abs %>%
+          <% rev_up = (@revenue_growth || 0) >= 0 %>
+          <span class="badge <%= rev_up ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' %> px-2 py-1 me-2">
+            <i class="bi bi-arrow-<%= rev_up ? 'up' : 'down' %> me-1"></i><%= (@revenue_growth || 0).abs %>%
           </span>
           <small class="text-muted">from last month</small>
         </div>
@@ -60,8 +61,9 @@
           </div>
         </div>
         <div class="d-flex align-items-center mt-2">
-          <span class="badge bg-primary-subtle text-primary px-2 py-1 me-2">
-            <i class="bi bi-arrow-up me-1"></i><%= (@order_growth || 0).abs %>%
+          <% ord_up = (@order_growth || 0) >= 0 %>
+          <span class="badge <%= ord_up ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' %> px-2 py-1 me-2">
+            <i class="bi bi-arrow-<%= ord_up ? 'up' : 'down' %> me-1"></i><%= (@order_growth || 0).abs %>%
           </span>
           <small class="text-muted">from last month</small>
         </div>
@@ -128,7 +130,7 @@
     <% end %>
   </div>
   <div class="col-md-2">
-    <%= link_to pending_admin_bookings_path, class: "text-decoration-none" do %>
+    <%= link_to admin_bookings_path(delivery_pending: '1'), class: "text-decoration-none" do %>
       <div class="card border-0 shadow-sm h-100" style="cursor:pointer;">
         <div class="card-body p-3 text-center">
           <div class="avatar-sm bg-warning-subtle rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2">
@@ -141,7 +143,7 @@
     <% end %>
   </div>
   <div class="col-md-2">
-    <%= link_to shipped_admin_orders_path, class: "text-decoration-none" do %>
+    <%= link_to shipped_admin_bookings_path, class: "text-decoration-none" do %>
       <div class="card border-0 shadow-sm h-100" style="cursor:pointer;">
         <div class="card-body p-3 text-center">
           <div class="avatar-sm bg-info-subtle rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2">
@@ -319,9 +321,9 @@
       <div class="card-body">
         <% sales_stats = [
              { label: 'Average Order Value', value: @avg_order_value || 0, format: 'currency', color: 'primary' },
-             { label: 'Conversion Rate', value: @conversion_rate || 0, format: 'percentage', color: 'success' },
-             { label: 'Monthly Revenue', value: @month_revenue || 0, format: 'currency', color: 'info' },
-             { label: 'Daily Revenue', value: @today_revenue || 0, format: 'currency', color: 'warning' }
+             { label: 'Payment Collection Rate', value: @payment_collection_rate || 0, format: 'percentage', color: 'success' },
+             { label: 'Revenue This Month', value: @month_revenue || 0, format: 'currency', color: 'info' },
+             { label: 'Revenue Today', value: @today_revenue || 0, format: 'currency', color: 'warning' }
            ] %>
         <% sales_stats.each do |stat| %>
           <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
@@ -488,7 +490,9 @@
             </thead>
             <tbody>
               <% begin
-                   recent_bookings = Booking.order(created_at: :desc).limit(5) rescue []
+                   recent_bookings = Booking.where.not(status: 'draft')
+                                            .includes(:customer)
+                                            .order(created_at: :desc).limit(5)
                  rescue
                    recent_bookings = []
                  end
@@ -552,36 +556,34 @@
               </tr>
             </thead>
             <tbody>
-              <% begin
-                   top_customers = Customer.order(created_at: :desc).limit(5) rescue []
-                 rescue
-                   top_customers = []
-                 end
-                 if top_customers.any?
-                   top_customers.each_with_index do |customer, index| %>
+              <% top_customers = @top_customers || [] %>
+              <% if top_customers.any? %>
+                <% top_customers.each_with_index do |row, index| %>
+                  <% customer = row[:customer] %>
+                  <% color = ['primary', 'success', 'warning', 'info', 'secondary'][index] || 'secondary' %>
                 <tr>
                   <td class="align-middle">
                     <div class="d-flex align-items-center">
-                      <div class="avatar-sm bg-<%= ['primary', 'success', 'warning', 'info', 'secondary'][index] %>-subtle rounded-circle d-flex align-items-center justify-content-center me-3">
-                        <i class="bi bi-person text-<%= ['primary', 'success', 'warning', 'info', 'secondary'][index] %>"></i>
+                      <div class="avatar-sm bg-<%= color %>-subtle rounded-circle d-flex align-items-center justify-content-center me-3">
+                        <i class="bi bi-person text-<%= color %>"></i>
                       </div>
                       <div>
                         <h6 class="mb-0"><%= customer.display_name %></h6>
-                        <small class="text-muted"><%= customer.mobile || "N/A" %></small>
+                        <small class="text-muted"><%= customer.mobile.presence || "N/A" %></small>
                       </div>
                     </div>
                   </td>
                   <td class="align-middle">
-                    <h6 class="mb-0"><%= rand(1..10) %></h6>
+                    <h6 class="mb-0"><%= row[:orders_count] %></h6>
                   </td>
                   <td class="align-middle">
-                    <h6 class="mb-0">₹<%= number_with_delimiter([15000, 23000, 8000, 45000, 12000][index]) %></h6>
+                    <h6 class="mb-0">₹<%= number_with_delimiter(row[:total_spent].to_i) %></h6>
                   </td>
                 </tr>
-              <% end
-               else %>
+                <% end %>
+              <% else %>
                 <tr>
-                  <td colspan="3" class="text-center py-4 text-muted">No customers found</td>
+                  <td colspan="3" class="text-center py-4 text-muted">No customer orders yet</td>
                 </tr>
               <% end %>
             </tbody>
@@ -593,7 +595,7 @@
 </div>
 
 <!-- Low Stock Alert -->
-<% if (@low_stock_products || 0) > 0 %>
+<% if (@low_stock_count || 0) > 0 %>
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-transparent border-0">
       <div class="d-flex justify-content-between align-items-center">
@@ -620,7 +622,7 @@
             </tr>
           </thead>
           <tbody>
-            <% Product.where('stock <= 5 AND stock > 0').limit(5).each do |product| %>
+            <% (@low_stock_list || []).each do |product| %>
               <tr>
                 <td class="align-middle">
                   <div>
@@ -760,13 +762,7 @@ Chart.defaults.color = '#64748b';
 
 // Real-time data from Ruby backend
 const salesTrendData = <%= (@sales_trend || {}).to_json.html_safe %>;
-const orderStatusData = {
-  'Pending': <%= @pending_bookings || 0 %>,
-  'Processing': <%= (@total_bookings - @pending_bookings - @completed_bookings - @cancelled_bookings) || 0 %>,
-  'Shipped': <%= @shipped_orders || 0 %>,
-  'Completed': <%= @completed_bookings || 0 %>,
-  'Cancelled': <%= @cancelled_bookings || 0 %>
-};
+const orderStatusData = <%= (@order_status_distribution || {}).to_json.html_safe %>;
 const categoryPerformanceData = <%= (@category_performance || {}).to_json.html_safe %>;
 const monthlyRevenueData = <%= (@monthly_revenue_trend || {}).to_json.html_safe %>;
 const locationData = <%= (@customer_location || { 'Karnataka' => 45, 'Maharashtra' => 32, 'Tamil Nadu' => 28, 'Delhi' => 25, 'Gujarat' => 18 }).to_json.html_safe %>;

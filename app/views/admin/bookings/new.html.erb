@@ -626,8 +626,12 @@
               <span>GST</span>
               <span>₹<span id="checkoutTax">0</span></span>
             </div>
+            <div class="d-flex justify-content-between mb-2 text-success" id="itemDiscountRow" style="display: none;">
+              <span><i class="bi bi-tags me-1"></i>Item Discounts</span>
+              <span>−₹<span id="itemDiscountAmount">0.00</span></span>
+            </div>
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <span>Discount</span>
+              <span>Bulk Discount</span>
               <div class="d-flex align-items-center gap-2">
                 <div class="btn-group btn-group-sm" role="group" aria-label="Discount type">
                   <button type="button" class="btn btn-outline-secondary active" id="discountTypeAmountBtn" onclick="setDiscountType('amount')">₹</button>
@@ -737,6 +741,62 @@ function initializeCart() {
   updateCartDisplay();
 }
 
+// ---- Per-product (line-item) discount helpers ---------------------------------
+// Discount is applied to the GST-inclusive line amount; GST is then re-extracted
+// from the reduced amount by the existing smart-rounding logic downstream.
+
+// Rupee value taken off a single cart line, capped at the line's gross.
+function itemLineDiscount(item) {
+  const gross = (item.price || 0) * (item.quantity || 0);
+  const type = item.discountType;
+  const val = parseFloat(item.discountValue) || 0;
+  if (!type || type === 'none' || val <= 0) return 0;
+  let d = type === 'percentage' ? gross * val / 100 : val;
+  if (d < 0) d = 0;
+  return Math.min(d, gross);
+}
+
+// GST-inclusive unit price after the line discount.
+function itemDiscountedUnit(item) {
+  if (!item.quantity || item.quantity <= 0) return item.price || 0;
+  return (item.price || 0) - itemLineDiscount(item) / item.quantity;
+}
+
+function itemHasDiscount(item) {
+  return itemLineDiscount(item) > 0.005;
+}
+
+// Called by the per-row ₹ / % toggle and value input in the ORDER SUMMARY.
+function setItemDiscountType(cartKey, type) {
+  if (!cart[cartKey]) return;
+  cart[cartKey].discountType = type;
+  if (type === 'none') cart[cartKey].discountValue = 0;
+  updateCheckoutDisplay();
+  updateCartDisplay();
+}
+
+function setItemDiscountValue(cartKey, value) {
+  if (!cart[cartKey]) return;
+  let v = parseFloat(value);
+  if (isNaN(v) || v < 0) v = 0;
+  const item = cart[cartKey];
+  if (item.discountType === 'percentage' && v > 100) v = 100;
+  const gross = (item.price || 0) * (item.quantity || 0);
+  if (item.discountType === 'fixed' && v > gross) v = parseFloat(gross.toFixed(2));
+  if ((!item.discountType || item.discountType === 'none') && v > 0) {
+    item.discountType = 'fixed';
+  }
+  item.discountValue = v;
+  updateCheckoutTotalsOnly();
+}
+
+// Lightweight totals refresh that doesn't rebuild the summary rows (keeps the
+// discount input focused while the user types).
+function updateCheckoutTotalsOnly() {
+  syncDiscountHiddenFields();
+  updateCheckoutTotals();
+}
+
 // Add item to cart
 // qty param is optional — used by barcode scan to bypass the DOM qty input
 function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate, variantId, qty) {
@@ -765,7 +825,9 @@ function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate
       basePrice: basePrice || finalPrice,
       gstRate: gstRate || 0,
       quantity: quantity,
-      stock: stock
+      stock: stock,
+      discountType: 'none',   // 'none' | 'percentage' | 'fixed'
+      discountValue: 0
     };
   }
 
@@ -896,21 +958,23 @@ function updateCartDisplay() {
 
   for (const [productId, item] of sortedItems) {
     const itemGSTRate = item.gstRate || 0;
-    // item.price is always GST-inclusive — derive the base price from it directly
-    // (smart-rounded, matching the checkout summary) rather than trusting a
-    // separately-stored basePrice, which can drift out of sync.
-    let itemBasePrice = item.price;
+    // item.price is GST-inclusive; discUnit is that price after the per-product
+    // discount, from which the base price is derived (smart-rounded).
+    const discUnit = itemDiscountedUnit(item);
+    const lineDisc = itemLineDiscount(item);
+    const hasDisc = lineDisc > 0.005;
+    let itemBasePrice = discUnit;
     let itemTotal;
 
     if (itemGSTRate > 0) {
-      const roundedFinal = Math.round(item.price);
+      const roundedFinal = Math.round(discUnit);
       const roundedGST = roundedFinal * itemGSTRate / 100;
       itemBasePrice = roundedFinal - roundedGST;
-      itemTotal = item.price * item.quantity; // Full price for display
+      itemTotal = discUnit * item.quantity; // Discounted price for display
       subtotal += itemBasePrice * item.quantity;
     } else {
       // Product has no GST
-      itemTotal = item.price * item.quantity;
+      itemTotal = discUnit * item.quantity;
       subtotal += itemTotal;
     }
 
@@ -942,10 +1006,12 @@ function updateCartDisplay() {
             </button>
           </div>
           <div class="text-end">
+            ${hasDisc ? `<div class="text-muted small"><s>₹${(item.price * item.quantity).toFixed(2)}</s></div>` : ''}
             <div class="fw-bold fs-5 text-primary">₹${itemTotal.toFixed(2)}</div>
+            ${hasDisc ? `<small class="text-success d-block">Item discount −₹${lineDisc.toFixed(2)}</small>` : ''}
             ${itemGSTRate > 0 ?
               `<small class="text-muted">${item.quantity} × ₹${itemBasePrice.toFixed(2)} (base)</small>` :
-              `<small class="text-muted">${item.quantity} × ₹${item.price}</small>`
+              `<small class="text-muted">${item.quantity} × ₹${discUnit.toFixed(2)}</small>`
             }
           </div>
         </div>
@@ -958,8 +1024,7 @@ function updateCartDisplay() {
   for (const [productId, item] of Object.entries(cart)) {
     const itemGSTRate = item.gstRate || 0;
     if (itemGSTRate > 0) {
-      const itemFinalPrice = item.price;
-      const roundedFinal = Math.round(itemFinalPrice);
+      const roundedFinal = Math.round(itemDiscountedUnit(item));
       const roundedGST = roundedFinal * itemGSTRate / 100;
       totalGST += roundedGST * item.quantity;
     }
@@ -1148,81 +1213,100 @@ function updateCheckoutDisplay() {
   orderTotalsEl.style.display = 'block';
 
   let summaryHtml = '';
-  let fieldsHtml = '';
   let subtotal = 0;
-  let fieldIndex = 0;
 
-  for (const [productId, item] of Object.entries(cart)) {
-    const itemBasePrice = item.basePrice || item.price;
+  for (const [cartKey, item] of Object.entries(cart)) {
     const itemGSTRate = item.gstRate || 0;
+    const discUnit = itemDiscountedUnit(item);
+    const lineDisc = itemLineDiscount(item);
+    const hasDisc = lineDisc > 0.005;
     let itemTotal;
     let itemGSTAmount = 0;
 
     if (itemGSTRate > 0) {
-      // Product has GST enabled
-      const itemFinalPrice = item.price;
-      const roundedFinal = Math.round(itemFinalPrice);
+      const roundedFinal = Math.round(discUnit);
       const roundedGST = roundedFinal * itemGSTRate / 100;
       const roundedBase = roundedFinal - roundedGST;
       itemGSTAmount = roundedGST * item.quantity;
       itemTotal = roundedFinal * item.quantity;
       subtotal += roundedBase * item.quantity;
     } else {
-      // Product has no GST
-      itemTotal = item.price * item.quantity;
+      itemTotal = discUnit * item.quantity;
       subtotal += itemTotal;
     }
 
+    const dType = (item.discountType && item.discountType !== 'none') ? item.discountType : 'none';
+    const dVal = parseFloat(item.discountValue) || 0;
+    const safeKey = cartKey.replace(/'/g, "\\'");
+
+    const priceLine = hasDisc
+      ? `<small class="text-muted"><s>₹${item.price.toFixed(2)}</s> <span class="text-success fw-semibold">₹${discUnit.toFixed(2)}</span> × ${item.quantity}</small>`
+      : `<small class="text-muted">₹${item.price.toFixed(2)} × ${item.quantity}</small>`;
+
     summaryHtml += `
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <div>
-          <div class="fw-medium">${item.name}</div>
-          <small class="text-muted">₹${item.price.toFixed(2)} × ${item.quantity}</small>
-          ${itemGSTRate > 0 ? `<br><small class="text-success">GST ${itemGSTRate}%: ₹${Math.abs(itemGSTAmount - Math.round(itemGSTAmount)) < 0.01 ? Math.round(itemGSTAmount) : itemGSTAmount.toFixed(2)}</small>` : ''}
+      <div class="border-bottom pb-2 mb-2">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="pe-2">
+            <div class="fw-medium">${item.name}</div>
+            ${priceLine}
+            ${itemGSTRate > 0 ? `<br><small class="text-success">GST ${itemGSTRate}%: ₹${Math.abs(itemGSTAmount - Math.round(itemGSTAmount)) < 0.01 ? Math.round(itemGSTAmount) : itemGSTAmount.toFixed(2)}</small>` : ''}
+          </div>
+          <div class="text-end">
+            ${hasDisc ? `<div class="text-muted small"><s>₹${(item.price * item.quantity).toFixed(2)}</s></div>` : ''}
+            <span class="fw-medium">₹${itemTotal.toFixed(2)}</span>
+          </div>
         </div>
-        <span class="fw-medium">₹${itemTotal.toFixed(2)}</span>
+        <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+          <span class="text-muted small me-1"><i class="bi bi-tag"></i> Discount</span>
+          <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-secondary py-0 px-2 ${dType === 'fixed' ? 'active' : ''}" onclick="setItemDiscountType('${safeKey}', '${dType === 'fixed' ? 'none' : 'fixed'}')">₹</button>
+            <button type="button" class="btn btn-outline-secondary py-0 px-2 ${dType === 'percentage' ? 'active' : ''}" onclick="setItemDiscountType('${safeKey}', '${dType === 'percentage' ? 'none' : 'percentage'}')">%</button>
+          </div>
+          <input type="number" min="0" step="0.01" value="${dVal || ''}" placeholder="0"
+                 class="form-control form-control-sm py-0" style="width:70px;"
+                 oninput="setItemDiscountValue('${safeKey}', this.value)">
+          ${hasDisc ? `<span class="badge bg-success-subtle text-success">-₹${lineDisc.toFixed(2)}</span>` : ''}
+        </div>
       </div>
     `;
+  }
 
+  orderSummaryEl.innerHTML = summaryHtml;
+  syncDiscountHiddenFields();
+
+  updateCheckoutTotals();
+}
+
+// Rebuilds the hidden booking_items_attributes fields (incl. per-line discount)
+// from the current cart. Called whenever cart contents or discounts change.
+function syncDiscountHiddenFields() {
+  const fieldsContainer = document.getElementById('checkoutItemsFields');
+  if (!fieldsContainer) return;
+
+  let fieldsHtml = '';
+  let fieldIndex = 0;
+  for (const [cartKey, item] of Object.entries(cart)) {
+    const dType = (item.discountType && item.discountType !== 'none' && (parseFloat(item.discountValue) || 0) > 0) ? item.discountType : '';
+    const dVal = dType ? (parseFloat(item.discountValue) || 0) : '';
     fieldsHtml += `
-      <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][product_id]" value="${item.productId || productId}">
+      <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][product_id]" value="${item.productId || cartKey}">
       <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][quantity]" value="${item.quantity}">
       <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][price]" value="${item.price}">
+      <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][discount_type]" value="${dType}">
+      <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][discount_value]" value="${dVal}">
       ${item.variantId ? `<input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][product_variant_id]" value="${item.variantId}">` : ''}
     `;
     fieldIndex++;
   }
-
-  orderSummaryEl.innerHTML = summaryHtml;
   fieldsContainer.innerHTML = fieldsHtml;
-
-  updateCheckoutTotals();
 }
 
 // Ensure cart items are in form before submission
 function ensureCartItemsInForm() {
   const fieldsContainer = document.getElementById('checkoutItemsFields');
-
-  // If fields container is empty but cart has items, regenerate the fields
   if (fieldsContainer && Object.keys(cart).length > 0) {
-    let fieldsHtml = '';
-    let fieldIndex = 0;
-
-    for (const [cartKey, item] of Object.entries(cart)) {
-      fieldsHtml += `
-        <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][product_id]" value="${item.productId || cartKey}">
-        <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][quantity]" value="${item.quantity}">
-        <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][price]" value="${item.price}">
-        ${item.variantId ? `<input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][product_variant_id]" value="${item.variantId}">` : ''}
-      `;
-      fieldIndex++;
-    }
-
-    fieldsContainer.innerHTML = fieldsHtml;
-
-    // Log for debugging
+    syncDiscountHiddenFields();
     console.log('Cart items added to form:', cart);
-    console.log('Form fields generated:', fieldsHtml);
   }
 }
 
@@ -1230,23 +1314,35 @@ function ensureCartItemsInForm() {
 function updateCheckoutTotals() {
   let subtotal = 0;
   let totalGST = 0;
+  let itemDiscountTotal = 0;
 
-  // Calculate subtotal and GST based on each product's GST configuration
+  // Calculate subtotal and GST from each line's per-product-discounted price
   for (const [productId, item] of Object.entries(cart)) {
-    const itemBasePrice = item.basePrice || item.price;
     const itemGSTRate = item.gstRate || 0;
+    const discUnit = itemDiscountedUnit(item);
+    itemDiscountTotal += itemLineDiscount(item);
 
     if (itemGSTRate > 0) {
       // Product has GST enabled
-      const itemFinalPrice = item.price;
-      const roundedFinal = Math.round(itemFinalPrice);
+      const roundedFinal = Math.round(discUnit);
       const roundedGST = roundedFinal * itemGSTRate / 100;
       const roundedBase = roundedFinal - roundedGST;
       subtotal += roundedBase * item.quantity;
       totalGST += roundedGST * item.quantity;
     } else {
       // Product has no GST
-      subtotal += item.price * item.quantity;
+      subtotal += discUnit * item.quantity;
+    }
+  }
+
+  // "Item discounts" summary row
+  const itemDiscRow = document.getElementById('itemDiscountRow');
+  if (itemDiscRow) {
+    if (itemDiscountTotal > 0.005) {
+      itemDiscRow.style.display = 'flex';
+      document.getElementById('itemDiscountAmount').textContent = itemDiscountTotal.toFixed(2);
+    } else {
+      itemDiscRow.style.display = 'none';
     }
   }
 

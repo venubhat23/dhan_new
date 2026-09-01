@@ -42,6 +42,10 @@ class Admin::ImportsController < Admin::ApplicationController
     # Show customer with daily tasks import form
   end
 
+  def vendors_form
+    # Show vendor import form
+  end
+
   # POST /admin/import/customers
   def customers
     uploaded_file = params[:file]
@@ -182,6 +186,33 @@ class Admin::ImportsController < Admin::ApplicationController
     end
   end
 
+  # POST /admin/import/vendors
+  def vendors
+    uploaded_file = params[:file]
+
+    if uploaded_file.blank?
+      redirect_back fallback_location: admin_imports_path, alert: 'Please select a file to import.'
+      return
+    end
+
+    begin
+      import_result = ImportService::VendorImporter.new(uploaded_file).import
+
+      if import_result[:success]
+        notice = "Successfully imported #{import_result[:imported_count]} vendors. #{import_result[:skipped_count]} records were skipped."
+        if import_result[:errors].present?
+          notice += " Issues: #{import_result[:errors].first(10).join('; ')}"
+        end
+        redirect_to admin_vendors_path, notice: notice
+      else
+        redirect_back fallback_location: admin_imports_path, alert: "Import failed: #{import_result[:error]}"
+      end
+    rescue => e
+      Rails.logger.error "Vendor import error: #{e.message}"
+      redirect_back fallback_location: admin_imports_path, alert: 'An error occurred during import. Please check your file format and try again.'
+    end
+  end
+
   # POST /admin/import/products_simple
   def products_simple
     uploaded_file = params[:file]
@@ -286,6 +317,8 @@ class Admin::ImportsController < Admin::ApplicationController
       send_customer_subscription_template
     when 'customer_daily_tasks'
       send_customer_daily_task_template
+    when 'vendors'
+      send_vendor_template
     else
       redirect_to admin_imports_path, alert: 'Invalid template type'
     end
@@ -623,6 +656,29 @@ class Admin::ImportsController < Admin::ApplicationController
     end
 
     filename = format == 'xlsx' ? 'customer_daily_tasks_import_template.xlsx' : 'customer_daily_tasks_import_template.csv'
+    send_data csv_data, filename: filename, type: 'text/csv'
+  end
+
+  def send_vendor_template
+    format = params[:format] || 'csv'
+
+    headers = [
+      'name*',
+      'phone', 'email', 'address', 'gst_no', 'payment_type', 'opening_balance', 'status'
+    ]
+
+    sample_data = [
+      ['Fresh Farms Dairy', '9800000001', 'contact@freshfarms.com', '12 Dairy Road, Bangalore', '29ABCDE1234F1Z5', 'Credit', '0', 'true'],
+      ['Green Valley Produce', '9800000002', 'orders@greenvalley.com', '45 Market Street, Mysore', '', 'Cash', '1500.50', 'true'],
+      ['Sunrise Wholesale', '', '', '', '', '', '', '']
+    ]
+
+    csv_data = CSV.generate(headers: true) do |csv|
+      csv << headers
+      sample_data.each { |row| csv << row }
+    end
+
+    filename = format == 'xlsx' ? 'vendors_import_template.xlsx' : 'vendors_import_template.csv'
     send_data csv_data, filename: filename, type: 'text/csv'
   end
 

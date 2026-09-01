@@ -571,6 +571,11 @@ class DashboardController < ApplicationController
     {}
   end
 
+  # Booking statuses that are not real orders yet (carts in progress).
+  NON_ORDER_BOOKING_STATUSES = %w[draft].freeze
+  # Booking statuses that count as fulfilled revenue.
+  FULFILLED_BOOKING_STATUSES = %w[completed delivered].freeze
+
   def load_ecommerce_dashboard_data
     # Product counts — two queries (status is a string enum, group by is the cleanest)
     product_status_counts = Product.group(:status).count rescue {}
@@ -582,34 +587,44 @@ class DashboardController < ApplicationController
     @total_categories  = category_counts.values.sum
     @active_categories = category_counts[true] || 0
 
-    # All Booking counts + revenue in 2 queries instead of 7+
-    booking_status_counts  = Booking.group(:status).count
-    booking_payment_counts = Booking.group(:payment_status).count
-    @total_bookings    = booking_status_counts.values.sum
-    @pending_bookings  = booking_status_counts['ordered_and_delivery_pending'] || booking_status_counts['pending'] || 0
-    @completed_bookings = booking_status_counts['completed'] || 0
-    @cancelled_bookings = booking_status_counts['cancelled'] || 0
+    # ---- Bookings are the real order entity everywhere on this dashboard ----
+    # Every count/revenue figure below is derived from this single GROUP BY so
+    # the KPI cards, the charts and the tables can never disagree.
+    booking_status_counts = Booking.group(:status).count
+    real_order_counts     = booking_status_counts.except(*NON_ORDER_BOOKING_STATUSES)
 
-    # Revenue in 1 conditional SUM query instead of 3 separate full-table scans
+    @draft_bookings     = booking_status_counts.slice(*NON_ORDER_BOOKING_STATUSES).values.sum
+    @total_bookings     = real_order_counts.values.sum
+    @total_orders       = @total_bookings
+    @pending_bookings   = real_order_counts.slice('ordered_and_delivery_pending', 'confirmed', 'processing', 'packed').values.sum
+    @shipped_orders     = real_order_counts.slice('shipped', 'out_for_delivery').values.sum
+    @completed_bookings = real_order_counts.slice(*FULFILLED_BOOKING_STATUSES).values.sum
+    @delivered_orders   = real_order_counts['delivered'] || 0
+    @cancelled_bookings = real_order_counts.slice('cancelled', 'returned').values.sum
+    @cancelled_orders   = @cancelled_bookings
+    @pending_orders     = @pending_bookings
+    # Orders that exist but aren't finished (used by the "Pending Orders" card)
+    @pending_orders_count = @total_bookings - @completed_bookings - @cancelled_bookings
+
+    # Revenue = fulfilled bookings only, in 1 conditional SUM query. Drafts and
+    # cancelled/returned bookings never contribute to any revenue figure.
     today_start = Date.current.beginning_of_day
     month_start = Date.current.beginning_of_month.beginning_of_day
-    revenue_row = Booking.select(Arel.sql(
-      "COALESCE(SUM(total_amount), 0)                                                    AS total_rev,
+    revenue_row = Booking.where(status: FULFILLED_BOOKING_STATUSES).select(Arel.sql(
+      "COALESCE(SUM(total_amount), 0)                                                          AS total_rev,
        COALESCE(SUM(CASE WHEN created_at >= '#{today_start}' THEN total_amount ELSE 0 END), 0) AS today_rev,
        COALESCE(SUM(CASE WHEN created_at >= '#{month_start}'  THEN total_amount ELSE 0 END), 0) AS month_rev"
     )).take
     @total_revenue = revenue_row.total_rev.to_f
     @today_revenue = revenue_row.today_rev.to_f
     @month_revenue = revenue_row.month_rev.to_f
-    @avg_order_value = @total_bookings > 0 ? (@total_revenue / @total_bookings).round(2) : 0
+    @avg_order_value = @completed_bookings > 0 ? (@total_revenue / @completed_bookings).round(2) : 0
 
-    # Order metrics — 1 GROUP BY instead of 5 queries
-    order_counts = begin Order.group(:status).count rescue {} end
-    @total_orders     = order_counts.values.sum
-    @pending_orders   = order_counts['pending']   || 0
-    @shipped_orders   = order_counts['shipped']   || 0
-    @delivered_orders = order_counts['delivered'] || 0
-    @cancelled_orders = order_counts['cancelled'] || 0
+    # Payment collection rate: share of real orders that are fully paid.
+    booking_payment_counts = Booking.where.not(status: NON_ORDER_BOOKING_STATUSES).group(:payment_status).count
+    paid_orders = booking_payment_counts['paid'].to_i
+    @payment_collection_rate = @total_bookings > 0 ? ((paid_orders.to_f / @total_bookings) * 100).round(1) : 0
+    @conversion_rate = @payment_collection_rate
 
     # Vendor metrics
     @total_vendors       = Vendor.count rescue 0
@@ -623,34 +638,27 @@ class DashboardController < ApplicationController
     @total_stores  = Store.count rescue 0
     @active_stores = Store.where(status: true).count rescue 0
 
-    # Inventory metrics
-    @total_stock_value    = Product.sum('price * stock').to_f
-    @low_stock_products   = Product.where('stock <= 5 AND stock > 0').count
+    # Inventory metrics — one "low stock" definition, used by every card, the
+    # chart and the detail table (products.stock, 1..5 units on hand).
+    @total_stock_value     = Product.sum('price * stock').to_f
+    @low_stock_products    = Product.where('stock > 0 AND stock <= 5').count
+    @low_stock_count       = @low_stock_products
+    @low_stock_list        = Product.includes(:category).where('stock > 0 AND stock <= 5').order(:stock).limit(10)
     @out_of_stock_products = Product.where(stock: 0).count
     @top_categories = calculate_top_categories
 
-    # Low stock via stock_batches
-    @low_stock_count = Product
-      .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id
-              AND stock_batches.status = 'active'
-              AND stock_batches.store_id IS NULL")
-      .group("products.id")
-      .having("COALESCE(SUM(stock_batches.quantity_remaining), 0) <= COALESCE(products.low_stock_threshold, 5)")
-      .count.size rescue @low_stock_products
-
-    # Pending payments — 1 query instead of 2
+    # Pending payments — real orders only (drafts are not unpaid orders)
     unpaid_row = Booking.where(payment_status: 'unpaid')
+                        .where.not(status: NON_ORDER_BOOKING_STATUSES)
                         .select(Arel.sql("COUNT(*) AS cnt, COALESCE(SUM(total_amount), 0) AS total"))
                         .take
     @pending_payments_count  = unpaid_row&.cnt.to_i
     @pending_payments_amount = unpaid_row&.total.to_f
 
-    @pending_orders_count = @total_bookings -
-      (booking_status_counts.slice('completed', 'cancelled', 'returned', 'delivered').values.sum)
-
-    # Customer metrics — 1 query
-    @total_customers         = Customer.count
+    # Customer metrics
+    @total_customers          = Customer.count
     @new_customers_this_month = Customer.where(created_at: month_start..Date.current.end_of_month).count
+    @top_customers            = calculate_top_customers
 
     # Chart data
     @sales_trend               = calculate_sales_trend
@@ -664,7 +672,6 @@ class DashboardController < ApplicationController
     # Growth metrics
     calculate_ecommerce_growth_metrics
 
-    @conversion_rate   = @total_customers > 0 ? ((@total_bookings.to_f / @total_customers) * 100).round(2) : 0
     @customer_location = calculate_customer_locations
   end
 
@@ -686,7 +693,8 @@ class DashboardController < ApplicationController
 
   def calculate_sales_trend
     start_day = 6.days.ago.beginning_of_day
-    rows = Booking.where(created_at: start_day..Time.current.end_of_day)
+    rows = Booking.where(status: FULFILLED_BOOKING_STATUSES)
+                  .where(created_at: start_day..Time.current.end_of_day)
                   .group(Arel.sql("TO_CHAR(created_at, 'YYYY-MM-DD')"))
                   .sum(:total_amount)
     trend = {}
@@ -701,6 +709,7 @@ class DashboardController < ApplicationController
 
   def calculate_category_performance
     BookingItem.joins(:booking, product: :category)
+               .where.not(bookings: { status: DashboardController::NON_ORDER_BOOKING_STATUSES })
                .group('categories.name')
                .sum('booking_items.quantity * booking_items.price')
                .reject { |_, v| v.to_f == 0 }
@@ -712,16 +721,37 @@ class DashboardController < ApplicationController
 
   def calculate_order_status_distribution
     {
-      'Pending' => @pending_orders,
-      'Shipped' => @shipped_orders,
-      'Delivered' => @delivered_orders,
-      'Cancelled' => @cancelled_orders
+      'Pending'   => @pending_bookings.to_i,
+      'Shipped'   => @shipped_orders.to_i,
+      'Completed' => @completed_bookings.to_i,
+      'Cancelled' => @cancelled_bookings.to_i
     }
   end
 
+  # Real top customers by fulfilled spend (not a random sample).
+  def calculate_top_customers
+    rows = Booking.where.not(status: NON_ORDER_BOOKING_STATUSES)
+                  .where.not(customer_id: nil)
+                  .group(:customer_id)
+                  .select('customer_id,
+                           COUNT(*) AS orders_count,
+                           COALESCE(SUM(total_amount), 0) AS total_spent')
+                  .order(Arel.sql('total_spent DESC, orders_count DESC'))
+                  .limit(5)
+    customers_by_id = Customer.where(id: rows.map(&:customer_id)).index_by(&:id)
+    rows.filter_map do |r|
+      customer = customers_by_id[r.customer_id]
+      next unless customer
+      { customer: customer, orders_count: r.orders_count.to_i, total_spent: r.total_spent.to_f }
+    end
+  rescue
+    []
+  end
+
   def calculate_top_selling_products
-    # Top 5 products by quantity sold
+    # Top 5 products by quantity sold (real orders only)
     BookingItem.joins(:product, :booking)
+               .where.not(bookings: { status: DashboardController::NON_ORDER_BOOKING_STATUSES })
                .group('products.name')
                .order('SUM(booking_items.quantity) DESC')
                .limit(5)
@@ -730,7 +760,8 @@ class DashboardController < ApplicationController
 
   def calculate_monthly_revenue_trend
     start_month = 5.months.ago.beginning_of_month.beginning_of_day
-    rows = Booking.where(created_at: start_month..Time.current.end_of_month)
+    rows = Booking.where(status: FULFILLED_BOOKING_STATUSES)
+                  .where(created_at: start_month..Time.current.end_of_month)
                   .group(Arel.sql("TO_CHAR(created_at, 'Mon YYYY')"))
                   .sum(:total_amount)
     trend = {}
@@ -778,11 +809,13 @@ class DashboardController < ApplicationController
     prev_start = 1.month.ago.beginning_of_month.beginning_of_day
     prev_end   = 1.month.ago.end_of_month.end_of_day
 
-    # 2 queries instead of 6: one conditional SUM/COUNT for bookings, one for customers
-    booking_row = Booking.select(Arel.sql(
-      "COALESCE(SUM(CASE WHEN created_at >= '#{cur_start}'  THEN total_amount ELSE 0 END), 0) AS cur_rev,
+    # Counts exclude drafts; revenue counts fulfilled bookings only — matching
+    # the KPI cards exactly.
+    fulfilled = FULFILLED_BOOKING_STATUSES.map { |s| ActiveRecord::Base.connection.quote(s) }.join(',')
+    booking_row = Booking.where.not(status: NON_ORDER_BOOKING_STATUSES).select(Arel.sql(
+      "COALESCE(SUM(CASE WHEN created_at >= '#{cur_start}' AND status IN (#{fulfilled}) THEN total_amount ELSE 0 END), 0) AS cur_rev,
        COUNT(CASE WHEN created_at >= '#{cur_start}'                             THEN 1 END)   AS cur_cnt,
-       COALESCE(SUM(CASE WHEN created_at BETWEEN '#{prev_start}' AND '#{prev_end}' THEN total_amount ELSE 0 END), 0) AS prev_rev,
+       COALESCE(SUM(CASE WHEN created_at BETWEEN '#{prev_start}' AND '#{prev_end}' AND status IN (#{fulfilled}) THEN total_amount ELSE 0 END), 0) AS prev_rev,
        COUNT(CASE WHEN created_at BETWEEN '#{prev_start}' AND '#{prev_end}'        THEN 1 END) AS prev_cnt"
     )).take
 
@@ -795,7 +828,6 @@ class DashboardController < ApplicationController
     @order_growth                = calculate_percentage_change(booking_row.cur_cnt.to_i,  booking_row.prev_cnt.to_i)
     @customer_acquisition_growth = calculate_percentage_change(customer_row.cur_cnt.to_i, customer_row.prev_cnt.to_i)
 
-    @conversion_rate     = @total_customers > 0 ? ((@total_bookings.to_f / @total_customers) * 100).round(1) : 0
     @inventory_turnover  = @total_stock_value > 0 ? (@total_revenue / @total_stock_value).round(2) : 0
   end
 

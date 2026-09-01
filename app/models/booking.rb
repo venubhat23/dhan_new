@@ -136,7 +136,13 @@ class Booking < ApplicationRecord
     transaction do
       target_rows = invoice.invoice_items.includes(:product).filter_map do |ii|
         next unless ii.product
-        { product: ii.product, quantity: ii.quantity, price: final_price_for(ii.product, ii.unit_price) }
+        {
+          product: ii.product,
+          quantity: ii.quantity,
+          price: final_price_for(ii.product, invoice_item_list_price(ii)),
+          discount_type: ii.discount_type.presence,
+          discount_value: ii.discount_type.present? ? ii.discount_value : nil
+        }
       end
 
       existing_by_product = booking_items.index_by(&:product_id)
@@ -145,14 +151,18 @@ class Booking < ApplicationRecord
       target_rows.each do |row|
         seen_product_ids << row[:product].id
         existing = existing_by_product[row[:product].id]
+        attrs = { quantity: row[:quantity], price: row[:price],
+                  discount_type: row[:discount_type], discount_value: row[:discount_value] }
 
         if existing
           unless existing.quantity.to_f.round(3) == row[:quantity].to_f.round(3) &&
-                 existing.price.to_f.round(2) == row[:price].round(2)
-            existing.update!(quantity: row[:quantity], price: row[:price])
+                 existing.price.to_f.round(2) == row[:price].round(2) &&
+                 existing.discount_type.presence == row[:discount_type] &&
+                 existing.discount_value.to_f == row[:discount_value].to_f
+            existing.update!(attrs)
           end
         else
-          booking_items.create!(product: row[:product], quantity: row[:quantity], price: row[:price])
+          booking_items.create!(attrs.merge(product: row[:product]))
         end
       end
 
@@ -169,13 +179,23 @@ class Booking < ApplicationRecord
   end
 
   def items_match_invoice?(invoice)
-    current = booking_items.map { |bi| [bi.product_id, bi.quantity.to_f.round(3), bi.price.to_f.round(2)] }.sort
+    current = booking_items.map do |bi|
+      [bi.product_id, bi.quantity.to_f.round(3), bi.price.to_f.round(2),
+       bi.discount_type.presence, bi.discount_value.to_f]
+    end.sort_by { |row| row.map(&:to_s) }
     target = invoice.invoice_items.filter_map do |ii|
       next unless ii.product_id
-      [ii.product_id, ii.quantity.to_f.round(3), final_price_for(ii.product, ii.unit_price).round(2)]
-    end.sort
+      [ii.product_id, ii.quantity.to_f.round(3), final_price_for(ii.product, invoice_item_list_price(ii)).round(2),
+       ii.discount_type.presence, (ii.discount_type.present? ? ii.discount_value.to_f : 0.0)]
+    end.sort_by { |row| row.map(&:to_s) }
 
     current == target && shipping_charges.to_f.round(2) == invoice.delivery_charge.to_f.round(2)
+  end
+
+  # The pre-discount base unit price recorded on an invoice line (falls back to
+  # the net unit_price for legacy rows written before per-line discounts existed).
+  def invoice_item_list_price(invoice_item)
+    invoice_item.original_unit_price.presence || invoice_item.unit_price
   end
 
   # Tax-inclusive price derived from an invoice's base unit_price, matching the
@@ -200,7 +220,8 @@ class Booking < ApplicationRecord
   # the price actually charged on the item (not the product's current master
   # price), so later product price changes don't retroactively alter old invoices.
   def invoice_unit_price_for(booking_item)
-    unit_price = base_unit_price_for(booking_item.product, booking_item.price)
+    # Start from the per-product-discounted, tax-inclusive unit price, then strip GST.
+    unit_price = base_unit_price_for(booking_item.product, booking_item.discounted_unit_price)
 
     if discount_amount.to_f > 0 && total_amount.to_f > 0
       unit_price = unit_price * (1 - discount_amount.to_f / total_amount.to_f)
@@ -268,7 +289,9 @@ class Booking < ApplicationRecord
     booking_items.each do |item|
       if item.quantity.present? && item.price.present?
         quantity = item.quantity
-        price = item.price
+        # Per-product (line-item) discount is applied to the tax-inclusive price
+        # first; GST is then re-extracted from the reduced amount below.
+        price = item.discounted_unit_price
 
         # Check if product has GST enabled
         if item.product && item.product.gst_enabled && item.product.gst_percentage.to_f > 0
@@ -309,7 +332,7 @@ class Booking < ApplicationRecord
   def calculated_subtotal
     return subtotal if subtotal.present?
 
-    total = booking_items.sum { |item| (item.quantity || 0) * (item.price || 0) }
+    total = booking_items.sum { |item| (item.quantity || 0) * item.discounted_unit_price }
     total.round(2)
   end
 
@@ -321,8 +344,8 @@ class Booking < ApplicationRecord
     booking_items.each do |item|
       if item.product && item.product.gst_enabled && item.product.gst_percentage.to_f > 0
         gst_rate = item.product.gst_percentage.to_f
-        item_base = (item.price || 0) * (item.quantity || 0)
-        item_gst = (item_base * gst_rate / 100).round(2)
+        item_incl = item.discounted_unit_price * (item.quantity || 0)
+        item_gst = (item_incl * gst_rate / (100 + gst_rate)).round(2)
         total_gst += item_gst
       end
     end
@@ -876,7 +899,10 @@ class Booking < ApplicationRecord
 
     invoice_total = 0
 
-    booking_items.includes(:product, :product_variant).each do |item|
+    # In the create flow booking_items is already loaded (with products memoised
+    # from calculate_totals) — reuse it instead of forcing a fresh 3-query reload.
+    items = booking_items.loaded? ? booking_items.to_a : booking_items.includes(:product, :product_variant).to_a
+    items.each do |item|
       product = item.product
       next unless product
 
@@ -890,7 +916,11 @@ class Booking < ApplicationRecord
         unit_price: unit_price,
         total_amount: item_total,
         product: product,
-        product_variant: item.product_variant
+        product_variant: item.product_variant,
+        original_unit_price: base_unit_price_for(product, item.price),
+        discount_type: item.discount_type.presence,
+        discount_value: item.discount_type.present? ? item.discount_value : nil,
+        discount_amount: item.discount_amount
       )
     end
 

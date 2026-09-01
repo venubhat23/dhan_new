@@ -667,7 +667,7 @@
         # Base amount (quantity × unit_price) - this is the amount shown in the items table
         # Convert string values to numbers for calculation
         quantity = (item['quantity'] || 0).to_f
-        price = (item['price'] || 0).to_f
+        price = (item['discounted_unit_price'] || item['price'] || 0).to_f
         base_amount = quantity * price
 
         # Add to subtotal (sum of all item amounts)
@@ -681,7 +681,7 @@
       # Fallback to booking items if invoice_items is not available
       if @booking&.booking_items&.any?
         @booking.booking_items.includes(:product).each do |item|
-          base_amount = item.quantity * (item.price || 0)
+          base_amount = item.quantity * item.discounted_unit_price
           subtotal_amount += base_amount
 
           if item.product&.respond_to?(:gst_enabled) && item.product.gst_enabled
@@ -821,16 +821,22 @@
                 <td data-label="ITEMS">
                   <div class="product-name"><%= item['product_name'] || 'Product' %></div>
                 </td>
+                <% rate_val = (item['discounted_unit_price'] || item['price'] || 0).to_f %>
                 <td class="text-center" data-label="QTY"><%= number_with_precision(item['quantity'] || 0, precision: 2, strip_insignificant_zeros: true) %></td>
-                <td class="text-right" data-label="RATE">₹<%= number_with_delimiter(item['price'] || 0, delimiter: ',') %></td>
+                <td class="text-right" data-label="RATE">
+                  <% if item['discount_amount'].to_f > 0 %>
+                    <span style="text-decoration:line-through;color:#888;">₹<%= number_with_delimiter(item['price'] || 0, delimiter: ',') %></span><br />
+                  <% end %>
+                  ₹<%= number_with_delimiter(sprintf('%.2f', rate_val), delimiter: ',') %>
+                </td>
                 <td class="text-right" data-label="TAX">₹0<br /><span class="tax-rate">(0%)</span></td>
-                <td class="text-right" data-label="AMOUNT">₹<%= number_with_delimiter((item['quantity'] || 0).to_f * (item['price'] || 0).to_f, delimiter: ',') %></td>
+                <td class="text-right" data-label="AMOUNT">₹<%= number_with_delimiter(((item['quantity'] || 0).to_f * rate_val).round(2), delimiter: ',') %></td>
               </tr>
             <% end %>
           <% elsif @booking&.booking_items&.any? %>
             <% @booking.booking_items.includes(:product).each do |item| %>
               <%
-                base_amount = item.quantity * (item.price || 0)
+                base_amount = item.quantity * item.discounted_unit_price
                 tax_amount = 0
                 tax_rate = 0
 
@@ -846,7 +852,12 @@
                   <div class="product-name"><%= item.product&.name || 'Product' %></div>
                 </td>
                 <td class="text-center" data-label="QTY"><%= number_with_precision(item.quantity, precision: 2, strip_insignificant_zeros: true) %></td>
-                <td class="text-right" data-label="RATE">₹<%= number_with_delimiter(item.price || 0, delimiter: ',') %></td>
+                <td class="text-right" data-label="RATE">
+                  <% if item.line_discount_amount > 0 %>
+                    <span style="text-decoration:line-through;color:#888;">₹<%= number_with_delimiter(item.price || 0, delimiter: ',') %></span><br />
+                  <% end %>
+                  ₹<%= number_with_delimiter(sprintf('%.2f', item.discounted_unit_price), delimiter: ',') %>
+                </td>
                 <td class="text-right" data-label="TAX">
                   ₹<%= number_with_delimiter(tax_amount, delimiter: ',') %><br />
                   <span class="tax-rate">(<%= tax_rate %>%)</span>

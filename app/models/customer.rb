@@ -106,6 +106,48 @@ has_many :pending_amounts, dependent: :destroy
     full_name
   end
 
+  # Domain used for the non-deliverable placeholder email given to customers
+  # created without a real email address (User requires a unique email; these
+  # customers log in with their mobile number instead). ".invalid" is a
+  # reserved TLD, so nothing is ever actually mailed there.
+  PLACEHOLDER_EMAIL_DOMAIN = 'no-email.invalid'.freeze
+
+  # Synthetic email for a customer with no real one, keyed off their mobile
+  # so it's stable and unique. Returns nil when there's no mobile to key on.
+  def placeholder_email
+    digits = mobile.to_s.gsub(/\D/, '')
+    return nil if digits.blank?
+    "#{digits}@#{PLACEHOLDER_EMAIL_DOMAIN}"
+  end
+
+  def placeholder_email?
+    email.to_s.end_with?("@#{PLACEHOLDER_EMAIL_DOMAIN}")
+  end
+
+  # Whether the customer has a usable, real email address.
+  def real_email?
+    email.present? && !placeholder_email?
+  end
+
+  # The linked User account used for mobile-app / web login. Matched by email
+  # when the customer has a real one, otherwise by mobile number (mobile login
+  # is supported, and customers imported without an email are keyed by mobile).
+  def linked_user
+    return @linked_user if defined?(@linked_user)
+
+    @linked_user =
+      (email.present? && User.find_by(email: email)) ||
+      (mobile.present? && User.where(user_type: 'customer').find_by(mobile: mobile)) ||
+      nil
+  end
+
+  # The identifier the customer actually types to log in: their real email, or
+  # their mobile number when the account has no real email.
+  def login_identifier
+    return email if real_email?
+    linked_user&.mobile.presence || mobile
+  end
+
   def active?
     return status if respond_to?(:status) && !status.nil?
     true # Default to active if no status column

@@ -102,7 +102,7 @@
                 <div class="booking-item-row border rounded p-3 mb-3" id="item-<%= index %>">
                   <%= f.fields_for :booking_items, item do |item_form| %>
                     <div class="row g-3 align-items-center">
-                      <div class="col-md-5">
+                      <div class="col-md-4">
                         <label class="form-label small">Product</label>
                         <%= item_form.hidden_field :product_id, data: { index: index } %>
                         <%= item_form.hidden_field :product_variant_id, data: { index: index } %>
@@ -130,8 +130,8 @@
                         </select>
                       </div>
 
-                      <div class="col-md-2">
-                        <label class="form-label small">Quantity</label>
+                      <div class="col-md-1">
+                        <label class="form-label small">Qty</label>
                         <%= item_form.number_field :quantity, class: 'form-control', min: 0.1, step: 0.1, onchange: 'calculateItemTotal(this)', data: { index: index } %>
                       </div>
 
@@ -140,10 +140,21 @@
                         <%= item_form.number_field :price, class: 'form-control', step: '0.01', onchange: 'calculateItemTotal(this)', data: { index: index } %>
                       </div>
 
-                      <div class="col-md-2">
+                      <div class="col-md-3">
+                        <label class="form-label small">Product Discount</label>
+                        <div class="input-group">
+                          <%= item_form.select :discount_type,
+                                options_for_select([['None', ''], ['%', 'percentage'], ['₹', 'fixed']], item.discount_type),
+                                {}, class: 'form-select flex-grow-0 w-auto', onchange: 'calculateItemTotal(this)' %>
+                          <%= item_form.number_field :discount_value, class: 'form-control', min: 0, step: '0.01',
+                                value: item.discount_value, placeholder: '0', onchange: 'calculateItemTotal(this)' %>
+                        </div>
+                      </div>
+
+                      <div class="col-md-1">
                         <label class="form-label small">Total</label>
-                        <div class="form-control bg-light" id="item-total-<%= index %>">
-                          ₹<%= number_with_delimiter(((item.quantity || 0) * (item.price || 0)).to_f) %>
+                        <div class="form-control bg-light px-2" id="item-total-<%= index %>" style="font-size:0.85rem;">
+                          ₹<%= number_with_delimiter(item.total.to_f > 0 ? item.total.to_f : ((item.quantity || 0) * (item.price || 0)).to_f) %>
                         </div>
                       </div>
 
@@ -170,7 +181,7 @@
           <div id="item-template" style="display: none;">
             <div class="booking-item-row border rounded p-3 mb-3">
               <div class="row g-3 align-items-center">
-                <div class="col-md-5">
+                <div class="col-md-4">
                   <label class="form-label small">Product</label>
                   <input type="hidden" name="booking[booking_items_attributes][INDEX][product_id]">
                   <input type="hidden" name="booking[booking_items_attributes][INDEX][product_variant_id]">
@@ -194,8 +205,8 @@
                   </select>
                 </div>
 
-                <div class="col-md-2">
-                  <label class="form-label small">Quantity</label>
+                <div class="col-md-1">
+                  <label class="form-label small">Qty</label>
                   <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][quantity]" min="0.1" step="0.1" value="1" onchange="calculateItemTotal(this)">
                 </div>
 
@@ -204,9 +215,21 @@
                   <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][price]" step="0.01" onchange="calculateItemTotal(this)">
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-md-3">
+                  <label class="form-label small">Product Discount</label>
+                  <div class="input-group">
+                    <select class="form-select flex-grow-0 w-auto" name="booking[booking_items_attributes][INDEX][discount_type]" onchange="calculateItemTotal(this)">
+                      <option value="">None</option>
+                      <option value="percentage">%</option>
+                      <option value="fixed">₹</option>
+                    </select>
+                    <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][discount_value]" min="0" step="0.01" placeholder="0" onchange="calculateItemTotal(this)">
+                  </div>
+                </div>
+
+                <div class="col-md-1">
                   <label class="form-label small">Total</label>
-                  <div class="form-control bg-light item-total">₹0</div>
+                  <div class="form-control bg-light item-total px-2" style="font-size:0.85rem;">₹0</div>
                 </div>
 
                 <div class="col-md-1">
@@ -527,6 +550,19 @@ function updateItemPrice(select) {
   }
 }
 
+// Rupee value of a row's per-product discount, capped at the line gross.
+function rowLineDiscount(row) {
+  const quantity = parseFloat(row.querySelector('input[name*="[quantity]"]')?.value) || 0;
+  const price = parseFloat(row.querySelector('input[name*="[price]"]')?.value) || 0;
+  const type = row.querySelector('[name*="[discount_type]"]')?.value || '';
+  const val = parseFloat(row.querySelector('input[name*="[discount_value]"]')?.value) || 0;
+  const gross = quantity * price;
+  if (!type || val <= 0) return 0;
+  let d = type === 'percentage' ? gross * val / 100 : val;
+  if (d < 0) d = 0;
+  return Math.min(d, gross);
+}
+
 // Calculate individual item total
 function calculateItemTotal(input) {
   const row = input.closest('.booking-item-row');
@@ -537,7 +573,7 @@ function calculateItemTotal(input) {
   if (quantityInput && priceInput && totalDiv) {
     const quantity = parseFloat(quantityInput.value) || 0;
     const price = parseFloat(priceInput.value) || 0;
-    const total = quantity * price;
+    const total = quantity * price - rowLineDiscount(row);
 
     totalDiv.innerHTML = `₹${total.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     calculateTotals();
@@ -548,7 +584,7 @@ function calculateItemTotal(input) {
 function calculateTotals() {
   let subtotal = 0;
 
-  // Calculate subtotal from all visible items
+  // Calculate subtotal from all visible items (net of per-product discounts)
   document.querySelectorAll('.booking-item-row:not([style*="display: none"])').forEach(row => {
     const quantityInput = row.querySelector('input[name*="[quantity]"]');
     const priceInput = row.querySelector('input[name*="[price]"]');
@@ -556,7 +592,7 @@ function calculateTotals() {
     if (quantityInput && priceInput) {
       const quantity = parseFloat(quantityInput.value) || 0;
       const price = parseFloat(priceInput.value) || 0;
-      subtotal += quantity * price;
+      subtotal += quantity * price - rowLineDiscount(row);
     }
   });
 
@@ -637,7 +673,7 @@ document.addEventListener('DOMContentLoaded', function() {
   selectPaymentMethod(currentPaymentMethod);
 
   // Add listeners to existing item inputs
-  document.querySelectorAll('input[name*="[quantity]"], input[name*="[price]"]').forEach(input => {
+  document.querySelectorAll('input[name*="[quantity]"], input[name*="[price]"], input[name*="[discount_value]"], select[name*="[discount_type]"]').forEach(input => {
     input.addEventListener('input', function() {
       calculateItemTotal(this);
     });

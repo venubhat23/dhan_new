@@ -3,6 +3,14 @@ class SystemSetting < ApplicationRecord
   validates :value, presence: true
   validates :setting_type, presence: true
 
+  # Keep the short-lived read caches (see .business_settings / .cached_row) honest.
+  after_commit :bust_setting_caches
+
+  def bust_setting_caches
+    self.class.bust_settings_cache!
+    Rails.cache.delete('system_setting:pagination_per_page')
+  end
+
   # Business details validations
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
   validates :upi_id, format: { with: /\A[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+\z/, message: "must be a valid UPI ID" }, allow_blank: true
@@ -104,9 +112,25 @@ class SystemSetting < ApplicationRecord
 
   # Business Settings Methods
 
-  # Singleton pattern to get the current business settings
+  # Singleton pattern to get the current business settings.
+  # Cached briefly because it is read many times per request (every invoice/PDF
+  # view), and each miss is a full DB round-trip.
   def self.business_settings
-    find_by(key: 'business_config') || new
+    Rails.cache.fetch('system_setting:business_config', expires_in: 5.minutes) do
+      find_by(key: 'business_config') || new
+    end
+  end
+
+  def self.bust_settings_cache!
+    Rails.cache.delete('system_setting:business_config')
+    Rails.cache.delete('system_setting:system_config')
+  end
+
+  # Cached fetch of a config row by key (bust with bust_settings_cache!).
+  def self.cached_row(key)
+    Rails.cache.fetch("system_setting:#{key}", expires_in: 5.minutes) do
+      find_by(key: key)
+    end
   end
 
   # Update business settings
@@ -254,18 +278,15 @@ class SystemSetting < ApplicationRecord
   # Low Stock Alert Methods
 
   def self.low_stock_alert_enabled?
-    setting = find_by(key: 'system_config')
-    setting&.low_stock_alert_enabled || false
+    cached_row('system_config')&.low_stock_alert_enabled || false
   end
 
   def self.low_stock_alert_threshold
-    setting = find_by(key: 'system_config')
-    setting&.low_stock_alert_threshold || 10
+    cached_row('system_config')&.low_stock_alert_threshold || 10
   end
 
   def self.low_stock_alert_email
-    setting = find_by(key: 'system_config')
-    setting&.low_stock_alert_email.presence || business_settings&.email
+    cached_row('system_config')&.low_stock_alert_email.presence || business_settings&.email
   end
 
   def self.update_low_stock_settings(params)

@@ -787,10 +787,16 @@
                 <td class="center-align"><%= item.quantity %> <%= item.product&.unit_type || 'PCS' %></td>
                 <td class="right-align">
                   <%
-                    # Display base unit price (without GST)
+                    # Display base unit price (without GST); already net of any per-product discount
                     unit_price = item.unit_price || 0
                   %>
+                  <% if item.respond_to?(:line_discount?) && item.line_discount? %>
+                    <span style="text-decoration:line-through;color:#888;">₹<%= number_with_delimiter(sprintf('%.2f', item.list_unit_price), delimiter: ',') %></span><br />
+                  <% end %>
                   ₹<%= number_with_delimiter(sprintf('%.2f', unit_price), delimiter: ',') %>
+                  <% if item.respond_to?(:line_discount?) && item.line_discount? %>
+                    <br /><span class="tax-rate" style="color:#1a7f37;"><%= item.discount_label %></span>
+                  <% end %>
                 </td>
                 <td class="right-align">
                   <%

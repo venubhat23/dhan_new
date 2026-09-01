@@ -506,6 +506,33 @@ module ApplicationHelper
     end
   end
 
+  # Per-product (line-item) discount helpers. Work for both BookingItem and
+  # InvoiceItem (both expose discount_type / discount_value / discount_amount).
+
+  # Short text label for a line's discount, e.g. "10% OFF" or "₹15 OFF".
+  # Returns nil when the line has no discount.
+  def line_discount_text(item)
+    return nil if item.nil?
+    return nil if item.discount_type.blank? || item.discount_value.to_f <= 0
+
+    if item.discount_type == 'percentage'
+      "#{item.discount_value.to_f.round(2).to_s.sub(/\.0+$/, '')}% OFF"
+    else
+      amt = item.discount_amount.to_f
+      amt = item.discount_value.to_f if amt <= 0
+      "₹#{number_with_delimiter(amt.round(2).to_s.sub(/\.0+$/, ''))} OFF"
+    end
+  end
+
+  # Green pill badge for a line discount, or "" when there is none.
+  def line_discount_badge(item)
+    label = line_discount_text(item)
+    return ''.html_safe if label.blank?
+
+    content_tag(:span, label, class: 'badge bg-success-subtle text-success border border-success-subtle',
+                              style: 'font-size:0.7rem;letter-spacing:0.3px;')
+  end
+
   # Customer navigation helper
   def active_class(controller_name, action_name = nil)
     if action_name

@@ -201,6 +201,13 @@
 .col-md-4 .select2-container {
   width: 100% !important;
 }
+
+.refresh-products-btn { font-size: 0.8rem; }
+.refresh-products-btn i.spin {
+  display: inline-block;
+  animation: vp-spin 0.7s linear infinite;
+}
+@keyframes vp-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
 </style>
 
 <script>
@@ -270,7 +277,13 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="product-item border rounded p-3 mb-3 shadow-sm" style="background: #f8f9fa; border-radius: 8px !important;">
         <div class="row g-3 align-items-end">
           <div class="col-md-3">
-            <label class="form-label fw-semibold">Product <span class="text-danger">*</span></label>
+            <div class="d-flex justify-content-between align-items-center">
+              <label class="form-label fw-semibold mb-0">Product <span class="text-danger">*</span></label>
+              <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none refresh-products-btn"
+                      title="Reload product list (pick up newly added products)">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+              </button>
+            </div>
             <select name="vendor_purchase[vendor_purchase_items_attributes][${index}][product_id]"
                     class="form-select product-select" required>
               ${createProductOptionsHtml()}
@@ -346,6 +359,63 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize the new row
     const newRow = container.lastElementChild;
     initializeProductRow(newRow);
+  });
+
+  // Reload the product list (e.g. after adding a product in another tab) without
+  // reloading the page, so in-progress form entries aren't lost. Repopulates every
+  // product dropdown and keeps each row's current selection.
+  const PRODUCTS_URL = "<%= products_admin_vendor_purchases_path(format: :json) %>";
+
+  async function refreshProductOptions(btn) {
+    const icon = btn ? btn.querySelector('i') : null;
+    if (icon) icon.classList.add('spin');
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await fetch(PRODUCTS_URL, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('Request failed: ' + res.status);
+      const data = await res.json();
+      window.productData = data;
+
+      document.querySelectorAll('.product-select').forEach(select => {
+        const current = select.value;
+        select.innerHTML = createProductOptionsHtml(current);
+        // Keep the selection if that product still exists
+        const stillExists = data.some(p => String(p.id) === String(current));
+        select.value = stillExists ? current : '';
+        if (select.classList.contains('select2-initialized')) {
+          $(select).trigger('change.select2');
+        }
+      });
+
+      showRefreshToast(data.length + ' products loaded');
+    } catch (err) {
+      console.error('Failed to refresh products', err);
+      showRefreshToast('Could not refresh products', true);
+    } finally {
+      if (icon) icon.classList.remove('spin');
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function showRefreshToast(message, isError) {
+    const el = document.createElement('div');
+    el.className = 'position-fixed top-0 start-50 translate-middle-x mt-3 px-3 py-2 rounded shadow-sm ' +
+                   (isError ? 'bg-danger text-white' : 'bg-success text-white');
+    el.style.zIndex = '20000';
+    el.style.fontSize = '0.875rem';
+    el.textContent = message;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2500);
+  }
+
+  // Delegate clicks from any (current or future) Refresh button
+  container.addEventListener('click', function(e) {
+    const btn = e.target.closest('.refresh-products-btn');
+    if (btn) {
+      e.preventDefault();
+      refreshProductOptions(btn);
+    }
   });
 
   // Initialize existing rows

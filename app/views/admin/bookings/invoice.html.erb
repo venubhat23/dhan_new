@@ -594,11 +594,14 @@
       total_sgst = 0
       total_igst = 0
 
+      total_product_discount = 0
       (@booking.booking_items || []).each do |item|
         # Base amount (quantity × price). Price is stored INCLUSIVE of GST
         # (matches Booking#calculate_totals), so tax is extracted from within
-        # this amount rather than added on top of it.
-        base_amount = item.quantity * (item.price || 0)
+        # this amount rather than added on top of it. Per-product discount is
+        # applied to the inclusive price first.
+        total_product_discount += item.line_discount_amount
+        base_amount = item.quantity * item.discounted_unit_price
 
         if item.product&.gst_enabled
           # Calculate total GST first, then split to avoid rounding issues
@@ -767,14 +770,19 @@
               <td class="center-align"><%= item.quantity.to_f.to_s.sub(/\.0$/, '') %></td>
               <td class="right-align">
                 <%
-                  # Display unit price (base price without GST)
-                  unit_price = item.price || 0
+                  unit_price = item.discounted_unit_price
                 %>
+                <% if item.line_discount_amount > 0 %>
+                  <span style="text-decoration:line-through;color:#888;">₹<%= number_with_delimiter(sprintf('%.2f', item.price || 0), delimiter: ',') %></span><br />
+                <% end %>
                 ₹<%= number_with_delimiter(sprintf('%.2f', unit_price), delimiter: ',') %>
+                <% if item.line_discount_amount > 0 %>
+                  <br /><span class="tax-rate" style="color:#1a7f37;"><%= line_discount_text(item) %></span>
+                <% end %>
               </td>
               <td class="right-align">
                 <%
-                  base_amount = item.quantity * (item.price || 0)
+                  base_amount = item.quantity * item.discounted_unit_price
                   if item.product&.gst_enabled
                     # Use individual tax percentages if available, otherwise split the total GST rate
                     if item.product.cgst_percentage.present? || item.product.sgst_percentage.present?
@@ -795,8 +803,8 @@
               <td class="right-align">
                 <%
                   # Price is stored inclusive of GST, so the item's final amount
-                  # is just quantity × price — tax is embedded, not added on top.
-                  final_amount = item.quantity * (item.price || 0)
+                  # is quantity × discounted price — tax is embedded, not added on top.
+                  final_amount = item.quantity * item.discounted_unit_price
                 %>
                 ₹<%= number_with_delimiter(final_amount.round(2), delimiter: ',') %>
               </td>
@@ -807,8 +815,22 @@
 
       <!-- Subtotal section -->
       <table class="subtotal-table">
+        <% if total_product_discount > 0 %>
+          <tr class="section-border">
+            <td>PRODUCT DISCOUNTS</td>
+            <td>-</td>
+            <td style="width: 40%;">
+              <table class="subtotal-values-table">
+                <tr>
+                  <td></td>
+                  <td style="color:#1a7f37;">− ₹ <%= number_with_delimiter(total_product_discount.round(2), delimiter: ',') %></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        <% end %>
         <tr class="section-border">
-          <td>SUBTOTAL</td>
+          <td>SUBTOTAL<%= total_product_discount > 0 ? ' (after product discounts)' : '' %></td>
           <td>-</td>
           <td style="width: 40%;">
             <table class="subtotal-values-table">

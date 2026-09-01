@@ -6,7 +6,7 @@ class Admin::ProductsController < Admin::ApplicationController
   before_action :authenticate_user!
 
   def index
-    @products = Product.includes(:category, image_attachment: :blob)
+    @products = Product.includes(:category, :product_variants, image_attachment: :blob)
 
     if params[:search].present?
       @products = @products.search(params[:search])
@@ -230,26 +230,70 @@ class Admin::ProductsController < Admin::ApplicationController
   end
 
   def bulk_update
-    updates = params[:products] || {}
+    product_updates = params[:products] || {}
+    variant_updates = params[:variants] || {}
     updated = 0
+    @bulk_batches_created = 0
     errors  = []
 
-    updates.each do |id, attrs|
+    product_updates.each do |id, attrs|
       product = Product.find_by(id: id)
       next unless product
 
       permitted = attrs.permit(:name, :price, :buying_price, :purchase_price, :stock, :unit_type, :status, :category_id)
-      if product.update(permitted)
-        updated += 1
-      else
+
+      # Handle stock separately so an increase creates a stock batch (using the
+      # cost/sell price entered in the same row) instead of a bare column bump.
+      track_stock = permitted.key?(:stock) && !product.has_multiple_quantities?
+      old_stock   = product.stock.to_f
+      new_stock   = permitted[:stock].to_f if track_stock
+
+      unless product.update(permitted.except(:stock))
         errors << "#{product.name}: #{product.errors.full_messages.join(', ')}"
+        next
       end
+
+      if track_stock && new_stock != old_stock
+        err = apply_stock_change(product, old_stock, new_stock,
+                                 cost: permitted[:purchase_price].presence || product.purchase_price.presence || product.buying_price,
+                                 sell: permitted[:price].presence || product.price,
+                                 label: "stock #{old_stock.to_i} → #{new_stock.to_i}")
+        errors << "#{product.name}: #{err}" if err
+      end
+
+      updated += 1
     end
 
+    variant_updates.each do |vid, attrs|
+      variant = ProductVariant.find_by(id: vid)
+      next unless variant
+
+      permitted   = attrs.permit(:selling_price, :buying_price, :purchase_price, :available_stock, :unit)
+      old_stock   = variant.available_stock.to_f
+      new_stock   = permitted[:available_stock].to_f if permitted.key?(:available_stock)
+
+      unless variant.update(permitted.except(:available_stock))
+        errors << "#{variant.product&.name} #{variant.label}: #{variant.errors.full_messages.join(', ')}"
+        next
+      end
+
+      if new_stock && new_stock != old_stock
+        variant.update_column(:available_stock, new_stock.to_i)
+        err = apply_stock_change(variant.product, old_stock, new_stock,
+                                 cost: permitted[:purchase_price].presence || variant.purchase_price.presence || variant.buying_price,
+                                 sell: permitted[:selling_price].presence || variant.selling_price,
+                                 label: "variant #{variant.label} stock #{old_stock.to_i} → #{new_stock.to_i}")
+        errors << "#{variant.product&.name} #{variant.label}: #{err}" if err
+      end
+
+      updated += 1
+    end
+
+    batch_note = @bulk_batches_created > 0 ? " (#{@bulk_batches_created} stock batch#{'es' if @bulk_batches_created != 1} created)" : ""
     if errors.empty?
-      redirect_to admin_products_path, notice: "#{updated} product(s) updated successfully"
+      redirect_to admin_products_path, notice: "#{updated} product(s) updated successfully#{batch_note}"
     else
-      redirect_to admin_products_path, alert: "Updated #{updated}, errors: #{errors.join(' | ')}"
+      redirect_to admin_products_path, alert: "Updated #{updated}#{batch_note}. Issues: #{errors.join(' | ')}"
     end
   rescue => e
     redirect_to admin_products_path, alert: "Bulk update failed: #{e.message}"
@@ -507,6 +551,70 @@ class Admin::ProductsController < Admin::ApplicationController
   end
 
   private
+
+  # Reconciles a product's central stock to `new_stock`: an increase adds a FIFO
+  # stock batch for the delta (so the extra units are real, allocatable inventory),
+  # a decrease draws the delta down from existing batches. Returns an error string
+  # on failure, nil on success.
+  def apply_stock_change(product, old_stock, new_stock, cost:, sell:, label:)
+    return nil unless product
+
+    delta = new_stock.to_f - old_stock.to_f
+    return nil if delta.zero?
+
+    if delta.positive?
+      cost_f = cost.to_f
+      sell_f = sell.to_f
+      sell_f = cost_f if sell_f <= 0
+      if cost_f <= 0
+        return "enter a Cost Price to add #{delta.to_i} unit(s) of stock (a batch needs a cost)"
+      end
+
+      product.stock_batches.create!(
+        vendor:             default_stock_vendor,
+        quantity_purchased: delta,
+        quantity_remaining: delta,
+        purchase_price:     cost_f,
+        selling_price:      sell_f,
+        batch_date:         Date.current,
+        status:             'active'
+      )
+      @bulk_batches_created = @bulk_batches_created.to_i + 1
+    else
+      product.send(:reduce_stock_from_batches, delta.abs)
+    end
+
+    new_total = product.stock_batches.active.sum(:quantity_remaining)
+    product.update_column(:stock, new_total) unless product.has_multiple_quantities?
+
+    begin
+      product.stock_movements.create!(
+        reference_type: 'adjustment',
+        reference_id:   nil,
+        movement_type:  delta.positive? ? 'added' : 'adjusted',
+        quantity:       delta,
+        stock_before:   new_total - delta,
+        stock_after:    new_total,
+        notes:          "Bulk edit: #{label}"
+      )
+    rescue => e
+      Rails.logger.error "Bulk edit stock movement log failed for Product ##{product.id}: #{e.message}"
+    end
+
+    nil
+  rescue ActiveRecord::RecordInvalid => e
+    e.message
+  end
+
+  def default_stock_vendor
+    @default_stock_vendor ||= Vendor.find_or_create_by(name: 'System Default') do |v|
+      v.email        = 'system@default.com'
+      v.phone        = '0000000000'
+      v.address      = 'System Generated'
+      v.payment_type = 'Cash'
+      v.status       = true
+    end
+  end
 
   def extract_r2_key_from_url(image_url)
     # Extract key from R2 public URL

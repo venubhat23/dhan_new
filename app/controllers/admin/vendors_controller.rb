@@ -89,7 +89,7 @@ class Admin::VendorsController < Admin::ApplicationController
   end
 
   def vendor_params
-    params.require(:vendor).permit(:name, :phone, :email, :address,
+    params.require(:vendor).permit(:name, :phone, :email, :address, :gst_no,
                                    :payment_type, :opening_balance, :status)
   end
 end

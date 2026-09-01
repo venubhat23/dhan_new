@@ -14,7 +14,7 @@ class Admin::PendingAmountsController < ApplicationController
       @pending_amounts = @pending_amounts.where(pending_date: start_date..end_date)
     end
 
-    @customers = Customer.order(:first_name, :last_name)
+    @customers = Customer.order(:full_name)
     @new_pending_amount = PendingAmount.new
   end
 

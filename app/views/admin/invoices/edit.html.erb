@@ -83,14 +83,14 @@
             <% @invoice_items.each_with_index do |item, index| %>
               <div class="line-item-row" data-index="<%= index %>">
                 <div class="row g-3 align-items-end">
-                  <div class="col-md-5">
+                  <div class="col-md-4">
                     <label class="form-label">Product</label>
                     <select name="invoice[invoice_items_attributes][<%= index %>][product_id]" class="form-select product-select" data-current-product="<%= item.product_id %>" onchange="updateProductPrice(this)">
                       <%= invoice_product_options(selected_product_id: item.product_id, selected_unit_price: item.unit_price) %>
                     </select>
                   </div>
-                  <div class="col-md-2">
-                    <label class="form-label">Quantity</label>
+                  <div class="col-md-1">
+                    <label class="form-label">Qty</label>
                     <input type="number"
                            name="invoice[invoice_items_attributes][<%= index %>][quantity]"
                            value="<%= item.quantity %>"
@@ -102,20 +102,36 @@
                            required>
                   </div>
                   <div class="col-md-2">
-                    <label class="form-label">Unit Price</label>
+                    <label class="form-label">List Price</label>
                     <div class="input-group">
                       <span class="input-group-text">₹</span>
                       <input type="number"
-                             name="invoice[invoice_items_attributes][<%= index %>][unit_price]"
-                             value="<%= item.unit_price %>"
+                             name="invoice[invoice_items_attributes][<%= index %>][original_unit_price]"
+                             value="<%= item.original_unit_price.presence || item.unit_price %>"
                              step="0.01"
                              min="0"
-                             class="form-control unit-price-input"
-                             onchange="calculateLineTotal(this)"
-                             required>
+                             class="form-control list-price-input"
+                             oninput="applyLineDiscount(this)">
                     </div>
                   </div>
-                  <div class="col-md-2">
+                  <div class="col-md-3">
+                    <label class="form-label">Product Discount</label>
+                    <div class="input-group">
+                      <select name="invoice[invoice_items_attributes][<%= index %>][discount_type]" class="form-select discount-type-input flex-grow-0 w-auto" onchange="applyLineDiscount(this)">
+                        <option value="" <%= 'selected' if item.discount_type.blank? %>>None</option>
+                        <option value="percentage" <%= 'selected' if item.discount_type == 'percentage' %>>%</option>
+                        <option value="fixed" <%= 'selected' if item.discount_type == 'fixed' %>>₹</option>
+                      </select>
+                      <input type="number"
+                             name="invoice[invoice_items_attributes][<%= index %>][discount_value]"
+                             value="<%= item.discount_value %>"
+                             step="0.01" min="0" placeholder="0"
+                             class="form-control discount-value-input"
+                             oninput="applyLineDiscount(this)">
+                    </div>
+                    <small class="text-muted">Net: ₹<span class="net-price-display"><%= sprintf('%.2f', item.unit_price.to_f) %></span></small>
+                  </div>
+                  <div class="col-md-1">
                     <label class="form-label">Total</label>
                     <div class="input-group">
                       <span class="input-group-text">₹</span>
@@ -133,6 +149,7 @@
                     </button>
                   </div>
                 </div>
+                <input type="hidden" name="invoice[invoice_items_attributes][<%= index %>][unit_price]" value="<%= item.unit_price %>" class="unit-price-input">
                 <div class="row mt-2">
                   <div class="col-12">
                     <input type="text"
@@ -154,14 +171,14 @@
             <div id="line-item-template" style="display: none;">
               <div class="line-item-row" data-index="">
                 <div class="row g-3 align-items-end">
-                  <div class="col-md-5">
+                  <div class="col-md-4">
                     <label class="form-label">Product</label>
                     <select name="" class="form-select product-select" onchange="updateProductPrice(this)">
                       <%= invoice_product_options %>
                     </select>
                   </div>
-                  <div class="col-md-2">
-                    <label class="form-label">Quantity</label>
+                  <div class="col-md-1">
+                    <label class="form-label">Qty</label>
                     <input type="number"
                            name=""
                            value="1"
@@ -173,7 +190,7 @@
                            required>
                   </div>
                   <div class="col-md-2">
-                    <label class="form-label">Unit Price</label>
+                    <label class="form-label">List Price</label>
                     <div class="input-group">
                       <span class="input-group-text">₹</span>
                       <input type="number"
@@ -181,12 +198,24 @@
                              value="0"
                              step="0.01"
                              min="0"
-                             class="form-control unit-price-input"
-                             onchange="calculateLineTotal(this)"
-                             required>
+                             class="form-control list-price-input"
+                             oninput="applyLineDiscount(this)">
                     </div>
                   </div>
-                  <div class="col-md-2">
+                  <div class="col-md-3">
+                    <label class="form-label">Product Discount</label>
+                    <div class="input-group">
+                      <select name="" class="form-select discount-type-input flex-grow-0 w-auto" onchange="applyLineDiscount(this)">
+                        <option value="">None</option>
+                        <option value="percentage">%</option>
+                        <option value="fixed">₹</option>
+                      </select>
+                      <input type="number" name="" value="" step="0.01" min="0" placeholder="0"
+                             class="form-control discount-value-input" oninput="applyLineDiscount(this)">
+                    </div>
+                    <small class="text-muted">Net: ₹<span class="net-price-display">0.00</span></small>
+                  </div>
+                  <div class="col-md-1">
                     <label class="form-label">Total</label>
                     <div class="input-group">
                       <span class="input-group-text">₹</span>
@@ -204,6 +233,7 @@
                     </button>
                   </div>
                 </div>
+                <input type="hidden" name="" value="0" class="unit-price-input">
                 <div class="row mt-2">
                   <div class="col-12">
                     <input type="text"
@@ -263,12 +293,20 @@
             summary_tax = @invoice_items.sum { |item| (item.quantity.to_f * item.unit_price.to_f) * invoice_gst_rate_for(item.product).to_f / 100 }
             summary_delivery = @invoice.delivery_charge.to_f
             summary_total = summary_subtotal + summary_tax + summary_delivery
+            summary_product_discount = @invoice_items.sum { |item| item.discount_amount.to_f }
           %>
 
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="text-muted">Subtotal</span>
             <span class="fw-medium" id="subtotal-display">₹<%= number_with_delimiter(sprintf('%.2f', summary_subtotal)) %></span>
           </div>
+
+          <% if summary_product_discount > 0 %>
+            <div class="d-flex justify-content-between align-items-center mb-2 small text-success">
+              <span><i class="bi bi-tags me-1"></i>Product discounts applied</span>
+              <span>−₹<%= number_with_delimiter(sprintf('%.2f', summary_product_discount)) %></span>
+            </div>
+          <% end %>
 
           <div class="d-flex justify-content-between align-items-center mb-3">
             <span class="text-muted">Delivery Charge</span>
@@ -368,6 +406,9 @@ function getFieldName(input) {
 
   if (classList.includes('product-select')) return '[product_id]';
   if (classList.includes('quantity-input')) return '[quantity]';
+  if (classList.includes('list-price-input')) return '[original_unit_price]';
+  if (classList.includes('discount-type-input')) return '[discount_type]';
+  if (classList.includes('discount-value-input')) return '[discount_value]';
   if (classList.includes('unit-price-input')) return '[unit_price]';
   if (classList.includes('line-total')) return '[total_amount]';
   if (input.placeholder && input.placeholder.includes('description')) return '[description]';
@@ -423,12 +464,15 @@ function updateProductPrice(selectElement) {
   const descriptionInput = lineItem.querySelector('input[placeholder*="description"]');
   const gstRateInput = lineItem.querySelector('.gst-rate-field');
 
+  const listPriceInput = lineItem.querySelector('.list-price-input');
+
   if (selectedOption.value) {
     const price = selectedOption.getAttribute('data-price');
     const description = selectedOption.getAttribute('data-description');
     const gstRate = selectedOption.getAttribute('data-gst-rate');
 
     unitPriceInput.value = price || 0;
+    if (listPriceInput) listPriceInput.value = price || 0;
     if (descriptionInput && description) {
       descriptionInput.value = description;
     }
@@ -436,19 +480,61 @@ function updateProductPrice(selectElement) {
       gstRateInput.value = gstRate || 0;
     }
 
-    calculateLineTotal(unitPriceInput);
+    applyLineDiscount(unitPriceInput);
   } else {
     unitPriceInput.value = 0;
+    if (listPriceInput) listPriceInput.value = 0;
     if (gstRateInput) {
       gstRateInput.value = 0;
     }
-    calculateLineTotal(unitPriceInput);
+    applyLineDiscount(unitPriceInput);
   }
 }
 
-// Calculate line total
-function calculateLineTotal(changedElement) {
+// Recompute the net unit price from list price + per-product discount, then the line total.
+function applyLineDiscount(changedElement) {
   const lineItem = changedElement.closest('.line-item-row');
+  const listInput = lineItem.querySelector('.list-price-input');
+  const unitPriceInput = lineItem.querySelector('.unit-price-input');
+  const typeInput = lineItem.querySelector('.discount-type-input');
+  const valueInput = lineItem.querySelector('.discount-value-input');
+  const netDisplay = lineItem.querySelector('.net-price-display');
+  const qty = parseFloat(lineItem.querySelector('.quantity-input').value) || 0;
+
+  const list = parseFloat(listInput?.value) || 0;
+  const type = typeInput?.value || '';
+  let val = parseFloat(valueInput?.value) || 0;
+
+  let net = list;
+  if (type && val > 0) {
+    if (type === 'percentage') {
+      if (val > 100) { val = 100; valueInput.value = 100; }
+      net = list * (1 - val / 100);
+    } else {
+      // fixed = ₹ off the whole line
+      const perUnit = qty > 0 ? val / qty : val;
+      net = list - perUnit;
+    }
+  }
+  if (net < 0) net = 0;
+
+  if (unitPriceInput) unitPriceInput.value = net.toFixed(4);
+  if (netDisplay) netDisplay.textContent = net.toFixed(2);
+
+  calculateLineTotal(unitPriceInput || changedElement, true);
+}
+
+// Calculate line total
+function calculateLineTotal(changedElement, _fromDiscount) {
+  const lineItem = changedElement.closest('.line-item-row');
+
+  // If a per-product discount is active and quantity/list changed, re-derive net first.
+  const type = lineItem.querySelector('.discount-type-input')?.value || '';
+  if (!_fromDiscount && type && !changedElement.classList.contains('unit-price-input')) {
+    applyLineDiscount(changedElement);
+    return;
+  }
+
   const quantity = parseFloat(lineItem.querySelector('.quantity-input').value) || 0;
   const unitPrice = parseFloat(lineItem.querySelector('.unit-price-input').value) || 0;
   const totalInput = lineItem.querySelector('.line-total');
@@ -514,8 +600,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
   updateInvoiceTotal();
 
+  // Note: we intentionally do NOT re-derive net price on load for existing rows —
+  // the stored unit_price already reflects any order-level (bulk) discount that was
+  // distributed across lines. Net price is only recomputed when the user actively
+  // edits the list price or the per-product discount on a row.
+
   // Add change listeners to existing items
-  document.querySelectorAll('.quantity-input, .unit-price-input').forEach(input => {
+  document.querySelectorAll('.quantity-input, .list-price-input, .discount-value-input').forEach(input => {
     input.addEventListener('change', function() {
       calculateLineTotal(this);
     });

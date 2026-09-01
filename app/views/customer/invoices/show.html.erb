@@ -164,10 +164,16 @@
                 </span>
               </td>
               <td class="align-middle text-end">
-                <span class="fw-semibold">₹<%= item.price.to_f %></span>
+                <% if item.line_discount_amount > 0 %>
+                  <span class="text-muted"><s>₹<%= item.price.to_f %></s></span><br>
+                  <span class="fw-semibold text-success">₹<%= item.discounted_unit_price.round(2) %></span>
+                  <small class="d-block text-success"><%= line_discount_text(item) %></small>
+                <% else %>
+                  <span class="fw-semibold">₹<%= item.price.to_f %></span>
+                <% end %>
               </td>
               <td class="align-middle text-end">
-                <span class="fw-bold text-success">₹<%= (item.quantity * item.price).to_f %></span>
+                <span class="fw-bold text-success">₹<%= (item.quantity * item.price - item.line_discount_amount).to_f.round(2) %></span>
               </td>
             </tr>
           <% end %>

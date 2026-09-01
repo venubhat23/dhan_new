@@ -1,0 +1,217 @@
+<% content_for :page_title, "Import Vendors" %>
+<% content_for :page_subtitle, "Bulk Vendor Import" %>
+
+<div class="container-fluid">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1">
+        <i class="fas fa-truck-loading me-2"></i>
+        Import Vendors
+      </h2>
+      <p class="text-muted mb-0">Bulk upload vendor / supplier data from CSV or Excel files</p>
+    </div>
+    <div>
+      <%= link_to admin_imports_path, class: "btn btn-outline-secondary" do %>
+        <i class="fas fa-arrow-left me-1"></i>
+        Back to Imports
+      <% end %>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Upload Form -->
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-purple text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-cloud-upload-alt me-2"></i>
+            Upload Vendor Data
+          </h5>
+        </div>
+        <div class="card-body p-4">
+          <%= form_with url: admin_import_vendors_path, multipart: true, local: true, class: "needs-validation", novalidate: true do |f| %>
+            <div class="mb-4">
+              <label for="file" class="form-label fw-bold">
+                <i class="fas fa-file-csv me-2"></i>
+                Select File
+                <span class="text-danger">*</span>
+              </label>
+              <%= f.file_field :file,
+                  class: "form-control form-control-lg",
+                  accept: ".csv,.xlsx,.xls",
+                  required: true,
+                  id: "file" %>
+              <div class="form-text">
+                <i class="fas fa-info-circle me-1"></i>
+                Supported formats: CSV, Excel (.xlsx, .xls). Maximum size: 10MB
+              </div>
+              <div class="invalid-feedback">
+                Please select a valid file to upload.
+              </div>
+            </div>
+
+            <!-- File Preview Section -->
+            <div id="file-preview" class="mb-4" style="display: none;">
+              <div class="alert alert-info">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-file-check me-2"></i>
+                  <div>
+                    <strong>File Selected:</strong> <span id="file-name"></span><br>
+                    <small>Size: <span id="file-size"></span> | Type: <span id="file-type"></span></small>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+              <button type="submit" class="btn btn-purple btn-lg" id="submit-btn">
+                <i class="fas fa-upload me-2"></i>
+                Import Vendors
+              </button>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <!-- Download Template Card -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-download me-2"></i>
+            Download Template
+          </h5>
+        </div>
+        <div class="card-body">
+          <p class="card-text mb-3">
+            Download the template with every field the vendor form supports. Only <strong>name</strong> is required &mdash; leave any other column blank.
+          </p>
+
+          <div class="d-grid gap-2">
+            <%= link_to download_template_admin_imports_path(template_type: 'vendors', format: 'csv'),
+                class: "btn btn-success",
+                target: "_blank" do %>
+              <i class="fas fa-file-csv me-2"></i>
+              Download CSV Template
+            <% end %>
+
+            <%= link_to download_template_admin_imports_path(template_type: 'vendors', format: 'xlsx'),
+                class: "btn btn-outline-success",
+                target: "_blank" do %>
+              <i class="fas fa-file-excel me-2"></i>
+              Download Excel Template
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Import Guidelines -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-info-circle me-2"></i>
+            Import Guidelines
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <h6 class="text-primary mb-2">Required Field:</h6>
+            <ul class="list-unstyled small">
+              <li><i class="fas fa-check text-success me-1"></i> name</li>
+            </ul>
+          </div>
+
+          <div class="mb-3">
+            <h6 class="text-primary mb-2">Optional Fields:</h6>
+            <ul class="list-unstyled small">
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> phone</li>
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> email</li>
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> address</li>
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> gst_no</li>
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> payment_type &mdash; <code>Cash</code> or <code>Credit</code> (defaults to Cash)</li>
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> opening_balance &mdash; number &ge; 0 (defaults to blank)</li>
+              <li><i class="fas fa-circle text-muted me-1" style="font-size: 0.4rem;"></i> status &mdash; <code>true</code>/<code>false</code> (defaults to Active)</li>
+            </ul>
+          </div>
+
+          <div class="alert alert-warning small mb-0">
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            <strong>Note:</strong> Rows whose vendor name already exists are skipped.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.form-control[type="file"] {
+  border: 2px dashed #dee2e6;
+  background-color: #f8f9fa;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+.form-control[type="file"]:hover {
+  border-color: #8965e0;
+  background-color: #e3f2fd;
+}
+.form-control[type="file"]:focus {
+  border-color: #8965e0;
+  background-color: #fff;
+  box-shadow: 0 0 0 0.25rem rgba(137, 101, 224, 0.25);
+}
+.bg-purple { background-color: #8965e0 !important; }
+.btn-purple { background-color: #8965e0; border-color: #8965e0; color: white; }
+.btn-purple:hover { background-color: #7651d9; border-color: #7651d9; color: white; }
+.btn.loading { pointer-events: none; opacity: 0.7; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const fileInput = document.getElementById('file');
+  const filePreview = document.getElementById('file-preview');
+  const fileName = document.getElementById('file-name');
+  const fileSize = document.getElementById('file-size');
+  const fileType = document.getElementById('file-type');
+  const form = document.querySelector('form');
+  const submitBtn = document.getElementById('submit-btn');
+
+  fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      filePreview.style.display = 'block';
+      fileName.textContent = file.name;
+      fileSize.textContent = formatFileSize(file.size);
+      fileType.textContent = file.type || 'Unknown';
+      fileInput.classList.add('is-valid');
+      fileInput.classList.remove('is-invalid');
+    } else {
+      filePreview.style.display = 'none';
+      fileInput.classList.remove('is-valid');
+    }
+  });
+
+  form.addEventListener('submit', function(e) {
+    if (!form.checkValidity()) {
+      e.preventDefault();
+      e.stopPropagation();
+    } else {
+      submitBtn.classList.add('loading');
+      submitBtn.disabled = true;
+    }
+    form.classList.add('was-validated');
+  });
+
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+});
+</script>

@@ -45,6 +45,10 @@
               <td><%= @vendor.email.present? ? @vendor.email : '-' %></td>
             </tr>
             <tr>
+              <td class="text-muted">GST Number:</td>
+              <td><%= @vendor.gst_no.present? ? @vendor.gst_no : '-' %></td>
+            </tr>
+            <tr>
               <td class="text-muted">Payment Type:</td>
               <td>
                 <span class="badge <%= @vendor.payment_type_badge_class %>">

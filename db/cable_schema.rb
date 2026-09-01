@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_08_29_000002) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_01_071746) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -126,6 +126,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_29_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "product_variant_id"
+    t.string "discount_type"
+    t.decimal "discount_value", precision: 10, scale: 2
+    t.decimal "discount_amount", precision: 10, scale: 2, default: "0.0"
     t.index ["booking_id"], name: "index_booking_items_on_booking_id"
     t.index ["product_variant_id"], name: "index_booking_items_on_product_variant_id"
   end
@@ -532,6 +535,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_29_000002) do
     t.datetime "updated_at", null: false
     t.bigint "product_id"
     t.bigint "product_variant_id"
+    t.string "discount_type"
+    t.decimal "discount_value", precision: 10, scale: 2
+    t.decimal "discount_amount", precision: 10, scale: 2, default: "0.0"
+    t.decimal "original_unit_price", precision: 10, scale: 2
     t.index ["description"], name: "index_invoice_items_on_description_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["invoice_id"], name: "index_invoice_items_on_invoice_id"
     t.index ["milk_delivery_task_id"], name: "index_invoice_items_on_milk_delivery_task_id"
@@ -1473,6 +1480,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_29_000002) do
     t.boolean "status"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "gst_no"
   end
 
   create_table "wallet_transactions", force: :cascade do |t|

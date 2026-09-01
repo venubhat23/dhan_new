@@ -55,8 +55,8 @@ class Franchise::BookingsController < Franchise::BaseController
     @franchise_bookings_count = franchise_bookings.count
     @online_orders_count = online_orders.count
 
-    @customers = Customer.select(:id, :first_name, :middle_name, :last_name, :email, :mobile)
-                        .order(:first_name, :last_name)
+    @customers = Customer.select(:id, :full_name, :email, :mobile)
+                        .order(:full_name)
   end
 
   def new
@@ -81,8 +81,8 @@ class Franchise::BookingsController < Franchise::BaseController
                        .group("products.id")
                        .order(Arel.sql("CASE WHEN COALESCE(SUM(stock_batches.quantity_remaining), 0) > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
 
-    @customers = Customer.select(:id, :first_name, :middle_name, :last_name, :email, :mobile)
-                        .order(:first_name, :last_name)
+    @customers = Customer.select(:id, :full_name, :email, :mobile)
+                        .order(:full_name)
   end
 
   def create
@@ -115,7 +115,7 @@ class Franchise::BookingsController < Franchise::BaseController
     # Validate stock availability before saving
     unless validate_stock_availability(@booking)
       @products = Product.active.includes(:category, image_attachment: :blob, additional_images_attachments: :blob)
-      @customers = Customer.all.order(:first_name, :last_name)
+      @customers = Customer.all.order(:full_name)
       @stores = Store.where(status: true)
       render :new, status: :unprocessable_entity
       return
@@ -166,7 +166,7 @@ class Franchise::BookingsController < Franchise::BaseController
       Rails.logger.error "Booking items errors: #{@booking.booking_items.map(&:errors).map(&:full_messages).flatten.join(', ')}"
 
       @products = Product.active.includes(:category, image_attachment: :blob, additional_images_attachments: :blob)
-      @customers = Customer.all.order(:first_name, :last_name)
+      @customers = Customer.all.order(:full_name)
       @stores = Store.where(status: true)
       flash.now[:alert] = @booking.errors.full_messages.join(', ')
       render :new, status: :unprocessable_entity
@@ -179,14 +179,14 @@ class Franchise::BookingsController < Franchise::BaseController
 
   def edit
     @products = Product.active.includes(:category, image_attachment: :blob, additional_images_attachments: :blob)
-    @customers = Customer.all.order(:first_name, :last_name)
+    @customers = Customer.all.order(:full_name)
   end
 
   def update
     # Validate stock availability for updates
     unless validate_stock_availability(@booking, is_update: true)
       @products = Product.active.includes(:category, image_attachment: :blob, additional_images_attachments: :blob)
-      @customers = Customer.all.order(:first_name, :last_name)
+      @customers = Customer.all.order(:full_name)
       render :edit, status: :unprocessable_entity
       return
     end
@@ -195,7 +195,7 @@ class Franchise::BookingsController < Franchise::BaseController
       redirect_to franchise_booking_path(@booking), notice: 'Booking updated successfully!'
     else
       @products = Product.active.includes(:category, image_attachment: :blob, additional_images_attachments: :blob)
-      @customers = Customer.all.order(:first_name, :last_name)
+      @customers = Customer.all.order(:full_name)
       render :edit
     end
   end
@@ -367,7 +367,7 @@ class Franchise::BookingsController < Franchise::BaseController
       :customer_phone, :customer_address, :delivery_address, :delivery_date, :delivery_time,
       :payment_method, :payment_status, :cash_received, :change_amount, :discount_amount, :store_id, :booked_by,
       booking_items_attributes: [
-        :id, :product_id, :quantity, :price, :unit_price, :subtotal, :_destroy
+        :id, :product_id, :quantity, :price, :unit_price, :subtotal, :discount_type, :discount_value, :_destroy
       ]
     )
   end
@@ -424,8 +424,8 @@ class Franchise::BookingsController < Franchise::BaseController
 
   def search_customers
     @customers = Customer.where(
-      "first_name ILIKE ? OR last_name ILIKE ? OR email ILIKE ? OR mobile ILIKE ?",
-      "%#{params[:q]}%", "%#{params[:q]}%", "%#{params[:q]}%", "%#{params[:q]}%"
+      "full_name ILIKE ? OR email ILIKE ? OR mobile ILIKE ?",
+      "%#{params[:q]}%", "%#{params[:q]}%", "%#{params[:q]}%"
     ).limit(10)
 
     render json: @customers.map { |c|

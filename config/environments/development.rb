@@ -57,7 +57,10 @@ Rails.application.configure do
   config.active_support.deprecation = :log
 
   # Raise an error on page load if there are pending migrations.
-  config.active_record.migration_error = :page_load
+  # Disabled: with a remote (Render) dev DB this runs a schema_migrations query
+  # against every configured database on *every* request (~1s of pure latency).
+  # Run `bin/rails db:migrate` manually after pulling migrations.
+  config.active_record.migration_error = false
 
   # Highlight code that triggered database queries in logs.
   config.active_record.verbose_query_logs = true

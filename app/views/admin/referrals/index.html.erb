@@ -380,7 +380,7 @@
                         <div class="modal-body">
                           <p>Select the customer account for <strong><%= referral.referred_name %></strong>:</p>
                           <%= form.select :customer_id,
-                              options_from_collection_for_select(Customer.order(:first_name, :last_name), :id, :display_name),
+                              options_from_collection_for_select(Customer.order(:full_name), :id, :display_name),
                               { prompt: "Select Customer" }, { class: "form-select", required: true } %>
                         </div>
                         <div class="modal-footer">

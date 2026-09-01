@@ -176,12 +176,16 @@ module ImportService
       record_failure(row_number, customer_data&.dig(:full_name).presence || '(unknown)', e.message)
     end
 
-    # Mirrors the admin "create customer" flow: every customer with an email
-    # gets a linked User (user_type: 'customer') so they can log in. Failure
-    # here never rolls back the imported customer &mdash; it's recorded as a note.
+    # Mirrors the admin "create customer" flow: every imported customer gets a
+    # linked User (user_type: 'customer') so they can log in. Customers with a
+    # real email log in with it; those without one get a non-deliverable
+    # placeholder email (User requires a unique email) and log in with their
+    # mobile number. Failure here never rolls back the imported customer &mdash;
+    # it's recorded as a note.
     def create_user_account(customer, row_number)
-      return if customer.email.blank?
-      return if User.exists?(email: customer.email)
+      login_email = customer.email.presence || customer.placeholder_email
+      return if login_email.blank?
+      return if User.exists?(email: login_email)
       return if customer.mobile.present? && User.exists?(mobile: customer.mobile)
 
       names = customer.full_name.to_s.split(' ')
@@ -189,7 +193,7 @@ module ImportService
       User.create!(
         first_name:            names.first.presence || 'Unknown',
         last_name:             (names[1..-1] || []).join(' ').presence || 'Unknown',
-        email:                 customer.email,
+        email:                 login_email,
         mobile:                customer.mobile,
         password:              DEFAULT_CUSTOMER_PASSWORD,
         password_confirmation: DEFAULT_CUSTOMER_PASSWORD,
@@ -205,8 +209,8 @@ module ImportService
       )
       @users_created += 1
     rescue => e
-      Rails.logger.warn "CustomerImporter: could not create user account for #{customer.email}: #{e.message}"
-      @notes << "Row #{row_number}: '#{customer.full_name}' was imported, but a login account could not be created for '#{customer.email}' (#{e.message}). Use \"Create User & Set Password\" on the customer's page."
+      Rails.logger.warn "CustomerImporter: could not create user account for #{customer.full_name} (#{customer.email.presence || customer.mobile}): #{e.message}"
+      @notes << "Row #{row_number}: '#{customer.full_name}' was imported, but a login account could not be created (#{e.message}). Use \"Create User & Set Password\" on the customer's page."
     end
 
     def record_failure(row_number, name, error_message)
