@@ -122,17 +122,6 @@ ActiveRecord::Base.transaction do
                   name, weight, unit, central_qty, central_low_val,
                   dvg_qty, si.low_stock_threshold)
   end
-
-  # variants of these products NOT in the sheet -> zero them out (no batch)
-  product_ids = SHEET.map { |r| Product.where("lower(name) = ?", (NAME_ALIAS[r[0].downcase] || r[0]).downcase).first&.id }.compact.uniq
-  ProductVariant.where(product_id: product_ids).where.not(id: touched_variant_ids).each do |v|
-    v.update_columns(available_stock: 0, updated_at: Time.current)
-    StoreInventory.find_or_create_by!(store_id: store.id, product_id: v.product_id, product_variant_id: v.id) do |si|
-      si.quantity = 0
-      si.low_stock_threshold = store.auto_transfer_threshold || 10
-    end
-    log << "#{v.product.name} #{v.label}: NOT in sheet -> set to 0"
-  end
 end
 
 puts "\n=== RESULT ==="
