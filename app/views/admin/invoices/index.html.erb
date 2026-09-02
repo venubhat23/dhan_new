@@ -162,7 +162,7 @@
       </div>
       <div class="d-flex align-items-center gap-2">
         <!-- Bulk Actions -->
-        <div id="bulkActions" style="display: none;" class="me-3 d-flex gap-2 align-items-center">
+        <div id="bulkActions" class="me-3 d-none gap-2 align-items-center" style="display: none;">
           <button id="bulkMarkPaidBtn" class="btn btn-success btn-sm" onclick="markSelectedAsPaid()">
             <i class="bi bi-check-circle me-1"></i>
             Mark as Paid (<span id="selectedCount">0</span>)
@@ -1469,10 +1469,13 @@ function updateBulkActions() {
 
   // Update count and show/hide bulk actions
   if (selectedCheckboxes.length > 0) {
-    bulkActions.style.display = 'block';
+    bulkActions.classList.remove('d-none');
+    bulkActions.classList.add('d-flex');
+    bulkActions.style.removeProperty('display');
     selectedCount.textContent = selectedCheckboxes.length;
   } else {
-    bulkActions.style.display = 'none';
+    bulkActions.classList.add('d-none');
+    bulkActions.classList.remove('d-flex');
   }
 
   // "Mark as Paid" only applies to invoices that aren't already fully paid
@@ -1582,7 +1585,24 @@ function markSelectedAsPaid() {
   });
 }
 
-function deleteSelectedInvoices() {
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute('content') : '';
+}
+
+// Parses a fetch Response as JSON, but raises a readable error if the server
+// sent back HTML (e.g. a login redirect or an unhandled 500) instead of JSON,
+// so the failure surfaces instead of silently doing nothing.
+async function readJson(response) {
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error(`Server returned ${response.status} (${response.statusText || 'unexpected response'})`);
+  }
+}
+
+async function deleteSelectedInvoices() {
   const selectedCheckboxes = document.querySelectorAll('.invoice-checkbox:checked');
   const invoiceIds = Array.from(selectedCheckboxes).map(cb => cb.value);
 
@@ -1591,45 +1611,72 @@ function deleteSelectedInvoices() {
     return;
   }
 
-  if (!confirm(`Are you sure you want to permanently delete ${invoiceIds.length} invoice(s)? This cannot be undone.`)) {
-    return;
-  }
-
   const btn = document.getElementById('bulkDeleteInvoiceBtn');
   const originalText = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Deleting...';
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Checking...';
 
-  fetch('/admin/invoices/bulk_delete', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    },
-    body: JSON.stringify({ invoice_ids: invoiceIds })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      const alert = document.createElement('div');
-      alert.className = 'alert alert-success alert-dismissible fade show position-fixed';
-      alert.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
-      alert.innerHTML = `<i class="bi bi-check-circle me-2"></i>Deleted ${data.deleted_count} invoice(s) successfully!
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-      document.body.appendChild(alert);
-      setTimeout(() => location.reload(), 1500);
-    } else {
-      alert('Error: ' + (data.error || 'Failed to delete invoices'));
+  try {
+    // Step 1: ask the server exactly what will be removed.
+    const previewResp = await fetch('/admin/invoices/bulk_delete_preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken() },
+      body: JSON.stringify({ invoice_ids: invoiceIds })
+    });
+    const preview = await readJson(previewResp);
+
+    if (!preview.success) {
+      throw new Error(preview.error || 'Could not check the selected invoices');
+    }
+
+    const invCount = preview.invoice_count;
+    const itemCount = preview.item_count;
+
+    if (invCount === 0) {
+      alert('The selected invoices no longer exist. Refreshing the list.');
+      location.reload();
+      return;
+    }
+
+    // Step 2: confirm, showing the real counts of associated records.
+    const message =
+      `This will permanently delete:\n\n` +
+      `  • ${invCount} invoice(s)\n` +
+      `  • ${itemCount} associated line item(s)\n\n` +
+      `This action cannot be undone. Delete all?`;
+
+    if (!confirm(message)) {
       btn.disabled = false;
       btn.innerHTML = originalText;
+      return;
     }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('An error occurred while deleting invoices. Please try again.');
+
+    // Step 3: delete.
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Deleting...';
+    const deleteResp = await fetch('/admin/invoices/bulk_delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken() },
+      body: JSON.stringify({ invoice_ids: invoiceIds })
+    });
+    const data = await readJson(deleteResp);
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to delete invoices');
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+    toast.innerHTML = `<i class="bi bi-check-circle me-2"></i>Deleted ${data.deleted_count} invoice(s) and ${data.deleted_items} line item(s).
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    document.body.appendChild(toast);
+    setTimeout(() => location.reload(), 1200);
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    alert('Error: ' + error.message);
     btn.disabled = false;
     btn.innerHTML = originalText;
-  });
+  }
 }
 
 // WhatsApp sharing functions

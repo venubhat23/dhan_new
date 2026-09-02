@@ -324,6 +324,7 @@ Rails.application.routes.draw do
         post :generate_bulk_invoices
         post :bulk_mark_as_paid
         post :bulk_delete
+        post :bulk_delete_preview
         post :partial_payment
         get :customers
         get :delivery_persons

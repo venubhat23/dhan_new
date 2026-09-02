@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_01_100520) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_02_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -761,13 +761,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_01_100520) do
 
   create_table "permissions", force: :cascade do |t|
     t.string "name", null: false
-    t.string "resource"
-    t.string "action"
+    t.string "module_name"
+    t.string "action_type"
     t.text "description"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["module_name", "action_type"], name: "index_permissions_on_module_name_and_action_type"
     t.index ["name"], name: "index_permissions_on_name", unique: true
-    t.index ["resource", "action"], name: "index_permissions_on_resource_and_action"
   end
 
   create_table "product_ratings", force: :cascade do |t|
@@ -937,6 +937,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_01_100520) do
     t.index ["customer_id"], name: "index_referrals_on_customer_id"
     t.index ["referral_source"], name: "index_referrals_on_referral_source"
     t.index ["referring_customer_id"], name: "index_referrals_on_referring_customer_id"
+  end
+
+  create_table "role_permissions", force: :cascade do |t|
+    t.bigint "role_id", null: false
+    t.bigint "permission_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["permission_id"], name: "index_role_permissions_on_permission_id"
+    t.index ["role_id", "permission_id"], name: "index_role_permissions_on_role_id_and_permission_id", unique: true
+    t.index ["role_id"], name: "index_role_permissions_on_role_id"
   end
 
   create_table "roles", force: :cascade do |t|
@@ -1571,6 +1581,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_01_100520) do
   add_foreign_key "referrals", "affiliates"
   add_foreign_key "referrals", "customers"
   add_foreign_key "referrals", "customers", column: "referring_customer_id"
+  add_foreign_key "role_permissions", "permissions"
+  add_foreign_key "role_permissions", "roles"
   add_foreign_key "sale_items", "bookings"
   add_foreign_key "sale_items", "products"
   add_foreign_key "sale_items", "stock_batches"

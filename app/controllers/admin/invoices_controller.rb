@@ -318,16 +318,38 @@ class Admin::InvoicesController < Admin::ApplicationController
     redirect_to admin_invoices_path, alert: "Error marking invoice as paid: #{e.message}"
   end
 
-  def bulk_delete
-    invoice_ids = params[:invoice_ids]
+  # Returns how many invoices (and their associated line items) a bulk delete
+  # would actually remove, so the confirmation dialog can show real counts
+  # before anything is deleted.
+  def bulk_delete_preview
+    invoice_ids = bulk_invoice_ids
 
-    if invoice_ids.blank? || !invoice_ids.is_a?(Array)
-      render json: { success: false, error: 'No invoice IDs provided' }, status: :bad_request
+    if invoice_ids.empty?
+      render json: { success: false, error: 'No invoices selected' }, status: :bad_request
+      return
+    end
+
+    invoice_count = Invoice.where(id: invoice_ids).count
+    item_count = InvoiceItem.where(invoice_id: invoice_ids).count
+
+    render json: {
+      success: true,
+      invoice_count: invoice_count,
+      item_count: item_count
+    }
+  end
+
+  def bulk_delete
+    invoice_ids = bulk_invoice_ids
+
+    if invoice_ids.empty?
+      render json: { success: false, error: 'No invoices selected' }, status: :bad_request
       return
     end
 
     invoices = Invoice.where(id: invoice_ids)
     deleted_count = invoices.count
+    deleted_items = InvoiceItem.where(invoice_id: invoice_ids).count
 
     Invoice.transaction do
       InvoiceItem.where(invoice_id: invoice_ids).delete_all
@@ -337,9 +359,11 @@ class Admin::InvoicesController < Admin::ApplicationController
     render json: {
       success: true,
       deleted_count: deleted_count,
-      message: "Successfully deleted #{deleted_count} invoice(s)"
+      deleted_items: deleted_items,
+      message: "Deleted #{deleted_count} invoice(s) and #{deleted_items} line item(s)"
     }
   rescue => e
+    Rails.logger.error("Invoice bulk_delete failed: #{e.class} #{e.message}")
     render json: { success: false, error: e.message }, status: :internal_server_error
   end
 
@@ -470,6 +494,14 @@ class Admin::InvoicesController < Admin::ApplicationController
   end
 
   private
+
+  # Normalizes the invoice_ids param (JSON array or form array) into a clean
+  # list of integer ids, dropping blanks/dupes.
+  def bulk_invoice_ids
+    ids = params[:invoice_ids]
+    ids = ids.values if ids.respond_to?(:values) && !ids.is_a?(Array)
+    Array(ids).map { |id| id.to_s.strip }.reject(&:blank?).map(&:to_i).uniq
+  end
 
   # Re-renders the edit form after a failed update, preserving whichever
   # layout (desktop admin vs. mobile UI) the request came from.
