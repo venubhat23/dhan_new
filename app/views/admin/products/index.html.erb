@@ -83,12 +83,40 @@
 </div>
 
 <script>
-function confirmDeleteProduct(productName, deleteUrl) {
-  if (confirm('Delete "' + productName + '"?\n\nThis will permanently remove the product and all associated data. This cannot be undone.')) {
-    var form = document.getElementById('deleteProductForm');
-    form.action = deleteUrl;
-    form.submit();
-  }
+function submitProductDelete(deleteUrl) {
+  var form = document.getElementById('deleteProductForm');
+  form.action = deleteUrl;
+  form.submit();
+}
+
+function confirmDeleteProduct(productName, deleteUrl, btn) {
+  if (btn) { btn.disabled = true; }
+  var reEnable = function () { if (btn) { btn.disabled = false; } };
+
+  // Ask the server what is still connected to this product, then show the
+  // operator the full breakdown before wiping everything.
+  fetch(deleteUrl + '/dependencies', { headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+    .then(function (data) {
+      var msg = 'Delete "' + productName + '"?\n\n';
+      var groups = (data && data.groups) || [];
+      if (groups.length) {
+        msg += 'The following ' + (data.total || 0) + ' connected record(s) will also be permanently removed:\n\n';
+        groups.forEach(function (g) { msg += '  • ' + g.label + ': ' + g.count + '\n'; });
+        msg += '\n';
+      } else {
+        msg += 'No other records are connected to this product.\n\n';
+      }
+      msg += 'This cannot be undone. Click OK to remove the product and all associated records.';
+      reEnable();
+      if (confirm(msg)) { submitProductDelete(deleteUrl); }
+    })
+    .catch(function () {
+      reEnable();
+      if (confirm('Delete "' + productName + '"?\n\nThis will permanently remove the product and all associated data. This cannot be undone.')) {
+        submitProductDelete(deleteUrl);
+      }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -140,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (checked.length === 0) return;
 
       const confirmMessages = {
-        delete: 'Delete ' + checked.length + ' selected product(s)? This cannot be undone.',
+        delete: 'Delete ' + checked.length + ' selected product(s)?\n\nEvery connected record (bookings, invoices, subscriptions, stock, store inventory, etc.) will also be permanently removed. This cannot be undone.',
         deactivate: 'Deactivate ' + checked.length + ' selected product(s)?',
         activate: 'Activate ' + checked.length + ' selected product(s)?'
       };
@@ -416,7 +444,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <i class="bi bi-image"></i>
                       <% end %>
                       <button type="button" class="btn btn-outline-danger" title="Delete Product"
-                              onclick="confirmDeleteProduct('<%= j(product.name) %>', '<%= admin_product_path(product) %>')">
+                              onclick="confirmDeleteProduct('<%= j(product.name) %>', '<%= admin_product_path(product) %>', this)">
                         <i class="bi bi-trash"></i>
                       </button>
                     </div>

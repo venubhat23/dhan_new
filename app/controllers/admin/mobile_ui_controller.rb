@@ -190,7 +190,7 @@ class Admin::MobileUiController < ActionController::Base
   end
 
   def new_vendor
-    @vendor = Vendor.new(payment_type: 'Cash', status: true)
+    @vendor = Vendor.new(payment_type: 'Paid', status: true)
     @back_url = params[:back_url].presence || admin_mobile_ui_vendors_path
   end
 

@@ -237,17 +237,16 @@
               %>
               <tr>
                 <td>
-                  <% unless payment_status == 'fully_paid' %>
-                    <div class="form-check">
-                      <input class="form-check-input invoice-checkbox" type="checkbox"
-                             value="<%= invoice_id %>"
-                             id="invoice_<%= invoice_id %>"
-                             onchange="updateBulkActions()"
-                             data-invoice-id="<%= invoice_id %>"
-                             data-invoice-type="<%= invoice_type %>">
-                      <label class="form-check-label" for="invoice_<%= invoice_id %>"></label>
-                    </div>
-                  <% end %>
+                  <div class="form-check">
+                    <input class="form-check-input invoice-checkbox" type="checkbox"
+                           value="<%= invoice_id %>"
+                           id="invoice_<%= invoice_id %>"
+                           onchange="updateBulkActions()"
+                           data-invoice-id="<%= invoice_id %>"
+                           data-invoice-type="<%= invoice_type %>"
+                           data-payment-status="<%= payment_status %>">
+                    <label class="form-check-label" for="invoice_<%= invoice_id %>"></label>
+                  </div>
                 </td>
                 <td class="fw-medium text-primary">
                   <%= link_to invoice_number, admin_invoice_path(model_object),
@@ -1474,6 +1473,14 @@ function updateBulkActions() {
     selectedCount.textContent = selectedCheckboxes.length;
   } else {
     bulkActions.style.display = 'none';
+  }
+
+  // "Mark as Paid" only applies to invoices that aren't already fully paid
+  const markPaidBtn = document.getElementById('bulkMarkPaidBtn');
+  if (markPaidBtn) {
+    const anyUnpaid = Array.from(selectedCheckboxes)
+      .some(cb => cb.dataset.paymentStatus !== 'fully_paid');
+    markPaidBtn.style.display = anyUnpaid ? '' : 'none';
   }
 
   // Update select all checkbox state

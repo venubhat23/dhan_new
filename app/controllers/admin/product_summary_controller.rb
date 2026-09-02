@@ -14,15 +14,20 @@ class Admin::ProductSummaryController < Admin::ApplicationController
     @errors = []
     changed = 0
 
+    # Per-row failures (e.g. adding stock with no cost price) are collected in
+    # @errors and skipped — the rows that did apply are still committed, so one
+    # bad cell no longer discards every other edit on the page.
     ActiveRecord::Base.transaction do
       changed += apply_main_product_changes
       changed += apply_main_variant_changes
       changed += apply_store_changes
-      raise ActiveRecord::Rollback if @errors.any?
     end
 
-    if @errors.any?
+    if @errors.any? && changed.zero?
       redirect_to admin_product_summary_path, alert: "No changes saved. #{@errors.first(5).join(' | ')}"
+    elsif @errors.any?
+      redirect_to admin_product_summary_path,
+                  alert: "#{changed} change(s) saved, #{@errors.size} skipped: #{@errors.first(5).join(' | ')}"
     else
       redirect_to admin_product_summary_path, notice: "#{changed} change(s) saved."
     end
@@ -46,6 +51,17 @@ class Admin::ProductSummaryController < Admin::ApplicationController
       @store_threshold[key] = row.low_stock_threshold
     end
 
+    # Main-store on-hand for a simple product is the sum of its central (store_id
+    # NULL) active stock batches — the same figure the storefront, POS, dashboard
+    # and stock filters use (Product::REAL_STOCK_SQL). The legacy products.stock
+    # column has drifted from this on most products, so reading/writing it here
+    # made edits land on a number nothing else in the app looks at.
+    @central_stock = Hash.new(0.0).merge(
+      StockBatch.where(product_id: product_ids, store_id: nil, status: 'active')
+                .where('quantity_remaining > 0')
+                .group(:product_id).sum(:quantity_remaining)
+    )
+
     # Main-store stock per product (canonical fulfilment fields the app keeps).
     @main_stock = {}
     # Aggregated per-store quantity per product (variant rows + plain row);
@@ -56,7 +72,7 @@ class Admin::ProductSummaryController < Admin::ApplicationController
         if product.has_multiple_quantities?
           product.product_variants.sum { |v| v.available_stock.to_f }
         else
-          product.stock.to_f
+          @central_stock[product.id].to_f
         end
 
       @stores.each do |store|
@@ -89,7 +105,7 @@ class Admin::ProductSummaryController < Admin::ApplicationController
         next
       end
 
-      old_stock = product.stock.to_f
+      old_stock = @main_stock[product.id].to_f
       next if new_stock == old_stock
 
       err = reconcile_stock(product, nil, old_stock, new_stock,
@@ -249,9 +265,14 @@ class Admin::ProductSummaryController < Admin::ApplicationController
       reduce_central_batches(product, variant, delta.abs)
     end
 
-    # Keep the displayed field in step with the user's target value. Batches are
-    # adjusted for the delta above (best effort when column/batches disagree).
-    product.update_column(:stock, new_stock) unless product.has_multiple_quantities?
+    # Keep the legacy products.stock column honest by resyncing it to the actual
+    # central batch total after the adjustment (matches Admin::ProductsController
+    # #apply_stock_change and BookingItem). A decrease is capped at the central
+    # stock that actually exists, so the resynced total is the real new on-hand.
+    unless product.has_multiple_quantities?
+      synced = product.stock_batches.central.active.sum(:quantity_remaining)
+      product.update_column(:stock, synced)
+    end
 
     log_movement(product, delta, new_stock, label)
     nil
@@ -290,7 +311,7 @@ class Admin::ProductSummaryController < Admin::ApplicationController
       v.email = 'system@default.com'
       v.phone = '0000000000'
       v.address = 'System Generated'
-      v.payment_type = 'Cash'
+      v.payment_type = 'Paid'
       v.status = true
     end
   end

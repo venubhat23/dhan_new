@@ -6,9 +6,9 @@ module ImportService
   #
   # Only `name` is required (Vendor model validation). Every other field a vendor
   # has when created through the admin form is accepted but optional:
-  #   phone, email, address, gst_no, payment_type (Cash/Credit), opening_balance, status
+  #   phone, email, address, gst_no, payment_type (Paid/Unpaid), opening_balance, status
   #
-  # Blank payment_type defaults to "Cash" and blank status defaults to active,
+  # Blank payment_type defaults to "Paid" and blank status defaults to active,
   # so a file containing nothing but a `name` column still imports cleanly.
   class VendorImporter
     attr_reader :file, :imported_count, :skipped_count, :errors
@@ -121,11 +121,11 @@ module ImportService
     end
 
     def normalize_payment_type(value)
-      return 'Cash' if value.blank?
+      return 'Paid' if value.blank?
 
       case value.downcase
-      when 'cash' then 'Cash'
-      when 'credit' then 'Credit'
+      when 'paid', 'cash' then 'Paid'
+      when 'unpaid', 'credit' then 'Unpaid'
       else value
       end
     end

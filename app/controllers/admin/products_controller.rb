@@ -126,42 +126,42 @@ class Admin::ProductsController < Admin::ApplicationController
     end
   end
 
-  def dependencies
-    booking_items_count = @product.booking_items.count
-    order_items_count   = begin; @product.order_items.count; rescue; 0; end
-    invoice_items_count = begin; InvoiceItem.where(product_id: @product.id).count; rescue; 0; end
-    bookings_count      = @product.bookings.count
-    orders_count        = begin; @product.orders.count; rescue; 0; end
-    invoices_count      = begin
-      Invoice.joins(:invoice_items).where(invoice_items: { product_id: @product.id }).count
-    rescue
-      0
-    end
+  # Every table that references products via product_id, in a foreign-key-safe
+  # deletion order (rows that point at product_variants / other child rows are
+  # cleared before the rows they depend on). Used both to show the operator what
+  # is connected (dependencies) and to wipe it on delete (purge_dependent_records!).
+  DEPENDENT_RELATIONS = [
+    ['Booking line items',      ->(p) { p.booking_items }],
+    ['Order line items',        ->(p) { OrderItem.where(product_id: p.id) }],
+    ['Invoice line items',      ->(p) { InvoiceItem.where(product_id: p.id) }],
+    ['Milk delivery tasks',     ->(p) { MilkDeliveryTask.where(product_id: p.id) }],
+    ['Milk subscriptions',      ->(p) { MilkSubscription.where(product_id: p.id) }],
+    ['Subscription templates',  ->(p) { SubscriptionTemplate.where(product_id: p.id) }],
+    ['Booking schedules',       ->(p) { BookingSchedule.where(product_id: p.id) }],
+    ['Customer formats',        ->(p) { CustomerFormat.where(product_id: p.id) }],
+    ['Store inventory records', ->(p) { StoreInventory.where(product_id: p.id) }],
+    ['Stock transfers',         ->(p) { StockTransfer.where(product_id: p.id) }],
+    ['Wishlist entries',        ->(p) { Wishlist.where(product_id: p.id) }],
+    ['Sale items',              ->(p) { p.sale_items }],
+    ['Stock movements',         ->(p) { p.stock_movements }],
+    ['Stock batches',           ->(p) { p.stock_batches }],
+    ['Vendor purchase items',   ->(p) { p.vendor_purchase_items }],
+    ['Delivery rules',          ->(p) { p.delivery_rules }],
+    ['Product ratings',         ->(p) { p.product_ratings }],
+    ['Product reviews',         ->(p) { p.product_reviews }],
+    ['Product variants',        ->(p) { p.product_variants }]
+  ].freeze
 
-    bookings = begin
-      @product.bookings.order(created_at: :desc).limit(5)
-              .pluck(:booking_number, :created_at, :total_amount)
-    rescue
-      []
-    end
-    invoices = begin
-      Invoice.joins(:invoice_items)
-             .where(invoice_items: { product_id: @product.id })
-             .order(created_at: :desc).limit(5)
-             .pluck(:invoice_number, :created_at, :total_amount)
-    rescue
-      []
+  def dependencies
+    groups = DEPENDENT_RELATIONS.filter_map do |label, scope|
+      count = begin; scope.call(@product).count; rescue StandardError; 0; end
+      { label: label, count: count } if count.positive?
     end
 
     render json: {
-      booking_items_count: booking_items_count,
-      order_items_count:   order_items_count,
-      invoice_items_count: invoice_items_count,
-      bookings_count:      bookings_count,
-      orders_count:        orders_count,
-      invoices_count:      invoices_count,
-      sample_bookings:     bookings.map { |n, d, a| { number: n, date: d&.strftime('%d %b %Y'), amount: a } },
-      sample_invoices:     invoices.map { |n, d, a| { number: n, date: d&.strftime('%d %b %Y'), amount: a } }
+      product_name: @product.name,
+      total: groups.sum { |g| g[:count] },
+      groups: groups
     }
   end
 
@@ -169,11 +169,7 @@ class Admin::ProductsController < Admin::ApplicationController
     product_name = @product.name
 
     ActiveRecord::Base.transaction do
-      # Delete all dependent records not covered by dependent: :destroy
-      @product.booking_items.destroy_all
-      @product.order_items.destroy_all rescue nil
-      InvoiceItem.where(product_id: @product.id).destroy_all rescue nil
-
+      purge_dependent_records!(@product)
       @product.destroy!
     end
 
@@ -308,15 +304,15 @@ class Admin::ProductsController < Admin::ApplicationController
       Product.where(id: params[:product_ids]).update_all(status: 'inactive')
       message = 'Products deactivated successfully'
     when 'delete'
-      products = Product.where(id: params[:product_ids])
-      count = products.count
-      products.each do |product|
-        product.booking_items.destroy_all
-        product.order_items.destroy_all rescue nil
-        InvoiceItem.where(product_id: product.id).destroy_all rescue nil
-        product.destroy!
+      products = Product.where(id: params[:product_ids]).to_a
+      count = products.size
+      ActiveRecord::Base.transaction do
+        products.each do |product|
+          purge_dependent_records!(product)
+          product.destroy!
+        end
       end
-      message = "#{count} product(s) deleted successfully"
+      message = "#{count} product(s) and all associated data deleted successfully"
     else
       message = 'Invalid action'
     end
@@ -552,6 +548,15 @@ class Admin::ProductsController < Admin::ApplicationController
 
   private
 
+  # Hard-deletes every row that references this product (see DEPENDENT_RELATIONS)
+  # so the product itself can be removed without tripping a foreign-key
+  # constraint. Must run inside a transaction alongside product.destroy!.
+  def purge_dependent_records!(product)
+    DEPENDENT_RELATIONS.each do |_label, scope|
+      scope.call(product).delete_all
+    end
+  end
+
   # Reconciles a product's central stock to `new_stock`: an increase adds a FIFO
   # stock batch for the delta (so the extra units are real, allocatable inventory),
   # a decrease draws the delta down from existing batches. Returns an error string
@@ -611,7 +616,7 @@ class Admin::ProductsController < Admin::ApplicationController
       v.email        = 'system@default.com'
       v.phone        = '0000000000'
       v.address      = 'System Generated'
-      v.payment_type = 'Cash'
+      v.payment_type = 'Paid'
       v.status       = true
     end
   end

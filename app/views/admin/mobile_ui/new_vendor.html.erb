@@ -91,13 +91,13 @@
     <div class="mb-3">
       <div class="field-label">Payment Type *</div>
       <div class="payment-toggle">
-        <label class="payment-opt <%= @vendor.payment_type == 'Cash' ? 'active' : '' %>" id="payOptCash">
-          <%= f.radio_button :payment_type, 'Cash', checked: @vendor.payment_type == 'Cash', style: 'display:none;', onchange: "setPaymentType('Cash')" %>
-          Cash
+        <label class="payment-opt <%= @vendor.payment_type == 'Paid' ? 'active' : '' %>" id="payOptPaid">
+          <%= f.radio_button :payment_type, 'Paid', checked: @vendor.payment_type == 'Paid', style: 'display:none;', onchange: "setPaymentType('Paid')" %>
+          Paid
         </label>
-        <label class="payment-opt <%= @vendor.payment_type == 'Credit' ? 'active' : '' %>" id="payOptCredit">
-          <%= f.radio_button :payment_type, 'Credit', checked: @vendor.payment_type == 'Credit', style: 'display:none;', onchange: "setPaymentType('Credit')" %>
-          Credit
+        <label class="payment-opt <%= @vendor.payment_type == 'Unpaid' ? 'active' : '' %>" id="payOptUnpaid">
+          <%= f.radio_button :payment_type, 'Unpaid', checked: @vendor.payment_type == 'Unpaid', style: 'display:none;', onchange: "setPaymentType('Unpaid')" %>
+          Unpaid
         </label>
       </div>
     </div>
@@ -118,7 +118,7 @@
 
 <script>
 function setPaymentType(type) {
-  document.getElementById('payOptCash').classList.toggle('active', type === 'Cash');
-  document.getElementById('payOptCredit').classList.toggle('active', type === 'Credit');
+  document.getElementById('payOptPaid').classList.toggle('active', type === 'Paid');
+  document.getElementById('payOptUnpaid').classList.toggle('active', type === 'Unpaid');
 }
 </script>

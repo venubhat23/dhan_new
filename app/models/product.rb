@@ -1589,7 +1589,7 @@ class Product < ApplicationRecord
       vendor.email = 'system@default.com'
       vendor.phone = '0000000000'
       vendor.address = 'System Generated'
-      vendor.payment_type = 'Cash'
+      vendor.payment_type = 'Paid'
       vendor.status = true
     end
   end

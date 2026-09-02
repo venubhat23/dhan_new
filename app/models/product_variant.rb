@@ -100,7 +100,7 @@ class ProductVariant < ApplicationRecord
       v.email   = 'system@default.com'
       v.phone   = '0000000000'
       v.address = 'System Generated'
-      v.payment_type = 'Cash'
+      v.payment_type = 'Paid'
       v.status  = true
     end
 

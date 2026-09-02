@@ -668,8 +668,8 @@ class Admin::ImportsController < Admin::ApplicationController
     ]
 
     sample_data = [
-      ['Fresh Farms Dairy', '9800000001', 'contact@freshfarms.com', '12 Dairy Road, Bangalore', '29ABCDE1234F1Z5', 'Credit', '0', 'true'],
-      ['Green Valley Produce', '9800000002', 'orders@greenvalley.com', '45 Market Street, Mysore', '', 'Cash', '1500.50', 'true'],
+      ['Fresh Farms Dairy', '9800000001', 'contact@freshfarms.com', '12 Dairy Road, Bangalore', '29ABCDE1234F1Z5', 'Unpaid', '0', 'true'],
+      ['Green Valley Produce', '9800000002', 'orders@greenvalley.com', '45 Market Street, Mysore', '', 'Paid', '1500.50', 'true'],
       ['Sunrise Wholesale', '', '', '', '', '', '', '']
     ]
 

@@ -4,7 +4,7 @@ class Vendor < ApplicationRecord
   has_many :vendor_payments, through: :vendor_purchases
 
   validates :name, presence: true
-  validates :payment_type, inclusion: { in: %w[Cash Credit] }
+  validates :payment_type, inclusion: { in: %w[Paid Unpaid] }
   validates :status, inclusion: { in: [true, false] }
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
   validates :opening_balance, numericality: { greater_than_or_equal_to: 0 }, allow_blank: true
@@ -34,9 +34,9 @@ class Vendor < ApplicationRecord
 
   def payment_type_badge_class
     case payment_type
-    when 'Cash'
+    when 'Paid'
       'bg-success text-white'
-    when 'Credit'
+    when 'Unpaid'
       'bg-warning text-dark'
     else
       'bg-secondary text-white'
