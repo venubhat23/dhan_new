@@ -6,7 +6,7 @@ services:
     startCommand: bundle exec rails server -p $PORT -e production
     envVars:
       - key: RUBY_VERSION
-        value: 3.2.0
+        value: 3.2.11
       - key: RAILS_ENV
         value: production
       - key: RAILS_SERVE_STATIC_FILES
