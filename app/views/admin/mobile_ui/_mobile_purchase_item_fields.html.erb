@@ -2,13 +2,12 @@
   <button type="button" class="remove-item-btn mob-remove-item"><i class="bi bi-trash"></i></button>
 
   <div class="field-label">Product *</div>
-  <%= f.select :product_id,
-      options_for_select(
-        @products.map { |p| [p.name, p.id, { 'data-unit-type' => p.unit_type || 'units', 'data-default-price' => p.default_selling_price }] },
-        f.object.product_id
-      ),
-      { prompt: 'Select product' },
-      { class: 'mob-select mob-product-select', required: true } %>
+  <%= f.hidden_field :product_id, class: 'mob-product-id' %>
+  <%= f.hidden_field :product_variant_id, class: 'mob-product-variant-id' %>
+  <select class="mob-select mob-product-select" required>
+    <option value="">Select product</option>
+    <%= vendor_purchase_product_option_tags(@products, f.object.selected_option_value) %>
+  </select>
 
   <div class="item-row">
     <div>

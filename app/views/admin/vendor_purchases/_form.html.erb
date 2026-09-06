@@ -211,13 +211,10 @@
 </style>
 
 <script>
-// Store product data for JavaScript template
-window.productData = <%= raw @products.map { |p| {
-  id: p.id,
-  name: p.name,
-  unit_type: p.unit_type || 'units',
-  default_selling_price: p.default_selling_price || 0
-}}.to_json %>;
+// Store product data for JavaScript template. Multi-quantity products expand
+// to one entry per variant; `value` is the composite the <select> carries
+// ("<product_id>" or "<product_id>-v<variant_id>").
+window.productData = <%= raw VendorPurchase.product_option_list(@products).to_json %>;
 </script>
 
 <script>
@@ -257,18 +254,32 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Create product options HTML
-  function createProductOptionsHtml(selectedId = '') {
+  function createProductOptionsHtml(selectedValue = '') {
     let html = '<option value="">Select Product</option>';
     window.productData.forEach(product => {
-      const selected = product.id == selectedId ? 'selected' : '';
-      html += `<option value="${product.id}"
+      const selected = product.value == selectedValue ? 'selected' : '';
+      html += `<option value="${product.value}"
                       data-unit-type="${product.unit_type}"
                       data-default-price="${product.default_selling_price}"
+                      data-purchase-price="${product.default_purchase_price}"
                       ${selected}>
                  ${product.name}
                </option>`;
     });
     return html;
+  }
+
+  // Split the product <select> composite value ("12" or "12-v34") into the
+  // hidden product_id / product_variant_id fields the form actually submits.
+  function syncProductSelection(row) {
+    const select = row.querySelector('.product-select');
+    const productIdField = row.querySelector('.product-id-field');
+    const variantIdField = row.querySelector('.product-variant-id-field');
+    if (!select || !productIdField || !variantIdField) return;
+
+    const parts = String(select.value || '').split('-v');
+    productIdField.value = parts[0] || '';
+    variantIdField.value = parts[1] || '';
   }
 
   // Create new product item HTML
@@ -284,8 +295,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <i class="bi bi-arrow-clockwise"></i> Refresh
               </button>
             </div>
-            <select name="vendor_purchase[vendor_purchase_items_attributes][${index}][product_id]"
-                    class="form-select product-select" required>
+            <input type="hidden" name="vendor_purchase[vendor_purchase_items_attributes][${index}][product_id]"
+                   class="product-id-field">
+            <input type="hidden" name="vendor_purchase[vendor_purchase_items_attributes][${index}][product_variant_id]"
+                   class="product-variant-id-field">
+            <select class="form-select product-select" required>
               ${createProductOptionsHtml()}
             </select>
           </div>
@@ -380,9 +394,10 @@ document.addEventListener('DOMContentLoaded', function() {
       document.querySelectorAll('.product-select').forEach(select => {
         const current = select.value;
         select.innerHTML = createProductOptionsHtml(current);
-        // Keep the selection if that product still exists
-        const stillExists = data.some(p => String(p.id) === String(current));
+        // Keep the selection if that product/variant still exists
+        const stillExists = data.some(p => String(p.value) === String(current));
         select.value = stillExists ? current : '';
+        syncProductSelection(select.closest('.product-item'));
         if (select.classList.contains('select2-initialized')) {
           $(select).trigger('change.select2');
         }
@@ -448,7 +463,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Product selection change (works with Select2)
     if (productSelect) {
+      // Keep the hidden product_id / product_variant_id in sync for any change,
+      // including keyboard selection and programmatic updates.
+      productSelect.addEventListener('change', function() {
+        syncProductSelection(row);
+        calculateGrandTotal();
+      });
+
       $(productSelect).on('select2:select', function(e) {
+        syncProductSelection(row);
+
         const selectedOption = this.options[this.selectedIndex];
         if (selectedOption.value) {
           const unitType = selectedOption.dataset.unitType || 'units';
@@ -458,8 +482,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
           // Set default selling price if available
           const defaultPrice = selectedOption.dataset.defaultPrice;
-          if (defaultPrice && sellingPriceInput) {
+          if (defaultPrice && parseFloat(defaultPrice) > 0 && sellingPriceInput) {
             sellingPriceInput.value = defaultPrice;
+          }
+
+          // Prefill purchase price from the last known cost if it's empty
+          const purchasePrice = selectedOption.dataset.purchasePrice;
+          if (purchasePrice && parseFloat(purchasePrice) > 0 && purchasePriceInput && !purchasePriceInput.value) {
+            purchasePriceInput.value = purchasePrice;
           }
         }
         calculateLineTotal();

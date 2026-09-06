@@ -1,17 +1,884 @@
-<% content_for :page_title, "New Customer" %>
 
+<!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h4 class="mb-1">Add New Customer</h4>
-    <small class="text-muted">Create a customer record for <%= @current_store.name %></small>
+    <h2 class="mb-1">Add New Customer</h2>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><%= link_to "Dashboard", dashboard_path, class: "text-decoration-none" %></li>
+        <li class="breadcrumb-item"><%= link_to "Customers", store_admin_customers_path, class: "text-decoration-none" %></li>
+        <li class="breadcrumb-item active" aria-current="page">New Customer</li>
+      </ol>
+    </nav>
   </div>
-  <%= link_to store_admin_customers_path, class: "btn btn-outline-secondary" do %>
-    <i class="bi bi-arrow-left me-2"></i>Back to Customers
-  <% end %>
+  <div>
+    <%= link_to store_admin_customers_path, class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-arrow-left me-1"></i>
+      Back to Customers
+    <% end %>
+  </div>
 </div>
 
-<div class="card border-0 shadow-sm">
-  <div class="card-body">
-    <%= render "form" %>
+<%= form_with model: [:store_admin, @customer], local: true, multipart: true, class: "row g-4" do |form| %>
+  <% if @customer.errors.any? %>
+    <div class="col-12">
+      <div class="alert alert-danger border-0 shadow-sm">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+          <div>
+            <h6 class="alert-heading mb-1">Please fix the following errors:</h6>
+            <ul class="mb-0 small">
+              <% @customer.errors.full_messages.each do |message| %>
+                <li><%= message %></li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Personal Information Section -->
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-primary bg-opacity-10 rounded p-2 me-3">
+            <i class="bi bi-person text-primary"></i>
+          </div>
+          <h5 class="card-title mb-0">Personal Information</h5>
+        </div>
+      </div>
+      <div class="card-body pt-3">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <%= form.label :full_name, "Customer Name", class: "form-label fw-medium" %>
+            <span class="text-danger ms-1">*</span>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-person text-muted"></i>
+              </span>
+              <%= form.text_field :full_name, class: "form-control border-start-0", placeholder: "Enter customer name", required: true %>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <%= form.label :email, "Email Address", class: "form-label fw-medium" %>
+            <span class="text-muted ms-1">(Optional)</span>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-envelope text-muted"></i>
+              </span>
+              <%= form.email_field :email, class: "form-control border-start-0", placeholder: "Enter email address (optional)", autocomplete: "off" %>
+            </div>
+            <div class="form-text">Email is optional but helpful for order updates and notifications</div>
+          </div>
+
+          <div class="col-md-6">
+            <%= form.label :mobile, "Mobile Number", class: "form-label fw-medium" %>
+            <span class="text-danger ms-1">*</span>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-telephone text-muted"></i>
+              </span>
+              <%= form.telephone_field :mobile, class: "form-control border-start-0", placeholder: "Enter mobile number", required: true, id: "customer_mobile" %>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <%= form.label :whatsapp_number, "WhatsApp Number", class: "form-label fw-medium" %>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-whatsapp text-muted"></i>
+              </span>
+              <%= form.telephone_field :whatsapp_number, class: "form-control border-start-0", placeholder: "Enter WhatsApp number", id: "customer_whatsapp" %>
+              <button type="button" class="btn btn-outline-secondary" id="copyMobileBtn" title="Copy from mobile number">
+                <i class="bi bi-copy"></i>
+              </button>
+            </div>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="sameAsMobile">
+              <label class="form-check-label text-muted" for="sameAsMobile">
+                Same as mobile number
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <%= form.label :gst_no, "GST Number", class: "form-label fw-medium" %>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-receipt text-muted"></i>
+              </span>
+              <%= form.text_field :gst_no, class: "form-control border-start-0 text-uppercase", placeholder: "22ABCDE1234F1Z5", maxlength: 15 %>
+            </div>
+            <div class="form-text">15-character GST number for business customers</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
   </div>
-</div>
+
+  <!-- Address Information Section -->
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-info bg-opacity-10 rounded p-2 me-3">
+            <i class="bi bi-geo-alt text-info"></i>
+          </div>
+          <h5 class="card-title mb-0">Address & Location Information</h5>
+        </div>
+      </div>
+      <div class="card-body pt-3">
+        <div class="row g-3">
+          <div class="col-12">
+            <%= form.label :address, "Billing Address", class: "form-label fw-medium" %>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-house text-muted"></i>
+              </span>
+              <%= form.text_area :address, class: "form-control border-start-0", placeholder: "Enter complete billing address", rows: 2 %>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <%= form.label :landmark, "Landmark", class: "form-label fw-medium" %>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-signpost text-muted"></i>
+              </span>
+              <%= form.text_field :landmark, class: "form-control border-start-0", placeholder: "Enter landmark near billing address" %>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <hr class="my-2">
+            <%= form.label :shipping_address, "Shipping Address", class: "form-label fw-medium" %>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-box-seam text-muted"></i>
+              </span>
+              <%= form.text_area :shipping_address, class: "form-control border-start-0", placeholder: "Enter complete shipping address", rows: 2 %>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <%= form.label :location_link, "Location Link", class: "form-label fw-medium" %>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-geo-alt text-muted"></i>
+              </span>
+              <%= form.url_field :location_link, class: "form-control border-start-0", placeholder: "Paste Google Maps link (optional)" %>
+            </div>
+          </div>
+
+          <!-- Location Section -->
+          <div class="col-12">
+            <hr class="my-4">
+            <div class="d-flex align-items-center mb-3">
+              <div class="bg-success bg-opacity-10 rounded p-2 me-3">
+                <i class="bi bi-geo-alt text-success"></i>
+              </div>
+              <h6 class="mb-0">Location Coordinates</h6>
+              <button type="button" class="btn btn-success btn-sm ms-auto" id="getLocationBtn">
+                <i class="bi bi-geo-alt me-1"></i>
+                Get Current Location
+              </button>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <%= form.label :latitude, "Latitude", class: "form-label fw-medium" %>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-geo text-muted"></i>
+              </span>
+              <%= form.number_field :latitude, class: "form-control border-start-0", placeholder: "Auto-filled by location", step: :any, readonly: true %>
+            </div>
+            <div class="form-text">Automatically filled when you use 'Get Current Location'</div>
+          </div>
+
+          <div class="col-md-6">
+            <%= form.label :longitude, "Longitude", class: "form-label fw-medium" %>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-geo text-muted"></i>
+              </span>
+              <%= form.number_field :longitude, class: "form-control border-start-0", placeholder: "Auto-filled by location", step: :any, readonly: true %>
+            </div>
+            <div class="form-text">Automatically filled when you use 'Get Current Location'</div>
+          </div>
+
+          <!-- Location Status Display -->
+          <div class="col-12">
+            <div id="locationStatus" class="alert alert-info d-none">
+              <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm me-2 d-none" id="locationSpinner"></div>
+                <i class="bi bi-info-circle me-2" id="locationIcon"></i>
+                <span id="locationMessage">Click 'Get Current Location' to automatically fill coordinates</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional Information Section -->
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-success bg-opacity-10 rounded p-2 me-3">
+            <i class="bi bi-journal-text text-success"></i>
+          </div>
+          <h5 class="card-title mb-0">Additional Information</h5>
+        </div>
+      </div>
+      <div class="card-body pt-3">
+        <div class="row g-3">
+          <div class="col-12">
+            <%= form.label :notes, "Notes", class: "form-label fw-medium" %>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0 align-self-start">
+                <i class="bi bi-pencil-square text-muted"></i>
+              </span>
+              <%= form.text_area :notes, class: "form-control border-start-0", placeholder: "Any additional notes or special requirements", rows: 3 %>
+            </div>
+            <div class="form-text">Add any special notes, preferences, or important information about this customer</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Upload Section -->
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-purple bg-opacity-10 rounded p-2 me-3">
+            <i class="bi bi-images text-purple"></i>
+          </div>
+          <h5 class="card-title mb-0">Image Uploads</h5>
+        </div>
+      </div>
+      <div class="card-body pt-3">
+        <div class="row g-4">
+          <!-- Personal Image -->
+          <div class="col-md-6">
+            <%= form.label :personal_image, "Personal/Profile Image", class: "form-label fw-medium" %>
+            <div class="upload-area border rounded p-4 text-center" id="personalImageArea">
+              <div class="upload-icon mb-2">
+                <i class="bi bi-person-square fs-2 text-muted"></i>
+              </div>
+              <p class="mb-2">Upload personal or profile image</p>
+              <%= form.file_field :personal_image, accept: "image/*", class: "form-control d-none", id: "personalImageInput" %>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('personalImageInput').click()">
+                <i class="bi bi-upload me-1"></i> Choose Image
+              </button>
+              <div class="form-text mt-2">JPG, PNG, WebP (Max 5MB)</div>
+            </div>
+            <div id="personalImagePreview" class="mt-3 d-none">
+              <img src="" alt="Personal Image Preview" class="img-thumbnail" style="max-height: 150px;">
+              <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="removePersonalImage">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- House Image -->
+          <div class="col-md-6">
+            <%= form.label :house_image, "House/Residence Image", class: "form-label fw-medium" %>
+            <div class="upload-area border rounded p-4 text-center" id="houseImageArea">
+              <div class="upload-icon mb-2">
+                <i class="bi bi-house-door fs-2 text-muted"></i>
+              </div>
+              <p class="mb-2">Upload house or residence image</p>
+              <%= form.file_field :house_image, accept: "image/*", class: "form-control d-none", id: "houseImageInput" %>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('houseImageInput').click()">
+                <i class="bi bi-upload me-1"></i> Choose Image
+              </button>
+              <div class="form-text mt-2">JPG, PNG, WebP (Max 5MB)</div>
+            </div>
+            <div id="houseImagePreview" class="mt-3 d-none">
+              <img src="" alt="House Image Preview" class="img-thumbnail" style="max-height: 150px;">
+              <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="removeHouseImage">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account Settings Section -->
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-warning bg-opacity-10 rounded p-2 me-3">
+            <i class="bi bi-shield-check text-warning"></i>
+          </div>
+          <h5 class="card-title mb-0">Account Settings</h5>
+        </div>
+      </div>
+      <div class="card-body pt-3">
+        <div class="row g-3">
+          <!-- Auto-generation checkbox -->
+          <div class="col-12">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="autoGeneratePassword">
+              <label class="form-check-label fw-medium" for="autoGeneratePassword">
+                <i class="bi bi-magic text-success me-1"></i>
+                Auto-generate secure password
+              </label>
+            </div>
+            <div class="form-text">When enabled, a strong password will be automatically generated for this customer</div>
+          </div>
+
+          <div class="col-md-6">
+            <%= form.label :password, "Password", class: "form-label fw-medium" %>
+            <span class="text-muted ms-1">(Optional)</span>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-lock text-muted"></i>
+              </span>
+              <%= form.password_field :password, class: "form-control border-start-0", placeholder: "Leave blank to use default password", id: "customerPassword" %>
+              <button type="button" class="btn btn-outline-muted" id="generatePasswordBtn" title="Generate random password">
+                <i class="bi bi-magic"></i>
+              </button>
+              <button type="button" class="btn btn-outline-secondary" id="togglePasswordBtn" title="Show/Hide password">
+                <i class="bi bi-eye" id="passwordToggleIcon"></i>
+              </button>
+            </div>
+            <div class="form-text">
+              <span id="passwordStrength"></span>
+              <span id="defaultPasswordHint">If left blank, the default password "dhanvantari@123" will be used.</span>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <%= form.label :password_confirmation, "Confirm Password", class: "form-label fw-medium" %>
+            <span class="text-muted ms-1">(Optional)</span>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-lock-fill text-muted"></i>
+              </span>
+              <%= form.password_field :password_confirmation, class: "form-control border-start-0", placeholder: "Confirm password", id: "passwordConfirmation" %>
+            </div>
+            <div id="passwordMatchStatus" class="form-text"></div>
+          </div>
+
+          <!-- Hidden field to store generated password for display -->
+          <%= form.hidden_field :auto_generated_password %>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form Actions -->
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-end gap-2">
+          <%= link_to store_admin_customers_path, class: "btn btn-outline-secondary" do %>
+            <i class="bi bi-x-lg me-1"></i> Cancel
+          <% end %>
+
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>
+            Create Customer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // WhatsApp and mobile number sync
+  const mobileInput = document.getElementById('customer_mobile');
+  const whatsappInput = document.getElementById('customer_whatsapp');
+  const copyMobileBtn = document.getElementById('copyMobileBtn');
+  const sameAsMobileCheckbox = document.getElementById('sameAsMobile');
+
+  // Copy mobile to WhatsApp
+  copyMobileBtn.addEventListener('click', function() {
+    if (mobileInput.value) {
+      whatsappInput.value = mobileInput.value;
+      sameAsMobileCheckbox.checked = true;
+    }
+  });
+
+  // Auto-sync WhatsApp when same as mobile is checked
+  sameAsMobileCheckbox.addEventListener('change', function() {
+    if (this.checked && mobileInput.value) {
+      whatsappInput.value = mobileInput.value;
+    } else if (!this.checked) {
+      whatsappInput.value = '';
+    }
+  });
+
+  // Sync WhatsApp when mobile changes if checkbox is checked
+  mobileInput.addEventListener('input', function() {
+    if (sameAsMobileCheckbox.checked) {
+      whatsappInput.value = this.value;
+    }
+  });
+
+  // Geolocation functionality
+  const getLocationBtn = document.getElementById('getLocationBtn');
+  const latitudeInput = document.querySelector('#customer_latitude');
+  const longitudeInput = document.querySelector('#customer_longitude');
+  const locationStatus = document.getElementById('locationStatus');
+  const locationSpinner = document.getElementById('locationSpinner');
+  const locationIcon = document.getElementById('locationIcon');
+  const locationMessage = document.getElementById('locationMessage');
+
+  getLocationBtn.addEventListener('click', function() {
+    if (!navigator.geolocation) {
+      showLocationMessage('Geolocation is not supported by this browser', 'danger');
+      return;
+    }
+
+    // Show loading state
+    getLocationBtn.disabled = true;
+    locationSpinner.classList.remove('d-none');
+    locationIcon.className = 'bi bi-geo-alt me-2';
+    showLocationMessage('Getting your location...', 'info');
+
+    navigator.geolocation.getCurrentPosition(
+      function(position) {
+        // Success callback
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+        const accuracy = position.coords.accuracy;
+
+        latitudeInput.value = latitude.toFixed(8);
+        longitudeInput.value = longitude.toFixed(8);
+
+        showLocationMessage(
+          `Location obtained successfully! Accuracy: ${Math.round(accuracy)}m`,
+          'success'
+        );
+
+        // Re-enable button
+        getLocationBtn.disabled = false;
+        locationSpinner.classList.add('d-none');
+        locationIcon.className = 'bi bi-check-circle me-2';
+      },
+      function(error) {
+        // Error callback
+        let message = 'Unable to get location. ';
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            message += 'Location access denied by user.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            message += 'Location information is unavailable.';
+            break;
+          case error.TIMEOUT:
+            message += 'Location request timed out.';
+            break;
+          default:
+            message += 'An unknown error occurred.';
+            break;
+        }
+
+        showLocationMessage(message, 'danger');
+
+        // Re-enable button
+        getLocationBtn.disabled = false;
+        locationSpinner.classList.add('d-none');
+        locationIcon.className = 'bi bi-exclamation-triangle me-2';
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
+      }
+    );
+  });
+
+  function showLocationMessage(message, type) {
+    locationMessage.textContent = message;
+    locationStatus.className = `alert alert-${type}`;
+    locationStatus.classList.remove('d-none');
+  }
+
+  // Password generation and strength checking
+  const passwordInput = document.getElementById('customerPassword');
+  const passwordConfirmation = document.getElementById('passwordConfirmation');
+  const generatePasswordBtn = document.getElementById('generatePasswordBtn');
+  const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+  const passwordToggleIcon = document.getElementById('passwordToggleIcon');
+  const passwordStrength = document.getElementById('passwordStrength');
+  const passwordMatchStatus = document.getElementById('passwordMatchStatus');
+  // Removed showGeneratedPasswordBtn - using eye icon instead
+  const autoGeneratedPasswordField = document.querySelector('#customer_auto_generated_password');
+  const autoGeneratePasswordCheckbox = document.getElementById('autoGeneratePassword');
+
+  let generatedPassword = '';
+
+  // Auto-generate password when checkbox is checked
+  autoGeneratePasswordCheckbox.addEventListener('change', function() {
+    if (this.checked) {
+      // Generate password automatically
+      generatedPassword = generateRandomPassword();
+      passwordInput.value = generatedPassword;
+      passwordConfirmation.value = generatedPassword;
+      autoGeneratedPasswordField.value = generatedPassword;
+
+      // Disable manual password input
+      passwordInput.setAttribute('readonly', true);
+      passwordConfirmation.setAttribute('readonly', true);
+      generatePasswordBtn.disabled = true;
+
+      // Update UI - make it clear to use the eye icon
+      passwordInput.placeholder = 'Auto-generated secure password';
+      passwordConfirmation.placeholder = 'Auto-filled';
+
+      checkPasswordStrength();
+      checkPasswordMatch();
+
+      // Show success message with clear instructions
+      passwordStrength.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Secure password auto-generated! Use the <i class="bi bi-eye"></i> icon to view it.</span>';
+
+      // Show brief success notification
+      setTimeout(() => {
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+          <i class="bi bi-check-circle-fill me-2"></i>Password auto-generated successfully!
+          <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
+      }, 100);
+
+    } else {
+      // Enable manual password input
+      passwordInput.removeAttribute('readonly');
+      passwordConfirmation.removeAttribute('readonly');
+      generatePasswordBtn.disabled = false;
+
+      // Clear passwords
+      passwordInput.value = '';
+      passwordConfirmation.value = '';
+      autoGeneratedPasswordField.value = '';
+      generatedPassword = '';
+
+      // Reset UI
+      passwordInput.placeholder = 'Enter password';
+      passwordConfirmation.placeholder = 'Confirm password';
+      passwordStrength.innerHTML = '';
+      passwordMatchStatus.innerHTML = '';
+    }
+  });
+
+  // Generate random password
+  generatePasswordBtn.addEventListener('click', function() {
+    generatedPassword = generateRandomPassword();
+    passwordInput.value = generatedPassword;
+    passwordConfirmation.value = generatedPassword;
+    autoGeneratedPasswordField.value = generatedPassword;
+
+    checkPasswordStrength();
+    checkPasswordMatch();
+
+    // Show success message with instructions
+    passwordStrength.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Strong password generated! Use the <i class="bi bi-eye"></i> icon to view it.</span>';
+
+    // Brief visual feedback
+    this.style.transform = 'scale(0.95)';
+    setTimeout(() => { this.style.transform = ''; }, 150);
+  });
+
+  // Removed show generated password button - using eye icon toggle instead
+
+  // Toggle password visibility
+  togglePasswordBtn.addEventListener('click', function() {
+    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordInput.setAttribute('type', type);
+    passwordConfirmation.setAttribute('type', type);
+
+    passwordToggleIcon.className = type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
+  });
+
+  // Password strength checker
+  passwordInput.addEventListener('input', checkPasswordStrength);
+  passwordConfirmation.addEventListener('input', checkPasswordMatch);
+
+  function generateRandomPassword(length = 12) {
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    const symbols = '@#$%&*!';
+    const allChars = uppercase + lowercase + numbers + symbols;
+
+    let password = '';
+
+    // Ensure at least one character from each category
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
+
+    // Fill the rest randomly
+    for (let i = 4; i < length; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+
+    // Shuffle the password
+    return password.split('').sort(() => Math.random() - 0.5).join('');
+  }
+
+  function checkPasswordStrength() {
+    const password = passwordInput.value;
+    let strength = 0;
+    let feedback = [];
+
+    if (password.length >= 8) strength++;
+    else feedback.push('At least 8 characters');
+
+    if (/[a-z]/.test(password)) strength++;
+    else feedback.push('Lowercase letter');
+
+    if (/[A-Z]/.test(password)) strength++;
+    else feedback.push('Uppercase letter');
+
+    if (/[0-9]/.test(password)) strength++;
+    else feedback.push('Number');
+
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    else feedback.push('Special character');
+
+    let message = '';
+    let className = '';
+
+    if (strength < 2) {
+      message = 'Weak password';
+      className = 'text-danger';
+    } else if (strength < 4) {
+      message = 'Medium password';
+      className = 'text-warning';
+    } else {
+      message = 'Strong password';
+      className = 'text-success';
+    }
+
+    if (feedback.length > 0 && strength < 5) {
+      message += ` - Missing: ${feedback.join(', ')}`;
+    }
+
+    passwordStrength.innerHTML = `<span class="${className}">${message}</span>`;
+  }
+
+  function checkPasswordMatch() {
+    const password = passwordInput.value;
+    const confirmation = passwordConfirmation.value;
+
+    if (confirmation === '') {
+      passwordMatchStatus.innerHTML = '';
+      return;
+    }
+
+    if (password === confirmation) {
+      passwordMatchStatus.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Passwords match</span>';
+    } else {
+      passwordMatchStatus.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle me-1"></i>Passwords do not match</span>';
+    }
+  }
+
+  // Image upload preview functionality
+  setupImagePreview('personalImageInput', 'personalImagePreview', 'removePersonalImage');
+  setupImagePreview('houseImageInput', 'houseImagePreview', 'removeHouseImage');
+
+  function setupImagePreview(inputId, previewId, removeButtonId) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    const removeButton = document.getElementById(removeButtonId);
+
+    input.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        // Validate file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+          alert('File size must be less than 5MB');
+          input.value = '';
+          return;
+        }
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          alert('Please select a valid image file');
+          input.value = '';
+          return;
+        }
+
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = preview.querySelector('img');
+          img.src = e.target.result;
+          preview.classList.remove('d-none');
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    removeButton.addEventListener('click', function() {
+      input.value = '';
+      preview.classList.add('d-none');
+    });
+  }
+
+
+  // Initialize location status
+  showLocationMessage('Click "Get Current Location" to automatically fill coordinates', 'info');
+});
+</script>
+
+<style>
+.upload-area {
+  border: 2px dashed #dee2e6 !important;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.upload-area:hover {
+  border-color: #007bff !important;
+  background-color: #f8f9fa;
+}
+
+.bg-purple {
+  background-color: #6f42c1;
+}
+
+.text-purple {
+  color: #6f42c1;
+}
+
+/* Location button animation */
+#getLocationBtn:disabled {
+  opacity: 0.6;
+}
+
+/* Password strength indicator */
+#passwordStrength {
+  font-size: 0.875rem;
+}
+
+/* Image preview styling */
+#personalImagePreview img,
+#houseImagePreview img {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* WhatsApp integration styling */
+#sameAsMobile:checked + label {
+  color: #25d366 !important;
+}
+
+/* Location accuracy badge */
+.location-accuracy {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+/* Auto-generated password styling */
+#customerPassword[readonly],
+#passwordConfirmation[readonly] {
+  background-color: #f8f9fa;
+  border-color: #28a745;
+  cursor: pointer;
+}
+
+#customerPassword[readonly]:focus,
+#passwordConfirmation[readonly]:focus {
+  background-color: #f8f9fa;
+  border-color: #28a745;
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+/* Auto-generate checkbox styling */
+#autoGeneratePassword:checked + label {
+  color: #28a745 !important;
+}
+
+#autoGeneratePassword:checked + label i {
+  animation: sparkle 1.5s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+
+/* Password generation button improvements */
+#generatePasswordBtn {
+  background-color: transparent;
+  border-color: #dee2e6;
+  color: #6c757d;
+  transition: all 0.2s ease;
+}
+
+#generatePasswordBtn:hover {
+  background-color: #f8f9fa;
+  border-color: #adb5bd;
+  color: #495057;
+  transform: scale(1.05);
+}
+
+#generatePasswordBtn:active,
+#generatePasswordBtn:focus {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+  color: #495057;
+  box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+}
+
+#generatePasswordBtn:disabled {
+  opacity: 0.5;
+  transform: none;
+}
+
+/* Make the magic icon slightly more subtle */
+#generatePasswordBtn .bi-magic {
+  opacity: 0.8;
+}
+
+/* Enhance eye icon when password is auto-generated */
+#customerPassword[readonly] + button + #togglePasswordBtn {
+  border-color: #28a745;
+  color: #28a745;
+  animation: subtle-pulse 2s ease-in-out infinite;
+}
+
+#customerPassword[readonly] + button + #togglePasswordBtn:hover {
+  background-color: #d4edda;
+  border-color: #28a745;
+}
+
+@keyframes subtle-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1);
+  }
+}
+
+
+</style>
+

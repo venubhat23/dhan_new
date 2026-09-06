@@ -1,48 +1,160 @@
-<% content_for :page_title, "Customers" %>
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+<!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h4 class="mb-1">Store Customers</h4>
-    <small class="text-muted">Customers who have booked at <%= @current_store.name %></small>
+    <h2 class="mb-1">Customer Management</h2>
+    <p class="text-muted mb-0">Manage and track all your customers</p>
   </div>
-  <%= link_to new_store_admin_customer_path, class: "btn btn-primary" do %>
-    <i class="bi bi-person-plus me-2"></i>Add Customer
-  <% end %>
+  <div>
+    <%= link_to new_store_admin_customer_path, class: "btn btn-primary" do %>
+      <i class="bi bi-plus-lg me-1"></i>
+      Add New Customer
+    <% end %>
+  </div>
 </div>
 
+<!-- Stats Cards -->
 <div class="row mb-4">
-  <div class="col-md-4 mb-3">
-    <div class="card shadow-sm border-0" style="border-left: 4px solid #10b981 !important;">
-      <div class="card-body d-flex justify-content-between align-items-center">
-        <div>
-          <h6 class="card-title mb-2" style="color: #2d3748; font-weight: 600;">Total Customers</h6>
-          <div style="color: #1a202c; font-weight: 800; font-size: 1.8rem;"><%= number_with_delimiter(@total_customers) %></div>
-          <small class="text-muted">with bookings at this store</small>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h6 class="text-muted mb-1">Total Customers</h6>
+            <h4 class="mb-0"><%= @total_customers || 0 %></h4>
+          </div>
+          <div class="text-primary">
+            <i class="bi bi-people fs-2"></i>
+          </div>
         </div>
-        <i class="bi bi-people" style="color: rgba(45,55,72,0.2); font-size: 3rem;"></i>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h6 class="text-muted mb-1">Active Customers</h6>
+            <h4 class="mb-0"><%= @active_customers || 0 %></h4>
+          </div>
+          <div class="text-success">
+            <i class="bi bi-person-check fs-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h6 class="text-muted mb-1">New This Month</h6>
+            <h4 class="mb-0"><%= @new_this_month || 0 %></h4>
+          </div>
+          <div class="text-info">
+            <i class="bi bi-person-plus fs-2"></i>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Filter Controls -->
 <div class="card border-0 shadow-sm mb-4">
-  <div class="card-body py-3">
-    <%= form_tag store_admin_customers_path, method: :get, local: true, class: "row g-3 align-items-end" do %>
-      <div class="col-md-5">
-        <label class="form-label small">Search</label>
-        <%= text_field_tag :search, params[:search], class: "form-control form-control-sm", placeholder: "Name, mobile or email" %>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label for="customerFilter" class="form-label fw-semibold">
+          <i class="bi bi-people me-1 text-primary"></i>
+          Select Customer
+        </label>
+        <select id="customerFilter" class="form-select customer-select2">
+          <option value="">All Customers</option>
+          <% Customer.order(:full_name).each do |customer| %>
+            <option value="<%= customer.id %>"
+                    <%= 'selected' if params[:customer_id] == customer.id.to_s %>
+                    data-name="<%= customer.display_name %>"
+                    data-email="<%= customer.email %>"
+                    data-mobile="<%= customer.mobile %>">
+              <%= customer.display_name %> - <%= customer.mobile %>
+            </option>
+          <% end %>
+        </select>
       </div>
-      <div class="col-md-3">
-        <%= submit_tag "Filter", class: "btn btn-primary btn-sm" %>
-        <%= link_to "Clear", store_admin_customers_path, class: "btn btn-outline-secondary btn-sm" %>
+      <div class="col-md-4">
+        <label for="deliveryPersonFilter" class="form-label fw-semibold">
+          <i class="bi bi-truck me-1 text-success"></i>
+          Select Delivery Person
+        </label>
+        <select id="deliveryPersonFilter" class="form-select delivery-person-select2">
+          <option value="">All Delivery Persons</option>
+          <% if defined?(DeliveryPerson) %>
+            <% DeliveryPerson.active.order(:first_name, :last_name).each do |dp| %>
+              <option value="<%= dp.id %>"
+                      <%= 'selected' if params[:delivery_person_id] == dp.id.to_s %>
+                      data-name="<%= dp.display_name %>"
+                      data-mobile="<%= dp.mobile %>"
+                      data-vehicle="<%= dp.vehicle_number %>">
+                <%= dp.display_name %> - <%= dp.mobile %> (<%= dp.vehicle_number %>)
+              </option>
+            <% end %>
+          <% end %>
+        </select>
       </div>
-    <% end %>
+      <div class="col-md-4">
+        <label for="statusFilter" class="form-label fw-semibold">
+          <i class="bi bi-funnel me-1 text-info"></i>
+          Status Filter
+        </label>
+        <select id="statusFilter" class="form-select">
+          <option value="">All Status</option>
+          <option value="active" <%= 'selected' if params[:status] == 'active' %>>Active</option>
+          <option value="inactive" <%= 'selected' if params[:status] == 'inactive' %>>Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="row mt-3">
+      <div class="col-12">
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="clearFilters">
+            <i class="bi bi-x-circle me-1"></i>Clear All
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
+<!-- Customers Table -->
 <div class="card border-0 shadow-sm">
-  <div class="card-header bg-white border-0">
-    <h6 class="mb-0"><i class="bi bi-list me-2"></i>Customer List</h6>
+  <div class="card-header bg-transparent border-0">
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Customer List</h5>
+      <div class="d-flex gap-2 align-items-center">
+        <!-- Bulk Actions (hidden until items are selected) -->
+        <div id="customerBulkActions" style="display: none;">
+          <%= form_with url: bulk_delete_store_admin_customers_path, method: :post, id: "bulkDeleteForm", local: true do |f| %>
+            <div id="bulk_customer_ids_container"></div>
+            <button type="button" class="btn btn-danger btn-sm" onclick="confirmBulkDelete()">
+              <i class="bi bi-trash me-1"></i>
+              Delete Selected (<span id="customerSelectedCount">0</span>)
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearCustomerSelection()">
+              <i class="bi bi-x me-1"></i>Clear
+            </button>
+          <% end %>
+        </div>
+        <div class="position-relative">
+          <input type="text" class="form-control" placeholder="Search in table..." id="searchInput">
+          <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3"></i>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="card-body p-0">
     <% if @customers.any? %>
@@ -50,28 +162,98 @@
         <table class="table table-hover mb-0">
           <thead class="table-light">
             <tr>
-              <th>Name</th>
-              <th>Mobile</th>
-              <th>Email</th>
-              <th>Since</th>
-              <th>Actions</th>
+              <th class="border-0 fw-semibold" style="width: 50px;">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="selectAllCustomers" onchange="toggleSelectAllCustomers()">
+                </div>
+              </th>
+              <th class="border-0 fw-semibold">Customer</th>
+              <th class="border-0 fw-semibold">Contact Info</th>
+              <th class="border-0 fw-semibold">Status</th>
+              <th class="border-0 fw-semibold">Joined</th>
+              <th class="border-0 fw-semibold">Last Updated</th>
+              <th class="border-0 fw-semibold">Actions</th>
             </tr>
           </thead>
           <tbody>
             <% @customers.each do |customer| %>
               <tr>
-                <td><strong><%= customer.full_name %></strong></td>
-                <td><%= customer.mobile %></td>
-                <td><%= customer.placeholder_email? ? content_tag(:span, "—", class: "text-muted") : customer.email %></td>
-                <td><small class="text-muted"><%= customer.created_at.strftime('%d %b %Y') %></small></td>
-                <td>
-                  <div class="btn-group" role="group">
-                    <%= link_to store_admin_customer_path(customer), class: "btn btn-sm btn-outline-primary" do %>
+                <td class="align-middle">
+                  <div class="form-check">
+                    <input class="form-check-input customer-checkbox" type="checkbox"
+                           value="<%= customer.id %>"
+                           id="customer_<%= customer.id %>"
+                           onchange="updateCustomerBulkActions()">
+                  </div>
+                </td>
+                <td class="align-middle">
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center me-3">
+                      <i class="bi bi-person text-primary"></i>
+                    </div>
+                    <div>
+                      <h6 class="mb-0"><%= customer.display_name %></h6>
+                      <small class="text-muted">ID: #<%= customer.id %></small>
+                    </div>
+                  </div>
+                </td>
+                <td class="align-middle">
+                  <div>
+                    <% if customer.email.present? %>
+                      <div class="small">
+                        <i class="bi bi-envelope text-muted me-1"></i>
+                        <%= customer.email %>
+                      </div>
+                    <% end %>
+                    <% if customer.mobile.present? %>
+                      <div class="small">
+                        <i class="bi bi-telephone text-muted me-1"></i>
+                        <%= customer.mobile %>
+                      </div>
+                    <% end %>
+                  </div>
+                </td>
+                <td class="align-middle">
+                  <% if customer.respond_to?(:status) && customer.status %>
+                    <span class="badge bg-success-subtle text-success">
+                      <i class="bi bi-check-circle me-1"></i>
+                      Active
+                    </span>
+                  <% else %>
+                    <span class="badge bg-danger-subtle text-danger">
+                      <i class="bi bi-x-circle me-1"></i>
+                      Inactive
+                    </span>
+                  <% end %>
+                </td>
+                <td class="align-middle">
+                  <%= customer.created_at.strftime("%b %d, %Y") if customer.created_at %>
+                </td>
+                <td class="align-middle">
+                  <% if customer.updated_at %>
+                    <span title="<%= customer.updated_at.strftime("%B %d, %Y at %I:%M %p") %>">
+                      <%= customer.updated_at.strftime("%b %d, %Y") %>
+                    </span>
+                    <div class="small text-muted"><%= customer.updated_at.strftime("%I:%M %p") %></div>
+                  <% end %>
+                </td>
+                <td class="align-middle">
+                  <div class="d-flex gap-1">
+                    <%= link_to store_admin_customer_path(customer),
+                        class: "btn btn-sm btn-outline-info",
+                        title: "View Details" do %>
                       <i class="bi bi-eye"></i>
                     <% end %>
-                    <%= link_to edit_store_admin_customer_path(customer), class: "btn btn-sm btn-outline-secondary" do %>
+                    <%= link_to edit_store_admin_customer_path(customer),
+                        class: "btn btn-sm btn-outline-primary",
+                        title: "Edit Customer" do %>
                       <i class="bi bi-pencil"></i>
                     <% end %>
+                    <button class="btn btn-sm btn-outline-danger"
+                            title="Delete Customer"
+                            onclick="confirmDelete('<%= customer.display_name %>', '<%= store_admin_customer_path(customer) %>')">
+                      <i class="bi bi-trash"></i>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -79,15 +261,523 @@
           </tbody>
         </table>
       </div>
-      <div class="p-3">
-        <%= paginate @customers if @customers.respond_to?(:current_page) %>
-      </div>
+
+      <!-- Pagination -->
+      <% if respond_to?(:paginate) && @customers.respond_to?(:total_pages) %>
+        <div class="card-footer bg-transparent border-0">
+          <%= paginate @customers %>
+        </div>
+      <% end %>
     <% else %>
       <div class="text-center py-5">
-        <i class="bi bi-people fs-1 text-muted mb-3"></i>
-        <h5 class="text-muted">No Customers Found</h5>
+        <div class="mb-3">
+          <i class="bi bi-people fs-1 text-muted"></i>
+        </div>
+        <h5 class="text-muted mb-3">No Customers Found</h5>
+        <p class="text-muted mb-4">Start building your customer base by adding your first customer.</p>
         <%= link_to "Add Customer", new_store_admin_customer_path, class: "btn btn-primary" %>
       </div>
     <% end %>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize Select2 dropdowns
+  initializeSelect2Dropdowns();
+
+  // Show flash messages with SweetAlert2
+  <% if notice %>
+    <% if notice.include?('deleted') %>
+      Swal.fire({
+        title: 'Customer Deleted Successfully!',
+        html: '<%= notice.html_safe %>',
+        icon: 'success',
+        confirmButtonText: '<i class="bi bi-check-circle me-2"></i>Got it!',
+        confirmButtonColor: '#198754',
+        customClass: {
+          confirmButton: 'btn btn-success px-4'
+        },
+        buttonsStyling: false,
+        timer: 8000,
+        timerProgressBar: true
+      });
+    <% else %>
+      Swal.fire({
+        title: 'Success!',
+        text: '<%= notice %>',
+        icon: 'success',
+        confirmButtonText: 'Got it!',
+        confirmButtonColor: '#198754'
+      });
+    <% end %>
+  <% end %>
+
+  <% if alert %>
+    Swal.fire({
+      title: 'Error!',
+      html: '<%= alert.html_safe %>',
+      icon: 'error',
+      confirmButtonText: '<i class="bi bi-x-circle me-2"></i>Understood',
+      confirmButtonColor: '#dc3545',
+      customClass: {
+        confirmButton: 'btn btn-danger px-4'
+      },
+      buttonsStyling: false
+    });
+  <% end %>
+
+  // Search functionality in table
+  const searchInput = document.getElementById('searchInput');
+  const tableRows = document.querySelectorAll('tbody tr');
+
+  searchInput?.addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+
+    tableRows.forEach(row => {
+      const customerName = row.cells[0]?.textContent.toLowerCase() || '';
+      const contactInfo = row.cells[1]?.textContent.toLowerCase() || '';
+
+      if (customerName.includes(searchTerm) ||
+          contactInfo.includes(searchTerm)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  });
+
+  // Filter functionality
+  setupFilterFunctionality();
+});
+
+// Initialize Select2 dropdowns
+function initializeSelect2Dropdowns() {
+  // Customer Select2
+  $('.customer-select2').select2({
+    theme: 'bootstrap-5',
+    placeholder: 'Search and select customer...',
+    allowClear: true,
+    width: '100%',
+    templateResult: formatCustomerOption,
+    templateSelection: formatCustomerSelection,
+    escapeMarkup: function(markup) { return markup; }
+  });
+
+  // Delivery Person Select2
+  $('.delivery-person-select2').select2({
+    theme: 'bootstrap-5',
+    placeholder: 'Search and select delivery person...',
+    allowClear: true,
+    width: '100%',
+    templateResult: formatDeliveryPersonOption,
+    templateSelection: formatDeliveryPersonSelection,
+    escapeMarkup: function(markup) { return markup; }
+  });
+}
+
+// Format customer option display
+function formatCustomerOption(option) {
+  if (!option.id) {
+    return option.text;
+  }
+
+  const $option = $(option.element);
+  const name = $option.data('name') || '';
+  const email = $option.data('email') || '';
+  const mobile = $option.data('mobile') || '';
+
+  return $(`
+    <div class="select2-option-content">
+      <div class="fw-semibold text-primary">${name}</div>
+      <div class="small text-muted">
+        <i class="bi bi-envelope me-1"></i>${email} |
+        <i class="bi bi-telephone me-1"></i>${mobile}
+      </div>
+    </div>
+  `);
+}
+
+// Format customer selection display
+function formatCustomerSelection(option) {
+  if (!option.id) {
+    return option.text;
+  }
+
+  const $option = $(option.element);
+  const name = $option.data('name') || '';
+  const mobile = $option.data('mobile') || '';
+
+  return `${name} - ${mobile}`;
+}
+
+// Format delivery person option display
+function formatDeliveryPersonOption(option) {
+  if (!option.id) {
+    return option.text;
+  }
+
+  const $option = $(option.element);
+  const name = $option.data('name') || '';
+  const mobile = $option.data('mobile') || '';
+  const vehicle = $option.data('vehicle') || '';
+
+  return $(`
+    <div class="select2-option-content">
+      <div class="fw-semibold text-success">${name}</div>
+      <div class="small text-muted">
+        <i class="bi bi-telephone me-1"></i>${mobile} |
+        <i class="bi bi-truck me-1"></i>${vehicle}
+      </div>
+    </div>
+  `);
+}
+
+// Format delivery person selection display
+function formatDeliveryPersonSelection(option) {
+  if (!option.id) {
+    return option.text;
+  }
+
+  const $option = $(option.element);
+  const name = $option.data('name') || '';
+  const vehicle = $option.data('vehicle') || '';
+
+  return `${name} - ${vehicle}`;
+}
+
+// Setup filter functionality
+function setupFilterFunctionality() {
+  const clearFiltersBtn = document.getElementById('clearFilters');
+
+  // Apply filters as soon as a dropdown selection changes
+  function applyFilters() {
+    const customerFilter = $('#customerFilter').val();
+    const deliveryPersonFilter = $('#deliveryPersonFilter').val();
+    const statusFilter = document.getElementById('statusFilter').value;
+
+    // Build URL parameters
+    const params = new URLSearchParams(window.location.search);
+
+    if (customerFilter) {
+      params.set('customer_id', customerFilter);
+    } else {
+      params.delete('customer_id');
+    }
+
+    if (deliveryPersonFilter) {
+      params.set('delivery_person_id', deliveryPersonFilter);
+    } else {
+      params.delete('delivery_person_id');
+    }
+
+    if (statusFilter) {
+      params.set('status', statusFilter);
+    } else {
+      params.delete('status');
+    }
+
+    // Navigate with filters
+    window.location.href = `${window.location.pathname}?${params.toString()}`;
+  }
+
+  $('#customerFilter').on('change', applyFilters);
+  $('#deliveryPersonFilter').on('change', applyFilters);
+  document.getElementById('statusFilter')?.addEventListener('change', applyFilters);
+
+  // Clear all filters
+  clearFiltersBtn?.addEventListener('click', function() {
+    // Navigate without parameters (page reload resets the widgets)
+    window.location.href = window.location.pathname;
+  });
+}
+
+// Beautiful confirmation dialog for customer deletion
+function confirmDelete(customerName, deleteUrl) {
+  Swal.fire({
+    title: '⚠️ Delete Customer?',
+    html: `
+      <div class="text-start">
+        <p class="mb-2"><strong>Customer:</strong> ${customerName}</p>
+        <div class="alert alert-warning small">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          <strong>This will permanently delete:</strong>
+          <ul class="mb-0 mt-2">
+            <li>Customer profile and personal information</li>
+            <li>All associated orders and bookings</li>
+            <li>Subscriptions and delivery records</li>
+            <li>User account and login credentials</li>
+            <li>All notifications and addresses</li>
+          </ul>
+        </div>
+        <div class="alert alert-danger small mb-0">
+          <i class="bi bi-shield-exclamation me-2"></i>
+          <strong>Warning:</strong> This action cannot be undone once confirmed!
+        </div>
+      </div>
+    `,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: '<i class="bi bi-trash me-2"></i>Yes, Delete Permanently',
+    cancelButtonText: '<i class="bi bi-x-circle me-2"></i>Cancel',
+    focusCancel: true,
+    customClass: {
+      confirmButton: 'btn btn-danger px-4 me-3',
+      cancelButton: 'btn btn-secondary px-4'
+    },
+    buttonsStyling: false
+  }).then((result) => {
+    if (result.isConfirmed) {
+      // Show loading state
+      Swal.fire({
+        title: 'Deleting Customer...',
+        html: `<div class="d-flex align-items-center justify-content-center">
+                 <div class="spinner-border text-danger me-3" role="status">
+                   <span class="visually-hidden">Loading...</span>
+                 </div>
+                 <span>Please wait while we delete <strong>${customerName}</strong> and all associated records...</span>
+               </div>`,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false
+      });
+
+      // Create and submit form for DELETE request
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = deleteUrl;
+
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'authenticity_token';
+      csrfInput.value = csrfToken;
+
+      const methodInput = document.createElement('input');
+      methodInput.type = 'hidden';
+      methodInput.name = '_method';
+      methodInput.value = 'delete';
+
+      form.appendChild(csrfInput);
+      form.appendChild(methodInput);
+      document.body.appendChild(form);
+      form.submit();
+    }
+  });
+}
+</script>
+
+<style>
+
+/* Fix dropdown menu visibility */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute !important;
+  z-index: 1050 !important;
+  min-width: 150px;
+}
+
+/* Ensure the last row's dropdown opens upward if needed */
+tbody tr:last-child .dropdown-menu,
+tbody tr:nth-last-child(2) .dropdown-menu {
+  bottom: 100%;
+  top: auto;
+}
+
+/* Make the credentials column more compact but readable */
+.login-credentials strong {
+  color: #495057;
+  font-size: 0.8rem;
+}
+
+.login-credentials .small {
+  line-height: 1.3;
+}
+
+/* Select2 Custom Styling */
+.select2-container--bootstrap-5 .select2-selection {
+  border-radius: 8px !important;
+  border: 1px solid #dee2e6 !important;
+  min-height: 38px !important;
+  background: white !important;
+  transition: all 0.3s ease !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  line-height: 36px !important;
+  font-size: 0.875rem !important;
+  color: #495057 !important;
+}
+
+.select2-container--bootstrap-5.select2-container--focus .select2-selection {
+  border-color: #81c784 !important;
+  box-shadow: 0 0 0 0.2rem rgba(129, 199, 132, 0.15) !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection:hover {
+  border-color: #adb5bd !important;
+}
+
+.select2-dropdown {
+  border-radius: 8px !important;
+  border: 1px solid #dee2e6 !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+  z-index: 1060 !important;
+}
+
+.select2-results__option--highlighted {
+  background-color: #e3f2fd !important;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+  color: #1976d2 !important;
+}
+
+.select2-results__option {
+  font-size: 0.875rem !important;
+  padding: 8px 12px !important;
+}
+
+.select2-results__option--selected {
+  background-color: #f0f8ff !important;
+  color: #2196f3 !important;
+}
+
+/* Custom option content styling */
+.select2-option-content {
+  padding: 4px 0;
+}
+
+.select2-option-content .fw-semibold {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.select2-option-content .small {
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+/* Clear button styling */
+.select2-container--bootstrap-5 .select2-selection__clear {
+  color: #6c757d !important;
+  font-size: 1.2rem !important;
+  margin-right: 8px !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection__clear:hover {
+  color: #dc3545 !important;
+}
+
+/* Search input styling in dropdown */
+.select2-search--dropdown .select2-search__field {
+  border: 1px solid #dee2e6 !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-size: 0.875rem !important;
+  margin: 8px !important;
+  width: calc(100% - 16px) !important;
+}
+
+/* Filter controls card styling */
+.card .form-label {
+  margin-bottom: 6px;
+  font-size: 0.875rem;
+}
+
+.card .form-select,
+.card .form-control {
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+}
+
+.card .form-select:focus,
+.card .form-control:focus {
+  border-color: #81c784;
+  box-shadow: 0 0 0 0.2rem rgba(129, 199, 132, 0.15);
+}
+
+/* Button styling */
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.875rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .select2-container {
+    width: 100% !important;
+  }
+
+  .select2-dropdown {
+    width: 100% !important;
+  }
+}
+</style>
+
+<script>
+// Bulk delete for customers
+function toggleSelectAllCustomers() {
+  const selectAll = document.getElementById('selectAllCustomers');
+  document.querySelectorAll('.customer-checkbox').forEach(cb => { cb.checked = selectAll.checked; });
+  updateCustomerBulkActions();
+}
+
+function updateCustomerBulkActions() {
+  const selected = document.querySelectorAll('.customer-checkbox:checked');
+  const total = document.querySelectorAll('.customer-checkbox');
+  const bulkBar = document.getElementById('customerBulkActions');
+  const countEl = document.getElementById('customerSelectedCount');
+  const selectAll = document.getElementById('selectAllCustomers');
+
+  countEl.textContent = selected.length;
+  bulkBar.style.display = selected.length > 0 ? 'flex' : 'none';
+
+  if (selected.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
+  else if (selected.length === total.length) { selectAll.checked = true; selectAll.indeterminate = false; }
+  else { selectAll.checked = false; selectAll.indeterminate = true; }
+}
+
+function clearCustomerSelection() {
+  document.querySelectorAll('.customer-checkbox').forEach(cb => { cb.checked = false; });
+  document.getElementById('selectAllCustomers').checked = false;
+  document.getElementById('selectAllCustomers').indeterminate = false;
+  updateCustomerBulkActions();
+}
+
+function confirmBulkDelete() {
+  const selected = document.querySelectorAll('.customer-checkbox:checked');
+  if (selected.length === 0) return;
+
+  Swal.fire({
+    title: 'Delete ' + selected.length + ' customer(s)?',
+    text: 'This will permanently delete all selected customers and their data. This cannot be undone.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Yes, delete all',
+    cancelButtonText: 'Cancel'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const container = document.getElementById('bulk_customer_ids_container');
+      container.innerHTML = '';
+      selected.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'customer_ids[]';
+        input.value = cb.value;
+        container.appendChild(input);
+      });
+      document.getElementById('bulkDeleteForm').submit();
+    }
+  });
+}
+</script>

@@ -401,11 +401,11 @@
                 <div class="col-md-4">
                   <label class="form-label">Store (Optional)</label>
                   <%= f.select :store_id,
-                      options_for_select([['Select Store (Optional)', '']] + Store.active.map { |s| [s.display_name, s.id] }),
+                      options_for_select([['Select Store (Optional)', '']] + Store.active.map { |s| [s.display_name, s.id] }, @booking.store_id),
                       {},
                       { class: 'form-select', id: 'store_select', onchange: 'handleStoreSelection(this)' } %>
                   <div class="form-text">
-                    <small><i class="bi bi-shop me-1"></i>Tag this sale to a store (auto-sets status to completed)</small>
+                    <small><i class="bi bi-shop me-1"></i>Tag this sale to a store — product stock below reflects that store, and the sale deducts from it</small>
                   </div>
                 </div>
 
@@ -1807,33 +1807,25 @@ function applyCategoryFilter() {
   });
 }
 
-// Handle store selection - automatically set status to completed if store is selected
+// Handle store selection - reload the picker so product stock reflects the
+// chosen store (the sale draws down that store's inventory, just like a
+// store-side booking).
 function handleStoreSelection(select) {
-  const statusSelect = document.getElementById('booking_status');
-
-  if (select.value && select.value !== '') {
-    // Store is selected - set status to completed
-    if (statusSelect) {
-      statusSelect.value = 'completed';
-      updateStatusPreview();
-
-      // Show notification
-      showNotification('Status automatically set to "Completed" as store is selected', 'info');
-
-      // Add visual feedback
-      statusSelect.style.backgroundColor = '#d4edda';
-      setTimeout(() => {
-        statusSelect.style.backgroundColor = '';
-      }, 2000);
-    }
-  } else {
-    // Store is deselected - optionally reset status to draft
-    if (statusSelect && statusSelect.value === 'completed') {
-      statusSelect.value = 'draft';
-      updateStatusPreview();
-      showNotification('Status reset to "Draft" as store was deselected', 'warning');
-    }
+  // Warn before reload if the cart already has items (reload clears them).
+  const hasCartItems = (typeof cart !== 'undefined') && cart && Object.keys(cart).length > 0;
+  if (hasCartItems && !confirm('Changing the store will reset the current product selection so stock can be re-checked against that store. Continue?')) {
+    // Revert the dropdown to its previous value.
+    select.value = '<%= @selected_store&.id %>';
+    return;
   }
+
+  const url = new URL(window.location.href);
+  if (select.value && select.value !== '') {
+    url.searchParams.set('store_id', select.value);
+  } else {
+    url.searchParams.delete('store_id');
+  }
+  window.location.href = url.toString();
 }
 
 // Status management

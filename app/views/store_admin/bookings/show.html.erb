@@ -1,167 +1,632 @@
-<%- content_for :title, "Booking - #{@booking.booking_number || "##{@booking.id}"}" %>
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Booking Details</h2>
+    <p class="text-muted mb-0">
+      <span class="badge bg-<%= @booking.status_color %> me-2">
+        <i class="bi <%= @booking.status_icon %> me-1"></i>
+        <%= @booking.status&.humanize || 'Pending' %>
+      </span>
+      Booking #<%= @booking.booking_number %>
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <!-- Invoice Actions -->
+    <% if @booking.invoice_generated? %>
+      <%= link_to invoice_store_admin_booking_path(@booking), class: "btn btn-primary" do %>
+        <i class="bi bi-eye me-1"></i>
+        Show Invoice
+      <% end %>
+    <% else %>
+      <%= button_to generate_invoice_store_admin_booking_path(@booking, list_state: @list_state), method: :post, class: "btn btn-success" do %>
+        <i class="bi bi-receipt me-1"></i>
+        Generate Invoice
+      <% end %>
+      <% unless @booking.payment_status_paid? %>
+        <%= button_to mark_paid_store_admin_booking_path(@booking, list_state: @list_state), method: :patch, class: "btn btn-warning",
+              data: { confirm: "Mark this booking as paid and generate invoice?" } do %>
+          <i class="bi bi-check-circle me-1"></i>
+          Mark as Paid & Invoice
+        <% end %>
+      <% end %>
+      <% if @booking.payment_status_unpaid? %>
+        <%= button_to store_admin_booking_path(@booking, list_state: @list_state), method: :patch, class: "btn btn-outline-warning",
+              params: { booking: { payment_status: 'partially_paid' } },
+              data: { confirm: "Mark this booking as partially paid?" } do %>
+          <i class="bi bi-clock-history me-1"></i>
+          Mark as Partially Paid
+        <% end %>
+      <% end %>
+    <% end %>
 
-<div class="row">
-  <div class="col-lg-8">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h4 class="card-title mb-0">Booking Details</h4>
-        <div class="d-flex gap-2">
-          <button onclick="window.print()" class="btn btn-success btn-sm">
-            <i class="fas fa-print me-1"></i>Print Bill
-          </button>
-          <% if ['draft', 'confirmed'].include?(@booking.status) %>
-            <%= link_to "Edit", edit_store_admin_booking_path(@booking), class: "btn btn-outline-primary btn-sm" %>
+
+    <%# WhatsApp buttons %>
+    <%
+      wa_phone = (@booking.customer_phone || @booking.customer&.mobile).to_s.gsub(/\D/, '')
+      wa_phone = "91#{wa_phone}" if wa_phone.length == 10
+      cname    = @booking.customer_name || @booking.customer&.display_name || 'Customer'
+      amount   = number_with_delimiter(@booking.total_amount.to_f)
+      bdate    = @booking.booking_date&.strftime('%d %b %Y') || @booking.created_at&.strftime('%d %b %Y')
+      @booking.ensure_share_token!
+      public_url   = "#{request.base_url}/booking/#{@booking.share_token}"
+      bi           = @booking.booking_invoices.first
+      pdf_line     = bi&.share_token.present? ? "\n📄 Download Invoice PDF: #{request.base_url}/invoice/#{bi.share_token}/download" : ""
+      wa_thank_msg = "Dear #{cname},\n\nThank you for your booking with Dhanvantari Naturals! 🌿\n\nBooking #: #{@booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View your booking: #{public_url}#{pdf_line}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
+    %>
+    <% if wa_phone.length >= 10 %>
+      <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
+         target="_blank" class="btn btn-success"
+         title="Send Thank You on WhatsApp">
+        <i class="bi bi-whatsapp me-1"></i>
+        Thanks
+      </a>
+      <% if @booking.payment_status_paid? && bi&.share_token.present? %>
+        <%
+          inv_url     = "#{request.base_url}/invoice/#{bi.share_token}"
+          inv_pdf_url = "#{request.base_url}/invoice/#{bi.share_token}/download"
+          wa_inv_msg  = "Dear #{cname},\n\nHere is your invoice from Dhanvantari Naturals 🌿\n\nBooking #: #{@booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View Invoice: #{inv_url}\n📄 Download PDF: #{inv_pdf_url}\n\nThank you!\n🙏 Dhanvantari Naturals Team"
+        %>
+        <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_inv_msg) %>"
+           target="_blank" class="btn btn-success"
+           style="background:#7b1fa2;border-color:#7b1fa2;"
+           title="Share Invoice via WhatsApp">
+          <i class="bi bi-whatsapp me-1"></i>
+          Invoice
+        </a>
+      <% end %>
+    <% end %>
+
+    <div class="dropdown">
+      <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        <i class="bi bi-three-dots"></i>
+      </button>
+      <ul class="dropdown-menu">
+        <li>
+          <%= link_to edit_store_admin_booking_path(@booking, list_state: @list_state), class: "dropdown-item" do %>
+            <i class="bi bi-pencil me-2"></i>
+            Edit Booking
           <% end %>
-          <%= link_to "Back to Bookings", store_admin_bookings_path, class: "btn btn-outline-secondary btn-sm" %>
-        </div>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+          <%= link_to store_admin_booking_path(@booking, list_state: @list_state), method: :delete,
+              class: "dropdown-item text-danger",
+              data: {
+                confirm: "Are you sure you want to delete this booking? This action cannot be undone.",
+                turbo_method: :delete
+              } do %>
+            <i class="bi bi-trash me-2"></i>
+            Delete Booking
+          <% end %>
+        </li>
+      </ul>
+    </div>
+
+    <%= link_to store_admin_bookings_path(@list_state), class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-arrow-left me-1"></i>
+      Back to Bookings
+    <% end %>
+  </div>
+</div>
+
+<!-- Status Management Section -->
+<% if @booking.next_possible_statuses.any? %>
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-transparent border-0 pb-0">
+    <div class="d-flex align-items-center justify-content-between">
+      <h5 class="mb-0">
+        <i class="bi bi-gear text-primary me-2"></i>
+        Order Status Management
+      </h5>
+      <div class="d-flex align-items-center">
+        <small class="text-muted me-3">Current Status:</small>
+        <span class="badge bg-<%= @booking.status_color %> px-3 py-2">
+          <i class="bi <%= @booking.status_icon %> me-1"></i>
+          <%= @booking.status.humanize %>
+        </span>
+      </div>
+    </div>
+  </div>
+  <div class="card-body pt-3">
+    <div class="row">
+      <div class="col-md-8">
+        <h6 class="text-muted mb-3">Update Order Stage:</h6>
+        <%= form_with url: update_status_store_admin_booking_path(@booking, list_state: @list_state), method: :patch, local: true, class: "d-flex gap-3 align-items-end" do |f| %>
+          <div class="flex-grow-1">
+            <%= f.label :status, "Select Stage:", class: "form-label small text-muted mb-1" %>
+            <%= f.select :status,
+                options_for_select([
+                  ['Draft', 'draft'],
+                  ['Ordered & Delivery Pending', 'ordered_and_delivery_pending'],
+                  ['Confirmed', 'confirmed'],
+                  ['Processing', 'processing'],
+                  ['Packed', 'packed'],
+                  ['Shipped', 'shipped'],
+                  ['Out for Delivery', 'out_for_delivery'],
+                  ['Delivered', 'delivered'],
+                  ['Completed', 'completed'],
+                  ['Cancelled', 'cancelled'],
+                  ['Returned', 'returned']
+                ].select { |option| @booking.next_possible_statuses.include?(option[1]) || option[1] == @booking.status },
+                @booking.status),
+                { prompt: "Select next stage..." },
+                { class: "form-select", id: "status_select" } %>
+          </div>
+          <div id="tracking_number_field" style="display: none;">
+            <%= f.label :tracking_number, "Tracking Number:", class: "form-label small text-muted mb-1" %>
+            <%= f.text_field :tracking_number, placeholder: "Enter tracking number", class: "form-control" %>
+          </div>
+          <div>
+            <%= f.submit "Update Stage", class: "btn btn-primary", id: "update_stage_btn", disabled: true %>
+          </div>
+        <% end %>
       </div>
 
+      <div class="col-md-4">
+        <% if @booking.can_cancel? %>
+          <h6 class="text-muted mb-2">Quick Actions:</h6>
+          <%= form_with url: cancel_order_store_admin_booking_path(@booking, list_state: @list_state), method: :patch, local: true, class: "mb-2" do |f| %>
+            <%= f.text_field :reason, placeholder: "Cancellation reason (optional)", class: "form-control form-control-sm mb-2" %>
+            <%= f.submit "Cancel Order", class: "btn btn-danger btn-sm w-100", confirm: "Are you sure you want to cancel this order?" %>
+          <% end %>
+        <% end %>
+
+        <% if @booking.out_for_delivery? %>
+          <%= link_to mark_delivered_store_admin_booking_path(@booking, list_state: @list_state), method: :patch,
+              class: "btn btn-success btn-sm w-100 mb-2",
+              confirm: "Mark this order as delivered?" do %>
+            <i class="bi bi-check-circle me-1"></i>
+            Mark as Delivered
+          <% end %>
+        <% end %>
+
+        <% if @booking.delivered? %>
+          <%= link_to mark_completed_store_admin_booking_path(@booking, list_state: @list_state), method: :patch,
+              class: "btn btn-primary btn-sm w-100",
+              confirm: "Mark this order as completed?" do %>
+            <i class="bi bi-check-all me-1"></i>
+            Mark as Completed
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+<% end %>
+
+<div class="row">
+  <!-- Main Booking Information -->
+  <div class="col-lg-8">
+    <!-- Booking Summary -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Booking Summary</h5>
+        <span class="badge bg-<%= @booking.payment_status == 'paid' ? 'success' : @booking.payment_status == 'partially_paid' ? 'warning' : 'danger' %>-subtle text-<%= @booking.payment_status == 'paid' ? 'success' : @booking.payment_status == 'partially_paid' ? 'warning' : 'danger' %>">
+          <%= @booking.payment_status_display %>
+        </span>
+      </div>
       <div class="card-body">
-        <div class="row mb-4">
+        <div class="row g-3">
           <div class="col-md-6">
-            <h6 class="fw-semibold">Booking Information</h6>
-            <table class="table table-borderless table-sm">
-              <tr><td><strong>Booking #:</strong></td><td><%= @booking.booking_number || "##{@booking.id}" %></td></tr>
-              <tr><td><strong>Store:</strong></td><td><%= @current_store.name %></td></tr>
-              <tr><td><strong>Date:</strong></td><td><%= @booking.created_at.strftime("%d %b %Y at %I:%M %p") %></td></tr>
-              <tr>
-                <td><strong>Status:</strong></td>
-                <td>
-                  <% if ['delivered', 'completed'].include?(@booking.status) %>
-                    <span class="badge bg-success"><%= @booking.status.humanize %></span>
-                  <% elsif ['cancelled', 'returned'].include?(@booking.status) %>
-                    <span class="badge bg-danger"><%= @booking.status.humanize %></span>
-                  <% elsif ['draft', 'ordered_and_delivery_pending'].include?(@booking.status) %>
-                    <span class="badge bg-warning text-dark"><%= @booking.status.humanize %></span>
-                  <% else %>
-                    <span class="badge bg-info"><%= @booking.status&.humanize || 'Unknown' %></span>
-                  <% end %>
-                </td>
-              </tr>
-              <tr>
-                <td><strong>Payment:</strong></td>
-                <td>
-                  <% if @booking.payment_status == 'paid' %>
-                    <span class="badge bg-success">Paid</span>
-                  <% else %>
-                    <span class="badge bg-warning text-dark">Unpaid</span>
-                  <% end %>
-                </td>
-              </tr>
-            </table>
+            <strong class="text-muted d-block">Booking Number</strong>
+            <%= @booking.booking_number %>
           </div>
-
           <div class="col-md-6">
-            <h6 class="fw-semibold">Customer Information</h6>
-            <% if @booking.customer %>
-              <table class="table table-borderless table-sm">
-                <tr><td><strong>Name:</strong></td><td><%= @booking.customer.full_name %></td></tr>
-                <tr><td><strong>Mobile:</strong></td><td><%= @booking.customer.mobile %></td></tr>
-                <tr><td><strong>Email:</strong></td><td><%= @booking.customer.email || 'N/A' %></td></tr>
-              </table>
-            <% else %>
-              <p class="text-muted">Walk-in Customer</p>
-            <% end %>
+            <strong class="text-muted d-block">Booking Date</strong>
+            <%= @booking.booking_date&.strftime("%B %d, %Y at %I:%M %p") || @booking.created_at&.strftime("%B %d, %Y at %I:%M %p") %>
           </div>
+          <div class="col-md-6">
+            <strong class="text-muted d-block">Payment Method</strong>
+            <%= @booking.payment_method_label %>
+          </div>
+          <div class="col-md-6">
+            <strong class="text-muted d-block">Created By</strong>
+            <%= @booking.user&.first_name || 'System' %>
+          </div>
+          <% if @booking.invoice_generated? %>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">Invoice Number</strong>
+              <span class="text-primary fw-medium"><%= @booking.invoice_number %></span>
+            </div>
+          <% end %>
+          <% if @booking.is_b2b? %>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">Booking Type</strong>
+              <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                <i class="bi bi-building me-1"></i>B2B Booking
+              </span>
+            </div>
+          <% end %>
         </div>
+      </div>
+    </div>
 
-        <!-- Booking Items -->
-        <div class="mb-4">
-          <h6 class="fw-semibold">Ordered Items</h6>
+    <!-- Customer Information -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h5 class="mb-0">Customer Information</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <strong class="text-muted d-block">Customer Name</strong>
+            <%= @booking.customer_name || @booking.customer&.display_name %>
+          </div>
+          <% if @booking.store.present? %>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">Store</strong>
+              <span class="badge bg-info">
+                <i class="bi bi-shop me-1"></i>
+                <%= @booking.store.display_name %>
+              </span>
+            </div>
+          <% end %>
+          <% if @booking.customer_email.present? %>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">Email</strong>
+              <a href="mailto:<%= @booking.customer_email %>"><%= @booking.customer_email %></a>
+            </div>
+          <% end %>
+          <% if @booking.customer_phone.present? %>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">Phone</strong>
+              <a href="tel:<%= @booking.customer_phone %>"><%= @booking.customer_phone %></a>
+            </div>
+          <% end %>
+          <% if @booking.delivery_address.present? %>
+            <div class="col-12">
+              <strong class="text-muted d-block">Delivery Address</strong>
+              <%= simple_format(@booking.delivery_address) %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Booking Items -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h5 class="mb-0">Booking Items</h5>
+      </div>
+      <div class="card-body p-0">
+        <% if @booking_items.any? %>
           <div class="table-responsive">
-            <table class="table table-striped">
-              <thead>
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
                 <tr>
-                  <th>Product</th>
-                  <th>Quantity</th>
-                  <th>Unit Price</th>
-                  <th>Total</th>
+                  <th class="border-0 fw-semibold">Product</th>
+                  <th class="border-0 fw-semibold text-center">Quantity</th>
+                  <th class="border-0 fw-semibold text-end">Unit Price</th>
+                  <th class="border-0 fw-semibold text-center">Discount</th>
+                  <th class="border-0 fw-semibold text-end">Total</th>
                 </tr>
               </thead>
               <tbody>
-                <% @booking.booking_items.includes(:product).each do |item| %>
+                <% @booking_items.each do |item| %>
                   <tr>
-                    <td><strong><%= item.product&.name %></strong></td>
-                    <td><%= item.quantity %></td>
-                    <td>₹<%= number_with_precision(item.price || 0, precision: 2) %></td>
-                    <td><strong>₹<%= number_with_precision((item.quantity.to_f * (item.price || 0)), precision: 2) %></strong></td>
+                    <td class="align-middle">
+                      <div class="d-flex align-items-center">
+                        <% begin %>
+                          <% if item.product&.main_image.present? && item.product.main_image.is_a?(String) %>
+                            <div class="me-3">
+                              <%= image_tag item.product.main_image, class: "rounded", style: "width: 50px; height: 50px; object-fit: cover;" %>
+                            </div>
+                          <% else %>
+                            <div class="me-3 bg-light rounded d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                              <i class="bi bi-image text-muted"></i>
+                            </div>
+                          <% end %>
+                        <% rescue => e %>
+                          <div class="me-3 bg-light rounded d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="bi bi-image text-muted"></i>
+                          </div>
+                        <% end %>
+                        <div>
+                          <h6 class="mb-1"><%= item.product&.name || 'Product' %></h6>
+                          <small class="text-muted">
+                            <% if item.product&.category %>
+                              <%= item.product.category.name %>
+                            <% end %>
+                            <% if item.product&.sku %>
+                              | SKU: <%= item.product.sku %>
+                            <% end %>
+                          </small>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="align-middle text-center">
+                      <span class="fw-medium"><%= item.quantity %></span>
+                      <small class="text-muted d-block">pcs</small>
+                    </td>
+                    <td class="align-middle text-end">
+                      <% if item.line_discount_amount > 0 %>
+                        <span class="text-muted"><s>₹<%= number_with_delimiter(item.price&.to_f || 0) %></s></span><br>
+                        <span class="fw-medium text-success">₹<%= number_with_delimiter(item.discounted_unit_price.round(2)) %></span>
+                      <% else %>
+                        <span class="fw-medium">₹<%= number_with_delimiter(item.price&.to_f || 0) %></span>
+                      <% end %>
+                    </td>
+                    <td class="align-middle text-center">
+                      <% if item.line_discount_amount > 0 %>
+                        <%= line_discount_badge(item) %>
+                        <small class="text-success d-block">−₹<%= number_with_delimiter(item.line_discount_amount.round(2)) %></small>
+                      <% else %>
+                        <span class="text-muted">—</span>
+                      <% end %>
+                    </td>
+                    <td class="align-middle text-end">
+                      <% if item.line_discount_amount > 0 %>
+                        <span class="text-muted small"><s>₹<%= number_with_delimiter((item.quantity * item.price).to_f.round(2)) %></s></span><br>
+                      <% end %>
+                      <span class="fw-bold text-success">₹<%= number_with_delimiter((item.quantity * item.price - item.line_discount_amount).to_f.round(2)) %></span>
+                    </td>
                   </tr>
                 <% end %>
               </tbody>
             </table>
           </div>
-        </div>
-
-        <% if @booking.notes.present? %>
-          <div class="mb-4">
-            <h6 class="fw-semibold">Notes</h6>
-            <div class="border rounded p-3 bg-light"><%= simple_format(@booking.notes) %></div>
+        <% else %>
+          <div class="text-center py-5">
+            <i class="bi bi-cart-x fs-1 text-muted d-block mb-3"></i>
+            <h6 class="text-muted">No items in this booking</h6>
           </div>
         <% end %>
       </div>
     </div>
+
+    <!-- Notes Section -->
+    <% if @booking.notes.present? %>
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">Notes</h5>
+        </div>
+        <div class="card-body">
+          <%= simple_format(@booking.notes) %>
+        </div>
+      </div>
+    <% end %>
   </div>
 
+  <!-- Sidebar -->
   <div class="col-lg-4">
-    <!-- Order Summary -->
-    <div class="card">
-      <div class="card-header"><h5 class="card-title mb-0">Order Summary</h5></div>
+    <!-- Payment Summary -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0">Payment Summary</h6>
+      </div>
       <div class="card-body">
-        <table class="table table-borderless">
-          <tr><td>Subtotal:</td><td class="text-end">₹<%= number_with_precision(@booking.subtotal || @booking.total_amount || 0, precision: 2) %></td></tr>
-          <% if @booking.discount_amount.to_f > 0 %>
-            <tr><td>Discount:</td><td class="text-end text-success">-₹<%= number_with_precision(@booking.discount_amount, precision: 2) %></td></tr>
-          <% end %>
-          <tr class="border-top"><td><strong>Total:</strong></td><td class="text-end"><strong>₹<%= number_with_precision(@booking.total_amount || 0, precision: 2) %></strong></td></tr>
-        </table>
-        <div class="mt-2">
-          <strong>Payment Method:</strong>
-          <span class="ms-2 text-capitalize"><%= @booking.payment_method || 'Cash' %></span>
+        <%
+          # Calculate GST correctly with smart rounding - item.price is inclusive of GST
+          total_tax_rate = 0
+          total_base_amount = 0
+          total_tax_amount = 0
+          total_item_discount = 0
+          @booking_items.each do |item|
+            total_item_discount += item.line_discount_amount
+            if item.product&.gst_enabled && item.product.gst_percentage.to_f > 0
+              gst_rate = item.product.gst_percentage.to_f
+              # Apply smart rounding logic like in the shopping cart; per-product
+              # discount is baked into the unit price first.
+              final_price_per_unit = item.discounted_unit_price
+              quantity = item.quantity
+
+              # Smart rounding: round final price, then calculate base price from rounded value
+              rounded_final_per_unit = final_price_per_unit.round
+              rounded_base_per_unit = (rounded_final_per_unit / (1 + (gst_rate / 100.0))).round
+              rounded_tax_per_unit = rounded_final_per_unit - rounded_base_per_unit
+
+              total_base_amount += rounded_base_per_unit * quantity
+              total_tax_amount += rounded_tax_per_unit * quantity
+              total_tax_rate += gst_rate
+            else
+              # No GST for this item
+              total_base_amount += item.discounted_unit_price * item.quantity
+            end
+          end
+          # Calculate weighted average tax rate
+          avg_tax_rate = @booking_items.any? { |item| item.product&.gst_enabled } ?
+            (total_tax_rate / @booking_items.select { |item| item.product&.gst_enabled }.count rescue 0) : 0
+          tax_display = avg_tax_rate.to_i == avg_tax_rate ? avg_tax_rate.to_i : avg_tax_rate.round(2)
+        %>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted">Subtotal:</span>
+          <span class="fw-medium">₹<%= number_with_delimiter(total_base_amount.round(2)) %></span>
         </div>
+
+        <% if total_item_discount > 0 %>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-success"><i class="bi bi-tags me-1"></i>Product Discounts applied:</span>
+            <span class="fw-medium text-success">−₹<%= number_with_delimiter(total_item_discount.round(2)) %></span>
+          </div>
+          <div class="text-muted small mb-2" style="margin-top:-4px;">(already reflected in the subtotal above)</div>
+        <% end %>
+
+        <% if @booking.discount_amount.present? && @booking.discount_amount.to_f > 0 %>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted">Bulk Discount:</span>
+            <span class="fw-medium text-success">-₹<%= number_with_delimiter(@booking.discount_amount.to_f) %></span>
+          </div>
+        <% end %>
+
+        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+          <span class="text-muted">Tax (<%= tax_display %>%):</span>
+          <span class="fw-medium">₹<%= number_with_delimiter(total_tax_amount.round(2)) %></span>
+        </div>
+
+        <% delivery_charge = @booking.shipping_charges.to_f %>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted"><i class="bi bi-truck me-1"></i>Delivery Charge:</span>
+          <div class="d-flex align-items-center gap-2">
+            <span class="fw-medium text-info" id="delivery_charge_display">₹<%= number_with_delimiter(delivery_charge) %></span>
+            <button type="button" class="btn btn-link btn-sm p-0" data-bs-toggle="collapse" data-bs-target="#edit_delivery_charge_form" aria-expanded="false" title="Edit delivery charge">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+          </div>
+        </div>
+        <div class="collapse mb-2" id="edit_delivery_charge_form">
+          <%= form_with url: update_delivery_charge_store_admin_booking_path(@booking), method: :patch, local: true, class: "d-flex gap-2 align-items-center bg-light p-2 rounded" do |f| %>
+            <%= f.label :shipping_charges, "₹", class: "small text-muted mb-0" %>
+            <%= f.number_field :shipping_charges, value: delivery_charge, step: 0.01, min: 0, class: "form-control form-control-sm", style: "max-width: 120px;" %>
+            <%= f.submit "Update", class: "btn btn-primary btn-sm" %>
+          <% end %>
+        </div>
+
+        <% if @booking.discount_amount.present? && @booking.discount_amount.to_f > 0 %>
+          <% original_total = total_base_amount + total_tax_amount + delivery_charge %>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted">Original Total:</span>
+            <span class="fw-medium text-muted"><s>₹<%= number_with_delimiter(original_total.round(2)) %></s></span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="fw-bold fs-5">Final Amount:</span>
+            <span class="fw-bold fs-5 text-success">₹<%= number_with_delimiter((original_total - @booking.discount_amount.to_f).round(2)) %></span>
+          </div>
+        <% else %>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="fw-bold fs-5">Total:</span>
+            <span class="fw-bold fs-5 text-primary">₹<%= number_with_delimiter((total_base_amount + total_tax_amount + delivery_charge).round(2)) %></span>
+          </div>
+        <% end %>
+
+        <% if (@booking.cash_received&.to_f || 0) > 0 %>
+          <div class="bg-light p-3 rounded">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="text-muted">Cash Received:</span>
+              <span class="fw-medium">₹<%= number_with_delimiter(@booking.cash_received&.to_f || 0) %></span>
+            </div>
+            <% if @booking.change_amount&.to_f > 0 %>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted">Change:</span>
+                <span class="fw-medium text-warning">₹<%= number_with_delimiter(@booking.change_amount&.to_f || 0) %></span>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
       </div>
     </div>
 
-    <!-- Update Status -->
-    <% if @can_update_status && @available_statuses.any? %>
-      <div class="card mt-3">
-        <div class="card-header"><h5 class="card-title mb-0">Update Status</h5></div>
-        <div class="card-body">
-          <p class="small text-muted">Current: <strong><%= @booking.status&.humanize || 'Unknown' %></strong></p>
-          <%= form_with url: update_status_store_admin_booking_path(@booking), method: :patch, local: true do |form| %>
-            <div class="mb-3">
-              <%= form.select :new_status,
-                  options_for_select(@available_statuses.map { |s| [s.humanize, s] }),
-                  { prompt: "Select new status..." },
-                  { class: "form-select" } %>
-            </div>
-            <%= form.submit "Update Status", class: "btn btn-primary w-100" %>
-          <% end %>
-        </div>
+    <!-- Timeline -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0">Activity Timeline</h6>
       </div>
-    <% end %>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-marker bg-success"></div>
+            <div class="timeline-content">
+              <small class="text-muted">Booking Created</small>
+              <div><%= @booking.created_at&.strftime("%B %d, %Y at %I:%M %p") %></div>
+            </div>
+          </div>
 
-    <!-- Cancel -->
-    <% if ['draft', 'confirmed'].include?(@booking.status) %>
-      <div class="card mt-3">
-        <div class="card-header bg-light"><h5 class="card-title mb-0 text-danger">Cancel Booking</h5></div>
-        <div class="card-body">
-          <%= form_with url: cancel_store_admin_booking_path(@booking), method: :patch, local: true do |form| %>
-            <div class="mb-3">
-              <%= form.text_area :cancellation_reason, placeholder: "Reason for cancellation...", class: "form-control", rows: 3, required: true %>
+          <% if @booking.invoice_generated? %>
+            <div class="timeline-item">
+              <div class="timeline-marker bg-primary"></div>
+              <div class="timeline-content">
+                <small class="text-muted">Invoice Generated</small>
+                <div><%= @booking.updated_at&.strftime("%B %d, %Y at %I:%M %p") %></div>
+              </div>
             </div>
-            <%= form.submit "Cancel Booking", class: "btn btn-danger w-100",
-                data: { confirm: "Are you sure? This cannot be undone." } %>
+          <% end %>
+
+          <% if @booking.order.present? %>
+            <div class="timeline-item">
+              <div class="timeline-marker bg-info"></div>
+              <div class="timeline-content">
+                <small class="text-muted">Converted to Order</small>
+                <div><%= @booking.order.created_at&.strftime("%B %d, %Y at %I:%M %p") %></div>
+              </div>
+            </div>
+          <% end %>
+
+          <% if @booking.updated_at != @booking.created_at %>
+            <div class="timeline-item">
+              <div class="timeline-marker bg-warning"></div>
+              <div class="timeline-content">
+                <small class="text-muted">Last Updated</small>
+                <div><%= @booking.updated_at&.strftime("%B %d, %Y at %I:%M %p") %></div>
+              </div>
+            </div>
           <% end %>
         </div>
       </div>
-    <% end %>
+    </div>
   </div>
 </div>
 
 <style>
-@media print {
-  .btn, .breadcrumb, .col-lg-4 { display: none !important; }
-  .col-lg-8 { flex: 0 0 100% !important; max-width: 100% !important; }
-  .card { border: none !important; box-shadow: none !important; }
+.timeline {
+  position: relative;
+  padding-left: 20px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #dee2e6;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.timeline-item:last-child {
+  margin-bottom: 0;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: -15px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
+.timeline-content {
+  padding-left: 10px;
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const statusSelect = document.getElementById('status_select');
+  const trackingNumberField = document.getElementById('tracking_number_field');
+  const updateBtn = document.getElementById('update_stage_btn');
+  const currentStatus = '<%= @booking.status %>';
+
+  function toggleTrackingField() {
+    if (statusSelect.value === 'shipped') {
+      trackingNumberField.style.display = 'block';
+    } else {
+      trackingNumberField.style.display = 'none';
+    }
+  }
+
+  function toggleUpdateButton() {
+    if (statusSelect.value && statusSelect.value !== currentStatus) {
+      updateBtn.disabled = false;
+      updateBtn.textContent = 'Update to ' + statusSelect.options[statusSelect.selectedIndex].text;
+    } else {
+      updateBtn.disabled = true;
+      updateBtn.textContent = 'Update Stage';
+    }
+  }
+
+  statusSelect.addEventListener('change', function() {
+    toggleTrackingField();
+    toggleUpdateButton();
+  });
+
+  // Initialize
+  toggleTrackingField();
+  toggleUpdateButton();
+});
+</script>

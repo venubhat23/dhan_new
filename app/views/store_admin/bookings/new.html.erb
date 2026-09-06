@@ -1,57 +1,107 @@
-<%- content_for :title, "New Booking - #{@current_store.name}" %>
-
-<style>
-.sa-hover-lift { transition: transform 0.15s, box-shadow 0.15s; }
-.sa-hover-lift:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important; }
-.sa-cart-item { background:#f9fafb; border-radius:10px; padding:0.75rem 1rem; margin-bottom:0.5rem; position:relative; }
-.sa-cart-remove { position:absolute; top:0.5rem; right:0.5rem; background:none; border:none; color:#9ca3af; cursor:pointer; font-size:1.1rem; }
-.sa-cart-remove:hover { color:#dc3545; }
-</style>
-
-<%# Header %>
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h5 class="mb-1 fw-bold">New Booking</h5>
-    <small class="text-muted">Create a booking for <%= @current_store.name %></small>
+<%# Floating Toggle Buttons %>
+<div class="position-fixed" style="top: 90px; right: 20px; z-index: 1050;">
+  <div class="d-flex gap-2">
+    <button type="button" class="btn btn-primary btn-sm shadow-lg" id="productsViewBtn" onclick="showProductsView()" title="Products" style="display: none;">
+      <i class="bi bi-grid"></i>
+    </button>
+    <button type="button" class="btn btn-outline-primary btn-sm shadow-lg" id="checkoutViewBtn" onclick="showCheckoutView()" title="Checkout">
+      <i class="bi bi-cart-check"></i>
+    </button>
   </div>
-  <%= link_to store_admin_bookings_path, class: "btn btn-outline-secondary btn-sm" do %>
-    <i class="bi bi-arrow-left me-1"></i>Back
-  <% end %>
 </div>
 
-<%# Toggle Buttons %>
-<div class="mb-3 d-flex gap-3 align-items-center">
-  <button type="button" class="btn btn-outline-primary px-4 py-2 rounded-3 fw-medium" id="saProductsBtn" onclick="saShowProducts()" style="display:none!important;">
-    <i class="bi bi-grid me-2"></i>Products
-  </button>
-  <button type="button" class="btn btn-outline-primary px-4 py-2 rounded-3 fw-medium position-relative" id="saCheckoutBtn" onclick="saShowCheckout()">
-    <i class="bi bi-cart-check me-2"></i>Checkout
-    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="saCartBadge">0</span>
-  </button>
+<%# Large Toggle Buttons %>
+<div class="mb-3">
+  <div class="btn-group-lg d-flex gap-3" role="group">
+    <button type="button" class="btn btn-primary px-3 py-2 rounded-3 shadow-sm" id="productsViewBtnLarge" onclick="showProductsView()" style="display: none;">
+      <i class="bi bi-grid me-2"></i>
+      <span class="fw-medium">Products</span>
+    </button>
+    <button type="button" class="btn btn-outline-primary px-3 py-2 rounded-3 shadow-sm" id="checkoutViewBtnLarge" onclick="showCheckoutView()">
+      <i class="bi bi-cart-check me-2"></i>
+      <span class="fw-medium">Checkout</span>
+    </button>
+  </div>
 </div>
 
-<%# Search & Filters %>
-<div class="card border-0 shadow-sm mb-3" id="saSearchSection">
+<%# Barcode scan toast — fixed top-center, shown on every successful scan %>
+<div id="barcodeToast" style="
+  display:none;
+  position:fixed;
+  top:70px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:9999;
+  min-width:280px;
+  max-width:420px;
+">
+  <div class="d-flex align-items-center gap-3 bg-success text-white rounded-3 shadow-lg px-4 py-3">
+    <i class="bi bi-cart-check-fill fs-3"></i>
+    <div class="flex-grow-1">
+      <div class="fw-bold" id="barcodeToastName" style="font-size:1rem;"></div>
+      <div class="opacity-75" id="barcodeToastMeta" style="font-size:0.85rem;"></div>
+    </div>
+    <i class="bi bi-check-circle-fill fs-4"></i>
+  </div>
+</div>
+
+<%# Barcode Scanner Input %>
+<div class="card border-0 shadow-sm mb-3" id="barcodeScanSection">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-6">
+        <label class="form-label form-label-sm mb-1 text-muted fw-semibold"><i class="bi bi-qr-code-scan me-1"></i>Scan / Type Barcode</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+          <input type="text" class="form-control" id="barcodeInput" placeholder="Scan barcode or type barcode number and press Enter..." autocomplete="off" autofocus>
+          <button class="btn btn-outline-secondary d-none" type="button" id="cameraBtn" onclick="openBarcodeCamera()" title="Scan with camera">
+            <i class="bi bi-camera"></i>
+          </button>
+        </div>
+        <div id="barcodeFeedback" class="mt-1" style="min-height:18px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# Camera QR Scanner Modal %>
+<div class="modal fade" id="cameraModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bi bi-camera me-1"></i>Scan Barcode with Camera</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="stopCamera()"></button>
+      </div>
+      <div class="modal-body text-center p-2">
+        <div id="cameraReader" style="width:100%;"></div>
+        <small class="text-muted">Point camera at the product QR code</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<%# Search and Filters %>
+<div class="card border-0 shadow-sm mb-3" id="searchSection">
   <div class="card-body py-2">
     <div class="row g-2 align-items-center">
       <div class="col-md-5">
-        <input type="text" class="form-control form-control-sm" id="saProductSearch"
-               placeholder="Search products by name, SKU..." oninput="saFilterProducts()">
+        <input type="text" class="form-control form-control-sm" placeholder="Search products by name, SKU, or category..." id="productSearch">
       </div>
       <div class="col-md-3">
-        <select class="form-select form-select-sm" id="saCategoryFilter" onchange="saFilterProducts()">
+        <select class="form-select form-select-sm" id="categoryFilter">
           <option value="">All Categories</option>
-          <% @store_products.map(&:category).compact.uniq.each do |cat| %>
-            <option value="<%= cat.id %>"><%= cat.name %></option>
+          <% @categories.each do |category| %>
+            <option value="<%= category.id %>"><%= category.name %></option>
           <% end %>
         </select>
       </div>
       <div class="col-md-4">
         <div class="d-flex gap-2 align-items-center">
           <small class="text-muted">Filter:</small>
-          <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-outline-primary btn-sm active" id="saAllBtn" onclick="saStockFilter('all')">All</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="saInStockBtn" onclick="saStockFilter('instock')">In Stock</button>
+          <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-primary btn-sm active" id="allProductsBtn" onclick="filterProducts('all')">All</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="inStockBtn" onclick="filterProducts('instock')">In Stock</button>
           </div>
         </div>
       </div>
@@ -59,154 +109,185 @@
   </div>
 </div>
 
-<%# Products Grid %>
-<div id="saProductsView">
+<%# Products View %>
+<div id="productsView">
   <div class="card border-0 shadow-sm">
     <div class="card-body pt-3">
-      <% if @store_products.any? %>
-        <div class="row g-3" id="saProductGrid">
-          <% @store_products.each do |product| %>
-            <% store_stock = @current_store.available_stock_for(product.id).to_f %>
-            <%
-              if product.has_multiple_quantities? && product.product_variants.any?
-                default_v = product.product_variants.order(:display_order, :weight).first
-                display_price = default_v.selling_price.to_f
-              else
-                display_price = product.price.to_f
-              end
-
-              if product.gst_enabled && product.gst_percentage.present? && product.gst_percentage > 0
-                gst_rate = product.gst_percentage.to_f
-                gst_amount = (display_price * gst_rate / 100.0)
-                base_price = display_price - gst_amount
-              else
-                gst_rate = 0
-                gst_amount = 0
-                base_price = display_price
-              end
-
-              rounded_price  = display_price.round
-              rounded_base   = base_price % 1 == 0 ? base_price.to_i : base_price.round(2)
-              rounded_gst    = gst_amount % 1 == 0 ? gst_amount.to_i : gst_amount.round(2)
-
-              low_stock_threshold = 5
-            %>
-            <div class="col-md-4 col-lg-3 sa-product-item"
-                 data-product-id="<%= product.id %>"
-                 data-category="<%= product.category_id %>"
-                 data-stock="<%= store_stock %>"
-                 data-name="<%= product.name.downcase %>"
-                 data-sku="<%= product.sku.downcase %>">
-              <div class="card h-100 border-0 shadow-sm sa-hover-lift">
-
-                <%# Product placeholder image area %>
+      <% if @products&.any? %>
+        <div class="row g-2" id="productGrid">
+          <% @products.each do |product| %>
+            <% current_stock = product.cached_total_batch_stock %>
+            <div class="col-6 col-md-4 col-lg-3 product-grid-item" data-product-id="<%= product.id %>" data-category="<%= product.category_id %>" data-stock="<%= current_stock %>">
+              <div class="card h-100 border-0 shadow-sm hover-lift">
+                <%# Product Image %>
                 <div class="position-relative">
                   <% if product.images_attached? && product.images.any? %>
-                    <%= image_tag product.images.first, class: "card-img-top", style: "height:180px; object-fit:cover;" %>
+                    <%= image_tag product.images.first, class: "card-img-top", loading: "lazy", style: "height: 130px; object-fit: cover;" %>
                   <% else %>
-                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height:180px;">
-                      <i class="bi bi-box-seam fs-1 text-muted"></i>
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 130px;">
+                      <i class="bi bi-box-seam fs-3 text-muted"></i>
                     </div>
                   <% end %>
 
-                  <%# Stock Badge %>
-                  <% if store_stock <= 0 %>
+                  <%# Enhanced Stock Badge %>
+                  <% if product.out_of_stock? %>
                     <span class="position-absolute top-0 end-0 badge bg-danger m-2">
                       <i class="bi bi-x-circle me-1"></i>Out of Stock
                     </span>
-                  <% elsif store_stock <= low_stock_threshold %>
+                  <% elsif product.low_stock? %>
                     <span class="position-absolute top-0 end-0 badge bg-warning text-dark m-2">
-                      <i class="bi bi-exclamation-triangle me-1"></i>Low Stock (<%= store_stock.to_i %> left)
+                      <i class="bi bi-exclamation-triangle me-1"></i>Low Stock (<%= current_stock.to_i %> left)
                     </span>
                   <% else %>
                     <span class="position-absolute top-0 end-0 badge bg-success m-2">
-                      <i class="bi bi-check-circle me-1"></i><%= store_stock.to_i %> in stock
+                      <i class="bi bi-check-circle me-1"></i><%= current_stock.to_i %> in stock
                     </span>
+                  <% end %>
+
+                  <%# Discount Badge %>
+                  <% if product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price %>
+                    <% discount_percent = ((product.price - product.discount_price) * 100 / product.price).round %>
+                    <span class="position-absolute top-0 start-0 badge bg-success m-2"><%= discount_percent %>% OFF</span>
                   <% end %>
                 </div>
 
-                <%# Card body %>
-                <div class="card-body d-flex flex-column p-3">
-                  <div class="d-flex justify-content-between align-items-start mb-1">
-                    <small class="text-muted"><%= product.category&.name || 'No Category' %></small>
-                    <small class="text-muted">SKU: <%= product.sku %></small>
-                  </div>
-
-                  <h6 class="card-title fw-bold mb-2" style="min-height:40px; font-size:0.9rem;"><%= product.name %></h6>
-
-                  <%# Price %>
-                  <div class="mb-3">
-                    <% if product.has_multiple_quantities? && product.product_variants.any? %>
-                      <select class="form-select form-select-sm mb-1"
-                              id="sa-variant-<%= product.id %>"
-                              onchange="saVariantChange(this, <%= product.id %>)">
-                        <% product.product_variants.order(:display_order, :weight).each do |v| %>
-                          <option value="<%= v.id %>"
-                                  data-price="<%= v.selling_price.to_f %>"
-                                  data-stock="<%= @current_store.available_stock_for(product.id).to_f %>"
-                                  <%= 'selected' if v == default_v %>>
-                            <%= v.label.presence || "#{v.weight} #{v.unit}" %> — ₹<%= v.selling_price.to_i %>
-                          </option>
-                        <% end %>
-                      </select>
-                      <span class="fw-bold text-primary" id="sa-price-<%= product.id %>">₹<%= rounded_price %></span>
-                    <% else %>
-                      <span class="fw-bold text-primary">₹<%= rounded_price %></span>
-                      <% if gst_rate > 0 %>
-                        <small class="text-muted d-block" style="font-size:0.72rem;">
-                          Base: ₹<%= rounded_base %> + GST: ₹<%= rounded_gst %> (<%= gst_rate.to_i %>%) = ₹<%= rounded_price %>
-                        </small>
-                      <% end %>
+                <%# Product Details %>
+                <div class="card-body d-flex flex-column p-2">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted" style="font-size:0.7rem;"><%= product.category&.name || 'No Category' %></small>
+                    <%= link_to edit_store_admin_product_path(product),
+                        class: "btn btn-sm btn-outline-secondary p-0 px-1",
+                        style: "font-size:0.7rem;",
+                        title: "Edit",
+                        target: "_blank" do %>
+                      <i class="bi bi-pencil-square"></i>
                     <% end %>
                   </div>
 
-                  <%# Quantity + Add to Cart %>
-                  <div class="mt-auto" id="sa-action-<%= product.id %>">
-                    <% if store_stock > 0 %>
+                  <h6 class="card-title mb-1" style="min-height: 36px; font-size: 0.85rem; line-height: 1.3;"><%= product.name %></h6>
+
+                  <%# Price %>
+                  <div class="mb-2">
+                    <%
+                      if product.has_multiple_quantities? && product.product_variants.any?
+                        default_v = product.default_variant || product.product_variants.ordered.first
+                        variant_price = default_v.effective_price
+                        selling_price = variant_price
+                      else
+                        selling_price = product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price ? product.discount_price : product.price
+                      end
+
+                      if product.gst_enabled && product.gst_percentage.present? && product.gst_percentage > 0
+                        gst_rate = product.gst_percentage
+                        base_price = selling_price / (1 + (gst_rate / 100.0))
+                        final_price = selling_price
+                      else
+                        base_price = selling_price
+                        gst_rate = 0
+                        final_price = selling_price
+                      end
+
+                      rounded_final = final_price.round
+                      gst_val = rounded_final * gst_rate / 100.0
+                      rounded_gst = gst_val % 1 == 0 ? gst_val.to_i : gst_val.round(2)
+                      base_val = rounded_final - gst_val
+                      rounded_base = base_val % 1 == 0 ? base_val.to_i : base_val.round(2)
+                    %>
+
+                    <% if product.has_multiple_quantities? && product.product_variants.any? %>
+                      <!-- Variant selector -->
+                      <select class="form-select form-select-sm mb-2"
+                              id="variant-select-<%= product.id %>"
+                              onchange="bookingUpdateVariant(this, <%= product.id %>)">
+                        <% product.sorted_variants.each do |v| %>
+                          <option value="<%= v.id %>"
+                                  data-price="<%= v.effective_price %>"
+                                  data-stock="<%= v.available_stock %>"
+                                  data-label="<%= v.label %>"
+                                  <%= 'selected' if v.id == default_v.id %>>
+                            <%= v.label %> — ₹<%= number_with_delimiter(v.effective_price) %>
+                          </option>
+                        <% end %>
+                      </select>
+                      <span class="h6 text-primary mb-0" id="booking-variant-price-<%= product.id %>">
+                        ₹<%= number_with_delimiter(rounded_final) %>
+                      </span>
+                      <input type="hidden" id="booking-selected-variant-<%= product.id %>" value="<%= default_v.id %>">
+                    <% elsif product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price %>
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="h6 text-success mb-0">₹<%= number_with_delimiter(final_price.round(2)) %></span>
+                        <small class="text-muted text-decoration-line-through">₹<%= number_with_delimiter(product.price) %></small>
+                      </div>
+                    <% else %>
+                      <span class="h6 text-primary mb-0">₹<%= number_with_delimiter(final_price.round(2)) %></span>
+                    <% end %>
+
+                    <% if product.gst_enabled && gst_rate > 0 %>
+                      <small class="text-muted d-block">
+                        Base: ₹<%= number_with_delimiter(rounded_base) %> + GST: ₹<%= number_with_delimiter(rounded_gst) %> (<%= gst_rate %>%) = ₹<%= number_with_delimiter(rounded_final) %>
+                      </small>
+                    <% end %>
+                  </div>
+
+
+                  <%# Quantity and Add to Cart %>
+                  <%
+                    effective_stock = if product.has_multiple_quantities? && product.product_variants.any?
+                      (default_v&.available_stock || 0)
+                    else
+                      current_stock
+                    end
+                  %>
+                  <div class="mt-auto" id="booking-stock-section-<%= product.id %>">
+                    <% if effective_stock > 0 %>
+                      <!-- Quantity Selector -->
                       <div class="mb-2">
-                        <label class="form-label fw-bold small mb-1">
-                          Quantity
-                          <span class="badge bg-info-subtle text-info ms-1" id="sa-maxstock-<%= product.id %>">Max: <%= store_stock.to_i %></span>
-                        </label>
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                          <label class="form-label fw-semibold small mb-0">Qty</label>
+                          <span class="badge bg-info-subtle text-info" style="font-size:0.7rem;" id="booking-max-stock-<%= product.id %>">Max: <%= effective_stock.to_i %></span>
+                        </div>
                         <div class="input-group input-group-sm">
-                          <button class="btn btn-outline-primary" type="button"
-                                  onclick="saDecQty(<%= product.id %>)"
-                                  style="width:40px; border-radius:6px 0 0 6px;">
-                            <i class="bi bi-dash fw-bold"></i>
+                          <button class="btn btn-outline-primary btn-sm px-2" type="button" onclick="decreaseQuantity(<%= product.id %>)">
+                            <i class="bi bi-dash"></i>
                           </button>
-                          <input type="number" id="sa-qty-<%= product.id %>"
-                                 value="1" min="0.01" step="0.01" max="<%= store_stock %>"
-                                 class="form-control text-center fw-bold"
-                                 onchange="saValidateQty(<%= product.id %>, <%= store_stock %>)">
-                          <button class="btn btn-outline-primary" type="button"
-                                  onclick="saIncQty(<%= product.id %>, <%= store_stock %>)"
-                                  style="width:40px; border-radius:0 6px 6px 0;">
-                            <i class="bi bi-plus fw-bold"></i>
+                          <input type="number" id="qty-<%= product.id %>" value="1" min="0.1" step="0.1" max="<%= effective_stock %>" class="form-control form-control-sm text-center fw-bold" onchange="validateQuantity(<%= product.id %>, <%= effective_stock %>)">
+                          <button class="btn btn-outline-primary btn-sm px-2" type="button" onclick="increaseQuantity(<%= product.id %>)">
+                            <i class="bi bi-plus"></i>
                           </button>
                         </div>
-                        <% if store_stock <= low_stock_threshold %>
+
+                        <% if product.low_stock? && !product.has_multiple_quantities? %>
                           <small class="text-warning d-block mt-1">
-                            <i class="bi bi-exclamation-triangle-fill"></i> Low Stock! Only <%= store_stock.to_i %> left
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <strong>Low Stock!</strong> Only <%= current_stock.to_i %> left
                           </small>
                         <% end %>
                       </div>
 
-                      <button class="btn btn-primary w-100 sa-add-to-cart-btn"
-                              id="sa-addbtn-<%= product.id %>"
+                      <!-- Add to Cart Button -->
+                      <%
+                        cart_final_price = rounded_final
+                        cart_base_price = rounded_base
+                        cart_gst_rate = gst_rate
+                      %>
+                      <button class="btn btn-primary btn-sm w-100 booking-add-to-cart-btn"
+                              id="booking-add-btn-<%= product.id %>"
                               data-product-id="<%= product.id %>"
                               data-product-name="<%= product.name %>"
-                              data-base-price="<%= rounded_base %>"
-                              data-gst-rate="<%= gst_rate %>"
-                              data-final-price="<%= rounded_price %>"
-                              data-stock="<%= store_stock %>"
-                              data-has-variants="<%= product.has_multiple_quantities? %>">
-                        <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                              data-base-price="<%= cart_base_price %>"
+                              data-gst-rate="<%= cart_gst_rate %>"
+                              data-final-price="<%= cart_final_price %>"
+                              data-stock="<%= effective_stock %>"
+                              data-has-variants="<%= product.has_multiple_quantities? ? 'true' : 'false' %>"
+                              <%= 'disabled' if effective_stock <= 0 %>>
+                        <i class="bi bi-cart-plus me-1"></i>Add to Cart
                       </button>
                     <% else %>
-                      <button class="btn btn-danger w-100" disabled>
-                        <i class="bi bi-x-circle me-2"></i>SOLD OUT
-                      </button>
-                      <small class="text-muted d-block text-center mt-1">Not in store stock</small>
+                      <div class="text-center">
+                        <button class="btn btn-danger btn-sm w-100" disabled>
+                          <i class="bi bi-x-circle me-1"></i>Out of Stock
+                        </button>
+                      </div>
                     <% end %>
                   </div>
                 </div>
@@ -214,15 +295,14 @@
             </div>
           <% end %>
         </div>
-
-        <div id="saNoResults" class="text-center py-5 d-none">
-          <i class="bi bi-search fs-1 text-muted mb-2"></i>
-          <p class="text-muted">No products match your search.</p>
-        </div>
       <% else %>
         <div class="text-center py-5">
           <i class="bi bi-box-seam fs-1 text-muted mb-3"></i>
-          <h5 class="text-muted">No Products in This Store</h5>
+          <h5 class="text-muted">No Products Available</h5>
+          <p class="text-muted">Add products to start creating bookings.</p>
+          <a href="<%= new_store_admin_product_path %>" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Add Product
+          </a>
         </div>
       <% end %>
     </div>
@@ -230,309 +310,2544 @@
 </div>
 
 <%# Checkout View %>
-<div id="saCheckoutView" style="display:none;">
-  <%= form_with model: [:store_admin, @booking], local: true, id: "saBookingForm" do |f| %>
-    <% if @booking.errors.any? %>
-      <div class="alert alert-danger mb-3">
-        <ul class="mb-0"><% @booking.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul>
-      </div>
-    <% end %>
-
-    <div class="row g-4">
-      <%# Left: Cart items + Totals %>
-      <div class="col-lg-7">
-        <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
-          <div class="card-header bg-white py-3 px-4">
-            <h6 class="mb-0 fw-semibold"><i class="bi bi-cart3 me-2 text-muted"></i>Cart Items</h6>
-          </div>
-          <div class="card-body px-4 py-3">
-            <div id="saCartItems"></div>
-            <div id="saCartEmpty" class="text-center py-4 text-muted small">
-              <i class="bi bi-cart" style="font-size:2rem; opacity:0.3;"></i>
-              <p class="mt-2 mb-0">No items yet — go back to add products</p>
-            </div>
-            <div id="saBookingItemsFields"></div>
-          </div>
+<div id="checkoutView" style="display: none;">
+  <div class="row">
+    <%# Checkout Form %>
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">Booking Details</h5>
         </div>
+        <div class="card-body">
+          <%= form_with model: [:store_admin, @booking], local: true, html: { id: 'bookingForm' } do |f| %>
+            <% if @booking.errors.any? %>
+              <div class="alert alert-danger">
+                <h6><i class="bi bi-exclamation-triangle me-2"></i>Please fix the following errors:</h6>
+                <ul class="mb-0">
+                  <% @booking.errors.full_messages.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
 
-        <div class="card border-0 shadow-sm" style="border-radius:14px;">
-          <div class="card-body px-4 py-3">
-            <div class="d-flex justify-content-between mb-2">
-              <span class="text-muted">Subtotal</span>
-              <span class="fw-semibold" id="saSubtotal">₹0</span>
-            </div>
-            <div class="d-flex justify-content-between mb-2">
-              <span class="text-muted">Discount</span>
-              <span class="text-danger" id="saDiscountDisplay">- ₹0</span>
-            </div>
-            <hr class="my-2">
-            <div class="d-flex justify-content-between">
-              <span class="fw-bold">Total</span>
-              <span class="fw-bold fs-5" style="color:#1C7C54;" id="saTotal">₹0</span>
-            </div>
-          </div>
-        </div>
-      </div>
+            <%# Customer Information %>
+            <div class="mb-4">
+              <h6 class="mb-3"><i class="bi bi-person me-2"></i>Customer Information</h6>
 
-      <%# Right: Order Details %>
-      <div class="col-lg-5">
-        <div class="card border-0 shadow-sm" style="border-radius:14px;">
-          <div class="card-header bg-white py-3 px-4">
-            <h6 class="mb-0 fw-semibold"><i class="bi bi-person me-2 text-muted"></i>Order Details</h6>
-          </div>
-          <div class="card-body px-4 py-3">
-            <div class="mb-3">
-              <label class="form-label fw-semibold small">Customer</label>
-              <%= f.collection_select :customer_id, (@customers || []), :id, :full_name,
-                  { include_blank: "Walk-in Customer" }, { class: "form-select form-select-sm" } %>
-            </div>
+              <% if @preselected_customer %>
+                <div class="alert alert-success border-0 mb-3 d-flex align-items-center py-2">
+                  <i class="bi bi-person-check-fill me-2"></i>
+                  <strong>Customer auto-loaded:</strong>&nbsp;<%= @preselected_customer.display_name %> (<%= @preselected_customer.mobile %>)
+                </div>
+              <% end %>
 
-            <div class="mb-3">
-              <label class="form-label fw-semibold small">Payment Method</label>
-              <%= f.select :payment_method,
-                  options_for_select([['Cash', 'cash'], ['UPI', 'upi'], ['Card', 'card']], 'cash'),
-                  {}, { class: "form-select form-select-sm" } %>
-            </div>
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label">
+                    <i class="bi bi-person-search me-1"></i>Search & Select Customer
+                  </label>
+                  <div class="position-relative">
+                    <!-- Hidden input for form submission -->
+                    <%= f.hidden_field :customer_id, id: 'selected_customer_id', value: @preselected_customer&.id %>
 
-            <div class="mb-3">
-              <label class="form-label fw-semibold small">Payment Status</label>
-              <%= f.select :payment_status,
-                  options_for_select([['Paid', 'paid'], ['Unpaid', 'unpaid']], 'paid'),
-                  {}, { class: "form-select form-select-sm" } %>
-            </div>
+                    <!-- Search input with icon wrapper -->
+                    <div class="customer-search-wrapper">
+                      <i class="bi bi-search customer-search-icon"></i>
+                      <input type="text"
+                             class="form-control customer-search-input"
+                             id="customerSearchInput"
+                             placeholder="Search by name, phone, or email..."
+                             autocomplete="off"
+                             style="<%= @preselected_customer ? 'display:none;' : '' %>">
+                    </div>
 
-            <div class="mb-3">
-              <label class="form-label fw-semibold small">Discount (₹)</label>
-              <div class="input-group input-group-sm">
-                <span class="input-group-text">₹</span>
-                <%= f.number_field :discount_amount, value: 0, class: "form-control", step: 0.01, min: 0,
-                    id: "saDiscountInput", oninput: "saUpdateTotal()" %>
+                    <!-- Search results dropdown -->
+                    <div class="customer-search-dropdown" id="customerSearchDropdown">
+                      <div class="customer-search-results" id="customerSearchResults">
+                        <!-- Results will be populated here -->
+                      </div>
+                      <div class="customer-search-footer">
+                        <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="showAllCustomers()">
+                          <i class="bi bi-people me-1"></i>Show All Customers
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Selected customer display -->
+                    <div class="selected-customer-display" id="selectedCustomerDisplay" style="<%= @preselected_customer ? 'display:block;' : 'display:none;' %>">
+                      <div class="d-flex align-items-center justify-content-between">
+                        <div class="customer-info">
+                          <div class="customer-name fw-medium"><%= @preselected_customer&.display_name %></div>
+                          <div class="customer-details text-muted small">
+                            <% if @preselected_customer %>
+                              <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-primary-subtle text-primary"><i class="bi bi-telephone me-1"></i><%= @preselected_customer.mobile %></span>
+                                <% if @preselected_customer.email.present? %>
+                                  <span class="badge bg-success-subtle text-success"><i class="bi bi-envelope me-1"></i><%= @preselected_customer.email %></span>
+                                <% end %>
+                              </div>
+                            <% end %>
+                          </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearSelectedCustomer()">
+                          <i class="bi bi-x"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <label class="form-label">Store</label>
+                  <%= f.hidden_field :store_id, value: @current_store.id, id: 'store_select' %>
+                  <input type="text" class="form-control" value="<%= @current_store.name %>" disabled>
+                  <div class="form-text">
+                    <small><i class="bi bi-shop me-1"></i>This sale is tagged to <%= @current_store.name %> and deducts from its stock</small>
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <label class="form-label">
+                    <i class="bi bi-flag me-1"></i>Status/Stage <span class="text-danger">*</span>
+                  </label>
+                  <%= f.select :status,
+                      options_for_select([['Select Status', '']] + Booking.statuses.map { |key, value| [key.humanize, key] }, 'completed'),
+                      {},
+                      { class: 'form-select', required: true, id: 'booking_status' } %>
+                  <div class="form-text">
+                    <small><i class="bi bi-info-circle me-1"></i>Current booking status for tracking</small>
+                  </div>
+
+                  <!-- Status Preview -->
+                  <div id="statusPreview" class="mt-2" style="display: none;">
+                    <span class="badge" id="statusBadge">
+                      <i id="statusIcon" class="me-1"></i>
+                      <span id="statusName">Selected Status</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <label class="form-label">
+                    <i class="bi bi-calendar-date me-1"></i>Booking Date <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group">
+                    <%= f.date_field :booking_date,
+                        class: 'form-control',
+                        value: Date.current.strftime('%Y-%m-%d'),
+                        required: true,
+                        id: 'booking_date_field' %>
+                    <button type="button" class="btn btn-outline-secondary" onclick="setBookingDateToToday()" title="Set to Today">
+                      <i class="bi bi-calendar-today"></i>
+                    </button>
+                  </div>
+                  <div class="form-text">
+                    <small><i class="bi bi-info-circle me-1"></i>Select the date for this booking (can be past, present, or future)</small>
+                  </div>
+                  <div id="bookingDateAlert" class="mt-2" style="display: none;"></div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Customer Name <span class="text-danger">*</span></label>
+                  <%= f.text_field :customer_name, class: 'form-control', placeholder: 'Enter customer name', required: true %>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Mobile Number <span class="text-danger">*</span></label>
+                  <%= f.text_field :customer_phone, class: 'form-control', placeholder: 'Enter mobile number', required: true %>
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label">Email Address</label>
+                  <%= f.email_field :customer_email, class: 'form-control', placeholder: 'Enter email address' %>
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label">Delivery Address</label>
+                  <%= f.text_area :delivery_address, class: 'form-control', rows: 3, placeholder: 'Enter complete delivery address' %>
+                </div>
               </div>
             </div>
 
-            <div class="mb-3">
-              <label class="form-label fw-semibold small">Notes</label>
-              <%= f.text_area :notes, class: "form-control form-control-sm", rows: 2, placeholder: "Optional notes..." %>
+            <%# Payment Information %>
+            <div class="mb-4">
+              <h6 class="mb-3"><i class="bi bi-credit-card me-2"></i>Payment Method</h6>
+
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <div class="form-check">
+                    <%= f.radio_button :payment_method, 'cash', class: 'form-check-input', id: 'payment_cash', onchange: 'selectPaymentMethod("cash")' %>
+                    <label class="form-check-label" for="payment_cash">
+                      <i class="bi bi-cash-stack me-1"></i>Cash Payment
+                    </label>
+                  </div>
+                </div>
+
+                <div class="col-md-3">
+                  <div class="form-check">
+                    <%= f.radio_button :payment_method, 'card', class: 'form-check-input', id: 'payment_card', onchange: 'selectPaymentMethod("card")' %>
+                    <label class="form-check-label" for="payment_card">
+                      <i class="bi bi-credit-card me-1"></i>Card Payment
+                    </label>
+                  </div>
+                </div>
+
+                <div class="col-md-3">
+                  <div class="form-check">
+                    <%= f.radio_button :payment_method, 'upi', checked: true, class: 'form-check-input', id: 'payment_upi', onchange: 'selectPaymentMethod("upi")' %>
+                    <label class="form-check-label" for="payment_upi">
+                      <i class="bi bi-phone me-1"></i>UPI Payment
+                    </label>
+                  </div>
+                </div>
+
+                <div class="col-md-3">
+                  <div class="form-check">
+                    <%= f.radio_button :payment_method, 'online', class: 'form-check-input', id: 'payment_online', onchange: 'selectPaymentMethod("online")' %>
+                    <label class="form-check-label" for="payment_online">
+                      <i class="bi bi-globe me-1"></i>Online Payment
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <%# Cash Payment Details %>
+              <div id="cashSection" class="mt-3">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Cash Received</label>
+                    <%= f.number_field :cash_received, class: 'form-control', placeholder: '0.00', step: '0.01', onkeyup: 'calculateChange()' %>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Change to Return</label>
+                    <%= f.number_field :change_amount, class: 'form-control', readonly: true, placeholder: '0.00' %>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="d-grid gap-2 mt-4">
-              <button type="submit" class="btn fw-semibold" id="saSubmitBtn"
-                  style="background:linear-gradient(135deg,#1C7C54,#10b981);color:white;border-radius:10px;">
-                <i class="bi bi-check-lg me-1"></i>Create Booking
+            <%# Payment Status %>
+            <div class="mb-4">
+              <h6 class="mb-3"><i class="bi bi-check-circle me-2"></i>Payment Status</h6>
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label" for="paymentStatusSelect">Payment Received</label>
+                  <%= f.select :payment_status,
+                      options_for_select([
+                        ['Unpaid', 'unpaid'],
+                        ['Partially Paid', 'partially_paid'],
+                        ['Paid', 'paid']
+                      ], 'unpaid'),
+                      {},
+                      { class: "form-select", id: "paymentStatusSelect" } %>
+                  <div class="form-text">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Choose whether payment has been fully received, partially received, or not yet received
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="alert alert-light border d-flex align-items-center mb-0" id="paymentStatusAlert">
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                    <span id="paymentStatusText">Payment not received</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <%# Additional Notes %>
+            <div class="mb-4">
+              <h6 class="mb-3"><i class="bi bi-chat-square-text me-2"></i>Additional Notes</h6>
+              <%= f.text_area :notes, class: 'form-control', rows: 3, placeholder: 'Add any special instructions or notes for this booking...' %>
+            </div>
+
+            <%# B2B Booking %>
+            <div class="mb-4">
+              <div class="form-check form-switch">
+                <%= f.check_box :is_b2b, class: 'form-check-input', id: 'b2bBookingToggle', role: 'switch' %>
+                <%= f.label :is_b2b, class: 'form-check-label fw-semibold', for: 'b2bBookingToggle' do %>
+                  <i class="bi bi-building me-1"></i>B2B Booking
+                  <small class="text-muted fw-normal ms-1">(Business-to-Business order)</small>
+                <% end %>
+              </div>
+            </div>
+
+            <%# Hidden Fields for Cart Items %>
+            <div id="checkoutItemsFields"></div>
+
+            <%# Hidden field for discount amount %>
+            <%= f.hidden_field :discount_amount, value: 0, id: 'hiddenDiscountAmount' %>
+
+            <%# Hidden field for delivery charges %>
+            <%= f.hidden_field :shipping_charges, value: 0, id: 'hiddenDeliveryCharge' %>
+
+            <%# Action Buttons %>
+            <div class="d-flex gap-2 justify-content-end">
+              <button type="button" class="btn btn-outline-secondary" onclick="showProductsView()">
+                <i class="bi bi-arrow-left me-1"></i>Back to Products
               </button>
+
+              <button type="submit" name="create_order" value="1" class="btn btn-success" id="completeBookingBtn">
+                <span class="btn-text">
+                  <i class="bi bi-check-circle me-1"></i>Complete Booking
+                </span>
+                <span class="btn-loading d-none">
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                  Processing booking...
+                </span>
+              </button>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <%# Order Summary %>
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header border-0 py-3" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-bottom: 3px solid #667eea;">
+          <h4 class="mb-0 text-black fw-bold"><i class="bi bi-receipt me-2 fs-4 text-primary"></i>ORDER SUMMARY</h4>
+        </div>
+        <div class="card-body">
+          <div id="checkoutOrderSummary">
+            <p class="text-muted text-center">No items in cart</p>
+          </div>
+
+          <div id="orderTotals" style="display: none;" class="border-top pt-3 mt-3">
+            <div class="d-flex justify-content-between mb-2">
+              <span>Subtotal</span>
+              <span>₹<span id="checkoutSubtotal">0</span></span>
+            </div>
+            <div class="d-flex justify-content-between mb-2" id="gstRow">
+              <span>GST</span>
+              <span>₹<span id="checkoutTax">0</span></span>
+            </div>
+            <div class="d-flex justify-content-between mb-2 text-success" id="itemDiscountRow" style="display: none;">
+              <span><i class="bi bi-tags me-1"></i>Item Discounts</span>
+              <span>−₹<span id="itemDiscountAmount">0.00</span></span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span>Bulk Discount</span>
+              <div class="d-flex align-items-center gap-2">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Discount type">
+                  <button type="button" class="btn btn-outline-secondary active" id="discountTypeAmountBtn" onclick="setDiscountType('amount')">₹</button>
+                  <button type="button" class="btn btn-outline-secondary" id="discountTypePercentBtn" onclick="setDiscountType('percent')">%</button>
+                </div>
+                <input type="number" id="checkoutDiscount" value="0" min="0" max="999999" step="0.01" class="form-control form-control-sm d-inline-block w-auto" style="width: 80px;" onchange="updateCheckoutTotals()" oninput="updateCheckoutTotals()">
+              </div>
+            </div>
+            <div class="d-flex justify-content-end mb-2" id="discountAmountPreviewRow" style="display: none;">
+              <small class="text-muted">= ₹<span id="discountAmountPreview">0.00</span> off</small>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span><i class="bi bi-truck me-1"></i>Delivery Charges</span>
+              <span>
+                ₹<input type="number" id="checkoutDeliveryCharge" value="0" min="0" max="999999" step="0.01" class="form-control form-control-sm d-inline-block w-auto" style="width: 80px;" onchange="updateCheckoutTotals()" oninput="updateCheckoutTotals()">
+              </span>
+            </div>
+            <div class="d-flex justify-content-between border-top pt-2 mb-0">
+              <span class="fw-bold">Total Amount</span>
+              <span class="fw-bold text-success fs-5">₹<span id="checkoutTotal">0</span></span>
             </div>
           </div>
         </div>
       </div>
     </div>
-  <% end %>
+  </div>
 </div>
 
+<%# Floating Cart - Enhanced and Larger %>
+<div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1000;">
+  <div class="card border-0 shadow-lg" id="floatingCart" style="min-width: 500px; max-width: 550px; display: none;">
+    <div class="card-header py-3" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-bottom: 3px solid #667eea;">
+      <div class="d-flex justify-content-between align-items-center">
+        <h3 class="mb-0 d-flex align-items-center fw-bold text-black">
+          <i class="bi bi-cart3 me-2 fs-2 text-primary"></i>
+          <span style="font-size: 1.75rem; letter-spacing: 1px; color: black; font-weight: 900;">SHOPPING CART</span>
+        </h3>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-primary text-white px-3 py-2" style="font-size: 0.9rem; border: 2px solid #667eea;">
+            <span id="cartCount">0</span> items
+          </span>
+          <button type="button" class="btn btn-sm btn-link text-dark p-0" onclick="minimizeCart()" title="Minimize">
+            <i class="bi bi-dash-lg"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body p-3" style="max-height: 420px; overflow-y: auto;">
+      <div id="cartItems">
+        <p class="text-muted text-center mb-0">Your cart is empty</p>
+      </div>
+    </div>
+    <div class="card-footer bg-light p-3">
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted">Subtotal</span>
+          <span class="fw-semibold">₹<span id="cartSubtotal">0</span></span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted" data-gst-label>Tax (GST)</span>
+          <span class="fw-semibold">₹<span id="cartTax">0</span></span>
+        </div>
+        <div class="border-top pt-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-bold fs-5">Total</span>
+            <span class="fw-bold fs-4 text-success">₹<span id="cartTotal">0</span></span>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-success btn-lg w-100" onclick="showCheckoutView()">
+        <i class="bi bi-arrow-right-circle me-2"></i>Proceed to Checkout
+      </button>
+    </div>
+  </div>
+
+  <%# Minimized Cart Button - Enhanced %>
+  <button class="btn btn-primary btn-lg rounded-circle shadow-lg" id="minimizedCart" style="display: none; width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid white;" onclick="maximizeCart()" title="Open Shopping Cart">
+    <i class="bi bi-cart3 fs-2"></i>
+    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger fs-6" id="minimizedCartCount" style="padding: 5px 10px;">0</span>
+  </button>
+</div>
+
+<%# JavaScript %>
 <script>
-let saCart = [];
-let saItemIdx = 0;
-let saStockMode = 'all';
+// Shopping Cart System
+let cart = {};
+let currentView = 'products';
+let discountType = 'amount'; // 'amount' or 'percent'
 
-function saShowProducts() {
-  document.getElementById('saProductsView').style.display = '';
-  document.getElementById('saCheckoutView').style.display = 'none';
-  document.getElementById('saSearchSection').style.display = '';
-  document.getElementById('saProductsBtn').style.display = 'none !important';
-  document.getElementById('saProductsBtn').classList.add('d-none');
-  document.getElementById('saCheckoutBtn').classList.remove('btn-primary');
-  document.getElementById('saCheckoutBtn').classList.add('btn-outline-primary');
-}
+// Toggle discount entry between a flat rupee amount and a percentage
+function setDiscountType(type) {
+  discountType = type;
+  document.getElementById('discountTypeAmountBtn').classList.toggle('active', type === 'amount');
+  document.getElementById('discountTypePercentBtn').classList.toggle('active', type === 'percent');
 
-function saShowCheckout() {
-  document.getElementById('saProductsView').style.display = 'none';
-  document.getElementById('saCheckoutView').style.display = '';
-  document.getElementById('saSearchSection').style.display = 'none';
-  document.getElementById('saProductsBtn').classList.remove('d-none');
-  document.getElementById('saCheckoutBtn').classList.remove('btn-outline-primary');
-  document.getElementById('saCheckoutBtn').classList.add('btn-primary');
-  saRenderCart();
-}
-
-function saVariantChange(select, productId) {
-  const opt = select.options[select.selectedIndex];
-  const price = parseFloat(opt.dataset.price) || 0;
-  const priceEl = document.getElementById('sa-price-' + productId);
-  if (priceEl) priceEl.textContent = '₹' + Math.round(price);
-  const addBtn = document.getElementById('sa-addbtn-' + productId);
-  if (addBtn) {
-    addBtn.dataset.finalPrice = Math.round(price);
-    addBtn.dataset.basePrice = Math.round(price);
-    addBtn.dataset.gstRate = 0;
+  const discountInput = document.getElementById('checkoutDiscount');
+  if (discountInput) {
+    discountInput.max = type === 'percent' ? 100 : 999999;
+    discountInput.value = 0;
   }
+
+  updateCheckoutTotals();
 }
 
-function saIncQty(id, max) {
-  const input = document.getElementById('sa-qty-' + id);
-  const val = parseFloat(input.value) || 0;
-  if (val < max) input.value = Math.min(val + 1, max);
+// Initialize cart
+function initializeCart() {
+  updateCartDisplay();
 }
 
-function saDecQty(id) {
-  const input = document.getElementById('sa-qty-' + id);
-  const val = parseFloat(input.value) || 1;
-  if (val > 0.01) input.value = Math.max(0.01, val - 1);
+// ---- Per-product (line-item) discount helpers ---------------------------------
+// Discount is applied to the GST-inclusive line amount; GST is then re-extracted
+// from the reduced amount by the existing smart-rounding logic downstream.
+
+// Rupee value taken off a single cart line, capped at the line's gross.
+function itemLineDiscount(item) {
+  const gross = (item.price || 0) * (item.quantity || 0);
+  const type = item.discountType;
+  const val = parseFloat(item.discountValue) || 0;
+  if (!type || type === 'none' || val <= 0) return 0;
+  let d = type === 'percentage' ? gross * val / 100 : val;
+  if (d < 0) d = 0;
+  return Math.min(d, gross);
 }
 
-function saValidateQty(id, max) {
-  const input = document.getElementById('sa-qty-' + id);
-  const val = parseFloat(input.value) || 1;
-  if (val > max) input.value = max;
-  if (val < 0.01) input.value = 0.01;
+// GST-inclusive unit price after the line discount.
+function itemDiscountedUnit(item) {
+  if (!item.quantity || item.quantity <= 0) return item.price || 0;
+  return (item.price || 0) - itemLineDiscount(item) / item.quantity;
 }
 
-function saAddToCart(productId, name, price, stock, basePrice, gstRate, hasVariants) {
-  let finalName = name;
-  let finalPrice = price;
-  let variantId = null;
+function itemHasDiscount(item) {
+  return itemLineDiscount(item) > 0.005;
+}
 
-  if (hasVariants) {
-    const varSelect = document.getElementById('sa-variant-' + productId);
-    if (varSelect) {
-      const opt = varSelect.options[varSelect.selectedIndex];
-      finalName = name + ' (' + opt.text.split('—')[0].trim() + ')';
-      finalPrice = parseFloat(opt.dataset.price) || price;
-      variantId = varSelect.value;
+// Called by the per-row ₹ / % toggle and value input in the ORDER SUMMARY.
+function setItemDiscountType(cartKey, type) {
+  if (!cart[cartKey]) return;
+  cart[cartKey].discountType = type;
+  if (type === 'none') cart[cartKey].discountValue = 0;
+  updateCheckoutDisplay();
+  updateCartDisplay();
+}
+
+function setItemDiscountValue(cartKey, value) {
+  if (!cart[cartKey]) return;
+  let v = parseFloat(value);
+  if (isNaN(v) || v < 0) v = 0;
+  const item = cart[cartKey];
+  if (item.discountType === 'percentage' && v > 100) v = 100;
+  const gross = (item.price || 0) * (item.quantity || 0);
+  if (item.discountType === 'fixed' && v > gross) v = parseFloat(gross.toFixed(2));
+  if ((!item.discountType || item.discountType === 'none') && v > 0) {
+    item.discountType = 'fixed';
+  }
+  item.discountValue = v;
+  updateCheckoutTotalsOnly();
+}
+
+// Lightweight totals refresh that doesn't rebuild the summary rows (keeps the
+// discount input focused while the user types).
+function updateCheckoutTotalsOnly() {
+  syncDiscountHiddenFields();
+  updateCheckoutTotals();
+}
+
+// Add item to cart
+// qty param is optional — used by barcode scan to bypass the DOM qty input
+function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate, variantId, qty) {
+  const qtyEl = document.getElementById(`qty-${productId}`);
+  const quantity = qty !== undefined ? parseFloat(qty) : (parseFloat(qtyEl?.value) || 1);
+
+  if (stock > 0 && quantity > stock) {
+    alert(`Only ${stock} items available in stock!`);
+    return;
+  }
+
+  const cartKey = variantId ? `${productId}_v${variantId}` : String(productId);
+
+  if (cart[cartKey]) {
+    if (stock > 0 && cart[cartKey].quantity + quantity > stock) {
+      alert(`Cannot add more items. Maximum stock: ${stock}`);
+      return;
     }
-  }
-
-  const qty = parseFloat(document.getElementById('sa-qty-' + productId).value) || 1;
-  const existing = saCart.find(i => i.productId === productId && i.variantId === variantId);
-
-  if (existing) {
-    existing.quantity = Math.min(existing.quantity + qty, stock);
+    cart[cartKey].quantity += quantity;
   } else {
-    saCart.push({ index: saItemIdx++, productId, name: finalName, price: finalPrice, basePrice, gstRate, variantId, quantity: qty, stock });
+    cart[cartKey] = {
+      productId: productId,
+      variantId: variantId || null,
+      name: productName,
+      price: finalPrice,
+      basePrice: basePrice || finalPrice,
+      gstRate: gstRate || 0,
+      quantity: quantity,
+      stock: stock,
+      discountType: 'none',   // 'none' | 'percentage' | 'fixed'
+      discountValue: 0
+    };
   }
 
-  // Reset qty input
-  document.getElementById('sa-qty-' + productId).value = 1;
+  // Reset quantity input if present
+  if (qtyEl) qtyEl.value = 1;
 
-  saUpdateBadge();
-  saRenderHiddenFields();
-  saUpdateTotal();
+  updateCartDisplay();
 
-  // Flash button feedback
-  const btn = document.getElementById('sa-addbtn-' + productId);
+  // Add pulse animation to cart
+  const floatingCart = document.getElementById('floatingCart');
+  const minimizedCart = document.getElementById('minimizedCart');
+  if (floatingCart && floatingCart.style.display !== 'none') {
+    floatingCart.classList.add('cart-pulse');
+    setTimeout(() => floatingCart.classList.remove('cart-pulse'), 500);
+  }
+  if (minimizedCart && minimizedCart.style.display !== 'none') {
+    minimizedCart.classList.add('cart-pulse');
+    setTimeout(() => minimizedCart.classList.remove('cart-pulse'), 500);
+  }
+
+}
+
+// Variant selector change handler for booking page
+function bookingUpdateVariant(selectEl, productId) {
+  const opt = selectEl.options[selectEl.selectedIndex];
+  const price = parseFloat(opt.dataset.price);
+  const stock = parseInt(opt.dataset.stock);
+  const variantId = selectEl.value;
+
+  // Update price display
+  const priceEl = document.getElementById(`booking-variant-price-${productId}`);
+  if (priceEl) priceEl.textContent = '₹' + price.toLocaleString('en-IN');
+
+  // Update hidden variant id
+  const hiddenInput = document.getElementById(`booking-selected-variant-${productId}`);
+  if (hiddenInput) hiddenInput.value = variantId;
+
+  // Update stock max & badge
+  const qtyInput = document.getElementById(`qty-${productId}`);
+  if (qtyInput) { qtyInput.max = stock; qtyInput.value = 1; }
+  const maxBadge = document.getElementById(`booking-max-stock-${productId}`);
+  if (maxBadge) maxBadge.textContent = 'Max: ' + stock;
+
+  // Update add button
+  const btn = document.getElementById(`booking-add-btn-${productId}`);
   if (btn) {
-    const orig = btn.innerHTML;
-    btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Added!';
-    btn.classList.remove('btn-primary');
-    btn.classList.add('btn-success');
-    setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('btn-success'); btn.classList.add('btn-primary'); }, 1200);
+    const gstRateVal = parseFloat(btn.dataset.gstRate || 0);
+    const deflatedBasePrice = gstRateVal > 0 ? price / (1 + gstRateVal / 100) : price;
+    btn.disabled = stock <= 0;
+    btn.dataset.finalPrice = price;
+    btn.dataset.basePrice = deflatedBasePrice;
+    btn.onclick = function() {
+      bookingAddToCart(productId, btn.closest('.card')?.querySelector('.card-title')?.textContent?.trim() || '', price, stock, deflatedBasePrice, gstRateVal);
+    };
   }
+}
+
+// Wrapper for variant-aware add-to-cart on booking page
+function bookingAddToCart(productId, productName, finalPrice, stock, basePrice, gstRate) {
+  // Pick up variant info if available
+  const variantInput = document.getElementById(`booking-selected-variant-${productId}`);
+  const variantId = variantInput ? variantInput.value : null;
+
+  // Use live price from variant selector if present
+  const variantSelect = document.getElementById(`variant-select-${productId}`);
+  if (variantSelect) {
+    const opt = variantSelect.options[variantSelect.selectedIndex];
+    finalPrice = parseFloat(opt.dataset.price);
+    stock = parseInt(opt.dataset.stock);
+    // finalPrice is GST-inclusive — deflate it to get the base (pre-GST) price
+    basePrice = gstRate > 0 ? finalPrice / (1 + gstRate / 100) : finalPrice;
+  }
+
+  addToCart(productId, productName, finalPrice, stock, basePrice, gstRate, variantId);
 }
 
 // Wire up "Add to Cart" buttons via data attributes instead of inline onclick,
 // so product names with quotes/apostrophes can't break the attribute markup.
-document.querySelectorAll('.sa-add-to-cart-btn').forEach(btn => {
+document.querySelectorAll('.booking-add-to-cart-btn').forEach(btn => {
   btn.onclick = function() {
-    saAddToCart(
+    bookingAddToCart(
       parseInt(btn.dataset.productId),
       btn.dataset.productName || '',
       parseFloat(btn.dataset.finalPrice) || 0,
       parseFloat(btn.dataset.stock) || 0,
       parseFloat(btn.dataset.basePrice) || 0,
-      parseFloat(btn.dataset.gstRate) || 0,
-      btn.dataset.hasVariants === 'true'
+      parseFloat(btn.dataset.gstRate) || 0
     );
   };
 });
 
-function saRemoveItem(idx) {
-  saCart = saCart.filter(i => i.index !== idx);
-  saRenderCart();
-  saUpdateBadge();
-  saUpdateTotal();
-  saRenderHiddenFields();
-}
+// Update cart display
+function updateCartDisplay() {
+  const cartCount = Object.keys(cart).length;
+  const totalItems = Object.values(cart).reduce((sum, item) => sum + item.quantity, 0);
+  const floatingCart = document.getElementById('floatingCart');
+  const minimizedCart = document.getElementById('minimizedCart');
+  const cartCountEl = document.getElementById('cartCount');
+  const minimizedCartCountEl = document.getElementById('minimizedCartCount');
+  const cartItemsEl = document.getElementById('cartItems');
+  const cartSubtotalEl = document.getElementById('cartSubtotal');
+  const cartTaxEl = document.getElementById('cartTax');
+  const cartTotalEl = document.getElementById('cartTotal');
 
-function saUpdateItemQty(idx, val) {
-  const item = saCart.find(i => i.index === idx);
-  if (item) item.quantity = parseFloat(val) || 1;
-  saUpdateTotal();
-  saRenderHiddenFields();
-}
+  cartCountEl.textContent = totalItems;
+  minimizedCartCountEl.textContent = totalItems;
 
-function saRenderCart() {
-  const container = document.getElementById('saCartItems');
-  const empty = document.getElementById('saCartEmpty');
-  if (!saCart.length) { container.innerHTML = ''; empty.style.display = 'block'; saUpdateTotal(); return; }
-  empty.style.display = 'none';
-  container.innerHTML = saCart.map(item => `
-    <div class="sa-cart-item">
-      <button class="sa-cart-remove" type="button" onclick="saRemoveItem(${item.index})"><i class="bi bi-x"></i></button>
-      <div class="d-flex align-items-center gap-3">
-        <div class="flex-grow-1">
-          <div class="fw-semibold small">${item.name}</div>
-          <div class="text-muted" style="font-size:0.75rem;">₹${item.price} each</div>
+  if (cartCount === 0) {
+    floatingCart.style.display = 'none';
+    minimizedCart.style.display = 'none';
+    cartItemsEl.innerHTML = '<div class="text-center py-4"><i class="bi bi-cart-x fs-1 text-muted d-block mb-2"></i><p class="text-muted mb-0">Your cart is empty</p><small class="text-muted">Add products to get started</small></div>';
+    cartSubtotalEl.textContent = '0';
+    cartTaxEl.textContent = '0';
+    cartTotalEl.textContent = '0';
+    return;
+  }
+
+  // Show cart if it was hidden
+  if (floatingCart.style.display === 'none' && minimizedCart.style.display === 'none') {
+    floatingCart.style.display = 'block';
+  }
+
+  let itemsHtml = '';
+  let subtotal = 0;
+
+  // Sort items by name for consistent display
+  const sortedItems = Object.entries(cart).sort((a, b) => a[1].name.localeCompare(b[1].name));
+
+  for (const [productId, item] of sortedItems) {
+    const itemGSTRate = item.gstRate || 0;
+    // item.price is GST-inclusive; discUnit is that price after the per-product
+    // discount, from which the base price is derived (smart-rounded).
+    const discUnit = itemDiscountedUnit(item);
+    const lineDisc = itemLineDiscount(item);
+    const hasDisc = lineDisc > 0.005;
+    let itemBasePrice = discUnit;
+    let itemTotal;
+
+    if (itemGSTRate > 0) {
+      const roundedFinal = Math.round(discUnit);
+      const roundedGST = roundedFinal * itemGSTRate / 100;
+      itemBasePrice = roundedFinal - roundedGST;
+      itemTotal = discUnit * item.quantity; // Discounted price for display
+      subtotal += itemBasePrice * item.quantity;
+    } else {
+      // Product has no GST
+      itemTotal = discUnit * item.quantity;
+      subtotal += itemTotal;
+    }
+
+    itemsHtml += `
+      <div class="cart-item-card mb-3">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="flex-grow-1">
+            <div class="fw-semibold text-dark" style="font-size: 0.95rem;">${item.name}</div>
+            <div class="d-flex align-items-center gap-2 mt-1">
+              ${itemGSTRate > 0 ?
+                `<span class="badge bg-light text-dark">₹${Math.abs(itemBasePrice - Math.round(itemBasePrice)) < 0.01 ? Math.round(itemBasePrice) : itemBasePrice.toFixed(2)} + GST ${itemGSTRate}%</span>` :
+                `<span class="badge bg-light text-dark">₹${item.price} each</span>`
+              }
+              ${item.quantity >= item.stock - 2 ? `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Only ${item.stock} in stock</span>` : ''}
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-link text-danger p-1" onclick="removeFromCart('${productId}')" title="Remove item">
+            <i class="bi bi-x-lg"></i>
+          </button>
         </div>
-        <div style="width:90px;">
-          <input type="number" value="${item.quantity}" min="0.01" step="0.01" max="${item.stock}"
-                 class="form-control form-control-sm text-center"
-                 onchange="saUpdateItemQty(${item.index}, this.value)">
-        </div>
-        <div style="width:75px; text-align:right;" class="fw-semibold">
-          ₹${Math.round(item.price * item.quantity)}
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="input-group input-group-sm" style="width: 140px;">
+            <button class="btn btn-outline-secondary px-3" type="button" onclick="decreaseCartQuantity('${productId}')" ${item.quantity <= 0.1 ? 'disabled' : ''}>
+              <i class="bi bi-dash"></i>
+            </button>
+            <input type="text" class="form-control text-center fw-bold" value="${item.quantity}" readonly style="background: white;">
+            <button class="btn btn-outline-secondary px-3" type="button" onclick="increaseCartQuantity('${productId}')" ${item.quantity >= item.stock ? 'disabled' : ''}>
+              <i class="bi bi-plus"></i>
+            </button>
+          </div>
+          <div class="text-end">
+            ${hasDisc ? `<div class="text-muted small"><s>₹${(item.price * item.quantity).toFixed(2)}</s></div>` : ''}
+            <div class="fw-bold fs-5 text-primary">₹${itemTotal.toFixed(2)}</div>
+            ${hasDisc ? `<small class="text-success d-block">Item discount −₹${lineDisc.toFixed(2)}</small>` : ''}
+            ${itemGSTRate > 0 ?
+              `<small class="text-muted">${item.quantity} × ₹${itemBasePrice.toFixed(2)} (base)</small>` :
+              `<small class="text-muted">${item.quantity} × ₹${discUnit.toFixed(2)}</small>`
+            }
+          </div>
         </div>
       </div>
-    </div>`).join('');
+    `;
+  }
+
+  // Calculate GST using smart rounding logic (same as product display)
+  let totalGST = 0;
+  for (const [productId, item] of Object.entries(cart)) {
+    const itemGSTRate = item.gstRate || 0;
+    if (itemGSTRate > 0) {
+      const roundedFinal = Math.round(itemDiscountedUnit(item));
+      const roundedGST = roundedFinal * itemGSTRate / 100;
+      totalGST += roundedGST * item.quantity;
+    }
+  }
+
+  const total = subtotal + totalGST;
+
+  cartItemsEl.innerHTML = itemsHtml;
+  cartSubtotalEl.textContent = subtotal.toFixed(2);
+  cartTaxEl.textContent = totalGST.toFixed(2);
+  cartTotalEl.textContent = total.toFixed(2);
+
+  // Update GST label in cart
+  const cartGSTLabel = document.querySelector('#floatingCart .text-muted[data-gst-label]');
+  if (cartGSTLabel) {
+    if (totalGST > 0) {
+      cartGSTLabel.textContent = 'GST';
+    } else {
+      cartGSTLabel.textContent = 'Tax (No GST)';
+    }
+  }
 }
 
-function saRenderHiddenFields() {
-  document.getElementById('saBookingItemsFields').innerHTML = saCart.map((item, i) => `
-    <input type="hidden" name="booking[booking_items_attributes][${i}][product_id]" value="${item.productId}">
-    <input type="hidden" name="booking[booking_items_attributes][${i}][quantity]" value="${item.quantity}">
-    <input type="hidden" name="booking[booking_items_attributes][${i}][price]" value="${item.price}">
-    ${item.variantId ? `<input type="hidden" name="booking[booking_items_attributes][${i}][product_variant_id]" value="${item.variantId}">` : ''}
-  `).join('');
+// Minimize cart to icon
+function minimizeCart() {
+  const floatingCart = document.getElementById('floatingCart');
+  const minimizedCart = document.getElementById('minimizedCart');
+
+  floatingCart.style.display = 'none';
+  minimizedCart.style.display = 'block';
+
+  // Add bounce animation
+  minimizedCart.classList.add('animate-bounce');
+  setTimeout(() => {
+    minimizedCart.classList.remove('animate-bounce');
+  }, 500);
 }
 
-function saUpdateTotal() {
-  const subtotal = saCart.reduce((s, i) => s + i.price * i.quantity, 0);
-  const discount = parseFloat(document.getElementById('saDiscountInput')?.value || 0);
-  const total = Math.max(0, subtotal - discount);
-  document.getElementById('saSubtotal').textContent = '₹' + Math.round(subtotal);
-  document.getElementById('saDiscountDisplay').textContent = '- ₹' + Math.round(discount);
-  document.getElementById('saTotal').textContent = '₹' + Math.round(total);
+// Maximize cart from icon
+function maximizeCart() {
+  const floatingCart = document.getElementById('floatingCart');
+  const minimizedCart = document.getElementById('minimizedCart');
+
+  minimizedCart.style.display = 'none';
+  floatingCart.style.display = 'block';
+
+  // Add slide-in animation
+  floatingCart.classList.add('animate-slide-in');
+  setTimeout(() => {
+    floatingCart.classList.remove('animate-slide-in');
+  }, 300);
 }
 
-function saUpdateBadge() {
-  const badge = document.getElementById('saCartBadge');
-  const count = saCart.reduce((s, i) => s + i.quantity, 0);
-  badge.textContent = Math.round(count);
-  badge.classList.toggle('d-none', count === 0);
+// Remove item from cart
+function removeFromCart(productId) {
+  const item = cart[productId];
+  if (item) {
+    showNotification(`${item.name} removed from cart`, 'info');
+  }
+  delete cart[productId];
+  updateCartDisplay();
+  updateCheckoutDisplay();
 }
 
-function saFilterProducts() {
-  const words = document.getElementById('saProductSearch').value.toLowerCase().split(/\s+/).filter(Boolean);
-  const cat = document.getElementById('saCategoryFilter').value;
-  let visible = 0;
-  document.querySelectorAll('.sa-product-item').forEach(item => {
-    const haystack = (item.dataset.name || '') + ' ' + (item.dataset.sku || '');
-    const matchQ = words.every(word => haystack.includes(word));
-    const matchC = !cat || item.dataset.category === cat;
-    const stock = parseFloat(item.dataset.stock) || 0;
-    const matchS = saStockMode === 'all' || (saStockMode === 'instock' && stock > 0);
-    const show = matchQ && matchC && matchS;
-    item.style.display = show ? '' : 'none';
-    if (show) visible++;
+// Increase cart item quantity
+function increaseCartQuantity(productId) {
+  if (cart[productId]) {
+    if (cart[productId].quantity < cart[productId].stock) {
+      cart[productId].quantity += 1;
+      cart[productId].quantity = parseFloat(cart[productId].quantity.toFixed(1));
+      updateCartDisplay();
+      updateCheckoutDisplay();
+      showNotification(`Quantity increased for ${cart[productId].name}`, 'success');
+    } else {
+      showNotification(`Maximum stock reached for ${cart[productId].name}`, 'warning');
+    }
+  }
+}
+
+// Decrease cart item quantity
+function decreaseCartQuantity(productId) {
+  if (cart[productId]) {
+    if (cart[productId].quantity > 1) {
+      cart[productId].quantity -= 1;
+      cart[productId].quantity = parseFloat(cart[productId].quantity.toFixed(1));
+      updateCartDisplay();
+      updateCheckoutDisplay();
+      showNotification(`Quantity decreased for ${cart[productId].name}`, 'success');
+    } else {
+      // If quantity would be 0, remove the item
+      removeFromCart(productId);
+    }
+  }
+}
+
+// Show Products View
+function showProductsView() {
+  currentView = 'products';
+  document.getElementById('productsView').style.display = 'block';
+  document.getElementById('checkoutView').style.display = 'none';
+
+  // Show search and filters section when in products view
+  document.getElementById('searchSection').style.display = 'block';
+
+  // Update buttons safely
+  const productsBtn = document.getElementById('productsViewBtn');
+  const checkoutBtn = document.getElementById('checkoutViewBtn');
+  const productsBtnLarge = document.getElementById('productsViewBtnLarge');
+  const checkoutBtnLarge = document.getElementById('checkoutViewBtnLarge');
+
+  if (productsBtn) {
+    productsBtn.style.display = 'none';
+    productsBtn.className = 'btn btn-primary btn-sm shadow-lg';
+  }
+  if (checkoutBtn) {
+    checkoutBtn.style.display = 'block';
+    checkoutBtn.className = 'btn btn-outline-primary btn-sm shadow-lg';
+  }
+  if (productsBtnLarge) {
+    productsBtnLarge.style.display = 'none';
+    productsBtnLarge.className = 'btn btn-primary px-3 py-2 rounded-3 shadow-sm';
+  }
+  if (checkoutBtnLarge) {
+    checkoutBtnLarge.style.display = 'block';
+    checkoutBtnLarge.className = 'btn btn-outline-primary px-3 py-2 rounded-3 shadow-sm';
+  }
+}
+
+// Show Checkout View
+function showCheckoutView() {
+  if (Object.keys(cart).length === 0) {
+    alert('Please add items to cart before checkout');
+    return;
+  }
+
+  minimizeCart();
+
+  currentView = 'checkout';
+  document.getElementById('productsView').style.display = 'none';
+  document.getElementById('checkoutView').style.display = 'block';
+
+  // Hide search and filters section when in checkout view
+  document.getElementById('searchSection').style.display = 'none';
+
+  // Update buttons safely
+  const productsBtn = document.getElementById('productsViewBtn');
+  const checkoutBtn = document.getElementById('checkoutViewBtn');
+  const productsBtnLarge = document.getElementById('productsViewBtnLarge');
+  const checkoutBtnLarge = document.getElementById('checkoutViewBtnLarge');
+
+  if (productsBtn) {
+    productsBtn.style.display = 'block';
+    productsBtn.className = 'btn btn-outline-primary btn-sm shadow-lg';
+  }
+  if (checkoutBtn) {
+    checkoutBtn.style.display = 'none';
+    checkoutBtn.className = 'btn btn-primary btn-sm shadow-lg';
+  }
+  if (productsBtnLarge) {
+    productsBtnLarge.style.display = 'block';
+    productsBtnLarge.className = 'btn btn-outline-primary px-3 py-2 rounded-3 shadow-sm';
+  }
+  if (checkoutBtnLarge) {
+    checkoutBtnLarge.style.display = 'none';
+    checkoutBtnLarge.className = 'btn btn-primary px-3 py-2 rounded-3 shadow-sm';
+  }
+
+  updateCheckoutDisplay();
+}
+
+// Update checkout display
+function updateCheckoutDisplay() {
+  const orderSummaryEl = document.getElementById('checkoutOrderSummary');
+  const orderTotalsEl = document.getElementById('orderTotals');
+  const fieldsContainer = document.getElementById('checkoutItemsFields');
+
+  const itemCount = Object.keys(cart).length;
+
+  if (itemCount === 0) {
+    orderSummaryEl.innerHTML = '<p class="text-muted text-center">No items in cart</p>';
+    orderTotalsEl.style.display = 'none';
+    fieldsContainer.innerHTML = '';
+    return;
+  }
+
+  orderTotalsEl.style.display = 'block';
+
+  let summaryHtml = '';
+  let subtotal = 0;
+
+  for (const [cartKey, item] of Object.entries(cart)) {
+    const itemGSTRate = item.gstRate || 0;
+    const discUnit = itemDiscountedUnit(item);
+    const lineDisc = itemLineDiscount(item);
+    const hasDisc = lineDisc > 0.005;
+    let itemTotal;
+    let itemGSTAmount = 0;
+
+    if (itemGSTRate > 0) {
+      const roundedFinal = Math.round(discUnit);
+      const roundedGST = roundedFinal * itemGSTRate / 100;
+      const roundedBase = roundedFinal - roundedGST;
+      itemGSTAmount = roundedGST * item.quantity;
+      itemTotal = roundedFinal * item.quantity;
+      subtotal += roundedBase * item.quantity;
+    } else {
+      itemTotal = discUnit * item.quantity;
+      subtotal += itemTotal;
+    }
+
+    const dType = (item.discountType && item.discountType !== 'none') ? item.discountType : 'none';
+    const dVal = parseFloat(item.discountValue) || 0;
+    const safeKey = cartKey.replace(/'/g, "\\'");
+
+    const priceLine = hasDisc
+      ? `<small class="text-muted"><s>₹${item.price.toFixed(2)}</s> <span class="text-success fw-semibold">₹${discUnit.toFixed(2)}</span> × ${item.quantity}</small>`
+      : `<small class="text-muted">₹${item.price.toFixed(2)} × ${item.quantity}</small>`;
+
+    summaryHtml += `
+      <div class="border-bottom pb-2 mb-2">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="pe-2">
+            <div class="fw-medium">${item.name}</div>
+            ${priceLine}
+            ${itemGSTRate > 0 ? `<br><small class="text-success">GST ${itemGSTRate}%: ₹${Math.abs(itemGSTAmount - Math.round(itemGSTAmount)) < 0.01 ? Math.round(itemGSTAmount) : itemGSTAmount.toFixed(2)}</small>` : ''}
+          </div>
+          <div class="text-end">
+            ${hasDisc ? `<div class="text-muted small"><s>₹${(item.price * item.quantity).toFixed(2)}</s></div>` : ''}
+            <span class="fw-medium">₹${itemTotal.toFixed(2)}</span>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+          <span class="text-muted small me-1"><i class="bi bi-tag"></i> Discount</span>
+          <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-secondary py-0 px-2 ${dType === 'fixed' ? 'active' : ''}" onclick="setItemDiscountType('${safeKey}', '${dType === 'fixed' ? 'none' : 'fixed'}')">₹</button>
+            <button type="button" class="btn btn-outline-secondary py-0 px-2 ${dType === 'percentage' ? 'active' : ''}" onclick="setItemDiscountType('${safeKey}', '${dType === 'percentage' ? 'none' : 'percentage'}')">%</button>
+          </div>
+          <input type="number" min="0" step="0.01" value="${dVal || ''}" placeholder="0"
+                 class="form-control form-control-sm py-0" style="width:70px;"
+                 oninput="setItemDiscountValue('${safeKey}', this.value)">
+          ${hasDisc ? `<span class="badge bg-success-subtle text-success">-₹${lineDisc.toFixed(2)}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  orderSummaryEl.innerHTML = summaryHtml;
+  syncDiscountHiddenFields();
+
+  updateCheckoutTotals();
+}
+
+// Rebuilds the hidden booking_items_attributes fields (incl. per-line discount)
+// from the current cart. Called whenever cart contents or discounts change.
+function syncDiscountHiddenFields() {
+  const fieldsContainer = document.getElementById('checkoutItemsFields');
+  if (!fieldsContainer) return;
+
+  let fieldsHtml = '';
+  let fieldIndex = 0;
+  for (const [cartKey, item] of Object.entries(cart)) {
+    const dType = (item.discountType && item.discountType !== 'none' && (parseFloat(item.discountValue) || 0) > 0) ? item.discountType : '';
+    const dVal = dType ? (parseFloat(item.discountValue) || 0) : '';
+    fieldsHtml += `
+      <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][product_id]" value="${item.productId || cartKey}">
+      <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][quantity]" value="${item.quantity}">
+      <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][price]" value="${item.price}">
+      <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][discount_type]" value="${dType}">
+      <input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][discount_value]" value="${dVal}">
+      ${item.variantId ? `<input type="hidden" name="booking[booking_items_attributes][${fieldIndex}][product_variant_id]" value="${item.variantId}">` : ''}
+    `;
+    fieldIndex++;
+  }
+  fieldsContainer.innerHTML = fieldsHtml;
+}
+
+// Ensure cart items are in form before submission
+function ensureCartItemsInForm() {
+  const fieldsContainer = document.getElementById('checkoutItemsFields');
+  if (fieldsContainer && Object.keys(cart).length > 0) {
+    syncDiscountHiddenFields();
+    console.log('Cart items added to form:', cart);
+  }
+}
+
+// Update checkout totals
+function updateCheckoutTotals() {
+  let subtotal = 0;
+  let totalGST = 0;
+  let itemDiscountTotal = 0;
+
+  // Calculate subtotal and GST from each line's per-product-discounted price
+  for (const [productId, item] of Object.entries(cart)) {
+    const itemGSTRate = item.gstRate || 0;
+    const discUnit = itemDiscountedUnit(item);
+    itemDiscountTotal += itemLineDiscount(item);
+
+    if (itemGSTRate > 0) {
+      // Product has GST enabled
+      const roundedFinal = Math.round(discUnit);
+      const roundedGST = roundedFinal * itemGSTRate / 100;
+      const roundedBase = roundedFinal - roundedGST;
+      subtotal += roundedBase * item.quantity;
+      totalGST += roundedGST * item.quantity;
+    } else {
+      // Product has no GST
+      subtotal += discUnit * item.quantity;
+    }
+  }
+
+  // "Item discounts" summary row
+  const itemDiscRow = document.getElementById('itemDiscountRow');
+  if (itemDiscRow) {
+    if (itemDiscountTotal > 0.005) {
+      itemDiscRow.style.display = 'flex';
+      document.getElementById('itemDiscountAmount').textContent = itemDiscountTotal.toFixed(2);
+    } else {
+      itemDiscRow.style.display = 'none';
+    }
+  }
+
+  const discountInputEl = document.getElementById('checkoutDiscount');
+  let discountInputValue = parseFloat(discountInputEl?.value || 0);
+  if (isNaN(discountInputValue) || discountInputValue < 0) {
+    discountInputValue = 0;
+  }
+
+  const maxDiscount = subtotal + totalGST;
+  let discount = 0;
+
+  if (discountType === 'percent') {
+    // Percentage discount is capped at 100%
+    if (discountInputValue > 100) {
+      discountInputValue = 100;
+      discountInputEl.value = discountInputValue;
+    }
+    discount = maxDiscount * discountInputValue / 100;
+  } else {
+    // Flat amount discount doesn't exceed subtotal + GST
+    discount = discountInputValue;
+    if (discount > maxDiscount) {
+      discount = maxDiscount;
+      discountInputEl.value = discount;
+    }
+  }
+
+  // Show the computed rupee amount when discount is entered as a percentage
+  const discountAmountPreviewRow = document.getElementById('discountAmountPreviewRow');
+  const discountAmountPreview = document.getElementById('discountAmountPreview');
+  if (discountAmountPreviewRow && discountAmountPreview) {
+    if (discountType === 'percent' && discountInputValue > 0) {
+      discountAmountPreviewRow.style.display = 'flex';
+      discountAmountPreview.textContent = discount.toFixed(2);
+    } else {
+      discountAmountPreviewRow.style.display = 'none';
+    }
+  }
+
+  // Update the hidden field with the computed discount amount (backend only stores a rupee amount)
+  const hiddenDiscountField = document.getElementById('hiddenDiscountAmount');
+  if (hiddenDiscountField) {
+    hiddenDiscountField.value = discount;
+    console.log('Updated hidden discount field to:', discount);
+  }
+
+  let deliveryCharge = parseFloat(document.getElementById('checkoutDeliveryCharge')?.value || 0);
+  if (deliveryCharge < 0 || isNaN(deliveryCharge)) {
+    deliveryCharge = 0;
+  }
+
+  // Update the hidden field with the delivery charge value
+  const hiddenDeliveryChargeField = document.getElementById('hiddenDeliveryCharge');
+  if (hiddenDeliveryChargeField) {
+    hiddenDeliveryChargeField.value = deliveryCharge;
+  }
+
+  const total = subtotal + totalGST - discount + deliveryCharge; // Final total after discount and delivery charge
+
+  // Update display
+  document.getElementById('checkoutSubtotal').textContent = subtotal.toFixed(2);
+
+  // Show/highlight discount row when discount is applied
+  const discountInput = document.getElementById('checkoutDiscount');
+  if (discount > 0) {
+    discountInput.style.borderColor = '#198754';
+    discountInput.style.backgroundColor = '#f8fff9';
+  } else {
+    discountInput.style.borderColor = '';
+    discountInput.style.backgroundColor = '';
+  }
+
+  // Only show GST if there is any GST amount
+  const gstRow = document.getElementById('gstRow');
+  if (gstRow) {
+    if (totalGST > 0) {
+      gstRow.style.display = 'flex';
+      document.getElementById('checkoutTax').textContent = totalGST.toFixed(2);
+    } else {
+      gstRow.style.display = 'none';
+    }
+  } else {
+    document.getElementById('checkoutTax').textContent = totalGST.toFixed(2);
+  }
+
+  document.getElementById('checkoutTotal').textContent = total.toFixed(2);
+
+  // Update change calculation when total changes
+  calculateChange();
+}
+
+// Payment method selection
+function selectPaymentMethod(method) {
+  const cashSection = document.getElementById('cashSection');
+  if (method === 'cash') {
+    cashSection.style.display = 'block';
+  } else {
+    cashSection.style.display = 'none';
+  }
+}
+
+// Calculate change for cash payment
+function calculateChange() {
+  const total = parseFloat(document.getElementById('checkoutTotal').textContent) || 0;
+  const received = parseFloat(document.getElementById('booking_cash_received').value) || 0;
+  const change = Math.max(0, received - total);
+  document.getElementById('booking_change_amount').value = change.toFixed(2);
+}
+
+// Customer Search System
+let customers = <%= raw @customers.map { |c| {
+  id: c.id,
+  name: c.display_name,
+  mobile: c.mobile,
+  email: c.email,
+  address: c.respond_to?(:address) ? c.address : ''
+}}.to_json %>;
+
+let searchTimeout;
+let currentSearchQuery = '';
+let selectedCustomerIndex = -1;
+
+// Initialize customer search
+function initializeCustomerSearch() {
+  const searchInput = document.getElementById('customerSearchInput');
+  const dropdown = document.getElementById('customerSearchDropdown');
+
+  if (!searchInput || !dropdown) return;
+
+  // Show dropdown on focus
+  searchInput.addEventListener('focus', function() {
+    if (this.value.length >= 1 || customers.length <= 20) {
+      showCustomerDropdown();
+      if (this.value.length >= 1) {
+        performCustomerSearch(this.value);
+      } else {
+        showAllCustomers();
+      }
+    }
   });
-  document.getElementById('saNoResults').classList.toggle('d-none', visible > 0);
+
+  // Hide dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.position-relative')) {
+      hideCustomerDropdown();
+    }
+  });
+
+  // Search as user types
+  searchInput.addEventListener('input', function() {
+    const query = this.value.trim();
+    currentSearchQuery = query;
+    selectedCustomerIndex = -1;
+
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      if (query.length >= 1) {
+        showCustomerDropdown();
+        performCustomerSearch(query);
+      } else if (query.length === 0) {
+        if (customers.length <= 20) {
+          showAllCustomers();
+        } else {
+          hideCustomerDropdown();
+        }
+      }
+    }, 300);
+  });
+
+  // Handle keyboard navigation
+  searchInput.addEventListener('keydown', function(e) {
+    const items = document.querySelectorAll('.customer-search-item');
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedCustomerIndex = Math.min(selectedCustomerIndex + 1, items.length - 1);
+      updateHighlightedItem(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedCustomerIndex = Math.max(selectedCustomerIndex - 1, -1);
+      updateHighlightedItem(items);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedCustomerIndex >= 0 && items[selectedCustomerIndex]) {
+        items[selectedCustomerIndex].click();
+      }
+    } else if (e.key === 'Escape') {
+      hideCustomerDropdown();
+      this.blur();
+    }
+  });
 }
 
-function saStockFilter(mode) {
-  saStockMode = mode;
-  document.getElementById('saAllBtn').classList.toggle('active', mode === 'all');
-  document.getElementById('saInStockBtn').classList.toggle('active', mode === 'instock');
-  saFilterProducts();
+function performCustomerSearch(query) {
+  const results = document.getElementById('customerSearchResults');
+  if (!results) return;
+
+  // Show loading
+  results.innerHTML = '<div class="customer-search-loading"><div class="customer-search-spinner"></div>Searching customers...</div>';
+
+  // Simulate network delay for better UX
+  setTimeout(() => {
+    const filteredCustomers = customers.filter(customer =>
+      customer.name.toLowerCase().includes(query.toLowerCase()) ||
+      (customer.mobile && customer.mobile.includes(query)) ||
+      (customer.email && customer.email.toLowerCase().includes(query.toLowerCase()))
+    ).slice(0, 10); // Limit to 10 results
+
+    displayCustomerResults(filteredCustomers, query);
+  }, 200);
 }
 
-document.getElementById('saBookingForm')?.addEventListener('submit', function(e) {
-  if (!saCart.length) { e.preventDefault(); alert('Please add at least one product to the booking.'); }
+function displayCustomerResults(customerList, searchQuery = '') {
+  const results = document.getElementById('customerSearchResults');
+  if (!results) return;
+
+  if (customerList.length === 0) {
+    results.innerHTML = '<div class="customer-search-empty"><i class="bi bi-person-x fs-4 mb-2 d-block text-muted"></i><div class="fw-medium">No customers found</div><small class="text-muted">Try searching with a different name, phone, or email</small></div>';
+    return;
+  }
+
+  let html = '';
+  customerList.forEach((customer, index) => {
+    const highlightedName = highlightSearchTerm(customer.name, searchQuery);
+    const highlightedMobile = highlightSearchTerm(customer.mobile, searchQuery);
+    const highlightedEmail = customer.email ? highlightSearchTerm(customer.email, searchQuery) : '';
+
+    html += '<div class="customer-search-item" onclick="selectCustomer(' + customer.id + ', \'' + escapeHtml(customer.name) + '\', \'' + customer.mobile + '\', \'' + escapeHtml(customer.email) + '\', \'' + escapeHtml(customer.address) + '\')" data-index="' + index + '">';
+    html += '<div class="customer-result-card">';
+    html += '<div class="customer-result-name">' + highlightedName + '</div>';
+    html += '<div class="customer-result-details">';
+    html += '<span class="customer-detail-item"><i class="bi bi-phone"></i>' + highlightedMobile + '</span>';
+    if (customer.email) {
+      html += '<span class="customer-detail-item"><i class="bi bi-envelope"></i>' + highlightedEmail + '</span>';
+    }
+    html += '<span class="customer-detail-badge">ID: ' + customer.id + '</span>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+  });
+
+  results.innerHTML = html;
+}
+
+function highlightSearchTerm(text, searchTerm) {
+  if (!searchTerm || !text) return text;
+  const regex = new RegExp('(' + escapeRegex(searchTerm) + ')', 'gi');
+  return text.replace(regex, '<mark style="background-color: #fff3cd; padding: 1px 2px; border-radius: 3px;">$1</mark>');
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;');
+}
+
+function escapeRegex(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&');
+}
+
+function updateHighlightedItem(items) {
+  items.forEach((item, index) => {
+    item.classList.toggle('active', index === selectedCustomerIndex);
+  });
+
+  if (selectedCustomerIndex >= 0 && items[selectedCustomerIndex]) {
+    items[selectedCustomerIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+function selectCustomer(customerId, customerName, customerMobile, customerEmail, customerAddress) {
+  document.getElementById('selected_customer_id').value = customerId;
+  document.getElementById('customerSearchInput').style.display = 'none';
+
+  const selectedDisplay = document.getElementById('selectedCustomerDisplay');
+  selectedDisplay.style.display = 'block';
+  selectedDisplay.querySelector('.customer-name').textContent = customerName;
+  selectedDisplay.querySelector('.customer-details').innerHTML = '<div class="d-flex align-items-center gap-2 flex-wrap"><span class="badge bg-primary-subtle text-primary"><i class="bi bi-telephone me-1"></i>' + customerMobile + '</span>' + (customerEmail ? '<span class="badge bg-success-subtle text-success"><i class="bi bi-envelope me-1"></i>' + customerEmail + '</span>' : '') + '</div>';
+
+  document.getElementById('booking_customer_name').value = customerName;
+  document.getElementById('booking_customer_phone').value = customerMobile;
+  document.getElementById('booking_customer_email').value = customerEmail || '';
+  if (customerAddress) {
+    document.getElementById('booking_delivery_address').value = customerAddress;
+  }
+
+  hideCustomerDropdown();
+  showNotification('Selected customer: ' + customerName, 'success');
+}
+
+function clearSelectedCustomer() {
+  document.getElementById('selected_customer_id').value = '';
+  document.getElementById('customerSearchInput').style.display = 'block';
+  document.getElementById('customerSearchInput').value = '';
+  document.getElementById('selectedCustomerDisplay').style.display = 'none';
+
+  document.getElementById('booking_customer_name').value = '';
+  document.getElementById('booking_customer_phone').value = '';
+  document.getElementById('booking_customer_email').value = '';
+  document.getElementById('booking_delivery_address').value = '';
+
+  document.getElementById('customerSearchInput').focus();
+}
+
+function showAllCustomers() {
+  displayCustomerResults(customers.slice(0, 10));
+}
+
+function showCustomerDropdown() {
+  const dropdown = document.getElementById('customerSearchDropdown');
+  if (dropdown) {
+    dropdown.classList.add('show');
+  }
+}
+
+function hideCustomerDropdown() {
+  const dropdown = document.getElementById('customerSearchDropdown');
+  if (dropdown) {
+    dropdown.classList.remove('show');
+  }
+  selectedCustomerIndex = -1;
+}
+
+// Quantity controls
+function increaseQuantity(productId) {
+  const input = document.getElementById(`qty-${productId}`);
+  const max = parseFloat(input.max);
+  const current = parseFloat(input.value) || 1;
+  if (current < max) {
+    input.value = (current + 1).toFixed(1);
+  }
+}
+
+function decreaseQuantity(productId) {
+  const input = document.getElementById(`qty-${productId}`);
+  const current = parseFloat(input.value) || 1;
+  if (current > 1) {
+    input.value = (current - 1).toFixed(1);
+  } else if (current > 0.1) {
+    input.value = 0.1;
+  }
+}
+
+// Validate quantity doesn't exceed available stock
+function validateQuantity(productId, maxStock) {
+  const input = document.getElementById(`qty-${productId}`);
+  const value = parseFloat(input.value) || 1;
+
+  if (value > maxStock) {
+    input.value = maxStock;
+    showNotification(`Maximum ${maxStock} items available for this product`, 'warning');
+  } else if (value < 0.1) {
+    input.value = 0.1;
+  } else if (value % 0.1 !== 0) {
+    // Round to nearest 0.1 increment
+    input.value = (Math.round(value * 10) / 10).toFixed(1);
+  }
+}
+
+// Notification system
+function showNotification(message, type = 'success') {
+  const colors = {
+    success: 'alert-success',
+    warning: 'alert-warning',
+    danger: 'alert-danger',
+    info: 'alert-info'
+  };
+
+  const icons = {
+    success: 'bi-check-circle-fill',
+    warning: 'bi-exclamation-triangle-fill',
+    danger: 'bi-x-circle-fill',
+    info: 'bi-info-circle-fill'
+  };
+
+  const notification = document.createElement('div');
+  notification.className = `alert ${colors[type]} alert-dismissible fade show position-fixed bottom-0 start-50 translate-middle-x mb-3`;
+  notification.style.cssText = 'z-index: 9999; min-width: 350px; max-width: 500px; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);';
+  notification.innerHTML = `
+    <div class="d-flex align-items-center">
+      <i class="bi ${icons[type]} me-2 fs-5"></i>
+      <div class="flex-grow-1">${message}</div>
+      <button type="button" class="btn-close ms-2" onclick="this.parentElement.parentElement.remove()"></button>
+    </div>
+  `;
+  document.body.appendChild(notification);
+
+  // Slide in animation
+  setTimeout(() => {
+    notification.style.transform = 'translateX(-50%) translateY(-10px)';
+  }, 10);
+
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    notification.style.transform = 'translateX(-50%) translateY(20px)';
+    setTimeout(() => notification.remove(), 300);
+  }, 4000);
+}
+
+// Search functionality
+function setupSearch() {
+  const searchInput = document.getElementById('productSearch');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const words = this.value.toLowerCase().split(/\s+/).filter(Boolean);
+      document.querySelectorAll('.product-grid-item').forEach(card => {
+        const name = card.querySelector('h6')?.textContent?.toLowerCase() || '';
+        const categoryElement = card.querySelector('small');
+        const category = categoryElement?.textContent?.toLowerCase() || '';
+
+        // Get the SKU from the second small element (SKU: xxx format)
+        const skuElement = card.querySelectorAll('small')[1];
+        const sku = skuElement?.textContent?.toLowerCase() || '';
+        const haystack = name + ' ' + category + ' ' + sku;
+
+        const matches = words.every(word => haystack.includes(word));
+        card.style.display = matches ? 'block' : 'none';
+      });
+    });
+  }
+}
+
+// Filter functionality
+function filterProducts(type) {
+  const products = document.querySelectorAll('.product-grid-item');
+  const allBtn = document.getElementById('allProductsBtn');
+  const inStockBtn = document.getElementById('inStockBtn');
+
+  // Update button states
+  if (allBtn) allBtn.classList.remove('active');
+  if (inStockBtn) inStockBtn.classList.remove('active');
+
+  if (type === 'all') {
+    if (allBtn) allBtn.classList.add('active');
+    products.forEach(product => {
+      product.style.display = 'block';
+    });
+  } else if (type === 'instock') {
+    if (inStockBtn) inStockBtn.classList.add('active');
+    products.forEach(product => {
+      const stock = parseInt(product.dataset.stock) || 0;
+      product.style.display = stock > 0 ? 'block' : 'none';
+    });
+  }
+}
+
+// Apply category filter
+function applyCategoryFilter() {
+  const categoryFilterEl = document.getElementById('categoryFilter');
+  const categoryFilter = categoryFilterEl ? categoryFilterEl.value : '';
+  const products = document.querySelectorAll('.product-grid-item');
+
+  products.forEach(product => {
+    if (!categoryFilter || product.dataset.category === categoryFilter) {
+      product.style.display = 'block';
+    } else {
+      product.style.display = 'none';
+    }
+  });
+}
+
+// Handle store selection - reload the picker so product stock reflects the
+// chosen store (the sale draws down that store's inventory, just like a
+// store-side booking).
+function handleStoreSelection(select) {
+  // Warn before reload if the cart already has items (reload clears them).
+  const hasCartItems = (typeof cart !== 'undefined') && cart && Object.keys(cart).length > 0;
+  if (hasCartItems && !confirm('Changing the store will reset the current product selection so stock can be re-checked against that store. Continue?')) {
+    // Revert the dropdown to its previous value.
+    select.value = '<%= @selected_store&.id %>';
+    return;
+  }
+
+  const url = new URL(window.location.href);
+  if (select.value && select.value !== '') {
+    url.searchParams.set('store_id', select.value);
+  } else {
+    url.searchParams.delete('store_id');
+  }
+  window.location.href = url.toString();
+}
+
+// Status management
+function updateStatusPreview() {
+  const statusSelect = document.getElementById('booking_status');
+  const statusPreview = document.getElementById('statusPreview');
+  const statusBadge = document.getElementById('statusBadge');
+  const statusIcon = document.getElementById('statusIcon');
+  const statusName = document.getElementById('statusName');
+
+  if (!statusSelect || !statusPreview) return;
+
+  const selectedValue = statusSelect.value;
+  const selectedText = statusSelect.options[statusSelect.selectedIndex].text;
+
+  if (selectedValue === '') {
+    statusPreview.style.display = 'none';
+    return;
+  }
+
+  // Status configurations from booking model
+  const statusConfigs = {
+    'draft': { color: 'bg-secondary', icon: 'bi-pencil' },
+    'ordered_and_delivery_pending': { color: 'bg-secondary', icon: 'bi-clock' },
+    'confirmed': { color: 'bg-info', icon: 'bi-check-circle' },
+    'processing': { color: 'bg-warning', icon: 'bi-gear' },
+    'packed': { color: 'bg-warning', icon: 'bi-box' },
+    'shipped': { color: 'bg-primary', icon: 'bi-truck' },
+    'out_for_delivery': { color: 'bg-primary', icon: 'bi-geo-alt' },
+    'delivered': { color: 'bg-success', icon: 'bi-house-check' },
+    'completed': { color: 'bg-success', icon: 'bi-check-all' },
+    'cancelled': { color: 'bg-danger', icon: 'bi-x-circle' },
+    'returned': { color: 'bg-danger', icon: 'bi-arrow-return-left' }
+  };
+
+  const config = statusConfigs[selectedValue] || { color: 'bg-secondary', icon: 'bi-question-circle' };
+
+  statusBadge.className = `badge ${config.color}`;
+  statusIcon.className = `${config.icon} me-1`;
+  statusName.textContent = selectedText;
+  statusPreview.style.display = 'block';
+}
+
+// Booking loader functionality
+function showBookingLoader() {
+  const submitBtn = document.getElementById('completeBookingBtn');
+  const btnText = submitBtn.querySelector('.btn-text');
+  const btnLoading = submitBtn.querySelector('.btn-loading');
+
+  if (submitBtn && btnText && btnLoading) {
+    // Hide normal text and show loading
+    btnText.classList.add('d-none');
+    btnLoading.classList.remove('d-none');
+
+    // Disable the button to prevent double submission
+    submitBtn.disabled = true;
+    submitBtn.classList.add('btn-loading-state');
+
+    // Disable the back button during processing
+    const backBtn = document.querySelector('button[onclick="showProductsView()"]');
+    if (backBtn) {
+      backBtn.disabled = true;
+      backBtn.classList.add('opacity-50');
+    }
+
+    // Show overlay message
+    showProcessingOverlay();
+  }
+}
+
+function showProcessingOverlay() {
+  // Create an overlay to prevent user interaction
+  const overlay = document.createElement('div');
+  overlay.id = 'bookingProcessingOverlay';
+  overlay.className = 'position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center';
+  overlay.style.cssText = `
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 9999;
+  `;
+
+  overlay.innerHTML = `
+    <div class="text-center text-white">
+      <div class="spinner-border spinner-border-lg mb-3" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <h5 class="mb-2">Processing Your Booking</h5>
+      <p class="mb-0 opacity-75">Please wait while we save your booking details...</p>
+      <div class="mt-3">
+        <small class="opacity-50">⚠️ Please do not close this window or navigate away</small>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+}
+
+// Initialize payment status functionality
+function initializePaymentStatus() {
+  const paymentStatusSelect = document.getElementById('paymentStatusSelect');
+  const paymentStatusAlert = document.getElementById('paymentStatusAlert');
+
+  if (!paymentStatusSelect || !paymentStatusAlert) {
+    console.error('Payment status elements not found');
+    return;
+  }
+
+  // Update payment status display
+  function updatePaymentStatusDisplay() {
+    if (paymentStatusSelect.value === 'paid') {
+      paymentStatusAlert.className = 'alert alert-success border-success bg-success bg-opacity-10 d-flex align-items-center mb-0';
+      paymentStatusAlert.innerHTML = '<i class="bi bi-check-circle text-success me-2"></i><span>Payment received ✓</span>';
+    } else if (paymentStatusSelect.value === 'partially_paid') {
+      paymentStatusAlert.className = 'alert alert-warning border-warning bg-warning bg-opacity-10 d-flex align-items-center mb-0';
+      paymentStatusAlert.innerHTML = '<i class="bi bi-clock-history text-warning me-2"></i><span>Payment partially received</span>';
+    } else {
+      paymentStatusAlert.className = 'alert alert-light border d-flex align-items-center mb-0';
+      paymentStatusAlert.innerHTML = '<i class="bi bi-exclamation-triangle text-warning me-2"></i><span>Payment not received</span>';
+    }
+  }
+
+  // Listen for changes
+  paymentStatusSelect.addEventListener('change', updatePaymentStatusDisplay);
+
+  // Initial display update
+  updatePaymentStatusDisplay();
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  initializeCart();
+  setupSearch();
+  initializeCustomerSearch();
+
+  // Auto-select preloaded customer from quick customer creation flow
+  <% if @preselected_customer %>
+  (function() {
+    const preId = <%= @preselected_customer.id %>;
+    const preName = <%= raw @preselected_customer.display_name.to_json %>;
+    const preMobile = <%= raw @preselected_customer.mobile.to_json %>;
+    const preEmail = <%= raw (@preselected_customer.email || '').to_json %>;
+    const preAddress = <%= raw (@preselected_customer.respond_to?(:address) ? @preselected_customer.address.to_s : '').to_json %>;
+
+    document.getElementById('selected_customer_id').value = preId;
+    const nameField = document.getElementById('booking_customer_name');
+    const phoneField = document.getElementById('booking_customer_phone');
+    const emailField = document.getElementById('booking_customer_email');
+    const addressField = document.getElementById('booking_delivery_address');
+    if (nameField) nameField.value = preName;
+    if (phoneField) phoneField.value = preMobile;
+    if (emailField) emailField.value = preEmail;
+    if (preAddress && addressField && !addressField.value) addressField.value = preAddress;
+  })();
+  <% end %>
+
+  // Set default payment method
+  selectPaymentMethod('upi');
+
+  // Update checkout totals when discount changes
+  const discountInput = document.getElementById('checkoutDiscount');
+  if (discountInput) {
+    discountInput.addEventListener('change', updateCheckoutTotals);
+  }
+
+  // Add category filter listener
+  const categoryFilter = document.getElementById('categoryFilter');
+  if (categoryFilter) {
+    categoryFilter.addEventListener('change', applyCategoryFilter);
+  }
+
+  // Initialize payment status functionality
+  initializePaymentStatus();
+
+  // Add status change listener
+  const statusSelect = document.getElementById('booking_status');
+  if (statusSelect) {
+    statusSelect.addEventListener('change', updateStatusPreview);
+  }
+
+  // Initialize booking date functionality
+  initializeBookingDate();
+
+  // Prevent form submission with empty cart
+  const bookingForm = document.getElementById('bookingForm');
+  if (bookingForm) {
+    bookingForm.addEventListener('submit', function(e) {
+      if (Object.keys(cart).length === 0) {
+        e.preventDefault();
+        alert('Please add items to cart before submitting');
+        return false;
+      }
+
+      // Clean discount input and recompute the hidden discount amount before submission
+      // (updateCheckoutTotals converts a percentage entry into the actual rupee amount the backend expects)
+      const discountInput = document.getElementById('checkoutDiscount');
+      if (discountInput) {
+        const cleanedValue = (discountInput.value || '0').toString().replace(/\s+/g, '').trim();
+        discountInput.value = parseFloat(cleanedValue) || 0;
+      }
+      updateCheckoutTotals();
+      console.log('Final discount amount before submission:', document.getElementById('hiddenDiscountAmount')?.value);
+
+      // Check if status is selected
+      const statusSelect = document.getElementById('booking_status');
+      if (statusSelect && statusSelect.value === '') {
+        e.preventDefault();
+        alert('Please select a status for this booking');
+        statusSelect.focus();
+        return false;
+      }
+
+      // IMPORTANT: Ensure cart items are added to form before submission
+      ensureCartItemsInForm();
+
+      // Show loading state
+      showBookingLoader();
+    });
+  }
 });
+
+// Booking Date Management Functions
+function setBookingDateToToday() {
+  const dateField = document.getElementById('booking_date_field');
+  if (dateField) {
+    const today = new Date().toISOString().split('T')[0];
+    dateField.value = today;
+    validateBookingDate();
+    showNotification('Booking date set to today', 'success');
+  }
+}
+
+function initializeBookingDate() {
+  const dateField = document.getElementById('booking_date_field');
+  if (dateField) {
+    // Add event listener for date changes
+    dateField.addEventListener('change', validateBookingDate);
+
+    // Initial validation
+    validateBookingDate();
+  }
+}
+
+function validateBookingDate() {
+  const dateField = document.getElementById('booking_date_field');
+  const alertDiv = document.getElementById('bookingDateAlert');
+
+  if (!dateField || !alertDiv) return;
+
+  const selectedDate = new Date(dateField.value);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  // Clear previous alerts
+  alertDiv.style.display = 'none';
+  alertDiv.innerHTML = '';
+
+  // Reset field styling
+  dateField.classList.remove('border-warning', 'border-danger', 'border-success');
+
+  if (isNaN(selectedDate.getTime())) {
+    return; // Invalid date, let browser handle validation
+  }
+
+  // Compare dates (ignore time)
+  const selectedDateOnly = selectedDate.toDateString();
+  const todayDateOnly = today.toDateString();
+  const yesterdayDateOnly = yesterday.toDateString();
+
+  if (selectedDateOnly === todayDateOnly) {
+    // Today - show success
+    showBookingDateAlert('Today\'s booking', 'success', 'bi-calendar-check');
+    dateField.classList.add('border-success');
+  } else if (selectedDate < yesterday) {
+    // Past date (more than yesterday) - show warning
+    const daysAgo = Math.ceil((today - selectedDate) / (1000 * 60 * 60 * 24));
+    showBookingDateAlert(`Past booking (${daysAgo} day${daysAgo > 1 ? 's' : ''} ago)`, 'warning', 'bi-calendar-x');
+    dateField.classList.add('border-warning');
+  } else if (selectedDate > today) {
+    // Future date - show info
+    const daysAhead = Math.ceil((selectedDate - today) / (1000 * 60 * 60 * 24));
+    showBookingDateAlert(`Future booking (${daysAhead} day${daysAhead > 1 ? 's' : ''} ahead)`, 'info', 'bi-calendar-plus');
+    dateField.classList.add('border-primary');
+  }
+}
+
+function showBookingDateAlert(message, type, icon) {
+  const alertDiv = document.getElementById('bookingDateAlert');
+  if (!alertDiv) return;
+
+  const alertClass = {
+    'success': 'alert-success',
+    'warning': 'alert-warning',
+    'info': 'alert-info',
+    'danger': 'alert-danger'
+  }[type] || 'alert-info';
+
+  alertDiv.innerHTML = `
+    <div class="alert ${alertClass} border-0 py-2 px-3 mb-0">
+      <div class="d-flex align-items-center">
+        <i class="bi ${icon} me-2"></i>
+        <small class="mb-0">${message}</small>
+      </div>
+    </div>
+  `;
+
+  alertDiv.style.display = 'block';
+}
+
+// ---- Barcode / QR Scanner ----
+
+// Show camera button only on touch/mobile devices
+if (navigator.maxTouchPoints > 0) {
+  const cameraBtn = document.getElementById('cameraBtn');
+  if (cameraBtn) cameraBtn.classList.remove('d-none');
+}
+
+const barcodeInput = document.getElementById('barcodeInput');
+const barcodeFeedback = document.getElementById('barcodeFeedback');
+
+if (barcodeInput) {
+  barcodeInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const code = barcodeInput.value.trim();
+      if (code) lookupBarcode(code);
+    }
+  });
+}
+
+function lookupBarcode(code) {
+  barcodeFeedback.innerHTML = '<small class="text-secondary"><i class="bi bi-hourglass-split me-1"></i>Looking up...</small>';
+  fetch(`<%= store_admin_qr_codes_lookup_path %>?barcode=${encodeURIComponent(code)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.found) {
+        barcodeInput.value = '';
+        barcodeAddToCart(data);
+      } else {
+        barcodeFeedback.innerHTML = `<small class="text-danger"><i class="bi bi-x-circle me-1"></i>${data.message}</small>`;
+        barcodeInput.select();
+      }
+    })
+    .catch(() => {
+      barcodeFeedback.innerHTML = '<small class="text-danger">Lookup failed. Try again.</small>';
+    });
+}
+
+// Scan → instantly add 1 to cart (or increment if already there).
+// For variant products the default variant is used automatically.
+function barcodeAddToCart(data) {
+  let price, stock, variantId, displayName;
+
+  if (data.has_multiple_quantities && data.variants && data.variants.length > 0) {
+    const v = data.variants.find(v => v.is_default) || data.variants[0];
+    price       = v.price;
+    stock       = v.stock;
+    variantId   = v.id;
+    displayName = data.variants.length > 1 ? `${data.name} (${v.label})` : data.name;
+  } else {
+    price       = data.price;
+    stock       = data.available_stock;
+    variantId   = null;
+    displayName = data.name;
+  }
+
+  if (stock <= 0) {
+    barcodeFeedback.innerHTML = `<small class="text-danger"><i class="bi bi-x-circle me-1"></i>${displayName} — out of stock</small>`;
+    barcodeInput.focus();
+    return;
+  }
+
+  const basePrice = data.gst_rate > 0 ? price / (1 + data.gst_rate / 100) : price;
+  addToCart(data.id, displayName, price, stock, basePrice, data.gst_rate, variantId, 1);
+
+  const cartKey  = variantId ? `${data.id}_v${variantId}` : String(data.id);
+  const newQty   = cart[cartKey]?.quantity || 1;
+  barcodeFeedback.innerHTML = `<small class="text-success fw-semibold"><i class="bi bi-check-circle me-1"></i>${displayName} — qty ${newQty}</small>`;
+  showBarcodeToast(displayName, newQty, price);
+  barcodeInput.focus();
+}
+
+let barcodeToastTimer = null;
+function showBarcodeToast(name, qty, price) {
+  const toast = document.getElementById('barcodeToast');
+  document.getElementById('barcodeToastName').textContent = name;
+  document.getElementById('barcodeToastMeta').textContent =
+    `Added to cart · Qty: ${qty} · ₹${price.toLocaleString('en-IN')}`;
+
+  // Reset animation then show
+  toast.style.transition = 'none';
+  toast.style.opacity = '0';
+  toast.style.display = 'block';
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      toast.style.transition = 'opacity 0.2s ease';
+      toast.style.opacity = '1';
+    });
+  });
+
+  // Auto-hide after 2.5 s
+  clearTimeout(barcodeToastTimer);
+  barcodeToastTimer = setTimeout(() => {
+    toast.style.transition = 'opacity 0.4s ease';
+    toast.style.opacity = '0';
+    setTimeout(() => { toast.style.display = 'none'; }, 400);
+  }, 2500);
+}
+
+// Camera scanner (html5-qrcode — loaded from CDN only when needed)
+let html5QrCode = null;
+
+function openBarcodeCamera() {
+  if (!window.Html5Qrcode) {
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+    script.onload = startCamera;
+    document.head.appendChild(script);
+  } else {
+    startCamera();
+  }
+}
+
+function startCamera() {
+  const modal = new bootstrap.Modal(document.getElementById('cameraModal'));
+  modal.show();
+  html5QrCode = new Html5Qrcode("cameraReader");
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    (decodedText) => {
+      stopCamera();
+      bootstrap.Modal.getInstance(document.getElementById('cameraModal')).hide();
+      barcodeInput.value = decodedText;
+      lookupBarcode(decodedText);
+    }
+  ).catch(err => console.error("Camera error:", err));
+}
+
+function stopCamera() {
+  if (html5QrCode) {
+    html5QrCode.stop().catch(() => {});
+    html5QrCode = null;
+  }
+}
 </script>
+
+<style>
+/* Hover effects */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important;
+}
+
+/* Product card compact layout */
+#productGrid .card {
+  min-height: 0;
+}
+
+#productGrid .card-body {
+  padding: 0.5rem !important;
+}
+
+#productGrid .input-group-sm .btn {
+  line-height: 1;
+}
+
+#productGrid .badge {
+  font-size: 0.65rem !important;
+  padding: 2px 5px !important;
+}
+
+/* Stock badge on image — smaller */
+#productGrid .position-absolute.badge {
+  font-size: 0.6rem !important;
+  padding: 3px 5px !important;
+}
+
+/* Product grid responsive */
+@media (max-width: 576px) {
+  #productGrid .card-img-top,
+  #productGrid .card-img-top.bg-light {
+    height: 100px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .position-fixed[style*="top: 90px"] {
+    position: fixed !important;
+  }
+}
+
+/* Customer Search Dropdown Styles */
+.customer-search-wrapper {
+  position: relative;
+}
+
+.customer-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 0.95rem;
+  z-index: 2;
+  transition: color 0.3s ease;
+}
+
+.customer-search-input {
+  position: relative;
+  z-index: 1;
+  border-radius: 8px;
+  padding-left: 38px !important;
+  background: #f8f9fa;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.customer-search-input:focus {
+  border-color: #0d6efd;
+  background: white;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.customer-search-input:focus ~ .customer-search-icon,
+.customer-search-wrapper:has(.customer-search-input:focus) .customer-search-icon {
+  color: #0d6efd;
+}
+
+.customer-search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e6ed;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+  z-index: 1000;
+  max-height: 420px;
+  overflow: hidden;
+  display: none;
+}
+
+.customer-search-dropdown.show {
+  display: block;
+  animation: slideDown 0.25s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.customer-search-results {
+  max-height: 340px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.customer-search-results::-webkit-scrollbar {
+  width: 6px;
+}
+
+.customer-search-results::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.customer-search-results::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.customer-search-results::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Clean Customer Search Item Styles */
+.customer-search-item {
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.customer-search-item:hover {
+  background: linear-gradient(to right, #f8fbff 0%, #f1f8ff 100%);
+}
+
+.customer-search-item:last-child {
+  border-bottom: none;
+}
+
+.customer-search-item.active {
+  background: linear-gradient(to right, #e7f3ff 0%, #deedff 100%);
+  border-left: 3px solid #0d6efd;
+}
+
+/* Modern Two-Line Card Layout */
+.customer-result-card {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.customer-result-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+.customer-result-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.customer-detail-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.customer-detail-item i {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  opacity: 0.8;
+}
+
+.customer-detail-badge {
+  margin-left: auto;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #64748b;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* Hover Effects */
+.customer-search-item:hover .customer-result-name {
+  color: #0d6efd;
+}
+
+.customer-search-item:hover .customer-detail-item i {
+  color: #0d6efd;
+  opacity: 1;
+}
+
+.customer-search-item:hover .customer-detail-badge {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+}
+
+/* Active/Selected State */
+.customer-search-item.active .customer-result-name {
+  color: #0d6efd;
+}
+
+.customer-search-item.active .customer-detail-badge {
+  background: #0d6efd;
+  color: white;
+}
+
+/* Responsive design for customer search */
+@media (max-width: 768px) {
+  .customer-result-card {
+    padding: 12px 14px;
+  }
+
+  .customer-result-name {
+    font-size: 0.9rem;
+  }
+
+  .customer-result-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .customer-detail-item {
+    font-size: 0.8rem;
+  }
+
+  .customer-detail-badge {
+    margin-left: 0;
+    align-self: flex-start;
+  }
+}
+
+.customer-search-footer {
+  padding: 10px 12px;
+  border-top: 1px solid #f1f5f9;
+  background: linear-gradient(to bottom, #fafbfc 0%, #f8f9fa 100%);
+}
+
+.customer-search-footer .btn {
+  border-radius: 8px;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.customer-search-footer .btn:hover {
+  background: #0d6efd;
+  border-color: #0d6efd;
+  color: white;
+}
+
+.selected-customer-display {
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px solid #0284c7;
+  border-radius: 10px;
+  margin-top: 8px;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.1);
+}
+
+.selected-customer-display .customer-info {
+  flex-grow: 1;
+}
+
+.selected-customer-display .customer-name {
+  font-weight: 600;
+  color: #0c4a6e;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.selected-customer-display .btn-outline-danger {
+  border-radius: 6px;
+  padding: 4px 8px;
+  border: 1px solid #fecaca;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.selected-customer-display .btn-outline-danger:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: white;
+}
+
+.customer-search-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: #64748b;
+  background: linear-gradient(to bottom, #fafbfc 0%, white 100%);
+}
+
+.customer-search-empty i {
+  color: #cbd5e1;
+}
+
+.customer-search-empty .fw-medium {
+  color: #475569;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.customer-search-empty small {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.customer-search-loading {
+  padding: 24px 16px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.customer-search-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #0d6efd;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Booking Loading Button Styles */
+.btn-loading-state {
+  position: relative;
+  pointer-events: none;
+}
+
+.btn-loading-state:hover {
+  background-color: #198754 !important;
+  border-color: #198754 !important;
+}
+
+.btn-loading .spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+#bookingProcessingOverlay {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.spinner-border-lg {
+  width: 3rem;
+  height: 3rem;
+}
+
+/* Enhanced Floating Cart Styles */
+#floatingCart {
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.25) !important;
+  transition: all 0.3s ease;
+  border: 2px solid #667eea;
+}
+
+#floatingCart .card-header {
+  border-radius: 14px 14px 0 0;
+  padding: 1rem 1.25rem;
+}
+
+#floatingCart .card-header h3 {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 900;
+  color: #000000 !important;
+}
+
+#floatingCart .card-header h3 span {
+  color: #000000 !important;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+#floatingCart:hover {
+  box-shadow: 0 15px 50px rgba(0,0,0,0.2) !important;
+}
+
+/* Pulse animation for cart */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.cart-pulse {
+  animation: pulse 0.5s ease-in-out;
+}
+
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px 16px 0 0 !important;
+}
+
+.cart-item-card {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 14px;
+  transition: all 0.2s ease;
+  border: 1px solid #e9ecef;
+}
+
+.cart-item-card:hover {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+
+.cart-item-card .input-group {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.cart-item-card .input-group .btn {
+  border: 1px solid #dee2e6;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.cart-item-card .input-group .btn:hover:not(:disabled) {
+  background: #0d6efd;
+  color: white;
+  border-color: #0d6efd;
+}
+
+.cart-item-card .input-group .form-control {
+  border-left: 1px solid #dee2e6;
+  border-right: 1px solid #dee2e6;
+  font-size: 0.95rem;
+}
+
+/* Minimized Cart Button */
+#minimizedCart {
+  position: relative;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+#minimizedCart:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4) !important;
+}
+
+#minimizedCart .badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  min-width: 20px;
+}
+
+/* Cart Animations */
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 0.5s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slideInRight 0.3s ease-out;
+}
+
+/* Cart scrollbar */
+#floatingCart .card-body {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+#floatingCart .card-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+#floatingCart .card-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+#floatingCart .card-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+#floatingCart .card-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Empty cart styling */
+#cartItems .bi-cart-x {
+  color: #cbd5e1;
+}
+
+/* Footer styling */
+#floatingCart .card-footer {
+  border-radius: 0 0 16px 16px !important;
+  border-top: 2px solid #e9ecef;
+}
+
+/* Success button enhancement */
+#floatingCart .btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  padding: 12px;
+  transition: all 0.3s ease;
+}
+
+#floatingCart .btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+</style>

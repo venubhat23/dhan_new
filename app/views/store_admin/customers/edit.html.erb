@@ -1,17 +1,262 @@
-<% content_for :page_title, "Edit Customer" %>
-
+<!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h4 class="mb-1">Edit Customer</h4>
-    <small class="text-muted"><%= @customer.full_name %></small>
+    <h2 class="mb-1">Edit Customer</h2>
+    <p class="text-muted mb-0">Update <%= @customer.display_name %> information</p>
   </div>
-  <%= link_to store_admin_customer_path(@customer), class: "btn btn-outline-secondary" do %>
-    <i class="bi bi-arrow-left me-2"></i>Back to Customer
-  <% end %>
+  <div class="d-flex gap-2">
+    <%= link_to store_admin_customer_path(@customer), class: "btn btn-outline-info" do %>
+      <i class="bi bi-eye me-1"></i>
+      View Customer
+    <% end %>
+    <%= link_to store_admin_customers_path, class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-arrow-left me-1"></i>
+      Back to Customers
+    <% end %>
+  </div>
 </div>
 
-<div class="card border-0 shadow-sm">
-  <div class="card-body">
-    <%= render "form" %>
+<div class="row">
+  <div class="col-lg-8">
+    <%= form_with model: [:store_admin, @customer], local: true, multipart: true, class: "needs-validation", novalidate: true do |form| %>
+
+      <!-- Personal Details -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">Personal Details</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <%= form.label :full_name, class: "form-label" do %>
+                Customer Name <span class="text-danger">*</span>
+              <% end %>
+              <%= form.text_field :full_name, class: "form-control", placeholder: "Enter customer name", required: true %>
+              <div class="invalid-feedback">Please provide a customer name.</div>
+            </div>
+            <div class="col-md-6">
+              <%= form.label :email, class: "form-label" do %>
+                Email <span class="text-muted">(Optional)</span>
+              <% end %>
+              <%= form.email_field :email, class: "form-control", placeholder: "Enter email address (optional)" %>
+              <div class="form-text">Email is optional but helpful for order updates and notifications</div>
+            </div>
+            <div class="col-md-6">
+              <%= form.label :mobile, class: "form-label" do %>
+                Mobile Number <span class="text-danger">*</span>
+              <% end %>
+              <%= form.text_field :mobile, class: "form-control", placeholder: "Enter mobile number", type: "tel", required: true %>
+              <div class="invalid-feedback">Please provide a mobile number.</div>
+            </div>
+            <div class="col-md-6">
+              <%= form.label :whatsapp_number, class: "form-label" %>
+              <%= form.text_field :whatsapp_number, class: "form-control", placeholder: "Enter WhatsApp number", type: "tel" %>
+              <small class="form-text text-muted">Leave blank if same as mobile</small>
+            </div>
+            <div class="col-md-6">
+              <%= form.label :gst_no, "GST Number", class: "form-label" %>
+              <%= form.text_field :gst_no, class: "form-control text-uppercase", placeholder: "22ABCDE1234F1Z5", maxlength: 15 %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Address Information -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">Address Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <%= form.label :address, "Billing Address", class: "form-label" %>
+              <%= form.text_area :address, class: "form-control", placeholder: "Enter complete billing address", rows: 2 %>
+            </div>
+
+            <div class="col-12">
+              <%= form.label :landmark, "Landmark", class: "form-label" %>
+              <%= form.text_field :landmark, class: "form-control", placeholder: "Enter landmark near billing address" %>
+            </div>
+
+            <div class="col-12">
+              <hr class="my-2">
+              <%= form.label :shipping_address, "Shipping Address", class: "form-label" %>
+              <%= form.text_area :shipping_address, class: "form-control", placeholder: "Enter complete shipping address", rows: 2 %>
+            </div>
+
+            <div class="col-12">
+              <%= form.label :location_link, "Location Link", class: "form-label" %>
+              <%= form.url_field :location_link, class: "form-control", placeholder: "Paste Google Maps link (optional)" %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">Additional Notes</h5>
+        </div>
+        <div class="card-body">
+          <%= form.label :notes, class: "form-label" %>
+          <%= form.text_area :notes, class: "form-control", placeholder: "Any additional notes or special requirements", rows: 3 %>
+          <div class="form-text">Add any special notes, preferences, or important information about this customer</div>
+        </div>
+      </div>
+
+      <!-- Current Images -->
+      <% if @customer.personal_image.attached? || @customer.house_image.attached? %>
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-transparent border-0">
+            <h5 class="mb-0">Current Images</h5>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <% if @customer.personal_image.attached? %>
+                <div class="col-md-6">
+                  <h6>Personal Image</h6>
+                  <%= image_tag @customer.personal_image, class: "img-thumbnail", style: "max-height: 200px; width: 100%; object-fit: cover;" %>
+                  <small class="d-block text-muted mt-1"><%= @customer.personal_image.filename %></small>
+                </div>
+              <% end %>
+              <% if @customer.house_image.attached? %>
+                <div class="col-md-6">
+                  <h6>House Image</h6>
+                  <%= image_tag @customer.house_image, class: "img-thumbnail", style: "max-height: 200px; width: 100%; object-fit: cover;" %>
+                  <small class="d-block text-muted mt-1"><%= @customer.house_image.filename %></small>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Image Uploads -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">Upload Images</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <%= form.label :personal_image, "Personal Image", class: "form-label" %>
+              <%= form.file_field :personal_image, class: "form-control", accept: "image/*" %>
+              <div class="form-text">Upload or replace personal image</div>
+            </div>
+            <div class="col-md-6">
+              <%= form.label :house_image, "House Image", class: "form-label" %>
+              <%= form.file_field :house_image, class: "form-control", accept: "image/*" %>
+              <div class="form-text">Upload or replace house image</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Status Field -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">Account Status</h5>
+        </div>
+        <div class="card-body">
+          <div class="form-check form-switch">
+            <%= form.check_box :status, class: "form-check-input", id: "customerStatus" %>
+            <%= form.label :status, "Active Customer", class: "form-check-label", for: "customerStatus" %>
+            <div class="form-text">Uncheck to disable customer access and hide from active lists</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="d-flex gap-2">
+        <%= form.submit "Update Customer", class: "btn btn-primary" %>
+        <%= link_to "Cancel", store_admin_customer_path(@customer), class: "btn btn-outline-secondary" %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Customer Summary -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0">Customer Summary</h6>
+      </div>
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+          <% if @customer.profile_image.attached? %>
+            <%= image_tag @customer.profile_image, class: "rounded-circle me-3", style: "width: 50px; height: 50px; object-fit: cover;" %>
+          <% else %>
+            <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+              <i class="bi bi-person text-primary"></i>
+            </div>
+          <% end %>
+          <div>
+            <h6 class="mb-0"><%= @customer.display_name %></h6>
+            <span class="badge bg-primary">
+              Customer
+            </span>
+          </div>
+        </div>
+
+        <hr>
+
+        <div class="row g-2 mb-2">
+          <div class="col-5"><strong>ID:</strong></div>
+          <div class="col-7">#<%= @customer.id %></div>
+        </div>
+
+        <div class="row g-2 mb-2">
+          <div class="col-5"><strong>Mobile:</strong></div>
+          <div class="col-7"><%= @customer.mobile %></div>
+        </div>
+
+        <div class="row g-2 mb-2">
+          <div class="col-5"><strong>Email:</strong></div>
+          <div class="col-7"><%= @customer.email %></div>
+        </div>
+
+
+
+        <div class="row g-2 mb-2">
+          <div class="col-5"><strong>Status:</strong></div>
+          <div class="col-7">
+            <% customer_status = @customer.respond_to?(:status) ? @customer.status : true %>
+            <span class="badge bg-<%= customer_status ? 'success' : 'danger' %>">
+              <%= customer_status ? 'Active' : 'Inactive' %>
+            </span>
+          </div>
+        </div>
+
+      </div>
+    </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  // Form validation
+  const forms = document.querySelectorAll('.needs-validation');
+  Array.prototype.slice.call(forms).forEach(function(form) {
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+        form.classList.add('was-validated');
+      }
+    }, false);
+  });
+
+  // Only show validation errors for empty fields, not filled ones
+  const inputs = document.querySelectorAll('.needs-validation input[required]');
+  inputs.forEach(function(input) {
+    if (input.value && input.value.trim() !== '') {
+      input.classList.add('is-valid');
+      input.classList.remove('is-invalid');
+    }
+  });
+});
+</script>
+
+<style>
+</style>

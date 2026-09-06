@@ -206,14 +206,9 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
   # Fresh list of active products for the purchase form's product dropdown, so a
   # product just added in another tab can be pulled in without reloading the page.
   def products
-    render json: Product.active.order(:name).map { |p|
-      {
-        id: p.id,
-        name: p.name,
-        unit_type: p.unit_type || 'units',
-        default_selling_price: p.default_selling_price || 0
-      }
-    }
+    render json: VendorPurchase.product_option_list(
+      Product.active.includes(:product_variants).order(:name)
+    )
   end
 
   def batch_inventory
@@ -281,14 +276,14 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
 
   def set_vendors_and_products
     @vendors = Vendor.active.order(:name)
-    @products = Product.active.order(:name)
+    @products = Product.active.includes(:product_variants).order(:name)
     @categories = Category.active.ordered
   end
 
   def vendor_purchase_params
     params.require(:vendor_purchase).permit(:vendor_id, :purchase_date, :notes, :status, :paid_amount,
       vendor_purchase_items_attributes: [
-        :id, :product_id, :quantity, :purchase_price, :selling_price, :_destroy
+        :id, :product_id, :product_variant_id, :quantity, :purchase_price, :selling_price, :_destroy
       ]
     )
   end

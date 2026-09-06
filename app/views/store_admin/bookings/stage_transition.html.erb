@@ -1,0 +1,501 @@
+<!-- Stage Transition Page -->
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-2">
+          <li class="breadcrumb-item"><%= link_to "Dashboard", store_admin_bookings_path, class: "text-decoration-none" %></li>
+          <li class="breadcrumb-item"><%= link_to "Bookings", store_admin_bookings_path, class: "text-decoration-none" %></li>
+          <li class="breadcrumb-item"><%= link_to "##{@booking.booking_number}", store_admin_booking_path(@booking), class: "text-decoration-none" %></li>
+          <li class="breadcrumb-item active">Stage Transition</li>
+        </ol>
+      </nav>
+      <h2 class="mb-1">
+        <i class="bi bi-gear-wide-connected text-primary me-2"></i>
+        Stage Management
+      </h2>
+      <p class="text-muted mb-0">Update booking stage for #<%= @booking.booking_number %></p>
+    </div>
+    <div class="d-flex gap-2">
+      <%= link_to store_admin_booking_path(@booking), class: "btn btn-outline-secondary" do %>
+        <i class="bi bi-eye me-1"></i> View Booking
+      <% end %>
+      <%= link_to store_admin_bookings_path, class: "btn btn-outline-primary" do %>
+        <i class="bi bi-arrow-left me-1"></i> Back to Bookings
+      <% end %>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Current Status Card -->
+    <div class="col-md-4 mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0">
+          <h6 class="mb-0">
+            <i class="bi bi-info-circle me-2"></i>
+            Current Status
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="text-center mb-3">
+            <div class="status-icon-large mb-2">
+              <i class="bi <%= @booking.status_icon %> fs-1 text-<%= @booking.status_color %>"></i>
+            </div>
+            <h5 class="mb-2">
+              <span class="badge bg-<%= @booking.status_color %> px-3 py-2 fs-6">
+                <%= @booking.status&.humanize %>
+              </span>
+            </h5>
+          </div>
+
+          <!-- Booking Details -->
+          <div class="info-list">
+            <div class="info-item">
+              <span class="label">Booking Number:</span>
+              <span class="value">#<%= @booking.booking_number %></span>
+            </div>
+            <div class="info-item">
+              <span class="label">Customer:</span>
+              <span class="value"><%= @booking.customer&.display_name || @booking.customer_name %></span>
+            </div>
+            <div class="info-item">
+              <span class="label">Total Amount:</span>
+              <span class="value text-success fw-bold">₹<%= number_with_delimiter(@booking.total_amount || 0) %></span>
+            </div>
+            <div class="info-item">
+              <span class="label">Items:</span>
+              <span class="value"><%= pluralize(@booking.booking_items.size, 'item') %></span>
+            </div>
+            <div class="info-item">
+              <span class="label">Payment Status:</span>
+              <span class="value">
+                <% payment_class = case @booking.payment_status
+                                   when 'paid' then 'bg-success-subtle text-success'
+                                   when 'unpaid' then 'bg-danger-subtle text-danger'
+                                   when 'partially_paid' then 'bg-warning-subtle text-warning'
+                                   else 'bg-secondary-subtle text-secondary'
+                                   end %>
+                <span class="badge <%= payment_class %>">
+                  <%= @booking.payment_status_display %>
+                </span>
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="label">Created:</span>
+              <span class="value"><%= @booking.created_at.strftime("%d %b %Y at %I:%M %p") if @booking.created_at %></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage Transition Form -->
+    <div class="col-md-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0">
+          <h6 class="mb-0">
+            <i class="bi bi-gear me-2"></i>
+            Update to: <strong class="text-<%=
+              case params[:target_stage]
+              when 'confirmed' then 'success'
+              when 'processing' then 'warning'
+              when 'packed' then 'info'
+              when 'shipped' then 'primary'
+              when 'out_for_delivery' then 'primary'
+              when 'delivered' then 'success'
+              when 'cancelled' then 'danger'
+              when 'returned' then 'warning'
+              else 'secondary'
+              end %>"><%= params[:target_stage]&.humanize %></strong>
+          </h6>
+        </div>
+        <div class="card-body">
+          <%= form_with model: @booking, url: process_stage_transition_store_admin_booking_path(@booking), method: :patch, local: true, class: "stage-transition-form" do |f| %>
+            <%= f.hidden_field :target_stage, value: params[:target_stage] %>
+
+            <!-- Stage-specific fields -->
+            <% case params[:target_stage] %>
+            <% when 'confirmed' %>
+              <div class="alert alert-info mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                Confirming this booking will mark it as ready for processing.
+              </div>
+
+              <!-- Notes field -->
+              <div class="mb-3">
+                <%= f.label :notes, "Confirmation Notes (Optional)", class: "form-label" %>
+                <%= f.text_area :notes, value: @booking.notes, class: "form-control", rows: 3, placeholder: "Add any confirmation notes..." %>
+              </div>
+
+            <% when 'processing' %>
+              <div class="alert alert-warning mb-4">
+                <i class="bi bi-gear me-2"></i>
+                Moving to processing stage means the order is being prepared.
+              </div>
+
+              <div class="mb-3">
+                <%= f.label :processing_notes, "Processing Instructions", class: "form-label" %>
+                <%= f.text_area :processing_notes, class: "form-control", rows: 3, placeholder: "Enter processing instructions, special requirements, etc." %>
+              </div>
+
+              <div class="mb-3">
+                <%= f.label :estimated_completion, "Estimated Completion Time", class: "form-label" %>
+                <%= f.datetime_local_field :estimated_completion, class: "form-control", value: 2.hours.from_now.strftime("%Y-%m-%dT%H:%M") %>
+              </div>
+
+            <% when 'packed' %>
+              <div class="alert alert-info mb-4">
+                <i class="bi bi-box me-2"></i>
+                Items are packed and ready for shipment.
+              </div>
+
+              <div class="mb-3">
+                <%= f.label :packaging_notes, "Packaging Notes", class: "form-label" %>
+                <%= f.text_area :packaging_notes, class: "form-control", rows: 3, placeholder: "Package details, special handling instructions, etc." %>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <%= f.label :package_weight, "Package Weight (kg)", class: "form-label" %>
+                    <%= f.number_field :package_weight, class: "form-control", step: 0.1, placeholder: "0.0" %>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <%= f.label :package_dimensions, "Dimensions (L×W×H cm)", class: "form-label" %>
+                    <%= f.text_field :package_dimensions, class: "form-control", placeholder: "e.g., 30x20x10" %>
+                  </div>
+                </div>
+              </div>
+
+            <% when 'shipped' %>
+              <div class="alert alert-primary mb-4">
+                <i class="bi bi-truck me-2"></i>
+                <strong>Required:</strong> Add shipping partner and tracking details.
+              </div>
+
+              <!-- Shipping Partner Selection -->
+              <div class="mb-3">
+                <%= f.label :shipping_partner, "Shipping Partner *", class: "form-label" %>
+                <%= f.select :shipping_partner,
+                    options_for_select([
+                      ['Select Shipping Partner', ''],
+                      ['BlueDart', 'bluedart'],
+                      ['DTDC', 'dtdc'],
+                      ['Delhivery', 'delhivery'],
+                      ['Ecom Express', 'ecom_express'],
+                      ['FedEx', 'fedex'],
+                      ['India Post', 'india_post'],
+                      ['Professional Couriers', 'professional_couriers'],
+                      ['Trackon', 'trackon'],
+                      ['Xpressbees', 'xpressbees'],
+                      ['Local Delivery', 'local_delivery'],
+                      ['Self Delivery', 'self_delivery'],
+                      ['Other', 'other']
+                    ]),
+                    {},
+                    { class: "form-select", required: true, id: "shipping_partner_select" } %>
+              </div>
+
+              <!-- Partner ID / Account Number -->
+              <div class="mb-3">
+                <%= f.label :partner_id, "Partner Account ID / Number", class: "form-label" %>
+                <%= f.text_field :partner_id, class: "form-control", placeholder: "Enter partner account ID or number" %>
+                <div class="form-text">Your account ID with the shipping partner</div>
+              </div>
+
+              <!-- Tracking Number -->
+              <div class="mb-3">
+                <%= f.label :tracking_number, "Tracking Number / AWB Number *", class: "form-label" %>
+                <%= f.text_field :tracking_number, class: "form-control", placeholder: "Enter tracking/AWB number", required: true %>
+              </div>
+
+              <!-- Delivery Person Selection -->
+              <div class="mb-3">
+                <%= f.label :delivery_person_id, "Assign Delivery Person (Optional)", class: "form-label" %>
+                <%= f.select :delivery_person_id,
+                    options_for_select([['Select Delivery Person', '']] +
+                    (@delivery_people || []).map { |dp| ["#{dp.first_name} #{dp.last_name} - #{dp.mobile}", dp.id] }),
+                    {},
+                    { class: "form-select", id: "delivery_person_select" } %>
+                <div class="form-text">Assign a delivery person for local deliveries</div>
+              </div>
+
+              <!-- Expected Delivery Date -->
+              <div class="mb-3">
+                <%= f.label :expected_delivery_date, "Expected Delivery Date", class: "form-label" %>
+                <%= f.date_field :expected_delivery_date, class: "form-control", value: 3.days.from_now.strftime("%Y-%m-%d") %>
+              </div>
+
+              <!-- Shipping Instructions -->
+              <div class="mb-3">
+                <%= f.label :shipping_instructions, "Shipping Instructions", class: "form-label" %>
+                <%= f.text_area :shipping_instructions, class: "form-control", rows: 3, placeholder: "Special delivery instructions, contact details, etc." %>
+              </div>
+
+            <% when 'out_for_delivery' %>
+              <div class="alert alert-primary mb-4">
+                <i class="bi bi-geo-alt me-2"></i>
+                Package is out for delivery to customer.
+              </div>
+
+              <div class="mb-3">
+                <%= f.label :delivery_notes, "Delivery Notes", class: "form-label" %>
+                <%= f.text_area :delivery_notes, class: "form-control", rows: 3, placeholder: "Any special delivery notes or customer contact information" %>
+              </div>
+
+            <% when 'delivered' %>
+              <div class="alert alert-success mb-4">
+                <i class="bi bi-check-circle me-2"></i>
+                Mark this order as successfully delivered to customer.
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <%= f.label :delivery_date, "Delivery Date & Time", class: "form-label" %>
+                    <%= f.datetime_local_field :delivery_date, class: "form-control", value: Time.current.strftime("%Y-%m-%dT%H:%M") %>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <%= f.label :delivered_to, "Delivered To", class: "form-label" %>
+                    <%= f.text_field :delivered_to, class: "form-control", placeholder: "Name of person who received" %>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <%= f.label :delivery_confirmation_notes, "Delivery Confirmation Notes", class: "form-label" %>
+                <%= f.text_area :delivery_confirmation_notes, class: "form-control", rows: 3, placeholder: "Delivery confirmation details, customer feedback, etc." %>
+              </div>
+
+            <% when 'cancelled' %>
+              <div class="alert alert-danger mb-4">
+                <i class="bi bi-x-circle me-2"></i>
+                <strong>Warning:</strong> This will cancel the booking. This action may not be reversible.
+              </div>
+
+              <div class="mb-3">
+                <%= f.label :cancellation_reason, "Cancellation Reason *", class: "form-label" %>
+                <%= f.select :cancellation_reason,
+                    options_for_select([
+                      ['Select Reason', ''],
+                      ['Customer Request', 'customer_request'],
+                      ['Payment Issues', 'payment_issues'],
+                      ['Out of Stock', 'out_of_stock'],
+                      ['Quality Issues', 'quality_issues'],
+                      ['Delivery Issues', 'delivery_issues'],
+                      ['Other', 'other']
+                    ]),
+                    {},
+                    { class: "form-select", required: true } %>
+              </div>
+
+              <div class="mb-3">
+                <%= f.label :cancellation_notes, "Detailed Cancellation Notes *", class: "form-label" %>
+                <%= f.text_area :cancellation_notes, class: "form-control", rows: 4, placeholder: "Provide detailed reason for cancellation...", required: true %>
+              </div>
+
+            <% when 'returned' %>
+              <div class="alert alert-warning mb-4">
+                <i class="bi bi-arrow-return-left me-2"></i>
+                Process return for this delivered order.
+              </div>
+
+              <div class="mb-3">
+                <%= f.label :return_reason, "Return Reason *", class: "form-label" %>
+                <%= f.select :return_reason,
+                    options_for_select([
+                      ['Select Return Reason', ''],
+                      ['Damaged Product', 'damaged_product'],
+                      ['Wrong Product', 'wrong_product'],
+                      ['Quality Issues', 'quality_issues'],
+                      ['Customer Not Satisfied', 'customer_not_satisfied'],
+                      ['Size/Fit Issues', 'size_fit_issues'],
+                      ['Other', 'other']
+                    ]),
+                    {},
+                    { class: "form-select", required: true } %>
+              </div>
+
+              <div class="mb-3">
+                <%= f.label :return_notes, "Return Details *", class: "form-label" %>
+                <%= f.text_area :return_notes, class: "form-control", rows: 4, placeholder: "Detailed return information...", required: true %>
+              </div>
+
+            <% else %>
+              <div class="alert alert-info mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                Update booking status with additional information.
+              </div>
+
+              <div class="mb-3">
+                <%= f.label :general_notes, "Update Notes", class: "form-label" %>
+                <%= f.text_area :general_notes, class: "form-control", rows: 3, placeholder: "Add notes for this status update..." %>
+              </div>
+            <% end %>
+
+            <!-- Action Buttons -->
+            <div class="d-flex gap-2 justify-content-end mt-4">
+              <%= link_to store_admin_bookings_path, class: "btn btn-secondary" do %>
+                <i class="bi bi-x me-1"></i> Cancel
+              <% end %>
+              <%= f.submit "Update to #{params[:target_stage]&.humanize}",
+                  class: "btn btn-#{
+                    case params[:target_stage]
+                    when 'confirmed' then 'success'
+                    when 'processing' then 'warning'
+                    when 'packed' then 'info'
+                    when 'shipped' then 'primary'
+                    when 'out_for_delivery' then 'primary'
+                    when 'delivered' then 'success'
+                    when 'cancelled' then 'danger'
+                    when 'returned' then 'warning'
+                    else 'primary'
+                    end
+                  }",
+                  confirm: params[:target_stage] == 'cancelled' ? 'Are you sure you want to cancel this booking?' : nil %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Shipping partner selection handling
+  const shippingPartnerSelect = document.getElementById('shipping_partner_select');
+  if (shippingPartnerSelect) {
+    shippingPartnerSelect.addEventListener('change', function() {
+      const selectedPartner = this.value;
+      // You can add partner-specific field handling here if needed
+      console.log('Selected shipping partner:', selectedPartner);
+    });
+  }
+
+  // Form validation for shipped stage
+  const form = document.querySelector('.stage-transition-form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      const targetStage = document.querySelector('input[name="booking[target_stage]"]').value;
+
+      if (targetStage === 'shipped') {
+        const shippingPartner = document.getElementById('shipping_partner_select').value;
+        const trackingNumber = document.querySelector('input[name="booking[tracking_number]"]').value;
+
+        if (!shippingPartner) {
+          e.preventDefault();
+          alert('Please select a shipping partner');
+          return false;
+        }
+
+        if (!trackingNumber.trim()) {
+          e.preventDefault();
+          alert('Please enter a tracking number');
+          return false;
+        }
+      }
+
+      if (targetStage === 'cancelled') {
+        const cancellationReason = document.querySelector('select[name="booking[cancellation_reason]"]').value;
+        const cancellationNotes = document.querySelector('textarea[name="booking[cancellation_notes]"]').value;
+
+        if (!cancellationReason) {
+          e.preventDefault();
+          alert('Please select a cancellation reason');
+          return false;
+        }
+
+        if (!cancellationNotes.trim()) {
+          e.preventDefault();
+          alert('Please provide detailed cancellation notes');
+          return false;
+        }
+      }
+    });
+  }
+});
+</script>
+
+<style>
+.info-list {
+  list-style: none;
+  padding: 0;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-item .label {
+  font-weight: 500;
+  color: #6c757d;
+  flex-shrink: 0;
+  margin-right: 1rem;
+}
+
+.info-item .value {
+  text-align: right;
+  font-weight: 500;
+}
+
+.status-icon-large {
+  padding: 1rem;
+  background-color: rgba(var(--bs-primary-rgb), 0.1);
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.card {
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.stage-transition-form .form-label {
+  font-weight: 600;
+  color: #495057;
+}
+
+.stage-transition-form .form-control,
+.stage-transition-form .form-select {
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  transition: all 0.15s ease-in-out;
+}
+
+.stage-transition-form .form-control:focus,
+.stage-transition-form .form-select:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.alert {
+  border: none;
+  border-radius: 0.5rem;
+}
+
+.breadcrumb-item a {
+  color: #6c757d;
+}
+
+.breadcrumb-item.active {
+  color: #495057;
+  font-weight: 500;
+}
+</style>

@@ -1,6 +1,7 @@
 class VendorPurchaseItem < ApplicationRecord
   belongs_to :vendor_purchase
   belongs_to :product
+  belongs_to :product_variant, optional: true
 
   validates :quantity, presence: true, numericality: { greater_than: 0 }
   validates :purchase_price, presence: true, numericality: { greater_than: 0 }
@@ -8,6 +9,19 @@ class VendorPurchaseItem < ApplicationRecord
 
   before_save :calculate_line_total
   validate :selling_price_should_be_greater_than_purchase_price
+
+  # Name shown on the purchase / stock-movement records. Includes the variant
+  # pack size when the line targets a specific variant.
+  def display_name
+    product_variant ? "#{product.name} #{product_variant.label}" : product.name
+  end
+
+  # Composite value the purchase form's product <select> carries for this line:
+  # "<product_id>" for a plain product, "<product_id>-v<variant_id>" for a variant.
+  def selected_option_value
+    return '' if product_id.blank?
+    product_variant_id.present? ? "#{product_id}-v#{product_variant_id}" : product_id.to_s
+  end
 
   def profit_margin
     return 0 if purchase_price.zero?

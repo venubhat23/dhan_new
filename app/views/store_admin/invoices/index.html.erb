@@ -1,122 +1,355 @@
-<% content_for :page_title, "Invoices" %>
-
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h4 class="mb-1">Store Invoices</h4>
-    <small class="text-muted">Invoices generated from bookings at <%= @current_store.name %></small>
+    <h2 class="mb-1">Invoice Management</h2>
+    <p class="text-muted mb-0">Manage customer invoices and billing</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bulkInvoiceModal">
+      <i class="bi bi-plus-lg me-1"></i>
+      Generate Invoices
+    </button>
   </div>
 </div>
 
+<!-- Summary Cards -->
 <div class="row mb-4">
-  <div class="col-md-3 mb-3">
-    <div class="card shadow-sm border-0" style="border-left: 4px solid #6366f1 !important;">
+  <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12 mb-3">
+    <div class="card border-0 shadow-sm h-100">
       <div class="card-body">
-        <h6 class="card-title mb-2" style="color:#2d3748;font-weight:600;">Invoices</h6>
-        <div style="color:#1a202c;font-weight:800;font-size:1.6rem;"><%= number_with_delimiter(@stats[:count]) %></div>
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+              <i class="bi bi-receipt text-primary fs-4"></i>
+            </div>
+          </div>
+          <div class="flex-grow-1 ms-3">
+            <div class="text-muted small">Total Invoices</div>
+            <div class="fs-4 fw-bold text-dark"><%= number_with_delimiter(@stats[:total_invoices]) %></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-md-3 mb-3">
-    <div class="card shadow-sm border-0" style="border-left: 4px solid #0ea5e9 !important;">
+
+  <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12 mb-3">
+    <div class="card border-0 shadow-sm h-100">
       <div class="card-body">
-        <h6 class="card-title mb-2" style="color:#2d3748;font-weight:600;">Total Value</h6>
-        <div style="color:#1a202c;font-weight:800;font-size:1.6rem;">₹<%= number_with_delimiter(@stats[:total].to_f.round(0)) %></div>
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-success bg-opacity-10 rounded-circle p-3">
+              <i class="bi bi-currency-rupee text-success fs-4"></i>
+            </div>
+          </div>
+          <div class="flex-grow-1 ms-3">
+            <div class="text-muted small">Total Amount</div>
+            <div class="fs-4 fw-bold text-dark">₹<%= number_with_delimiter(@stats[:total_amount].to_i) %></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-md-3 mb-3">
-    <div class="card shadow-sm border-0" style="border-left: 4px solid #10b981 !important;">
+
+  <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12 mb-3">
+    <div class="card border-0 shadow-sm h-100">
       <div class="card-body">
-        <h6 class="card-title mb-2" style="color:#2d3748;font-weight:600;">Paid</h6>
-        <div style="color:#1a202c;font-weight:800;font-size:1.6rem;">₹<%= number_with_delimiter(@stats[:paid].to_f.round(0)) %></div>
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-success bg-opacity-10 rounded-circle p-3">
+              <i class="bi bi-check-circle text-success fs-4"></i>
+            </div>
+          </div>
+          <div class="flex-grow-1 ms-3">
+            <div class="text-muted small">Paid Amount</div>
+            <div class="fs-4 fw-bold text-success">₹<%= number_with_delimiter(@stats[:paid_amount].to_i) %></div>
+            <div class="small text-muted"><%= @stats[:paid_count] %> invoices</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-md-3 mb-3">
-    <div class="card shadow-sm border-0" style="border-left: 4px solid #ef4444 !important;">
+
+  <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12 mb-3">
+    <div class="card border-0 shadow-sm h-100">
       <div class="card-body">
-        <h6 class="card-title mb-2" style="color:#2d3748;font-weight:600;">Outstanding</h6>
-        <div style="color:#1a202c;font-weight:800;font-size:1.6rem;">₹<%= number_with_delimiter(@stats[:outstanding].to_f.round(0)) %></div>
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+              <i class="bi bi-clock text-warning fs-4"></i>
+            </div>
+          </div>
+          <div class="flex-grow-1 ms-3">
+            <div class="text-muted small">Pending Amount</div>
+            <div class="fs-4 fw-bold text-warning">₹<%= number_with_delimiter(@stats[:pending_amount].to_i) %></div>
+            <div class="small text-muted"><%= @stats[:pending_count] %> invoices</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Search and Filters -->
 <div class="card border-0 shadow-sm mb-4">
-  <div class="card-body py-3">
-    <%= form_tag store_admin_invoices_path, method: :get, local: true, class: "row g-3 align-items-end" do %>
-      <div class="col-md-3">
-        <label class="form-label small">Search</label>
-        <%= text_field_tag :search, params[:search], class: "form-control form-control-sm", placeholder: "Invoice # or customer" %>
+  <div class="card-body">
+    <%= form_with url: store_admin_invoices_path, method: :get, local: true, class: "search-form" do |f| %>
+      <!-- First Row: Main Search and Status -->
+      <div class="row g-3 align-items-end mb-3">
+        <div class="col-lg-6 col-md-8">
+          <%= f.text_field :search, value: params[:search], placeholder: "Search invoices, customers...",
+                          class: "form-control", id: "searchInput" %>
+          <small class="text-muted d-none" id="searchHint">Please type at least 2 characters to search.</small>
+        </div>
+        <div class="col-lg-3 col-md-4">
+          <%= f.select :status, options_for_select([
+                ['All Status', 'all'],
+                ['Paid', 'fully_paid'],
+                ['Unpaid', 'unpaid'],
+                ['Partially Paid', 'partially_paid']
+              ], params[:status] || 'all'), {}, { class: "form-select" } %>
+        </div>
+        <div class="col-lg-3 col-md-12">
+          <div class="d-flex gap-2">
+            <%= f.submit "Search", class: "btn btn-primary" %>
+            <%= link_to "Reset", store_admin_invoices_path, class: "btn btn-outline-secondary" %>
+          </div>
+        </div>
       </div>
-      <div class="col-md-2">
-        <label class="form-label small">Payment</label>
-        <%= select_tag :payment_status, options_for_select([['All', ''], ['Unpaid', 'unpaid'], ['Partially Paid', 'partially_paid'], ['Fully Paid', 'fully_paid']], params[:payment_status]), class: "form-select form-select-sm" %>
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small">From</label>
-        <%= date_field_tag :date_from, params[:date_from], class: "form-control form-control-sm" %>
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small">To</label>
-        <%= date_field_tag :date_to, params[:date_to], class: "form-control form-control-sm" %>
-      </div>
-      <div class="col-md-3">
-        <%= submit_tag "Filter", class: "btn btn-primary btn-sm" %>
-        <%= link_to "Clear", store_admin_invoices_path, class: "btn btn-outline-secondary btn-sm" %>
+
+      <!-- Second Row: Additional Filters -->
+      <div class="row g-3 align-items-end">
+        <div class="col-lg-3 col-md-6">
+          <div class="input-group">
+            <span class="input-group-text bg-primary text-white">
+              <i class="bi bi-receipt"></i>
+            </span>
+            <input type="text" class="form-control" value="Regular Invoices Only" readonly>
+            <input type="hidden" name="type" value="regular">
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <%= f.select :delivery_person_id,
+                options_for_select([['All Delivery Persons', 'all']] +
+                                 @delivery_persons.map { |dp| [dp.display_name, dp.id] },
+                                 params[:delivery_person_id] || 'all'),
+                {}, { class: "form-select" } %>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <%= f.date_field :date_from, value: params[:date_from],
+                          class: "form-control", placeholder: "From Date" %>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <%= f.date_field :date_to, value: params[:date_to],
+                          class: "form-control", placeholder: "To Date" %>
+        </div>
       </div>
     <% end %>
   </div>
 </div>
 
+<!-- Invoices Table -->
 <div class="card border-0 shadow-sm">
-  <div class="card-header bg-white border-0">
-    <h6 class="mb-0"><i class="bi bi-receipt me-2"></i>Invoice List</h6>
+  <div class="card-header bg-white border-0 py-3">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h6 class="mb-0 text-dark">Invoice List</h6>
+        <small class="text-muted">
+          <% if params[:search].present? || params[:status].present? || params[:date_from].present? || params[:date_to].present? %>
+            Showing filtered results
+          <% else %>
+            Showing latest <%= @invoices.count %> invoices
+          <% end %>
+        </small>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <!-- Bulk Actions -->
+        <div id="bulkActions" class="me-3 d-none gap-2 align-items-center" style="display: none;">
+          <button id="bulkMarkPaidBtn" class="btn btn-success btn-sm" onclick="markSelectedAsPaid()">
+            <i class="bi bi-check-circle me-1"></i>
+            Mark as Paid (<span id="selectedCount">0</span>)
+          </button>
+          <button id="bulkDeleteInvoiceBtn" class="btn btn-danger btn-sm" onclick="deleteSelectedInvoices()">
+            <i class="bi bi-trash me-1"></i>
+            Delete Selected
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="clearSelection()">
+            <i class="bi bi-x me-1"></i>
+            Clear
+          </button>
+        </div>
+        <small class="text-muted">
+          Total: <%= number_with_delimiter(@stats[:total_invoices]) %> invoices
+        </small>
+      </div>
+    </div>
   </div>
   <div class="card-body p-0">
     <% if @invoices.any? %>
       <div class="table-responsive">
-        <table class="table table-hover mb-0">
+        <table class="table table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th>Invoice #</th>
-              <th>Booking</th>
-              <th>Customer</th>
-              <th>Date</th>
-              <th>Total</th>
-              <th>Payment</th>
-              <th>Actions</th>
+              <th class="border-0 fw-semibold" style="width: 50px;">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                  <label class="form-check-label" for="selectAll"></label>
+                </div>
+              </th>
+              <th class="border-0 fw-semibold">Invoice #</th>
+              <th class="border-0 fw-semibold">Customer</th>
+              <th class="border-0 fw-semibold">Amount</th>
+              <th class="border-0 fw-semibold">Payment Status</th>
+              <th class="border-0 fw-semibold">Date</th>
+              <th class="border-0 fw-semibold">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <% @invoices.each do |invoice| %>
+            <% @invoices.each do |invoice_data| %>
+              <%
+                # Handle both hash data (combined) and ActiveRecord objects (legacy)
+                if invoice_data.is_a?(Hash)
+                  invoice_id = invoice_data[:id]
+                  invoice_number = invoice_data[:invoice_number]
+                  customer_name = invoice_data[:customer_name]
+                  customer_mobile = invoice_data[:customer_mobile]
+                  total_amount = invoice_data[:total_amount]
+                  paid_amount = invoice_data[:paid_amount]
+                  payment_status = invoice_data[:payment_status]
+                  invoice_date = invoice_data[:invoice_date]
+                  created_at = invoice_data[:created_at]
+                  invoice_type = invoice_data[:type]
+                  booking_number = invoice_data[:booking_number]
+                  model_object = invoice_data[:model_object]
+                else
+                  # Legacy ActiveRecord object
+                  invoice_id = invoice_data.id
+                  invoice_number = invoice_data.invoice_number
+                  customer_name = invoice_data.customer&.display_name || 'Walk-in Customer'
+                  customer_mobile = invoice_data.customer&.mobile
+                  total_amount = invoice_data.total_amount
+                  paid_amount = invoice_data.paid_amount || 0
+                  payment_status = invoice_data.payment_status
+                  invoice_date = invoice_data.invoice_date
+                  created_at = invoice_data.created_at
+                  invoice_type = 'regular'
+                  booking_number = nil
+                  model_object = invoice_data
+                end
+              %>
               <tr>
-                <td><strong><%= invoice.invoice_number %></strong></td>
-                <td><small class="text-muted"><%= @booking_numbers[invoice.invoice_number] || "—" %></small></td>
-                <td><%= invoice.customer_display_name %></td>
-                <td><small><%= invoice.invoice_date&.strftime('%d %b %Y') %></small></td>
-                <td>₹<%= number_with_delimiter(invoice.total_amount.to_f.round(2)) %></td>
                 <td>
-                  <% badge = { 'fully_paid' => 'bg-success', 'partially_paid' => 'bg-warning text-dark', 'unpaid' => 'bg-danger' }[invoice.payment_status] || 'bg-secondary' %>
-                  <span class="badge <%= badge %>"><%= invoice.payment_status&.humanize %></span>
+                  <div class="form-check">
+                    <input class="form-check-input invoice-checkbox" type="checkbox"
+                           value="<%= invoice_id %>"
+                           id="invoice_<%= invoice_id %>"
+                           onchange="updateBulkActions()"
+                           data-invoice-id="<%= invoice_id %>"
+                           data-invoice-type="<%= invoice_type %>"
+                           data-payment-status="<%= payment_status %>">
+                    <label class="form-check-label" for="invoice_<%= invoice_id %>"></label>
+                  </div>
+                </td>
+                <td class="fw-medium text-primary">
+                  <%= link_to invoice_number, store_admin_invoice_path(model_object),
+                      class: "text-decoration-none fw-medium" %>
+                  <% if invoice_type == 'booking' %>
+                    <span class="badge bg-info bg-opacity-10 text-info border border-info ms-1" style="font-size: 0.65rem;">
+                      <i class="bi bi-bookmark me-1"></i>Booking
+                    </span>
+                  <% end %>
                 </td>
                 <td>
-                  <div class="btn-group" role="group">
-                    <%= link_to store_admin_invoice_path(invoice), class: "btn btn-sm btn-outline-primary" do %>
+                  <div class="d-flex flex-column">
+                    <span class="fw-medium"><%= customer_name || 'N/A' %></span>
+                    <% if customer_mobile.present? %>
+                      <small class="text-muted"><%= customer_mobile %></small>
+                    <% end %>
+                    <% if booking_number.present? %>
+                      <small class="text-muted">Booking: <%= booking_number %></small>
+                    <% end %>
+                  </div>
+                </td>
+                <td class="fw-medium">₹<%= number_with_delimiter((total_amount || 0).to_i) %></td>
+                <td>
+                  <% case payment_status.to_s %>
+                  <% when 'fully_paid', 'paid' %>
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success">
+                      <i class="bi bi-check-circle me-1"></i>
+                      Paid
+                    </span>
+                  <% when 'partially_paid' %>
+                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning">
+                      <i class="bi bi-clock me-1"></i>
+                      Partial
+                    </span>
+                  <% else %>
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary">
+                      <i class="bi bi-x-circle me-1"></i>
+                      Unpaid
+                    </span>
+                  <% end %>
+                </td>
+                <td class="text-muted">
+                  <div class="d-flex flex-column">
+                    <span><%= invoice_date&.strftime("%d %b %Y") if invoice_date %></span>
+                    <small class="text-muted"><%= time_ago_in_words(created_at) + ' ago' if created_at %></small>
+                  </div>
+                </td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <!-- Invoice Actions (same for both regular and booking invoices) -->
+                    <%= link_to store_admin_invoice_path(model_object), class: "btn btn-sm btn-outline-primary",
+                               title: "View Invoice", data: { bs_toggle: "tooltip" } do %>
                       <i class="bi bi-eye"></i>
                     <% end %>
-                    <%= link_to edit_store_admin_invoice_path(invoice), class: "btn btn-sm btn-outline-secondary" do %>
-                      <i class="bi bi-pencil"></i>
+                    <%= link_to edit_store_admin_invoice_path(model_object), class: "btn btn-sm btn-outline-warning",
+                               title: "Edit Invoice", data: { bs_toggle: "tooltip" } do %>
+                      <i class="bi bi-pencil-square"></i>
                     <% end %>
-                    <%= link_to download_pdf_store_admin_invoice_path(invoice, format: :pdf), class: "btn btn-sm btn-outline-secondary", title: "Download PDF" do %>
-                      <i class="bi bi-file-earmark-pdf"></i>
+                    <% unless payment_status == 'fully_paid' %>
+                      <button type="button" class="btn btn-sm btn-outline-warning"
+                             onclick="openPartialPaymentModal(<%= invoice_id %>, '<%= invoice_number %>', <%= total_amount %>, '<%= customer_name %>', <%= paid_amount || 0 %>)"
+                             title="Partial Payment"
+                             data-bs-toggle="tooltip">
+                        <i class="bi bi-cash"></i>
+                      </button>
+                      <%= button_to mark_as_paid_store_admin_invoice_path(model_object),
+                                    method: :patch,
+                                    class: "btn btn-sm btn-outline-success",
+                                    title: "Mark as Paid",
+                                    form: { style: "display: inline;" },
+                                    data: {
+                                      bs_toggle: "tooltip",
+                                      confirm: "Mark this invoice as paid?"
+                                    } do %>
+                        <i class="bi bi-check-circle"></i>
+                      <% end %>
                     <% end %>
-                    <% unless invoice.payment_status == 'fully_paid' %>
-                      <%= button_to mark_as_paid_store_admin_invoice_path(invoice), method: :patch,
-                            class: "btn btn-sm btn-outline-success", title: "Mark as Paid",
-                            form: { class: "d-inline" },
-                            data: { turbo_confirm: "Mark #{invoice.invoice_number} as fully paid?" } do %>
-                        <i class="bi bi-check2-circle"></i>
+                    <% if respond_to?(:download_pdf_store_admin_invoice_path) %>
+                      <%= link_to download_pdf_store_admin_invoice_path(model_object, format: :pdf),
+                                 class: "btn btn-sm btn-outline-info", target: "_blank",
+                                 title: "Download PDF", data: { bs_toggle: "tooltip" } do %>
+                        <i class="bi bi-download"></i>
+                      <% end %>
+                    <% end %>
+                    <% if customer_mobile.present? %>
+                      <button type="button" class="btn btn-sm btn-outline-success"
+                             onclick="shareViaWhatsApp('<%= invoice_id %>', '<%= customer_mobile %>', '<%= invoice_number %>', <%= total_amount %>)"
+                             title="Share via WhatsApp"
+                             data-bs-toggle="tooltip">
+                        <i class="bi bi-whatsapp"></i>
+                      </button>
+                    <% end %>
+                    <% if invoice_type == 'regular' %>
+                      <%= button_to store_admin_invoice_path(model_object),
+                                    method: :delete,
+                                  class: "btn btn-sm btn-outline-danger",
+                                  title: "Delete Invoice",
+                                  form: { style: "display: inline;" },
+                                  data: {
+                                    bs_toggle: "tooltip",
+                                    confirm: "Are you sure you want to delete this invoice? This action cannot be undone."
+                                  } do %>
+                        <i class="bi bi-trash"></i>
                       <% end %>
                     <% end %>
                   </div>
@@ -126,15 +359,1600 @@
           </tbody>
         </table>
       </div>
-      <div class="p-3">
-        <%= paginate @invoices if @invoices.respond_to?(:current_page) %>
+
+      <!-- Pagination Info -->
+      <div class="card-footer bg-light border-0">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="text-muted small">
+            Showing <%= @invoices.count %> of <%= number_with_delimiter(@stats[:total_invoices]) %> invoices
+          </div>
+          <div>
+            <% if @invoices.count >= 50 %>
+              <%= link_to "Load More", store_admin_invoices_path(params.permit!.merge(limit: 100)),
+                         class: "btn btn-sm btn-outline-primary" %>
+            <% end %>
+          </div>
+        </div>
       </div>
     <% else %>
       <div class="text-center py-5">
-        <i class="bi bi-receipt fs-1 text-muted mb-3"></i>
+        <div class="mb-3">
+          <i class="bi bi-receipt-cutoff display-1 text-muted"></i>
+        </div>
         <h5 class="text-muted">No Invoices Found</h5>
-        <p class="text-muted small">Invoices appear here once bookings at this store are invoiced.</p>
+        <p class="text-muted mb-3">
+          <% if params[:search].present? || params[:status].present? %>
+            No invoices match your search criteria.
+          <% else %>
+            Generate invoices for completed deliveries to get started.
+          <% end %>
+        </p>
+        <% if params[:search].present? || params[:status].present? %>
+          <%= link_to "Clear Filters", store_admin_invoices_path, class: "btn btn-outline-primary" %>
+        <% end %>
       </div>
     <% end %>
   </div>
 </div>
+
+<!-- Partial Payment Modal -->
+<div class="modal-overlay" id="partialPaymentModal" style="display: none;">
+  <div class="simple-modal">
+    <div class="modal-header bg-warning text-dark">
+      <h5 class="modal-title">
+        <i class="bi bi-cash"></i> Partial Payment
+      </h5>
+      <button type="button" class="btn-close" onclick="closePartialPaymentModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="partialPaymentForm">
+        <input type="hidden" id="partialPaymentInvoiceId" name="invoice_id">
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Invoice Details</label>
+          <div class="card bg-light border-0">
+            <div class="card-body">
+              <div class="row">
+                <div class="col-sm-6">
+                  <small class="text-muted">Invoice Number</small>
+                  <div class="fw-medium" id="partialPaymentInvoiceNumber"></div>
+                </div>
+                <div class="col-sm-6">
+                  <small class="text-muted">Customer</small>
+                  <div class="fw-medium" id="partialPaymentCustomerName"></div>
+                </div>
+              </div>
+              <div class="row mt-2">
+                <div class="col-sm-6">
+                  <small class="text-muted">Total Amount</small>
+                  <div class="fw-bold text-primary fs-5">₹<span id="partialPaymentTotalAmount"></span></div>
+                </div>
+                <div class="col-sm-6">
+                  <small class="text-muted">Remaining Amount</small>
+                  <div class="fw-bold text-warning fs-5">₹<span id="partialPaymentRemainingAmount"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="partialPaymentAmount" class="form-label">
+            Payment Amount <span class="text-danger">*</span>
+          </label>
+          <div class="input-group">
+            <span class="input-group-text">₹</span>
+            <input type="number"
+                   class="form-control form-control-lg"
+                   id="partialPaymentAmount"
+                   name="amount"
+                   step="0.01"
+                   min="0.01"
+                   required
+                   placeholder="Enter payment amount">
+          </div>
+          <div class="form-text">
+            Enter the amount being paid (must be less than remaining amount for partial payment)
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label for="partialPaymentNotes" class="form-label">Payment Notes</label>
+          <textarea class="form-control"
+                    id="partialPaymentNotes"
+                    name="notes"
+                    rows="3"
+                    placeholder="Optional notes about this payment..."></textarea>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-secondary" onclick="closePartialPaymentModal()">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-warning" id="processPartialPaymentBtn">
+            <i class="bi bi-cash me-1"></i>
+            Process Payment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Generate Invoice Modal -->
+<div class="modal-overlay" id="bulkInvoiceModal" style="display: none;">
+  <div class="simple-modal">
+    <div class="modal-header bg-primary text-white">
+      <h5 class="modal-title" id="bulkInvoiceModalLabel">
+        <i class="bi bi-receipt"></i> Generate Bulk Invoices
+      </h5>
+      <button type="button" class="btn-close btn-close-white" onclick="closeBulkInvoiceModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body pt-4">
+      <div id="bulkInvoiceLoading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3 text-muted">Loading invoice form...</p>
+      </div>
+      <div id="bulkInvoiceContent" style="display: none;">
+        <form id="generateInvoiceForm">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="invoice_month" class="form-label">Month <span class="text-danger">*</span></label>
+                <select class="form-select" id="invoice_month" name="month" required>
+                  <option value="">Select Month</option>
+                  <option value="1">January</option>
+                  <option value="2">February</option>
+                  <option value="3">March</option>
+                  <option value="4">April</option>
+                  <option value="5">May</option>
+                  <option value="6">June</option>
+                  <option value="7">July</option>
+                  <option value="8">August</option>
+                  <option value="9">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="invoice_year" class="form-label">Year <span class="text-danger">*</span></label>
+                <select class="form-select" id="invoice_year" name="year" required>
+                  <option value="">Select Year</option>
+                  <% (2024..2030).each do |year| %>
+                    <option value="<%= year %>" <%= 'selected' if year == Date.current.year %>><%= year %></option>
+                  <% end %>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Customer Selection <span class="text-danger">*</span></label>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="customer_selection" id="all_customers" value="all" checked>
+              <label class="form-check-label" for="all_customers">
+                All Customers
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="customer_selection" id="specific_customers" value="specific">
+              <label class="form-check-label" for="specific_customers">
+                Specific Customers
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="customer_selection" id="delivery_person_customers" value="delivery_person">
+              <label class="form-check-label" for="delivery_person_customers">
+                Customers by Delivery Person
+              </label>
+            </div>
+          </div>
+
+          <!-- Delivery Person Selection -->
+          <div id="delivery_person_section" class="mb-4" style="display: none;">
+            <label class="form-label">Select Delivery Person</label>
+            <select class="form-select" id="delivery_person_select" name="delivery_person_id">
+              <option value="">Choose Delivery Person...</option>
+              <!-- Options will be populated by JavaScript -->
+            </select>
+            <div class="form-text">
+              <i class="bi bi-info-circle me-1"></i>
+              Select a delivery person to generate invoices for their customers only.
+            </div>
+          </div>
+
+          <div id="customer_dropdown_section" class="mb-4" style="display: none;">
+            <label class="form-label">Select Customers</label>
+            <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto; background-color: #f8f9fa;">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                  <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="selectAllCustomers()">
+                    <i class="bi bi-check-all me-1"></i>Select All
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllCustomers()">
+                    <i class="bi bi-x-circle me-1"></i>Deselect All
+                  </button>
+                </div>
+                <div>
+                  <input type="text" class="form-control form-control-sm" placeholder="Search customers..."
+                         id="customerSearch" onkeyup="filterCustomers()" style="width: 200px;">
+                </div>
+              </div>
+              <div id="customers_checkbox_list">
+                <!-- Customer checkboxes will be loaded dynamically -->
+                <div class="text-muted text-center py-3">
+                  <i class="bi bi-person-lines-fill fs-3 d-block mb-2"></i>
+                  Loading customers...
+                </div>
+              </div>
+            </div>
+            <div class="form-text mt-2">
+              <i class="bi bi-info-circle me-1"></i>
+              Select customers using checkboxes. Use search to quickly find specific customers.
+              <span id="selected_count" class="badge bg-primary ms-2">0 selected</span>
+            </div>
+            <!-- Hidden inputs for form submission -->
+            <div id="selected_customer_inputs"></div>
+          </div>
+
+          <div class="text-end">
+            <button type="button" class="btn btn-secondary me-2" onclick="closeBulkInvoiceModal()">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" id="generateInvoiceBtn">
+              <i class="bi bi-receipt me-1"></i>
+              Generate Invoice
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal CSS -->
+<style>
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.simple-modal {
+  background: white;
+  border-radius: 15px;
+  max-width: 90%;
+  width: 900px;
+  margin: 50px auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  position: relative;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+.simple-modal .modal-header {
+  padding: 20px 30px;
+  border-radius: 15px 15px 0 0;
+  display: flex;
+  justify-content: between;
+  align-items: center;
+}
+
+.simple-modal .modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.simple-modal .btn-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+  margin-left: auto;
+}
+
+.simple-modal .btn-close:hover {
+  opacity: 1;
+}
+
+.simple-modal .modal-body {
+  padding: 30px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+/* Close modal when clicking outside */
+.modal-overlay:target {
+  display: block;
+}
+
+/* Scrollbar styling for modal content */
+.simple-modal .modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.simple-modal .modal-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.simple-modal .modal-body::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.simple-modal .modal-body::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+</style>
+
+<script>
+// Update the button to use onclick instead of Bootstrap modal
+document.addEventListener('DOMContentLoaded', function() {
+  const generateBtn = document.querySelector('[data-bs-target="#bulkInvoiceModal"]');
+  if (generateBtn) {
+    generateBtn.removeAttribute('data-bs-toggle');
+    generateBtn.removeAttribute('data-bs-target');
+    generateBtn.setAttribute('onclick', 'openBulkInvoiceModal()');
+  }
+});
+
+// Open bulk invoice modal
+function openBulkInvoiceModal() {
+  console.log('Opening bulk invoice modal');
+
+  // Load form content
+  loadBulkInvoiceForm();
+
+  // Show modal
+  const modal = document.getElementById('bulkInvoiceModal');
+  if (modal) {
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+  }
+}
+
+// Close bulk invoice modal
+function closeBulkInvoiceModal() {
+  const modal = document.getElementById('bulkInvoiceModal');
+  if (modal) {
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto'; // Restore background scrolling
+  }
+}
+
+// Load bulk invoice form
+function loadBulkInvoiceForm() {
+  // Show loading, hide content
+  const modalLoading = document.getElementById('bulkInvoiceLoading');
+  const modalContent = document.getElementById('bulkInvoiceContent');
+
+  if (modalLoading) modalLoading.style.display = 'block';
+  if (modalContent) modalContent.style.display = 'none';
+
+  // Load customers and show form content directly
+  loadCustomersAndShowForm();
+}
+
+function loadCustomersAndShowForm() {
+  // Load both customers and delivery persons
+  Promise.all([
+    fetch('/store_admin/invoices/customers'),
+    fetch('/store_admin/invoices/delivery_persons')
+  ])
+    .then(responses => {
+      // Check if both requests were successful
+      responses.forEach(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+      });
+      return Promise.all(responses.map(response => response.json()));
+    })
+    .then(([customers, deliveryPersons]) => {
+      // Populate customer checkboxes (rendering is capped — see renderCustomerCheckboxList —
+      // building hundreds of DOM nodes up front is what made this modal feel frozen/unclickable)
+      window.selectedCustomerIds = window.selectedCustomerIds || new Set();
+      window.allCustomers = customers;
+      renderCustomerCheckboxList(customers);
+
+      // Populate delivery persons dropdown
+      const deliveryPersonSelect = document.getElementById('delivery_person_select');
+      if (deliveryPersonSelect) {
+        // Clear existing options except the first one
+        deliveryPersonSelect.innerHTML = '<option value="">Choose Delivery Person...</option>';
+
+        deliveryPersons.forEach(dp => {
+          const option = document.createElement('option');
+          option.value = dp.id;
+          option.textContent = dp.display_name;
+          deliveryPersonSelect.appendChild(option);
+        });
+      }
+
+      // Store data globally for search functionality
+      window.allDeliveryPersons = deliveryPersons;
+
+      // Show form content and hide loading
+      const modalLoading = document.getElementById('bulkInvoiceLoading');
+      const modalContent = document.getElementById('bulkInvoiceContent');
+
+      if (modalContent) modalContent.style.display = 'block';
+      if (modalLoading) modalLoading.style.display = 'none';
+
+      // Initialize form event listeners
+      initializeFormListeners();
+    })
+    .catch(error => {
+      console.error('Error loading customers:', error);
+      const modalContent = document.getElementById('bulkInvoiceContent');
+      const modalLoading = document.getElementById('bulkInvoiceLoading');
+
+      if (modalContent) {
+        modalContent.innerHTML = '<div class="alert alert-danger">Error loading form. Please try again.</div>';
+        modalContent.style.display = 'block';
+      }
+      if (modalLoading) modalLoading.style.display = 'none';
+    });
+}
+
+function initializeFormListeners() {
+  // Handle customer selection radio buttons
+  const customerRadios = document.querySelectorAll('input[name="customer_selection"]');
+  const customerDropdownSection = document.getElementById('customer_dropdown_section');
+  const deliveryPersonSection = document.getElementById('delivery_person_section');
+
+  customerRadios.forEach(radio => {
+    radio.addEventListener('change', function() {
+      if (customerDropdownSection) {
+        customerDropdownSection.style.display = this.value === 'specific' ? 'block' : 'none';
+      }
+      if (deliveryPersonSection) {
+        deliveryPersonSection.style.display = this.value === 'delivery_person' ? 'block' : 'none';
+      }
+
+      // Clear delivery person selection when switching away from delivery person mode
+      if (this.value !== 'delivery_person') {
+        const deliveryPersonSelect = document.getElementById('delivery_person_select');
+        if (deliveryPersonSelect) {
+          deliveryPersonSelect.value = '';
+        }
+      }
+    });
+  });
+
+  // Handle delivery person selection
+  const deliveryPersonSelect = document.getElementById('delivery_person_select');
+  if (deliveryPersonSelect) {
+    deliveryPersonSelect.addEventListener('change', function() {
+      const deliveryPersonId = this.value;
+      const deliveryPersonCustomersRadio = document.getElementById('delivery_person_customers');
+
+      if (deliveryPersonId && deliveryPersonCustomersRadio && deliveryPersonCustomersRadio.checked) {
+        loadCustomersForDeliveryPerson(deliveryPersonId);
+      }
+    });
+  }
+
+  // Handle form submission
+  const form = document.getElementById('generateInvoiceForm');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      generateInvoices();
+    });
+  }
+}
+
+// Customer checkbox functions
+//
+// Rendering all customers (can be 500+) as DOM checkboxes up front is what made
+// this modal feel frozen/unclickable. Only a capped number is ever rendered;
+// selection state lives in window.selectedCustomerIds (a Set) so it survives
+// re-renders when searching, rather than being read off the DOM each time.
+const CUSTOMER_RENDER_CAP = 100;
+
+function customerMatchesSearch(customer, searchTerm) {
+  if (!searchTerm) return true;
+  const text = `${customer.display_name || ''} ${customer.email || ''} ${customer.mobile || ''}`.toLowerCase();
+  return text.includes(searchTerm);
+}
+
+function renderCustomerCheckboxList(customers) {
+  const container = document.getElementById('customers_checkbox_list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (customers.length === 0) {
+    container.innerHTML = `
+      <div class="text-muted text-center py-3">
+        <i class="bi bi-person-x fs-3 d-block mb-2"></i>
+        No customers found
+      </div>
+    `;
+    return;
+  }
+
+  const shown = customers.slice(0, CUSTOMER_RENDER_CAP);
+  shown.forEach(customer => {
+    const checkboxDiv = document.createElement('div');
+    checkboxDiv.className = 'form-check customer-checkbox-item';
+    const checkedAttr = window.selectedCustomerIds.has(String(customer.id)) ? 'checked' : '';
+    checkboxDiv.innerHTML = `
+      <input class="form-check-input customer-checkbox" type="checkbox"
+             value="${customer.id}" id="customer_${customer.id}" ${checkedAttr}
+             onchange="toggleCustomerSelection(this)">
+      <label class="form-check-label" for="customer_${customer.id}">
+        <strong>${customer.display_name}</strong>
+        ${customer.email ? `<br><small class="text-muted">${customer.email}</small>` : ''}
+        ${customer.mobile ? `<br><small class="text-muted">${customer.mobile}</small>` : ''}
+      </label>
+    `;
+    container.appendChild(checkboxDiv);
+  });
+
+  if (customers.length > CUSTOMER_RENDER_CAP) {
+    const notice = document.createElement('div');
+    notice.className = 'text-muted text-center py-2 small border-top mt-2';
+    notice.textContent = `Showing ${CUSTOMER_RENDER_CAP} of ${customers.length} matching customers — refine your search to see more.`;
+    container.appendChild(notice);
+  }
+}
+
+function toggleCustomerSelection(checkboxEl) {
+  const id = String(checkboxEl.value);
+  if (checkboxEl.checked) {
+    window.selectedCustomerIds.add(id);
+  } else {
+    window.selectedCustomerIds.delete(id);
+  }
+  updateSelectedCustomers();
+}
+
+function selectAllCustomers() {
+  const searchTerm = (document.getElementById('customerSearch')?.value || '').toLowerCase();
+  const matching = (window.allCustomers || []).filter(c => customerMatchesSearch(c, searchTerm));
+
+  matching.forEach(c => window.selectedCustomerIds.add(String(c.id)));
+  renderCustomerCheckboxList(matching);
+  updateSelectedCustomers();
+}
+
+function deselectAllCustomers() {
+  window.selectedCustomerIds.clear();
+  filterCustomers();
+  updateSelectedCustomers();
+}
+
+function filterCustomers() {
+  const searchTerm = (document.getElementById('customerSearch')?.value || '').toLowerCase();
+  const matching = (window.allCustomers || []).filter(c => customerMatchesSearch(c, searchTerm));
+  renderCustomerCheckboxList(matching);
+}
+
+function updateSelectedCustomers() {
+  const selectedCount = window.selectedCustomerIds.size;
+
+  // Update the count badge
+  const countBadge = document.getElementById('selected_count');
+  if (countBadge) {
+    countBadge.textContent = `${selectedCount} selected`;
+    countBadge.className = selectedCount > 0 ? 'badge bg-primary ms-2' : 'badge bg-secondary ms-2';
+  }
+
+  // Update hidden inputs for form submission
+  const selectedInputsContainer = document.getElementById('selected_customer_inputs');
+  if (selectedInputsContainer) {
+    selectedInputsContainer.innerHTML = '';
+
+    window.selectedCustomerIds.forEach(id => {
+      const hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.name = 'customer_ids[]';
+      hiddenInput.value = id;
+      selectedInputsContainer.appendChild(hiddenInput);
+    });
+  }
+}
+
+function loadCustomersForDeliveryPerson(deliveryPersonId) {
+  const customerCheckboxList = document.getElementById('customers_checkbox_list');
+
+  if (!customerCheckboxList) return;
+
+  // Show loading
+  customerCheckboxList.innerHTML = `
+    <div class="text-center py-3">
+      <div class="spinner-border text-primary spinner-border-sm me-2" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      Loading customers for selected delivery person...
+    </div>
+  `;
+
+  // Fetch customers for this delivery person
+  fetch(`/store_admin/invoices/customers_by_delivery_person?delivery_person_id=${deliveryPersonId}`)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(customers => {
+      window.allCustomers = customers;
+      window.selectedCustomerIds = new Set(); // reset selection when the delivery person changes
+      const searchInput = document.getElementById('customerSearch');
+      if (searchInput) searchInput.value = '';
+
+      renderCustomerCheckboxList(customers);
+
+      // Show the customer dropdown section when customers are loaded
+      const customerDropdownSection = document.getElementById('customer_dropdown_section');
+      if (customerDropdownSection && customers.length > 0) {
+        customerDropdownSection.style.display = 'block';
+      }
+
+      // Update the count
+      updateSelectedCustomers();
+    })
+    .catch(error => {
+      console.error('Error loading customers for delivery person:', error);
+      customerCheckboxList.innerHTML = `
+        <div class="text-danger text-center py-3">
+          <i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>
+          Error loading customers. Please try again.
+        </div>
+      `;
+    });
+}
+
+function generateInvoices() {
+  const form = document.getElementById('generateInvoiceForm');
+  const generateBtn = document.getElementById('generateInvoiceBtn');
+
+  if (!form || !generateBtn) return;
+
+  // Show loading state
+  generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Generating...';
+  generateBtn.disabled = true;
+
+  // Collect form data
+  const formData = new FormData(form);
+  const data = {
+    month: formData.get('month'),
+    year: formData.get('year'),
+    customer_selection: formData.get('customer_selection'),
+    customer_ids: formData.getAll('customer_ids[]'),
+    delivery_person_id: formData.get('delivery_person_id')
+  };
+
+  // Validate form
+  if (!data.month || !data.year) {
+    alert('Please select month and year');
+    resetGenerateButton();
+    return;
+  }
+
+  if (data.customer_selection === 'specific' && data.customer_ids.length === 0) {
+    alert('Please select at least one customer');
+    resetGenerateButton();
+    return;
+  }
+
+  if (data.customer_selection === 'delivery_person') {
+    if (!data.delivery_person_id) {
+      alert('Please select a delivery person');
+      resetGenerateButton();
+      return;
+    }
+    if (data.customer_ids.length === 0) {
+      alert('No customers found for the selected delivery person, or no customers selected');
+      resetGenerateButton();
+      return;
+    }
+  }
+
+  // Send request
+  fetch('/store_admin/invoices/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.success) {
+      alert(`Successfully generated ${result.invoices_created} invoices!`);
+      closeBulkInvoiceModal();
+      location.reload(); // Refresh the page to show new invoices
+    } else {
+      alert('Error generating invoices: ' + (result.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error generating invoices. Please try again.');
+  })
+  .finally(() => {
+    resetGenerateButton();
+  });
+}
+
+function resetGenerateButton() {
+  const generateBtn = document.getElementById('generateInvoiceBtn');
+  if (generateBtn) {
+    generateBtn.innerHTML = '<i class="bi bi-receipt me-1"></i>Generate Invoice';
+    generateBtn.disabled = false;
+  }
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(e) {
+  const modal = document.getElementById('bulkInvoiceModal');
+  if (e.target === modal) {
+    closeBulkInvoiceModal();
+  }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeBulkInvoiceModal();
+    closePartialPaymentModal();
+  }
+});
+
+// Partial Payment Modal Functions
+function openPartialPaymentModal(invoiceId, invoiceNumber, totalAmount, customerName, paidAmount = 0) {
+  // Calculate remaining amount
+  const remainingAmount = totalAmount - paidAmount;
+
+  // Set modal data
+  document.getElementById('partialPaymentInvoiceId').value = invoiceId;
+  document.getElementById('partialPaymentInvoiceNumber').textContent = invoiceNumber;
+  document.getElementById('partialPaymentCustomerName').textContent = customerName;
+  document.getElementById('partialPaymentTotalAmount').textContent = totalAmount.toFixed(2);
+  document.getElementById('partialPaymentRemainingAmount').textContent = remainingAmount.toFixed(2);
+
+  // Reset form
+  document.getElementById('partialPaymentForm').reset();
+  document.getElementById('partialPaymentInvoiceId').value = invoiceId; // Reset clears hidden fields too
+
+  // Set max amount for input (should not exceed remaining amount)
+  const amountInput = document.getElementById('partialPaymentAmount');
+  amountInput.max = remainingAmount;
+
+  // Show modal
+  const modal = document.getElementById('partialPaymentModal');
+  if (modal) {
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  }
+
+  // Focus on amount input
+  setTimeout(() => {
+    amountInput.focus();
+  }, 100);
+}
+
+function closePartialPaymentModal() {
+  const modal = document.getElementById('partialPaymentModal');
+  if (modal) {
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+  }
+}
+
+// Handle partial payment form submission
+document.addEventListener('DOMContentLoaded', function() {
+  const partialPaymentForm = document.getElementById('partialPaymentForm');
+  if (partialPaymentForm) {
+    partialPaymentForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      processPartialPayment();
+    });
+  }
+
+  // Update remaining amount when payment amount changes
+  const amountInput = document.getElementById('partialPaymentAmount');
+  if (amountInput) {
+    amountInput.addEventListener('input', function() {
+      // Get the original remaining amount that was set when modal opened
+      const maxAmount = parseFloat(this.max) || 0;
+      const paymentAmount = parseFloat(this.value) || 0;
+      const newRemainingAmount = maxAmount - paymentAmount;
+
+      document.getElementById('partialPaymentRemainingAmount').textContent = newRemainingAmount.toFixed(2);
+
+      // Update button text based on remaining amount
+      const processBtn = document.getElementById('processPartialPaymentBtn');
+      if (newRemainingAmount <= 0) {
+        processBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Mark as Fully Paid';
+        processBtn.className = 'btn btn-success';
+      } else {
+        processBtn.innerHTML = '<i class="bi bi-cash me-1"></i>Process Partial Payment';
+        processBtn.className = 'btn btn-warning';
+      }
+    });
+  }
+});
+
+function processPartialPayment() {
+  const form = document.getElementById('partialPaymentForm');
+  const processBtn = document.getElementById('processPartialPaymentBtn');
+
+  if (!form || !processBtn) return;
+
+  // Get form data
+  const formData = new FormData(form);
+  const invoiceId = formData.get('invoice_id');
+  const amount = parseFloat(formData.get('amount'));
+  const notes = formData.get('notes');
+  const totalAmount = parseFloat(document.getElementById('partialPaymentTotalAmount').textContent);
+
+  // Validation
+  if (!invoiceId || !amount || amount <= 0) {
+    alert('Please enter a valid payment amount.');
+    return;
+  }
+
+  if (amount > totalAmount) {
+    alert('Payment amount cannot exceed the total invoice amount.');
+    return;
+  }
+
+  // Show loading state
+  const originalBtnContent = processBtn.innerHTML;
+  processBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Processing...';
+  processBtn.disabled = true;
+
+  // Prepare request data
+  const requestData = {
+    invoice_id: invoiceId,
+    amount: amount,
+    notes: notes
+  };
+
+  // Send request
+  fetch('/store_admin/invoices/partial_payment', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify(requestData)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.success) {
+      // Show success message
+      const remainingAmount = totalAmount - amount;
+      const message = remainingAmount <= 0
+        ? 'Invoice marked as fully paid!'
+        : `Partial payment of ₹${amount.toFixed(2)} processed successfully. Remaining: ₹${remainingAmount.toFixed(2)}`;
+
+      alert(message);
+      closePartialPaymentModal();
+      location.reload(); // Refresh to show updated status
+    } else {
+      alert('Error processing payment: ' + (result.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error processing payment. Please try again.');
+  })
+  .finally(() => {
+    // Reset button
+    processBtn.innerHTML = originalBtnContent;
+    processBtn.disabled = false;
+  });
+}
+
+// Enhanced search functionality
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize Bootstrap tooltips for action buttons
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+  const searchForm = document.querySelector('.search-form');
+  const searchInput = document.getElementById('searchInput');
+  let searchTimeout;
+
+  // Add loading state to form submission
+  if (searchForm) {
+    searchForm.addEventListener('submit', function() {
+      this.classList.add('loading');
+    });
+  }
+
+  // Auto-search as you type (debounced) - no need to click the Search button.
+  // Requires at least 2 characters before searching, to avoid overly broad
+  // single-letter matches; shows a hint below the field until then.
+  if (searchInput) {
+    const searchHint = document.getElementById('searchHint');
+    let lastSubmittedValue = searchInput.value;
+    searchInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+
+      const value = this.value.trim();
+      if (searchHint) searchHint.classList.toggle('d-none', value.length !== 1);
+
+      if (value.length === 1) return;
+
+      searchTimeout = setTimeout(() => {
+        if (this.value !== lastSubmittedValue) {
+          lastSubmittedValue = this.value;
+          searchForm.classList.add('loading');
+          searchForm.requestSubmit ? searchForm.requestSubmit() : searchForm.submit();
+        }
+      }, 400);
+    });
+  }
+
+  // Quick status filter
+  const statusSelect = document.querySelector('select[name="status"]');
+  if (statusSelect) {
+    statusSelect.addEventListener('change', function() {
+      searchForm.classList.add('loading');
+      searchForm.submit();
+    });
+  }
+
+  // Quick delivery person filter
+  const deliveryPersonSelect = document.querySelector('select[name="delivery_person_id"]');
+  if (deliveryPersonSelect) {
+    deliveryPersonSelect.addEventListener('change', function() {
+      searchForm.classList.add('loading');
+      searchForm.submit();
+    });
+  }
+
+  // Quick invoice type filter
+  const typeSelect = document.querySelector('select[name="type"]');
+  if (typeSelect) {
+    typeSelect.addEventListener('change', function() {
+      searchForm.classList.add('loading');
+      searchForm.submit();
+    });
+  }
+
+  // Highlight search terms in results
+  function highlightSearchTerms() {
+    const searchTerm = new URLSearchParams(window.location.search).get('search');
+    if (searchTerm && searchTerm.length > 0) {
+      const tableRows = document.querySelectorAll('tbody tr');
+
+      tableRows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        cells.forEach(cell => {
+          if (cell.textContent.toLowerCase().includes(searchTerm.toLowerCase())) {
+            const regex = new RegExp(`(${searchTerm})`, 'gi');
+            cell.innerHTML = cell.innerHTML.replace(regex, '<mark class="bg-warning bg-opacity-25 text-dark">$1</mark>');
+          }
+        });
+      });
+    }
+  }
+
+  // Call highlight function
+  highlightSearchTerms();
+
+  // Add smooth scrolling to results after search
+  if (window.location.search.includes('search=') || window.location.search.includes('status=')) {
+    setTimeout(() => {
+      const resultsTable = document.querySelector('.table-responsive');
+      if (resultsTable) {
+        resultsTable.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  }
+
+  // Export functionality (if needed)
+  function exportToCSV() {
+    const table = document.querySelector('.table');
+    if (!table) return;
+
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+
+    for (let row of rows) {
+      const cols = row.querySelectorAll('td, th');
+      const csvRow = [];
+
+      for (let col of cols) {
+        // Skip action column
+        if (!col.textContent.includes('Actions')) {
+          csvRow.push('"' + col.textContent.trim().replace(/"/g, '""') + '"');
+        }
+      }
+
+      if (csvRow.length > 0) {
+        csv.push(csvRow.join(','));
+      }
+    }
+
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'invoices_' + new Date().toISOString().slice(0, 10) + '.csv';
+    link.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  // Add export button (optional)
+  const headerActions = document.querySelector('.d-flex.gap-2');
+  if (headerActions && document.querySelectorAll('tbody tr').length > 0) {
+    const exportBtn = document.createElement('button');
+    exportBtn.className = 'btn btn-outline-secondary';
+    exportBtn.innerHTML = '<i class="bi bi-download me-1"></i>Export';
+    exportBtn.onclick = exportToCSV;
+    headerActions.appendChild(exportBtn);
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    // Ctrl/Cmd + K to focus search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+      }
+    }
+
+    // Ctrl/Cmd + R to reset filters
+    if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+      e.preventDefault();
+      window.location.href = window.location.pathname;
+    }
+  });
+
+  // Add keyboard shortcut hints to search input
+  if (searchInput) {
+    searchInput.setAttribute('title', 'Tip: Press Ctrl+K to quickly focus search');
+
+    // Restore focus/cursor after an auto-search reload so typing can continue uninterrupted
+    if (new URLSearchParams(window.location.search).get('search')) {
+      searchInput.focus();
+      const val = searchInput.value;
+      searchInput.value = '';
+      searchInput.value = val;
+    }
+  }
+});
+
+// Bulk Actions for Invoice Payment
+function toggleSelectAll() {
+  const selectAllCheckbox = document.getElementById('selectAll');
+  const invoiceCheckboxes = document.querySelectorAll('.invoice-checkbox');
+
+  invoiceCheckboxes.forEach(checkbox => {
+    checkbox.checked = selectAllCheckbox.checked;
+  });
+
+  updateBulkActions();
+}
+
+function updateBulkActions() {
+  const selectedCheckboxes = document.querySelectorAll('.invoice-checkbox:checked');
+  const bulkActions = document.getElementById('bulkActions');
+  const selectedCount = document.getElementById('selectedCount');
+  const selectAllCheckbox = document.getElementById('selectAll');
+  const totalCheckboxes = document.querySelectorAll('.invoice-checkbox');
+
+  // Update count and show/hide bulk actions
+  if (selectedCheckboxes.length > 0) {
+    bulkActions.classList.remove('d-none');
+    bulkActions.classList.add('d-flex');
+    bulkActions.style.removeProperty('display');
+    selectedCount.textContent = selectedCheckboxes.length;
+  } else {
+    bulkActions.classList.add('d-none');
+    bulkActions.classList.remove('d-flex');
+  }
+
+  // "Mark as Paid" only applies to invoices that aren't already fully paid
+  const markPaidBtn = document.getElementById('bulkMarkPaidBtn');
+  if (markPaidBtn) {
+    const anyUnpaid = Array.from(selectedCheckboxes)
+      .some(cb => cb.dataset.paymentStatus !== 'fully_paid');
+    markPaidBtn.style.display = anyUnpaid ? '' : 'none';
+  }
+
+  // Update select all checkbox state
+  if (selectedCheckboxes.length === totalCheckboxes.length && totalCheckboxes.length > 0) {
+    selectAllCheckbox.checked = true;
+    selectAllCheckbox.indeterminate = false;
+  } else if (selectedCheckboxes.length > 0) {
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = true;
+  } else {
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = false;
+  }
+}
+
+function clearSelection() {
+  const checkboxes = document.querySelectorAll('.invoice-checkbox');
+  const selectAllCheckbox = document.getElementById('selectAll');
+
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = false;
+  });
+  selectAllCheckbox.checked = false;
+  selectAllCheckbox.indeterminate = false;
+
+  updateBulkActions();
+}
+
+function markSelectedAsPaid() {
+  const selectedCheckboxes = document.querySelectorAll('.invoice-checkbox:checked');
+  const invoiceIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+  if (invoiceIds.length === 0) {
+    alert('Please select at least one invoice to mark as paid.');
+    return;
+  }
+
+  const confirmMessage = `Are you sure you want to mark ${invoiceIds.length} invoice(s) as paid?`;
+  if (!confirm(confirmMessage)) {
+    return;
+  }
+
+  // Disable the button and show loading
+  const bulkMarkPaidBtn = document.getElementById('bulkMarkPaidBtn');
+  const originalText = bulkMarkPaidBtn.innerHTML;
+  bulkMarkPaidBtn.disabled = true;
+  bulkMarkPaidBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Processing...';
+
+  // Send AJAX request
+  fetch('/store_admin/invoices/bulk_mark_as_paid', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({
+      invoice_ids: invoiceIds
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Show success message
+      const successMessage = `Successfully marked ${data.updated_count} invoice(s) as paid!`;
+
+      // Create a temporary success alert
+      const alert = document.createElement('div');
+      alert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+      alert.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+      alert.innerHTML = `
+        <i class="bi bi-check-circle me-2"></i>${successMessage}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+      document.body.appendChild(alert);
+
+      // Remove alert after 5 seconds
+      setTimeout(() => {
+        if (alert.parentNode) {
+          alert.parentNode.removeChild(alert);
+        }
+      }, 5000);
+
+      // Reload the page to reflect changes
+      setTimeout(() => {
+        location.reload();
+      }, 1500);
+    } else {
+      alert('Error: ' + (data.error || 'Failed to mark invoices as paid'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('An error occurred while marking invoices as paid. Please try again.');
+  })
+  .finally(() => {
+    // Re-enable button
+    bulkMarkPaidBtn.disabled = false;
+    bulkMarkPaidBtn.innerHTML = originalText;
+  });
+}
+
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute('content') : '';
+}
+
+// Parses a fetch Response as JSON, but raises a readable error if the server
+// sent back HTML (e.g. a login redirect or an unhandled 500) instead of JSON,
+// so the failure surfaces instead of silently doing nothing.
+async function readJson(response) {
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error(`Server returned ${response.status} (${response.statusText || 'unexpected response'})`);
+  }
+}
+
+async function deleteSelectedInvoices() {
+  const selectedCheckboxes = document.querySelectorAll('.invoice-checkbox:checked');
+  const invoiceIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+  if (invoiceIds.length === 0) {
+    alert('Please select at least one invoice to delete.');
+    return;
+  }
+
+  const btn = document.getElementById('bulkDeleteInvoiceBtn');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Checking...';
+
+  try {
+    // Step 1: ask the server exactly what will be removed.
+    const previewResp = await fetch('/store_admin/invoices/bulk_delete_preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken() },
+      body: JSON.stringify({ invoice_ids: invoiceIds })
+    });
+    const preview = await readJson(previewResp);
+
+    if (!preview.success) {
+      throw new Error(preview.error || 'Could not check the selected invoices');
+    }
+
+    const invCount = preview.invoice_count;
+    const itemCount = preview.item_count;
+
+    if (invCount === 0) {
+      alert('The selected invoices no longer exist. Refreshing the list.');
+      location.reload();
+      return;
+    }
+
+    // Step 2: confirm, showing the real counts of associated records.
+    const message =
+      `This will permanently delete:\n\n` +
+      `  • ${invCount} invoice(s)\n` +
+      `  • ${itemCount} associated line item(s)\n\n` +
+      `This action cannot be undone. Delete all?`;
+
+    if (!confirm(message)) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      return;
+    }
+
+    // Step 3: delete.
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Deleting...';
+    const deleteResp = await fetch('/store_admin/invoices/bulk_delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken() },
+      body: JSON.stringify({ invoice_ids: invoiceIds })
+    });
+    const data = await readJson(deleteResp);
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to delete invoices');
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+    toast.innerHTML = `<i class="bi bi-check-circle me-2"></i>Deleted ${data.deleted_count} invoice(s) and ${data.deleted_items} line item(s).
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    document.body.appendChild(toast);
+    setTimeout(() => location.reload(), 1200);
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    alert('Error: ' + error.message);
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
+// WhatsApp sharing functions
+function shareViaWhatsApp(invoiceId, customerMobile, invoiceNumber, totalAmount) {
+  // Format the customer mobile number (remove any non-digit characters and ensure it starts with country code)
+  const phoneNumber = formatPhoneNumber(customerMobile);
+
+  if (!phoneNumber) {
+    alert('Invalid phone number for WhatsApp sharing.');
+    return;
+  }
+
+  // Generate invoice URL
+  const invoiceUrl = `${window.location.origin}/store_admin/invoices/${invoiceId}`;
+
+  // Create a nicely formatted message
+  const message = `🧾 *Invoice from Dhanvantari Naturals*
+
+📋 Invoice Number: ${invoiceNumber}
+💰 Amount: ₹${totalAmount.toFixed(2)}
+
+🔗 View Invoice: ${invoiceUrl}
+
+Thank you for your business! 🙏`;
+
+  // Create WhatsApp URL
+  const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+
+  // Open WhatsApp in new tab
+  window.open(whatsappUrl, '_blank');
+}
+
+function shareBookingViaWhatsApp(shareToken, customerMobile, invoiceNumber, totalAmount) {
+  // Format the customer mobile number
+  const phoneNumber = formatPhoneNumber(customerMobile);
+
+  if (!phoneNumber) {
+    alert('Invalid phone number for WhatsApp sharing.');
+    return;
+  }
+
+  // Generate booking invoice URL
+  const invoiceUrl = `${window.location.origin}/invoice/${shareToken}`;
+
+  // Create a nicely formatted message
+  const message = `🧾 *Invoice from Dhanvantari Naturals*
+
+📋 Invoice Number: ${invoiceNumber}
+💰 Amount: ₹${totalAmount.toFixed(2)}
+
+🔗 View Invoice: ${invoiceUrl}
+📥 Download PDF: ${invoiceUrl}.pdf
+
+Thank you for your business! 🙏`;
+
+  // Create WhatsApp URL
+  const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+
+  // Open WhatsApp in new tab
+  window.open(whatsappUrl, '_blank');
+}
+
+function formatPhoneNumber(mobile) {
+  if (!mobile) return null;
+
+  // Remove all non-digit characters
+  let phoneNumber = mobile.replace(/\D/g, '');
+
+  // If it's a 10-digit number, add India country code (91)
+  if (phoneNumber.length === 10) {
+    phoneNumber = '91' + phoneNumber;
+  }
+  // If it already has country code, keep as is
+  else if (phoneNumber.length === 12 && phoneNumber.startsWith('91')) {
+    // Already has India country code
+  }
+  // If it starts with +91, remove the +
+  else if (phoneNumber.length === 13 && phoneNumber.startsWith('91')) {
+    // Remove the extra digit if it's 13 digits starting with 91
+    phoneNumber = phoneNumber.substring(1);
+  }
+
+  // Validate final number (should be 12 digits for international format)
+  if (phoneNumber.length === 12 && phoneNumber.startsWith('91')) {
+    return phoneNumber;
+  }
+
+  return null;
+}
+</script>
+
+<style>
+.customer-checkbox-item {
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background-color: white;
+  transition: all 0.2s ease;
+}
+
+.customer-checkbox-item:hover {
+  background-color: #f8f9fa;
+  border-color: #007bff;
+  box-shadow: 0 1px 3px rgba(0, 123, 255, 0.1);
+}
+
+.customer-checkbox-item .form-check-input:checked + .form-check-label {
+  color: #007bff;
+  font-weight: 500;
+}
+
+.customer-checkbox-item .form-check-input {
+  margin-top: 0.2rem;
+}
+
+.customer-checkbox-item label {
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.customer-checkbox-item label strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.customer-checkbox-item label small {
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+#customerSearch {
+  border: 1px solid #ced4da;
+  border-radius: 0.375rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+#customerSearch:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.badge {
+  font-size: 0.75rem;
+  padding: 0.35em 0.65em;
+}
+
+/* Enhanced styling for invoice index */
+.search-form .form-control:focus,
+.search-form .form-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.table th {
+  font-weight: 600;
+  color: #495057;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  padding: 1rem 0.75rem;
+}
+
+.table td {
+  padding: 1rem 0.75rem;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: #f8f9fa;
+  transform: scale(1.002);
+  transition: all 0.2s ease;
+}
+
+/* Card enhancements */
+.card {
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+}
+
+/* Summary card icons */
+.bg-opacity-10 {
+  background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
+}
+
+/* Badge improvements */
+.badge {
+  font-weight: 500;
+  padding: 0.5em 0.8em;
+  border-radius: 0.375rem;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+
+  .card-body {
+    padding: 1rem !important;
+  }
+
+  .row.g-3 > * {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Loading animation */
+.search-form.loading .btn {
+  pointer-events: none;
+}
+
+.search-form.loading .btn::after {
+  content: "";
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  margin-left: 0.5rem;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Action buttons styling */
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  border-radius: 0.375rem;
+  min-width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-sm i {
+  font-size: 0.9rem;
+}
+
+.d-flex.gap-1 {
+  gap: 0.25rem !important;
+}
+
+/* WhatsApp button styling */
+.btn-outline-success:hover {
+  background-color: #25D366 !important;
+  border-color: #25D366 !important;
+  color: white !important;
+}
+
+.btn-outline-success .bi-whatsapp {
+  font-size: 0.9rem;
+}
+
+/* WhatsApp button specific styling */
+.btn-outline-success[title*="WhatsApp"] {
+  border-color: #25D366;
+  color: #25D366;
+}
+
+.btn-outline-success[title*="WhatsApp"]:hover {
+  background-color: #25D366;
+  border-color: #25D366;
+  transform: scale(1.05);
+  transition: all 0.2s ease;
+}
+</style>

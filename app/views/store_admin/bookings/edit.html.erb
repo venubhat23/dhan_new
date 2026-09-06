@@ -1,73 +1,710 @@
-<%- content_for :title, "Edit Booking - #{@booking.booking_number || @booking.id}" %>
-
+<!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h4 class="mb-1">Edit Booking</h4>
-    <small class="text-muted"><%= @booking.booking_number || "##{@booking.id}" %></small>
+    <h2 class="mb-1">Edit Booking</h2>
+    <p class="text-muted mb-0">
+      <span class="badge bg-<%= @booking.status_color %> me-2">
+        <i class="bi <%= @booking.status_icon %> me-1"></i>
+        <%= @booking.status&.humanize || 'Pending' %>
+      </span>
+      Booking #<%= @booking.booking_number %>
+    </p>
   </div>
-  <%= link_to store_admin_booking_path(@booking), class: "btn btn-outline-secondary" do %>
-    <i class="bi bi-arrow-left me-2"></i>Back to Booking
-  <% end %>
-</div>
-
-<div class="card border-0 shadow-sm">
-  <div class="card-body">
-    <%= form_with model: [:store_admin, @booking], local: true do |f| %>
-      <% if @booking.errors.any? %>
-        <div class="alert alert-danger">
-          <ul class="mb-0">
-            <% @booking.errors.full_messages.each do |msg| %>
-              <li><%= msg %></li>
-            <% end %>
-          </ul>
-        </div>
-      <% end %>
-
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label">Customer</label>
-          <%= f.collection_select :customer_id,
-              (@customers || []),
-              :id,
-              :full_name,
-              { include_blank: "-- Walk-in Customer --" },
-              { class: "form-select" } %>
-        </div>
-
-        <div class="col-md-3">
-          <label class="form-label">Payment Method</label>
-          <%= f.select :payment_method,
-              options_for_select([['Cash', 'cash'], ['UPI', 'upi'], ['Card', 'card'], ['Bank Transfer', 'bank_transfer']], @booking.payment_method),
-              { include_blank: "Select Method" },
-              { class: "form-select" } %>
-        </div>
-
-        <div class="col-md-3">
-          <label class="form-label">Payment Status</label>
-          <%= f.select :payment_status,
-              options_for_select([['Unpaid', 'unpaid'], ['Paid', 'paid']], @booking.payment_status),
-              {},
-              { class: "form-select" } %>
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Discount Amount</label>
-          <div class="input-group">
-            <span class="input-group-text">₹</span>
-            <%= f.number_field :discount_amount, class: "form-control", step: 0.01, min: 0 %>
-          </div>
-        </div>
-
-        <div class="col-12">
-          <label class="form-label">Notes</label>
-          <%= f.text_area :notes, class: "form-control", rows: 2 %>
-        </div>
-      </div>
-
-      <div class="mt-4 d-flex gap-2">
-        <%= f.submit "Update Booking", class: "btn btn-primary" %>
-        <%= link_to "Cancel", store_admin_booking_path(@booking), class: "btn btn-outline-secondary" %>
-      </div>
+  <div class="d-flex gap-2">
+    <%= link_to store_admin_booking_path(@booking, list_state: @list_state), class: "btn btn-outline-info" do %>
+      <i class="bi bi-eye me-1"></i>
+      View Details
+    <% end %>
+    <%= link_to store_admin_bookings_path(@list_state), class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-arrow-left me-1"></i>
+      Back to Bookings
     <% end %>
   </div>
 </div>
+
+<!-- Main Form -->
+<%= form_with model: [:store_admin, @booking], local: true do |f| %>
+  <% (@list_state || {}).each do |key, value| %>
+    <%= hidden_field_tag "list_state[#{key}]", value %>
+  <% end %>
+  <% if @booking.errors.any? %>
+    <div class="alert alert-danger border-0 shadow-sm mb-4">
+      <div class="d-flex align-items-center">
+        <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+        <div>
+          <h6 class="alert-heading mb-1">Please fix the following errors:</h6>
+          <ul class="mb-0 small">
+            <% @booking.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="row">
+    <!-- Main Form Sections -->
+    <div class="col-lg-8">
+      <!-- Customer Information -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="bi bi-person text-primary me-2"></i>
+            Customer Information
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Existing Customer</label>
+              <%= f.select :customer_id,
+                  options_for_select([['Select existing customer', '']] + Customer.limit(100).map { |c| ["#{c.display_name} - #{c.mobile}", c.id] }, @booking.customer_id),
+                  {},
+                  { class: 'form-select', onchange: 'fillCustomerDetails(this)' } %>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Customer Name <span class="text-danger">*</span></label>
+              <%= f.text_field :customer_name, class: 'form-control', placeholder: 'Enter customer name', required: true %>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Mobile Number <span class="text-danger">*</span></label>
+              <%= f.text_field :customer_phone, class: 'form-control', placeholder: 'Enter mobile number', required: true %>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Email Address</label>
+              <%= f.email_field :customer_email, class: 'form-control', placeholder: 'Enter email address' %>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Delivery Address</label>
+              <%= f.text_area :delivery_address, class: 'form-control', rows: 3, placeholder: 'Enter complete delivery address' %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Booking Items -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="bi bi-basket text-primary me-2"></i>
+            Booking Items
+          </h5>
+        </div>
+        <div class="card-body">
+          <div id="booking-items">
+            <% if @booking.booking_items.any? %>
+              <% @booking.booking_items.each_with_index do |item, index| %>
+                <div class="booking-item-row border rounded p-3 mb-3" id="item-<%= index %>">
+                  <%= f.fields_for :booking_items, item do |item_form| %>
+                    <div class="row g-3 align-items-center">
+                      <div class="col-md-4">
+                        <label class="form-label small">Product</label>
+                        <%= item_form.hidden_field :product_id, data: { index: index } %>
+                        <%= item_form.hidden_field :product_variant_id, data: { index: index } %>
+                        <select class="form-select" onchange="updateItemPrice(this)" data-index="<%= index %>">
+                          <option value="">Select Product</option>
+                          <% @products.each do |product| %>
+                            <% if product.product_variants.any? %>
+                              <optgroup label="<%= product.name %>">
+                                <% product.product_variants.default_first.each do |v| %>
+                                  <option value="<%= product.id %>|<%= v.id %>"
+                                          data-price="<%= v.effective_price %>"
+                                          <%= 'selected' if item.product_id == product.id && item.product_variant_id == v.id %>>
+                                    <%= product.name %> - <%= v.label %> — ₹<%= number_with_delimiter(v.effective_price) %>
+                                  </option>
+                                <% end %>
+                              </optgroup>
+                            <% else %>
+                              <option value="<%= product.id %>|"
+                                      data-price="<%= product.price %>"
+                                      <%= 'selected' if item.product_id == product.id && item.product_variant_id.nil? %>>
+                                <%= product.name %> - ₹<%= number_with_delimiter(product.price) %>
+                              </option>
+                            <% end %>
+                          <% end %>
+                        </select>
+                      </div>
+
+                      <div class="col-md-1">
+                        <label class="form-label small">Qty</label>
+                        <%= item_form.number_field :quantity, class: 'form-control', min: 0.1, step: 0.1, onchange: 'calculateItemTotal(this)', data: { index: index } %>
+                      </div>
+
+                      <div class="col-md-2">
+                        <label class="form-label small">Unit Price</label>
+                        <%= item_form.number_field :price, class: 'form-control', step: '0.01', onchange: 'calculateItemTotal(this)', data: { index: index } %>
+                      </div>
+
+                      <div class="col-md-3">
+                        <label class="form-label small">Product Discount</label>
+                        <div class="input-group">
+                          <%= item_form.select :discount_type,
+                                options_for_select([['None', ''], ['%', 'percentage'], ['₹', 'fixed']], item.discount_type),
+                                {}, class: 'form-select flex-grow-0 w-auto', onchange: 'calculateItemTotal(this)' %>
+                          <%= item_form.number_field :discount_value, class: 'form-control', min: 0, step: '0.01',
+                                value: item.discount_value, placeholder: '0', onchange: 'calculateItemTotal(this)' %>
+                        </div>
+                      </div>
+
+                      <div class="col-md-1">
+                        <label class="form-label small">Total</label>
+                        <div class="form-control bg-light px-2" id="item-total-<%= index %>" style="font-size:0.85rem;">
+                          ₹<%= number_with_delimiter(item.total.to_f > 0 ? item.total.to_f : ((item.quantity || 0) * (item.price || 0)).to_f) %>
+                        </div>
+                      </div>
+
+                      <div class="col-md-1">
+                        <label class="form-label small d-block">&nbsp;</label>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeBookingItem(<%= index %>)">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+
+          <!-- Add Item Button -->
+          <button type="button" class="btn btn-outline-primary" onclick="addBookingItem()">
+            <i class="bi bi-plus-circle me-1"></i>
+            Add Item
+          </button>
+
+          <!-- Item Template (Hidden) -->
+          <div id="item-template" style="display: none;">
+            <div class="booking-item-row border rounded p-3 mb-3">
+              <div class="row g-3 align-items-center">
+                <div class="col-md-4">
+                  <label class="form-label small">Product</label>
+                  <input type="hidden" name="booking[booking_items_attributes][INDEX][product_id]">
+                  <input type="hidden" name="booking[booking_items_attributes][INDEX][product_variant_id]">
+                  <select class="form-select" onchange="updateItemPrice(this)">
+                    <option value="">Select Product</option>
+                    <% @products.each do |product| %>
+                      <% if product.product_variants.any? %>
+                        <optgroup label="<%= product.name %>">
+                          <% product.product_variants.default_first.each do |v| %>
+                            <option value="<%= product.id %>|<%= v.id %>" data-price="<%= v.effective_price %>">
+                              <%= product.name %> - <%= v.label %> — ₹<%= number_with_delimiter(v.effective_price) %>
+                            </option>
+                          <% end %>
+                        </optgroup>
+                      <% else %>
+                        <option value="<%= product.id %>|" data-price="<%= product.price %>">
+                          <%= product.name %> - ₹<%= number_with_delimiter(product.price) %>
+                        </option>
+                      <% end %>
+                    <% end %>
+                  </select>
+                </div>
+
+                <div class="col-md-1">
+                  <label class="form-label small">Qty</label>
+                  <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][quantity]" min="0.1" step="0.1" value="1" onchange="calculateItemTotal(this)">
+                </div>
+
+                <div class="col-md-2">
+                  <label class="form-label small">Unit Price</label>
+                  <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][price]" step="0.01" onchange="calculateItemTotal(this)">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label small">Product Discount</label>
+                  <div class="input-group">
+                    <select class="form-select flex-grow-0 w-auto" name="booking[booking_items_attributes][INDEX][discount_type]" onchange="calculateItemTotal(this)">
+                      <option value="">None</option>
+                      <option value="percentage">%</option>
+                      <option value="fixed">₹</option>
+                    </select>
+                    <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][discount_value]" min="0" step="0.01" placeholder="0" onchange="calculateItemTotal(this)">
+                  </div>
+                </div>
+
+                <div class="col-md-1">
+                  <label class="form-label small">Total</label>
+                  <div class="form-control bg-light item-total px-2" style="font-size:0.85rem;">₹0</div>
+                </div>
+
+                <div class="col-md-1">
+                  <label class="form-label small d-block">&nbsp;</label>
+                  <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewBookingItem(this)">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Information -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="bi bi-credit-card text-primary me-2"></i>
+            Payment Information
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <!-- Payment Method -->
+            <div class="col-12">
+              <label class="form-label">Payment Method</label>
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <div class="form-check">
+                    <%= f.radio_button :payment_method, 'cash', class: 'form-check-input', id: 'payment_cash', onchange: 'selectPaymentMethod("cash")' %>
+                    <label class="form-check-label" for="payment_cash">
+                      <i class="bi bi-cash-stack me-1"></i>Cash Payment
+                    </label>
+                  </div>
+                </div>
+
+                <div class="col-md-3">
+                  <div class="form-check">
+                    <%= f.radio_button :payment_method, 'card', class: 'form-check-input', id: 'payment_card', onchange: 'selectPaymentMethod("card")' %>
+                    <label class="form-check-label" for="payment_card">
+                      <i class="bi bi-credit-card me-1"></i>Card Payment
+                    </label>
+                  </div>
+                </div>
+
+                <div class="col-md-3">
+                  <div class="form-check">
+                    <%= f.radio_button :payment_method, 'upi', class: 'form-check-input', id: 'payment_upi', onchange: 'selectPaymentMethod("upi")' %>
+                    <label class="form-check-label" for="payment_upi">
+                      <i class="bi bi-phone me-1"></i>UPI Payment
+                    </label>
+                  </div>
+                </div>
+
+                <div class="col-md-3">
+                  <div class="form-check">
+                    <%= f.radio_button :payment_method, 'online', class: 'form-check-input', id: 'payment_online', onchange: 'selectPaymentMethod("online")' %>
+                    <label class="form-check-label" for="payment_online">
+                      <i class="bi bi-globe me-1"></i>Online Payment
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Status -->
+            <div class="col-md-6">
+              <label class="form-label">Payment Status</label>
+              <%= f.select :payment_status,
+                  options_for_select([
+                    ['Unpaid', 'unpaid'],
+                    ['Paid', 'paid'],
+                    ['Partially Paid', 'partially_paid'],
+                    ['Refunded', 'refunded']
+                  ], @booking.payment_status),
+                  {},
+                  { class: 'form-select' } %>
+            </div>
+
+            <!-- Cash Payment Details -->
+            <div id="cashSection" class="col-12" style="<%= @booking.payment_method == 'cash' ? '' : 'display: none;' %>">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Cash Received</label>
+                  <%= f.number_field :cash_received, class: 'form-control', placeholder: '0.00', step: '0.01', onkeyup: 'calculateChange()' %>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Change to Return</label>
+                  <%= f.number_field :change_amount, class: 'form-control', readonly: true, placeholder: '0.00' %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Booking Status -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="bi bi-gear text-primary me-2"></i>
+            Booking Status
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Current Status</label>
+              <%= f.select :status,
+                  options_for_select([
+                    ['Draft', 'draft'],
+                    ['Ordered & Delivery Pending', 'ordered_and_delivery_pending'],
+                    ['Confirmed', 'confirmed'],
+                    ['Processing', 'processing'],
+                    ['Packed', 'packed'],
+                    ['Shipped', 'shipped'],
+                    ['Out for Delivery', 'out_for_delivery'],
+                    ['Delivered', 'delivered'],
+                    ['Completed', 'completed'],
+                    ['Cancelled', 'cancelled'],
+                    ['Returned', 'returned']
+                  ], @booking.status),
+                  {},
+                  { class: 'form-select' } %>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Booking Date</label>
+              <%= f.datetime_local_field :booking_date, class: 'form-control' %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Additional Notes -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="bi bi-chat-square-text text-primary me-2"></i>
+            Additional Notes
+          </h5>
+        </div>
+        <div class="card-body">
+          <%= f.text_area :notes, class: 'form-control', rows: 4, placeholder: 'Add any special instructions or notes for this booking...' %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <!-- Payment Summary -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h6 class="mb-0">Payment Summary</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Subtotal</label>
+              <%= f.number_field :subtotal, class: 'form-control', step: '0.01', readonly: true %>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Discount</label>
+              <div class="d-flex align-items-center gap-2">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Discount type">
+                  <button type="button" class="btn btn-outline-secondary active" id="discountTypeAmountBtn" onclick="setDiscountType('amount')">₹</button>
+                  <button type="button" class="btn btn-outline-secondary" id="discountTypePercentBtn" onclick="setDiscountType('percent')">%</button>
+                </div>
+                <input type="number" id="discountInput" value="<%= @booking.discount_amount.to_f %>" min="0" max="999999" step="0.01" class="form-control" onchange="calculateTotals()" oninput="calculateTotals()">
+              </div>
+              <small class="text-muted d-none" id="discountAmountPreview">= ₹0.00 off</small>
+              <%= f.hidden_field :discount_amount, id: 'discountHiddenField' %>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label"><i class="bi bi-truck me-1"></i>Delivery Charge</label>
+              <%= f.number_field :shipping_charges, value: @booking.shipping_charges.to_f, min: 0, step: '0.01', class: 'form-control', oninput: 'calculateTotals()' %>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-bold">Total Amount</label>
+              <%= f.number_field :total_amount, class: 'form-control fw-bold text-success', step: '0.01', readonly: true %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Invoice Information -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h6 class="mb-0">Invoice Information</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <div class="form-check">
+                <%= f.check_box :invoice_generated, class: 'form-check-input' %>
+                <%= f.label :invoice_generated, 'Invoice Generated', class: 'form-check-label' %>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Invoice Number</label>
+              <%= f.text_field :invoice_number, class: 'form-control', placeholder: 'Auto-generated' %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0">
+          <h6 class="mb-0">Actions</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <%= f.submit 'Update Booking', class: 'btn btn-primary' %>
+
+            <%= link_to store_admin_booking_path(@booking, list_state: @list_state), class: 'btn btn-outline-secondary' do %>
+              <i class="bi bi-x-lg me-1"></i>Cancel
+            <% end %>
+
+            <hr class="my-2">
+
+            <% unless @booking.invoice_generated? %>
+              <%= link_to generate_invoice_store_admin_booking_path(@booking, list_state: @list_state), class: 'btn btn-success btn-sm', method: :patch do %>
+                <i class="bi bi-receipt me-1"></i>Generate Invoice
+              <% end %>
+            <% end %>
+
+            <% if @booking.invoice_generated? %>
+              <%= link_to invoice_store_admin_booking_path(@booking), class: 'btn btn-info btn-sm', target: '_blank' do %>
+                <i class="bi bi-file-earmark-pdf me-1"></i>View Invoice
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<!-- JavaScript -->
+<script>
+let itemIndex = <%= @booking.booking_items.count %>;
+let discountType = 'amount'; // 'amount' or 'percent'
+
+// Toggle discount entry between a flat rupee amount and a percentage
+function setDiscountType(type) {
+  discountType = type;
+  document.getElementById('discountTypeAmountBtn').classList.toggle('active', type === 'amount');
+  document.getElementById('discountTypePercentBtn').classList.toggle('active', type === 'percent');
+
+  const discountInput = document.getElementById('discountInput');
+  if (discountInput) {
+    discountInput.max = type === 'percent' ? 100 : 999999;
+  }
+
+  calculateTotals();
+}
+
+// Add new booking item
+function addBookingItem() {
+  const template = document.getElementById('item-template');
+  const newItem = template.cloneNode(true);
+
+  // Update the template with new index
+  newItem.innerHTML = newItem.innerHTML.replace(/INDEX/g, itemIndex);
+  newItem.id = `new-item-${itemIndex}`;
+  newItem.style.display = 'block';
+
+  document.getElementById('booking-items').appendChild(newItem);
+  itemIndex++;
+}
+
+// Remove existing booking item
+function removeBookingItem(index) {
+  const item = document.getElementById(`item-${index}`);
+  if (confirm('Are you sure you want to remove this item?')) {
+    item.style.display = 'none';
+    // Add a hidden field to mark for destruction
+    const destroyField = document.createElement('input');
+    destroyField.type = 'hidden';
+    destroyField.name = `booking[booking_items_attributes][${index}][_destroy]`;
+    destroyField.value = '1';
+    item.appendChild(destroyField);
+
+    calculateTotals();
+  }
+}
+
+// Remove new booking item
+function removeNewBookingItem(button) {
+  if (confirm('Are you sure you want to remove this item?')) {
+    button.closest('.booking-item-row').remove();
+    calculateTotals();
+  }
+}
+
+// Update item price when product (or variant) is selected
+function updateItemPrice(select) {
+  const selectedOption = select.options[select.selectedIndex];
+  const price = selectedOption.getAttribute('data-price');
+  const [productId, variantId] = (select.value || '').split('|');
+  const row = select.closest('.booking-item-row');
+  const priceInput = row.querySelector('input[name*="[price]"]');
+  const productIdInput = row.querySelector('input[name*="[product_id]"]');
+  const variantIdInput = row.querySelector('input[name*="[product_variant_id]"]');
+
+  if (productIdInput) productIdInput.value = productId || '';
+  if (variantIdInput) variantIdInput.value = variantId || '';
+
+  if (price && priceInput) {
+    priceInput.value = price;
+    calculateItemTotal(priceInput);
+  }
+}
+
+// Rupee value of a row's per-product discount, capped at the line gross.
+function rowLineDiscount(row) {
+  const quantity = parseFloat(row.querySelector('input[name*="[quantity]"]')?.value) || 0;
+  const price = parseFloat(row.querySelector('input[name*="[price]"]')?.value) || 0;
+  const type = row.querySelector('[name*="[discount_type]"]')?.value || '';
+  const val = parseFloat(row.querySelector('input[name*="[discount_value]"]')?.value) || 0;
+  const gross = quantity * price;
+  if (!type || val <= 0) return 0;
+  let d = type === 'percentage' ? gross * val / 100 : val;
+  if (d < 0) d = 0;
+  return Math.min(d, gross);
+}
+
+// Calculate individual item total
+function calculateItemTotal(input) {
+  const row = input.closest('.booking-item-row');
+  const quantityInput = row.querySelector('input[name*="[quantity]"]');
+  const priceInput = row.querySelector('input[name*="[price]"]');
+  const totalDiv = row.querySelector('.item-total, [id^="item-total-"]');
+
+  if (quantityInput && priceInput && totalDiv) {
+    const quantity = parseFloat(quantityInput.value) || 0;
+    const price = parseFloat(priceInput.value) || 0;
+    const total = quantity * price - rowLineDiscount(row);
+
+    totalDiv.innerHTML = `₹${total.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    calculateTotals();
+  }
+}
+
+// Calculate booking totals
+function calculateTotals() {
+  let subtotal = 0;
+
+  // Calculate subtotal from all visible items (net of per-product discounts)
+  document.querySelectorAll('.booking-item-row:not([style*="display: none"])').forEach(row => {
+    const quantityInput = row.querySelector('input[name*="[quantity]"]');
+    const priceInput = row.querySelector('input[name*="[price]"]');
+
+    if (quantityInput && priceInput) {
+      const quantity = parseFloat(quantityInput.value) || 0;
+      const price = parseFloat(priceInput.value) || 0;
+      subtotal += quantity * price - rowLineDiscount(row);
+    }
+  });
+
+  const discountInputEl = document.getElementById('discountInput');
+  let discountInputValue = parseFloat(discountInputEl?.value) || 0;
+  if (discountInputValue < 0) discountInputValue = 0;
+
+  let discountAmount = 0;
+  const discountPreview = document.getElementById('discountAmountPreview');
+
+  if (discountType === 'percent') {
+    if (discountInputValue > 100) {
+      discountInputValue = 100;
+      discountInputEl.value = discountInputValue;
+    }
+    discountAmount = subtotal * discountInputValue / 100;
+    if (discountPreview) {
+      discountPreview.textContent = `= ₹${discountAmount.toFixed(2)} off`;
+      discountPreview.classList.remove('d-none');
+    }
+  } else {
+    discountAmount = discountInputValue > subtotal ? subtotal : discountInputValue;
+    if (discountPreview) discountPreview.classList.add('d-none');
+  }
+
+  const shippingChargesEl = document.querySelector('input[name="booking[shipping_charges]"]');
+  const shippingCharges = parseFloat(shippingChargesEl?.value) || 0;
+
+  // item price is GST-inclusive, so the total is subtotal minus discount plus delivery charge — no tax is added on top
+  const totalAmount = subtotal - discountAmount + shippingCharges;
+
+  // Update form fields
+  document.querySelector('input[name="booking[subtotal]"]').value = subtotal.toFixed(2);
+  document.getElementById('discountHiddenField').value = discountAmount.toFixed(2);
+  document.querySelector('input[name="booking[total_amount]"]').value = totalAmount.toFixed(2);
+}
+
+// Payment method selection
+function selectPaymentMethod(method) {
+  const cashSection = document.getElementById('cashSection');
+  if (method === 'cash') {
+    cashSection.style.display = 'block';
+  } else {
+    cashSection.style.display = 'none';
+  }
+}
+
+// Calculate change for cash payment
+function calculateChange() {
+  const total = parseFloat(document.querySelector('input[name="booking[total_amount]"]').value) || 0;
+  const received = parseFloat(document.querySelector('input[name="booking[cash_received]"]').value) || 0;
+  const change = Math.max(0, received - total);
+  document.querySelector('input[name="booking[change_amount]"]').value = change.toFixed(2);
+}
+
+// Fill customer details from dropdown
+function fillCustomerDetails(select) {
+  const customerId = select.value;
+  if (!customerId) return;
+
+  // You would typically make an AJAX call here to get customer details
+  // For now, just clear the fields when changing selection
+  if (!customerId) {
+    document.querySelector('input[name="booking[customer_name]"]').value = '';
+    document.querySelector('input[name="booking[customer_phone]"]').value = '';
+    document.querySelector('input[name="booking[customer_email]"]').value = '';
+    document.querySelector('textarea[name="booking[delivery_address]"]').value = '';
+  }
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+  // Calculate initial totals
+  calculateTotals();
+
+  // Set initial payment method
+  const currentPaymentMethod = '<%= @booking.payment_method %>';
+  selectPaymentMethod(currentPaymentMethod);
+
+  // Add listeners to existing item inputs
+  document.querySelectorAll('input[name*="[quantity]"], input[name*="[price]"], input[name*="[discount_value]"], select[name*="[discount_type]"]').forEach(input => {
+    input.addEventListener('input', function() {
+      calculateItemTotal(this);
+    });
+  });
+});
+</script>
+
+<style>
+.booking-item-row {
+  background: #f8f9fa;
+  border: 1px dashed #dee2e6 !important;
+  transition: all 0.3s ease;
+}
+
+.booking-item-row:hover {
+  background: #e9ecef;
+  border-color: #6c757d !important;
+}
+
+.form-label.small {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+.card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+}
+</style>

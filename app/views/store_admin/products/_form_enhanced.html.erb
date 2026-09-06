@@ -1,0 +1,2941 @@
+<style>
+/* Enhanced Product Form Styles - Professional Version */
+.enhanced-form-wrapper {
+  background: transparent;
+  padding: 0;
+  max-width: none;
+}
+
+/* Cloudinary Upload Styles */
+.upload-area-enhanced {
+  border: 2px dashed #e9ecef;
+  border-radius: 12px;
+  padding: 2rem;
+  background: #f8f9fa;
+  transition: all 0.3s ease;
+}
+
+.upload-area-enhanced:hover {
+  border-color: #667eea;
+  background: #f1f3ff;
+}
+
+.upload-container {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.upload-icon {
+  font-size: 3rem;
+  color: #667eea;
+  margin-bottom: 1rem;
+}
+
+.upload-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 0.5rem;
+}
+
+.upload-subtitle {
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.upload-btn {
+  padding: 0.75rem 2rem;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.upload-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.upload-guidelines {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.guideline-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #495057;
+}
+
+.guideline-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.guideline-list li {
+  padding: 0.25rem 0;
+  font-size: 0.85rem;
+  color: #6c757d;
+  position: relative;
+  padding-left: 1rem;
+}
+
+.guideline-list li::before {
+  content: '•';
+  color: #667eea;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
+.cloudinary-preview {
+  min-height: 60px;
+}
+
+.cloudinary-image-item {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.cloudinary-image-item:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.form-section {
+  padding: 2rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.form-section:last-child {
+  border-bottom: none;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 1.5rem;
+}
+
+.section-title i {
+  margin-right: 0.5rem;
+  color: #667eea;
+}
+
+.form-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.form-grid-2 {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.form-grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: 0.5rem;
+}
+
+.required-mark {
+  color: #dc3545;
+  margin-left: 3px;
+}
+
+.form-control, .form-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #667eea;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.help-text {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+.help-text i {
+  color: #667eea;
+  margin-right: 0.25rem;
+}
+
+/* Product Type Cards */
+.product-type-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.product-type-card {
+  position: relative;
+  cursor: pointer;
+}
+
+.product-type-card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+}
+
+.type-card-content {
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.product-type-card input[type="radio"]:checked + .type-card-content {
+  border-color: #667eea;
+  background: #f8f9ff;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.type-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: #667eea;
+}
+
+.type-name {
+  font-weight: 500;
+  color: #212529;
+}
+
+/* Delivery Rules Section */
+.delivery-rule-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+/* Image Management Styles */
+.existing-images-section {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.image-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.image-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.image-wrapper {
+  position: relative;
+  aspect-ratio: 1;
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.image-wrapper:hover .image-overlay {
+  opacity: 1;
+}
+
+.image-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-direction: column;
+}
+
+.image-actions .btn-group {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.image-actions .btn {
+  border-radius: 4px !important;
+}
+
+.image-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
+.image-info {
+  padding: 0.75rem;
+}
+
+.image-preview-small {
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.image-preview-small img {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.upload-area-enhanced.border-success {
+  border-color: #28a745 !important;
+}
+
+.upload-area-enhanced.border-success:hover {
+  border-color: #1e7e34 !important;
+  background: #f0fff4;
+}
+
+/* Image Modal Styles */
+.image-modal {
+  background: rgba(0,0,0,0.9);
+}
+
+.image-modal .modal-content {
+  background: transparent;
+  border: none;
+}
+
+.image-modal .modal-body {
+  padding: 0;
+  text-align: center;
+}
+
+.image-modal img {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+}
+
+.image-url-display {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 0.875rem;
+  word-break: break-all;
+  margin: 1rem 0;
+}
+
+/* Occasional Product Toggle */
+.toggle-container {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 60px;
+  height: 30px;
+  margin-right: 1rem;
+}
+
+.toggle-switch input {
+  display: none;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  border-radius: 30px;
+  transition: 0.3s;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: #667eea;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(30px);
+}
+
+/* Calendar styles */
+.date-input-group {
+  position: relative;
+}
+
+.calendar-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+  pointer-events: none;
+}
+
+/* Radio button groups */
+.radio-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+}
+
+.radio-option input[type="radio"] {
+  margin-right: 0.5rem;
+}
+
+.radio-option label {
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Submit buttons */
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  padding: 2rem;
+  background: #f8f9fa;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-secondary {
+  background: white;
+  color: #495057;
+  border: 1px solid #dee2e6;
+}
+
+.btn-secondary:hover {
+  background: #f8f9fa;
+}
+
+/* Discount Section Styles */
+.discount-section {
+  margin-top: 2rem;
+}
+
+.discount-config-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #dee2e6;
+}
+
+.input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-addon {
+  padding: 0.75rem;
+  background: #e9ecef;
+  border: 1px solid #ced4da;
+  border-radius: 0 6px 6px 0;
+  color: #495057;
+  font-weight: 500;
+}
+
+.input-group .form-control {
+  border-radius: 6px 0 0 6px;
+  border-right: none;
+}
+
+.final-price-display {
+  display: flex;
+  align-items: center;
+  background: #e8f5e9;
+  border: 2px solid #4caf50;
+  border-radius: 6px;
+  padding: 0.5rem;
+}
+
+.final-price-display .currency-symbol {
+  padding: 0 0.5rem;
+  font-size: 1.2rem;
+  color: #2e7d32;
+  font-weight: bold;
+}
+
+.final-price-display input {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  padding: 0;
+}
+
+/* SEO Section Styles */
+.seo-section {
+  background: #f0f7ff;
+  border: 1px solid #b3d9ff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.seo-header {
+  background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+  color: white;
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.seo-header:hover {
+  background: linear-gradient(135deg, #357ae8 0%, #2e8e47 100%);
+}
+
+.seo-header h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.seo-header i {
+  margin-right: 0.5rem;
+}
+
+.seo-toggle-icon {
+  transition: transform 0.3s ease;
+  font-size: 1.2rem;
+}
+
+.seo-toggle-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.seo-content {
+  padding: 1.5rem;
+  display: none;
+}
+
+.seo-content.show {
+  display: block;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+
+.character-count {
+  font-size: 0.875rem;
+  color: #6c757d;
+  text-align: right;
+  margin-top: 0.25rem;
+}
+
+.character-count.warning {
+  color: #ffc107;
+}
+
+.character-count.error {
+  color: #dc3545;
+}
+</style>
+
+<div class="enhanced-form-wrapper">
+  <%= form_with(model: [:store_admin, product], local: true, html: { id: "enhanced-product-form" }) do |form| %>
+
+    <!-- Error Display -->
+    <% if product.errors.any? %>
+      <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+        <h5 class="alert-heading">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          Please fix the following errors:
+        </h5>
+        <ul class="mb-0">
+          <% product.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% end %>
+
+    <!-- Basic Information Section -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <i class="bi bi-info-circle"></i>
+        Basic Information
+      </h3>
+
+      <div class="form-grid form-grid-2">
+        <div class="form-group">
+          <%= form.label :name, class: "form-label" do %>
+            Product Name <span class="required-mark">*</span>
+          <% end %>
+          <%= form.text_field :name,
+              class: "form-control #{'is-invalid' if product.errors[:name].any?}",
+              placeholder: "Enter product name", required: true %>
+          <% if product.errors[:name].any? %>
+            <div class="invalid-feedback">
+              <%= product.errors[:name].first %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :category_id, class: "form-label" do %>
+            Category <span class="required-mark">*</span>
+          <% end %>
+          <%= form.select :category_id,
+              options_from_collection_for_select(Category.active, :id, :name, product.category_id),
+              { prompt: "— Select Category —" },
+              { class: "form-select", required: true } %>
+        </div>
+      </div>
+
+      <!-- Product Type Selection (Required) -->
+      <!-- Unit Selection (Required) -->
+      <div class="form-grid form-grid-2">
+        <div class="form-group">
+          <%= form.label :unit_type, class: "form-label" do %>
+            Unit <span class="required-mark">*</span>
+          <% end %>
+          <%= form.select :unit_type,
+              options_for_select(Product::UNIT_TYPES, product.unit_type),
+              { prompt: "— Select Unit —" },
+              { class: "form-select", required: true } %>
+          <div class="help-text">Select the measurement unit for this product</div>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :sku, "SKU", class: "form-label" %>
+          <%= form.text_field :sku,
+              class: "form-control #{'is-invalid' if product.errors[:sku].any?}",
+              placeholder: "Auto-generated if left blank" %>
+          <% if product.errors[:sku].any? %>
+            <div class="invalid-feedback">
+              <%= product.errors[:sku].first %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :hsn_code, "HSN Number", class: "form-label" %>
+          <%= form.text_field :hsn_code, class: "form-control", placeholder: "e.g., 0401, 1006" %>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <%= form.label :description, "Description", class: "form-label" %>
+        <%= form.text_area :description, class: "form-control", rows: 4, placeholder: "Enter product description" %>
+      </div>
+    </div>
+
+    <!-- Product Images Section -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <i class="bi bi-images"></i>
+        Product Images
+      </h3>
+
+      <!-- Existing Images Display -->
+      <% if product.persisted? && (product.image_url.present? || product.additional_images_urls.present? || product.images_attached?) %>
+        <div class="existing-images-section mb-4">
+          <h5 class="mb-3">
+            <i class="bi bi-folder-open me-2"></i>Current Images
+          </h5>
+
+          <div class="row g-3" id="existingImagesContainer">
+
+            <!-- Cloudinary Images -->
+            <% if product.image_url.present? %>
+              <div class="col-xl-2 col-lg-3 col-md-4 col-6" data-image-type="cloudinary" data-image-url="<%= product.image_url %>">
+                <div class="image-card">
+                  <div class="image-wrapper position-relative">
+                    <img src="<%= product.cloudinary_image_url(width: 300, height: 300) %>" alt="Main Product Image" class="product-image w-100 rounded">
+                    <div class="image-overlay">
+                      <div class="image-actions">
+                        <button type="button" class="btn btn-sm btn-primary me-1" onclick="viewImage('<%= product.cloudinary_image_url %>', 'Main Image')">
+                          <i class="bi bi-eye"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-info me-1" onclick="copyImageUrl('<%= product.cloudinary_image_url %>')">
+                          <i class="bi bi-link-45deg"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="image-badge">
+                      <span class="badge bg-success">Main - Cloudinary</span>
+                    </div>
+                  </div>
+                  <div class="image-info mt-2">
+                    <small class="text-success d-block fw-bold">
+                      <i class="bi bi-cloud-check me-1"></i>Cloudinary
+                    </small>
+                    <small class="text-muted">Optimized Cloud Image</small>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Upload New Images</label>
+
+          <!-- Cloudinary Upload (Only Option) -->
+          <div id="cloudinary-upload">
+              <div class="upload-area-enhanced">
+                <div class="upload-container">
+                  <div class="upload-icon">
+                    <i class="bi bi-cloud-arrow-up"></i>
+                  </div>
+                  <div class="upload-content">
+                    <h6 class="upload-title">Cloudinary Upload</h6>
+                    <p class="upload-subtitle">Fast, reliable cloud storage with automatic optimization</p>
+                    <input type="file" id="cloudinaryImageInput" class="d-none" multiple accept="image/*">
+                    <button type="button" class="btn btn-primary upload-btn" onclick="document.getElementById('cloudinaryImageInput').click()">
+                      <i class="bi bi-upload me-2"></i>Choose Images
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="cloudinary-preview mt-4" id="cloudinaryPreview"></div>
+              <!-- Hidden fields for Cloudinary URLs -->
+              <%= form.hidden_field :image_url %>
+              <%= form.hidden_field :additional_images_urls %>
+          </div>
+
+          <div class="upload-guidelines mt-4">
+            <div class="row">
+              <div class="col-md-6">
+                <h6 class="guideline-title">
+                  <i class="bi bi-lightbulb text-warning me-1"></i>
+                  Image Guidelines
+                </h6>
+                <ul class="guideline-list">
+                  <li>Use high-quality images (minimum 800x600px)</li>
+                  <li>Supported formats: JPG, PNG, WebP</li>
+                  <li>Maximum file size: 10MB per image</li>
+                  <li>First image becomes the main product image</li>
+                </ul>
+              </div>
+              <div class="col-md-6">
+                <h6 class="guideline-title">
+                  <i class="bi bi-camera text-primary me-1"></i>
+                  Best Practices
+                </h6>
+                <ul class="guideline-list">
+                  <li>Show product from multiple angles</li>
+                  <li>Use good lighting and clear backgrounds</li>
+                  <li>Include close-up details if relevant</li>
+                  <li>Keep consistent style across images</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pricing & Inventory Section -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <i class="bi bi-currency-rupee"></i>
+        Pricing & Inventory
+      </h3>
+
+      <!-- Multi-quantity toggle -->
+      <div class="toggle-container mb-4">
+        <div class="toggle-switch">
+          <%= form.check_box :has_multiple_quantities, id: "has_multiple_quantities" %>
+          <label class="toggle-slider" for="has_multiple_quantities"></label>
+        </div>
+        <div>
+          <strong>Product has multiple quantity options</strong><br>
+          <small class="text-muted">e.g. 500g at ₹40, 1kg at ₹75 — each with its own price & stock</small>
+        </div>
+      </div>
+
+      <!-- Variants table (visible when toggle ON) -->
+      <div id="variants_section" style="<%= @product.has_multiple_quantities? ? '' : 'display:none;' %>" class="mb-4">
+        <!-- Vertical variant cards -->
+        <div id="variants_body" class="d-flex flex-column gap-3">
+          <% if @product.product_variants.any? %>
+            <%= form.fields_for :product_variants, @product.product_variants.ordered do |vf| %>
+              <% v_gst = vf.object.gst_percentage.presence&.to_f || @product.gst_percentage.to_f %>
+              <% v_eff = vf.object.effective_price.to_f %>
+              <% v_gst_amt = v_gst > 0 ? (v_eff * v_gst / 100.0).round(2) : 0 %>
+              <div class="variant-row border rounded p-3 bg-white shadow-sm position-relative">
+                <!-- Header row: label + default + delete -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span class="fw-semibold text-primary"><i class="bi bi-layers me-1"></i>Variant</span>
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="form-check form-check-inline mb-0">
+                      <%= vf.check_box :is_default, class: "form-check-input" %>
+                      <%= vf.label :is_default, "Set as Default", class: "form-check-label small fw-semibold" %>
+                    </div>
+                    <%= vf.hidden_field :_destroy, class: "destroy-field", value: "0" %>
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-variant-row">
+                      <i class="bi bi-trash me-1"></i>Remove
+                    </button>
+                  </div>
+                </div>
+
+                <div class="row g-3">
+                  <!-- Weight + Unit -->
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :weight, "Weight / Qty", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :weight, class: "form-control variant-weight", step: 0.001, min: 0.001, placeholder: "1.000" %>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :unit, "Unit", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.select :unit, options_for_select(Product::UNIT_TYPES, vf.object.unit), {}, { class: "form-select" } %>
+                  </div>
+
+                  <!-- Cost + Selling -->
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :buying_price, "Cost Price ₹", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :buying_price, class: "form-control", step: 0.01, min: 0, placeholder: "0.00" %>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :selling_price, "Selling Price ₹", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :selling_price, class: "form-control variant-selling-price", step: 0.01, min: 0, placeholder: "0.00", required: true %>
+                  </div>
+
+                  <!-- Discount toggle -->
+                  <div class="col-12">
+                    <div class="form-check form-switch">
+                      <%= vf.check_box :discount_enabled, class: "form-check-input variant-discount-toggle", id: "disc_toggle_#{vf.object.object_id}" %>
+                      <label class="form-check-label fw-semibold" for="disc_toggle_<%= vf.object.object_id %>">Enable Discount</label>
+                    </div>
+                  </div>
+
+                  <!-- Discount fields (shown when toggle ON) -->
+                  <div class="col-6 col-md-3 variant-discount-fields" style="<%= vf.object.discount_enabled? ? '' : 'display:none;' %>">
+                    <%= vf.label :discount_type, "Discount Type", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.select :discount_type,
+                        options_for_select([['Percentage (%)', 'percentage'], ['Fixed (₹)', 'fixed']], vf.object.discount_type),
+                        { include_blank: '— Select —' },
+                        { class: "form-select variant-discount-type" } %>
+                  </div>
+                  <div class="col-6 col-md-3 variant-discount-fields" style="<%= vf.object.discount_enabled? ? '' : 'display:none;' %>">
+                    <%= vf.label :discount_value, "Discount Value", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :discount_value, class: "form-control variant-discount-value", step: 0.01, min: 0, placeholder: "0" %>
+                  </div>
+
+                  <!-- GST -->
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :gst_percentage, "GST %", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :gst_percentage, class: "form-control variant-gst-pct",
+                        step: 0.01, min: 0, max: 50,
+                        placeholder: "#{@product.gst_percentage || 0} (product default)",
+                        value: vf.object.gst_percentage %>
+                    <div class="form-text">Leave blank to use product GST</div>
+                  </div>
+
+                  <!-- Stock -->
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :available_stock, "Available Stock", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :available_stock, class: "form-control", min: 0, placeholder: "0" %>
+                  </div>
+
+                  <!-- Purchase Price -->
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :purchase_price, "Purchase Price ₹", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :purchase_price, class: "form-control", step: 0.01, min: 0, placeholder: "0.00" %>
+                  </div>
+
+                  <!-- B2B Price + Percentage -->
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :b2b_price, "B2B Price ₹", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :b2b_price, class: "form-control", step: 0.01, min: 0, placeholder: "0.00" %>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :b2b_percentage, "B2B %", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :b2b_percentage, class: "form-control", step: 0.01, min: 0, max: 100, placeholder: "0.00" %>
+                  </div>
+
+                  <!-- Low Stock Threshold -->
+                  <div class="col-6 col-md-3">
+                    <%= vf.label :low_stock_threshold, "Low Stock Alert", class: "form-label small fw-semibold mb-1" %>
+                    <%= vf.number_field :low_stock_threshold, class: "form-control", min: 0, placeholder: "10" %>
+                    <div class="form-text">Alert when stock ≤ this value</div>
+                  </div>
+
+                  <!-- Calculated summary -->
+                  <div class="col-12">
+                    <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
+                      <span class="text-muted small">Calculated:</span>
+                      <span class="badge bg-info-subtle text-info border border-info px-3 py-2">
+                        GST ₹ <strong class="variant-gst-amt ms-1"><%= number_with_precision(v_gst_amt, precision: 2) %></strong>
+                      </span>
+                      <span class="badge bg-success-subtle text-success border border-success px-3 py-2">
+                        After Disc ₹ <strong class="variant-final-price ms-1"><%= number_with_precision(v_eff, precision: 2) %></strong>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+
+        <button type="button" id="add_variant_row" class="btn btn-outline-primary mt-3">
+          <i class="bi bi-plus-circle me-1"></i>Add Quantity Option
+        </button>
+      </div>
+
+      <!-- Template for new variant cards -->
+      <template id="variant_row_template">
+        <div class="variant-row border rounded p-3 bg-white shadow-sm position-relative">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="fw-semibold text-primary"><i class="bi bi-layers me-1"></i>Variant</span>
+            <div class="d-flex align-items-center gap-3">
+              <div class="form-check form-check-inline mb-0">
+                <input type="checkbox" name="product[product_variants_attributes][NEW_IDX][is_default]" value="1" class="form-check-input" id="is_default_NEW_IDX">
+                <label class="form-check-label small fw-semibold" for="is_default_NEW_IDX">Set as Default</label>
+              </div>
+              <input type="hidden" name="product[product_variants_attributes][NEW_IDX][_destroy]" class="destroy-field" value="0">
+              <button type="button" class="btn btn-outline-danger btn-sm remove-variant-row">
+                <i class="bi bi-trash me-1"></i>Remove
+              </button>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">Weight / Qty</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][weight]" class="form-control variant-weight" step="0.001" min="0.001" placeholder="1.000">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">Unit</label>
+              <select name="product[product_variants_attributes][NEW_IDX][unit]" class="form-select">
+                <% Product::UNIT_TYPES.each do |label, val| %>
+                  <option value="<%= val %>"><%= label %></option>
+                <% end %>
+              </select>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">Cost Price ₹</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][buying_price]" class="form-control" step="0.01" min="0" placeholder="0.00">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">Selling Price ₹</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][selling_price]" class="form-control variant-selling-price" step="0.01" min="0" placeholder="0.00" required>
+            </div>
+
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input type="checkbox" name="product[product_variants_attributes][NEW_IDX][discount_enabled]" value="1" class="form-check-input variant-discount-toggle" id="disc_toggle_NEW_IDX">
+                <label class="form-check-label fw-semibold" for="disc_toggle_NEW_IDX">Enable Discount</label>
+              </div>
+            </div>
+
+            <div class="col-6 col-md-3 variant-discount-fields" style="display:none">
+              <label class="form-label small fw-semibold mb-1">Discount Type</label>
+              <select name="product[product_variants_attributes][NEW_IDX][discount_type]" class="form-select variant-discount-type">
+                <option value="">— Select —</option>
+                <option value="percentage">Percentage (%)</option>
+                <option value="fixed">Fixed (₹)</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-3 variant-discount-fields" style="display:none">
+              <label class="form-label small fw-semibold mb-1">Discount Value</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][discount_value]" class="form-control variant-discount-value" step="0.01" min="0" placeholder="0">
+            </div>
+
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">GST %</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][gst_percentage]" class="form-control variant-gst-pct" step="0.01" min="0" max="50" placeholder="<%= @product.gst_percentage || 0 %> (product default)">
+              <div class="form-text">Leave blank to use product GST</div>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">Available Stock</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][available_stock]" class="form-control" min="0" placeholder="0">
+            </div>
+
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">Purchase Price ₹</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][purchase_price]" class="form-control" step="0.01" min="0" placeholder="0.00">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">B2B Price ₹</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][b2b_price]" class="form-control" step="0.01" min="0" placeholder="0.00">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">B2B %</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][b2b_percentage]" class="form-control" step="0.01" min="0" max="100" placeholder="0.00">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small fw-semibold mb-1">Low Stock Alert</label>
+              <input type="number" name="product[product_variants_attributes][NEW_IDX][low_stock_threshold]" class="form-control" min="0" placeholder="10">
+              <div class="form-text">Alert when stock ≤ this value</div>
+            </div>
+
+            <div class="col-12">
+              <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
+                <span class="text-muted small">Calculated:</span>
+                <span class="badge bg-info-subtle text-info border border-info px-3 py-2">
+                  GST ₹ <strong class="variant-gst-amt ms-1">0.00</strong>
+                </span>
+                <span class="badge bg-success-subtle text-success border border-success px-3 py-2">
+                  After Disc ₹ <strong class="variant-final-price ms-1">0.00</strong>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Single pricing fields (hidden when multi-qty ON) -->
+      <div id="single_pricing_section" style="<%= @product.has_multiple_quantities? ? 'display:none;' : '' %>">
+      <div class="form-grid form-grid-2">
+        <div class="form-group">
+          <%= form.label :buying_price, class: "form-label" do %>
+            Cost Price (₹) <span class="required-mark">*</span>
+          <% end %>
+          <%= form.number_field :buying_price, class: "form-control",
+              step: "0.01", required: true, placeholder: "0.00",
+              id: "buying-price" %>
+          <div class="help-text">Your cost price for this product</div>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :purchase_price, class: "form-label" do %>
+            Purchase Price (₹)
+          <% end %>
+          <%= form.number_field :purchase_price, class: "form-control",
+              step: "0.01", min: 0, placeholder: "0.00",
+              id: "purchase-price" %>
+          <div class="help-text">Price at which product was purchased</div>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :b2b_price, class: "form-label" do %>
+            B2B Price (₹)
+          <% end %>
+          <%= form.number_field :b2b_price, class: "form-control",
+              step: "0.01", min: 0, placeholder: "0.00",
+              id: "b2b-price" %>
+          <div class="help-text">Special price for B2B customers</div>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :b2b_percentage, class: "form-label" do %>
+            B2B Discount (%)
+          <% end %>
+          <%= form.number_field :b2b_percentage, class: "form-control",
+              step: "0.01", min: 0, max: 100, placeholder: "0.00",
+              id: "b2b-percentage" %>
+          <div class="help-text">B2B discount percentage off selling price</div>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :price, class: "form-label" do %>
+            Selling Price (₹) <span class="required-mark">*</span>
+          <% end %>
+          <%= form.number_field :price,
+              class: "form-control #{'is-invalid' if product.errors[:price].any?}",
+              step: "0.01", required: true, placeholder: "0.00",
+              id: "selling-price" %>
+          <% if product.errors[:price].any? %>
+            <div class="invalid-feedback">
+              <%= product.errors[:price].first %>
+            </div>
+          <% end %>
+          <div class="help-text">Final price customer pays (inclusive of GST if enabled)</div>
+        </div>
+      </div>
+
+      <!-- Discount Section -->
+      <div class="discount-section mt-4">
+        <div class="toggle-container">
+          <div class="toggle-switch">
+            <%= form.check_box :is_discounted, id: "discount-toggle" %>
+            <label class="toggle-slider" for="discount-toggle"></label>
+          </div>
+          <div>
+            <strong>Enable Discount</strong><br>
+            <small class="text-muted">Apply discount to this product</small>
+          </div>
+        </div>
+
+        <div id="discount-config" style="display: none;" class="mt-3">
+          <div class="discount-config-card">
+            <!-- Discount Type Selection -->
+            <div class="form-group">
+              <label class="form-label">Discount Type</label>
+              <div class="radio-group">
+                <div class="radio-option">
+                  <%= form.radio_button :discount_type, 'percentage',
+                      id: "discount-percentage", checked: product.discount_type == 'percentage' %>
+                  <label for="discount-percentage">
+                    <i class="bi bi-percent"></i> Percentage (%)
+                  </label>
+                </div>
+                <div class="radio-option">
+                  <%= form.radio_button :discount_type, 'fixed',
+                      id: "discount-fixed", checked: product.discount_type == 'fixed' %>
+                  <label for="discount-fixed">
+                    <i class="bi bi-currency-rupee"></i> Fixed Amount (₹)
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-grid form-grid-2">
+              <!-- Percentage Discount Input -->
+              <div class="form-group" id="percentage-input" style="display: none;">
+                <%= form.label :discount_value, "Discount Percentage", class: "form-label" %>
+                <div class="input-group">
+                  <%= form.number_field :discount_value, class: "form-control",
+                      step: "0.01", min: 0, max: 100,
+                      placeholder: "10", id: "discount-percentage-value" %>
+                  <span class="input-addon">%</span>
+                </div>
+                <div class="help-text">Enter percentage (e.g., 10 for 10% off)</div>
+              </div>
+
+              <!-- Fixed Discount Input -->
+              <div class="form-group" id="fixed-input" style="display: none;">
+                <%= form.label :discount_value, "Discount Amount", class: "form-label" %>
+                <div class="input-group">
+                  <span class="input-addon">₹</span>
+                  <%= form.number_field :discount_value, class: "form-control",
+                      step: "0.01", min: 0,
+                      placeholder: "50", id: "discount-fixed-value" %>
+                </div>
+                <div class="help-text">Enter fixed discount amount in rupees</div>
+              </div>
+
+              <!-- Final Price (Read-only) -->
+              <div class="form-group">
+                <label class="form-label">Final Price After Discount</label>
+                <div class="final-price-display">
+                  <span class="currency-symbol">₹</span>
+                  <input type="text" id="final-price" class="form-control" readonly
+                         value="0.00" style="font-weight: bold; color: #28a745;">
+                </div>
+                <div class="help-text">Auto-calculated based on discount</div>
+                <%= form.hidden_field :discount_price, id: "discount-price-hidden" %>
+              </div>
+            </div>
+
+            <!-- Discount Summary -->
+            <div id="discount-summary" class="alert alert-info mt-3" style="display: none;">
+              <strong>Discount Applied:</strong>
+              <span id="discount-summary-text"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inventory Section -->
+      <div class="form-grid form-grid-2 mt-4">
+        <div class="form-group">
+          <%= form.label :stock, class: "form-label" do %>
+            Available Stock <span class="required-mark">*</span>
+          <% end %>
+          <%= form.number_field :stock, class: "form-control",
+              min: 0, required: true, placeholder: "0", id: "product_stock" %>
+          <div class="help-text">Current available quantity</div>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :low_stock_threshold, class: "form-label" do %>
+            Low Stock Alert Threshold
+          <% end %>
+          <%= form.number_field :low_stock_threshold, class: "form-control",
+              min: 0, placeholder: "10", id: "low_stock_threshold" %>
+          <div class="help-text">Show low-stock warning when quantity drops to this level (default: 10)</div>
+        </div>
+
+        <!-- Stock Update Vendor Purchase Linking (shown only when editing) -->
+        <% if product.persisted? %>
+          <div class="form-group" id="vendor-purchase-section" style="display: none;">
+            <%= label_tag :vendor_purchase_id, "Link to Vendor Purchase (Optional)", class: "form-label" %>
+            <%= select_tag :vendor_purchase_id,
+                options_from_collection_for_select(
+                  VendorPurchase.includes(:vendor).recent.limit(20),
+                  :id,
+                  lambda { |vp| "#{vp.vendor.name} - #{vp.purchase_number} (#{vp.purchase_date})" }
+                ),
+                {
+                  include_blank: "Create new stock batch without purchase link",
+                  class: "form-control",
+                  id: "vendor_purchase_select"
+                } %>
+            <div class="help-text">
+              <i class="bi bi-info-circle"></i>
+              Link stock changes to a specific vendor purchase for better tracking
+            </div>
+          </div>
+        <% end %>
+
+        <div class="form-group">
+          <%= form.label :weight, "Weight/Quantity", class: "form-label" %>
+          <%= form.number_field :weight, class: "form-control",
+              step: "0.001", placeholder: "1.000" %>
+          <div class="help-text">Weight or quantity per unit</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <%= form.label :dimensions, "Dimensions", class: "form-label" %>
+        <%= form.text_field :dimensions, class: "form-control",
+            placeholder: "30cm x 20cm x 10cm" %>
+        <div class="help-text">Product dimensions (optional)</div>
+      </div>
+      </div><!-- /single_pricing_section -->
+    </div>
+
+    <!-- GST Configuration Section -->
+    <div class="form-section" id="product_gst_section" style="<%= @product.has_multiple_quantities? ? 'display:none;' : '' %>">
+      <h3 class="section-title">
+        <i class="bi bi-receipt"></i>
+        GST Configuration
+      </h3>
+
+      <div class="toggle-container">
+        <div class="toggle-switch">
+          <%= form.check_box :gst_enabled, id: "gst-toggle" %>
+          <label class="toggle-slider" for="gst-toggle"></label>
+        </div>
+        <div>
+          <strong>Enable GST</strong><br>
+          <small class="text-muted">Apply GST to this product pricing</small>
+        </div>
+      </div>
+
+      <div id="gst-config" style="display: none;" class="mt-4">
+        <div class="discount-config-card">
+
+          <!-- GST Type Selection -->
+          <div class="form-group">
+            <label class="form-label">GST Configuration Type</label>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="gst-simple" name="gst_type" value="simple" checked>
+                <label for="gst-simple">
+                  <i class="bi bi-percent"></i> Simple GST (%)
+                </label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="gst-detailed" name="gst_type" value="detailed">
+                <label for="gst-detailed">
+                  <i class="bi bi-file-text"></i> Detailed GST (CGST + SGST + IGST)
+                </label>
+              </div>
+            </div>
+            <div class="help-text">
+              <i class="bi bi-info-circle"></i>
+              Simple: Enter single GST percentage. Detailed: Configure CGST, SGST, and IGST separately
+            </div>
+          </div>
+
+          <!-- Simple GST Configuration -->
+          <div id="simple-gst-config">
+            <div class="form-grid form-grid-2">
+              <div class="form-group">
+                <%= form.label :gst_percentage, "GST Percentage", class: "form-label" %>
+                <div class="input-group">
+                  <%= form.number_field :gst_percentage, class: "form-control",
+                      step: "0.01", min: 0, max: 100,
+                      placeholder: "18", id: "gst-percentage-input" %>
+                  <span class="input-addon">%</span>
+                </div>
+                <div class="help-text">Standard GST rates: 5%, 12%, 18%, 28%</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Base Price (Excluding GST)</label>
+                <div class="final-price-display">
+                  <span class="currency-symbol">₹</span>
+                  <input type="text" id="base-price-display" class="form-control" readonly
+                         value="0.00" style="font-weight: bold; color: #28a745;">
+                </div>
+                <div class="help-text">Price before adding GST</div>
+                <%= form.hidden_field :base_price_excluding_gst, id: "base-price-hidden" %>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Total GST Amount</label>
+                <div class="final-price-display">
+                  <span class="currency-symbol">₹</span>
+                  <input type="text" id="gst-amount-display" class="form-control" readonly
+                         value="0.00" style="font-weight: bold; color: #dc3545;">
+                </div>
+                <%= form.hidden_field :gst_amount, id: "gst-amount-hidden" %>
+                <div class="help-text">Total GST included in selling price</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detailed GST Configuration -->
+          <div id="detailed-gst-config" style="display: none;">
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <%= form.label :cgst_percentage, "CGST (%)", class: "form-label" %>
+                <div class="input-group">
+                  <%= form.number_field :cgst_percentage, class: "form-control gst-component",
+                      step: "0.01", min: 0, max: 50,
+                      placeholder: "9", id: "cgst-percentage" %>
+                  <span class="input-addon">%</span>
+                </div>
+                <%= form.hidden_field :cgst_amount, id: "cgst-amount-hidden" %>
+              </div>
+
+              <div class="form-group">
+                <%= form.label :sgst_percentage, "SGST (%)", class: "form-label" %>
+                <div class="input-group">
+                  <%= form.number_field :sgst_percentage, class: "form-control gst-component",
+                      step: "0.01", min: 0, max: 50,
+                      placeholder: "9", id: "sgst-percentage" %>
+                  <span class="input-addon">%</span>
+                </div>
+                <%= form.hidden_field :sgst_amount, id: "sgst-amount-hidden" %>
+              </div>
+
+              <div class="form-group">
+                <%= form.label :igst_percentage, "IGST (%)", class: "form-label" %>
+                <div class="input-group">
+                  <%= form.number_field :igst_percentage, class: "form-control gst-component",
+                      step: "0.01", min: 0, max: 100,
+                      placeholder: "18", id: "igst-percentage" %>
+                  <span class="input-addon">%</span>
+                </div>
+                <%= form.hidden_field :igst_amount, id: "igst-amount-hidden" %>
+              </div>
+            </div>
+
+            <!-- Base Price for Detailed GST -->
+            <div class="form-group">
+              <label class="form-label">Base Price (Excluding GST)</label>
+              <div class="final-price-display">
+                <span class="currency-symbol">₹</span>
+                <input type="text" id="base-price-detailed-display" class="form-control" readonly
+                       value="0.00" style="font-weight: bold; color: #28a745;">
+              </div>
+              <div class="help-text">Price before adding GST components</div>
+            </div>
+
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label class="form-label">CGST Amount</label>
+                <div class="input-group">
+                  <span class="input-addon">₹</span>
+                  <input type="text" id="cgst-amount-display" class="form-control" readonly value="0.00">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">SGST Amount</label>
+                <div class="input-group">
+                  <span class="input-addon">₹</span>
+                  <input type="text" id="sgst-amount-display" class="form-control" readonly value="0.00">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">IGST Amount</label>
+                <div class="input-group">
+                  <span class="input-addon">₹</span>
+                  <input type="text" id="igst-amount-display" class="form-control" readonly value="0.00">
+                </div>
+              </div>
+            </div>
+
+            <div class="help-text">
+              <i class="bi bi-info-circle"></i>
+              <strong>For Intra-state transactions:</strong> Use CGST + SGST (e.g., 2.5% + 2.5% = 5% total)<br>
+              <strong>For Inter-state transactions:</strong> Use IGST only (e.g., 5% IGST)<br>
+              <strong>Example for 5% GST:</strong> CGST = 2.5%, SGST = 2.5%, IGST = 0% (for intra-state)
+            </div>
+          </div>
+
+          <!-- Total Price with GST (Confirmation) -->
+          <div class="form-group mt-4">
+            <label class="form-label">Final Customer Price (Confirmation)</label>
+            <div class="final-price-display" style="border-color: #007bff; background: #e7f3ff;">
+              <span class="currency-symbol">₹</span>
+              <input type="text" id="final-price-with-gst" class="form-control" readonly
+                     value="0.00" style="font-weight: bold; color: #007bff; font-size: 1.2rem;">
+            </div>
+            <div class="help-text">
+              <i class="bi bi-info-circle"></i>
+              This should match your selling price (confirmation that calculations are correct)
+            </div>
+            <%= form.hidden_field :final_amount_with_gst, id: "final-amount-with-gst-hidden" %>
+          </div>
+
+          <!-- GST Summary -->
+          <div id="gst-summary" class="alert alert-success mt-3" style="display: none;">
+            <div class="row">
+              <div class="col-md-6">
+                <strong>Price Breakdown:</strong><br>
+                <span id="gst-summary-breakdown"></span>
+              </div>
+              <div class="col-md-6">
+                <strong>Tax Details:</strong><br>
+                <span id="gst-summary-taxes"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📦 Delivery Rules Section -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <i class="bi bi-truck"></i>
+        📦 Delivery Rules
+      </h3>
+
+      <div class="delivery-rule-card">
+        <!-- Delivery Type Selection -->
+        <div class="form-group">
+          <label class="form-label">Delivery Coverage</label>
+          <select id="delivery-type" class="form-select">
+            <option value="everywhere">Deliver Everywhere</option>
+            <option value="state">Specific States Only</option>
+            <option value="city">Specific Cities Only</option>
+            <option value="pincode">Specific Pincodes Only</option>
+          </select>
+          <div class="help-text">
+            <i class="bi bi-info-circle"></i>
+            Choose how you want to define your delivery coverage area
+          </div>
+        </div>
+
+        <!-- A) States Selection with Select2 Multi-Select -->
+        <div id="states-selection" class="form-group" style="display: none;">
+          <label class="form-label">
+            <i class="bi bi-geo-alt"></i>
+            Select States (Multi-Select)
+          </label>
+          <select id="delivery-states" class="form-select select2-states" multiple
+                  name="product[delivery_rules_attributes][0][location_data_states][]"
+                  data-placeholder="Search and select states...">
+            <option value="Andhra Pradesh">Andhra Pradesh</option>
+            <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+            <option value="Assam">Assam</option>
+            <option value="Bihar">Bihar</option>
+            <option value="Chhattisgarh">Chhattisgarh</option>
+            <option value="Delhi">Delhi</option>
+            <option value="Goa">Goa</option>
+            <option value="Gujarat">Gujarat</option>
+            <option value="Haryana">Haryana</option>
+            <option value="Himachal Pradesh">Himachal Pradesh</option>
+            <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+            <option value="Jharkhand">Jharkhand</option>
+            <option value="Karnataka">Karnataka</option>
+            <option value="Kerala">Kerala</option>
+            <option value="Madhya Pradesh">Madhya Pradesh</option>
+            <option value="Maharashtra">Maharashtra</option>
+            <option value="Manipur">Manipur</option>
+            <option value="Meghalaya">Meghalaya</option>
+            <option value="Mizoram">Mizoram</option>
+            <option value="Nagaland">Nagaland</option>
+            <option value="Odisha">Odisha</option>
+            <option value="Punjab">Punjab</option>
+            <option value="Rajasthan">Rajasthan</option>
+            <option value="Sikkim">Sikkim</option>
+            <option value="Tamil Nadu">Tamil Nadu</option>
+            <option value="Telangana">Telangana</option>
+            <option value="Tripura">Tripura</option>
+            <option value="Uttar Pradesh">Uttar Pradesh</option>
+            <option value="Uttarakhand">Uttarakhand</option>
+            <option value="West Bengal">West Bengal</option>
+          </select>
+          <div class="help-text">
+            <i class="bi bi-search"></i>
+            Search and select multiple states for delivery coverage
+          </div>
+        </div>
+
+        <!-- B) Cities Selection with Dynamic Loading -->
+        <div id="cities-selection" class="form-group" style="display: none;">
+          <label class="form-label">
+            <i class="bi bi-buildings"></i>
+            Select Cities (Multi-Select)
+          </label>
+
+          <!-- State Filter for Cities -->
+          <div class="mb-3">
+            <label class="form-label text-sm">Filter by State</label>
+            <select id="state-filter-for-cities" class="form-select select2-single"
+                    data-placeholder="Select a state to load cities...">
+              <option value="">— All States —</option>
+              <option value="Tamil Nadu">Tamil Nadu</option>
+              <option value="Karnataka">Karnataka</option>
+              <option value="Maharashtra">Maharashtra</option>
+              <option value="Kerala">Kerala</option>
+              <option value="Delhi">Delhi</option>
+              <option value="Gujarat">Gujarat</option>
+              <option value="West Bengal">West Bengal</option>
+              <option value="Uttar Pradesh">Uttar Pradesh</option>
+              <option value="Rajasthan">Rajasthan</option>
+              <option value="Punjab">Punjab</option>
+              <option value="Haryana">Haryana</option>
+              <option value="Madhya Pradesh">Madhya Pradesh</option>
+              <option value="Bihar">Bihar</option>
+              <option value="Odisha">Odisha</option>
+              <option value="Telangana">Telangana</option>
+              <option value="Andhra Pradesh">Andhra Pradesh</option>
+            </select>
+          </div>
+
+          <!-- Cities Multi-Select -->
+          <select id="delivery-cities" class="form-select select2-cities" multiple
+                  name="product[delivery_rules_attributes][0][location_data_cities][]"
+                  data-placeholder="First select a state above, then choose cities...">
+            <!-- Cities will be loaded dynamically based on state selection -->
+          </select>
+          <div class="help-text">
+            <i class="bi bi-arrow-up-circle"></i>
+            First select a state above to load available cities, then choose multiple cities
+          </div>
+        </div>
+
+        <!-- C) Pincodes Input -->
+        <div id="pincodes-selection" class="form-group" style="display: none;">
+          <label class="form-label">
+            <i class="bi bi-mailbox"></i>
+            Enter Pincodes
+          </label>
+          <textarea id="delivery-pincodes" class="form-control" rows="4"
+                    name="product[delivery_rules_attributes][0][location_data_pincodes]"
+                    placeholder="Enter pincodes separated by commas&#10;&#10;Example:&#10;600001, 600002, 600003, 560001, 400001"></textarea>
+          <div class="help-text">
+            <i class="bi bi-info-circle"></i>
+            Enter multiple pincodes separated by commas. Each pincode should be 6 digits.
+          </div>
+        </div>
+
+        <!-- Hidden Fields for Delivery Rules -->
+        <% existing_rule = @existing_rule || product.delivery_rules.first %>
+        <% if existing_rule %>
+          <input type="hidden" name="product[delivery_rules_attributes][0][id]" value="<%= existing_rule.id %>">
+          <input type="hidden" name="product[delivery_rules_attributes][0][rule_type]" id="delivery-rule-type" value="<%= existing_rule.rule_type || 'everywhere' %>">
+          <input type="hidden" name="product[delivery_rules_attributes][0][delivery_charge]" value="<%= existing_rule.delivery_charge || 0 %>">
+          <input type="hidden" name="product[delivery_rules_attributes][0][delivery_days]" value="<%= existing_rule.delivery_days || 7 %>">
+          <input type="hidden" name="product[delivery_rules_attributes][0][location_data]" id="existing-location-data" value="<%= existing_rule.location_data || '[]' %>">
+        <% else %>
+          <input type="hidden" name="product[delivery_rules_attributes][0][rule_type]" id="delivery-rule-type" value="everywhere">
+          <input type="hidden" name="product[delivery_rules_attributes][0][delivery_charge]" value="0">
+          <input type="hidden" name="product[delivery_rules_attributes][0][delivery_days]" value="7">
+          <input type="hidden" name="product[delivery_rules_attributes][0][location_data]" id="existing-location-data" value="[]">
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Occasional Product Section -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <i class="bi bi-calendar-event"></i>
+        Enable Occasional Product
+      </h3>
+
+      <div class="toggle-container">
+        <div class="toggle-switch">
+          <%= form.check_box :is_occasional_product, id: "occasional-toggle" %>
+          <label class="toggle-slider" for="occasional-toggle"></label>
+        </div>
+        <div>
+          <strong>Enable Occasional Product</strong><br>
+          <small class="text-muted">Make this product available only during specific times</small>
+        </div>
+      </div>
+
+      <div id="occasional-settings" style="display: none;">
+        <div class="form-group">
+          <label class="form-label">Occasional Type</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" id="one-time" name="occasional_type" value="one_time" checked>
+              <label for="one-time">One Time</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="recurring" name="occasional_type" value="recurring">
+              <label for="recurring">Recurring</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- One Time Settings -->
+        <div id="one-time-settings">
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <%= form.label :occasional_start_date, "Start Date", class: "form-label" %>
+              <div class="date-input-group">
+                <%= form.datetime_field :occasional_start_date, class: "form-control" %>
+                <i class="bi bi-calendar calendar-icon"></i>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <%= form.label :occasional_end_date, "End Date", class: "form-label" %>
+              <div class="date-input-group">
+                <%= form.datetime_field :occasional_end_date, class: "form-control" %>
+                <i class="bi bi-calendar calendar-icon"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recurring Settings -->
+        <div id="recurring-settings" style="display: none;">
+          <!-- For recurring products, no date fields are needed -->
+          <div class="form-group">
+            <div class="help-text">
+              <i class="bi bi-info-circle"></i>
+              This product will be available according to the recurring schedule settings below
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Recurring Type</label>
+            <%= form.select :occasional_schedule_type,
+                options_for_select([['Weekly', 'weekly'], ['Monthly', 'monthly']]),
+                { prompt: "— Select Recurring Type —" },
+                { class: "form-select", id: "recurring-type" } %>
+          </div>
+
+          <!-- Weekly Settings -->
+          <div id="weekly-settings" style="display: none;">
+            <div class="form-grid form-grid-2">
+              <div class="form-group">
+                <%= form.label :occasional_recurring_from_day, "Day of Week", class: "form-label" %>
+                <%= form.select :occasional_recurring_from_day,
+                    options_for_select([
+                      ['Monday', 'monday'],
+                      ['Tuesday', 'tuesday'],
+                      ['Wednesday', 'wednesday'],
+                      ['Thursday', 'thursday'],
+                      ['Friday', 'friday'],
+                      ['Saturday', 'saturday'],
+                      ['Sunday', 'sunday']
+                    ]),
+                    { prompt: "— Select Day —" },
+                    { class: "form-select" } %>
+              </div>
+
+              <div class="form-group">
+                <%= form.label :occasional_recurring_from_time, "Time", class: "form-label" %>
+                <%= form.time_field :occasional_recurring_from_time, class: "form-control" %>
+              </div>
+            </div>
+
+            <div class="form-grid form-grid-2">
+              <div class="form-group">
+                <%= form.label :occasional_recurring_to_day, "Valid Until Day", class: "form-label" %>
+                <%= form.select :occasional_recurring_to_day,
+                    options_for_select([
+                      ['Monday', 'monday'],
+                      ['Tuesday', 'tuesday'],
+                      ['Wednesday', 'wednesday'],
+                      ['Thursday', 'thursday'],
+                      ['Friday', 'friday'],
+                      ['Saturday', 'saturday'],
+                      ['Sunday', 'sunday']
+                    ]),
+                    { prompt: "— Select Day —" },
+                    { class: "form-select" } %>
+              </div>
+
+              <div class="form-group">
+                <%= form.label :occasional_recurring_to_time, "Until Time", class: "form-label" %>
+                <%= form.time_field :occasional_recurring_to_time, class: "form-control" %>
+              </div>
+            </div>
+            <div class="help-text">
+              Example: Every Friday 5:00 PM, valid from Friday to Sunday 10:00 PM
+            </div>
+          </div>
+
+          <!-- Monthly Settings -->
+          <div id="monthly-settings" style="display: none;">
+            <!-- Monthly settings simplified - using existing model attributes -->
+            <div class="help-text">
+              <i class="bi bi-info-circle"></i>
+              Monthly recurring products will be available throughout the month
+            </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEO & Marketing Section -->
+    <div class="form-section">
+      <div class="seo-section">
+        <div class="seo-header" onclick="toggleSeoSection()">
+          <h3>
+            <i class="bi bi-graph-up"></i>
+            📈 SEO & Marketing
+          </h3>
+          <i class="bi bi-chevron-down seo-toggle-icon" id="seo-toggle-icon"></i>
+        </div>
+
+        <div class="seo-content" id="seo-content">
+          <div class="form-group">
+            <%= form.label :meta_title, "Meta Title", class: "form-label" %>
+            <%= form.text_field :meta_title, class: "form-control",
+                placeholder: "Enter SEO title for search engines",
+                maxlength: 60, id: "meta-title" %>
+            <div class="help-text">SEO title for search engines</div>
+            <div class="character-count" id="meta-title-count">0 / 60 characters</div>
+          </div>
+
+          <div class="form-group">
+            <%= form.label :tags, "Tags", class: "form-label" %>
+            <%= form.text_field :tags, class: "form-control",
+                placeholder: "milk, organic milk, fresh dairy" %>
+            <div class="help-text">Comma separated tags for better searchability</div>
+          </div>
+
+          <div class="form-group">
+            <%= form.label :meta_description, "Meta Description", class: "form-label" %>
+            <%= form.text_area :meta_description, class: "form-control",
+                rows: 3, placeholder: "Enter SEO description for search engines",
+                maxlength: 160, id: "meta-description" %>
+            <div class="help-text">SEO description for search engines</div>
+            <div class="character-count" id="meta-description-count">0 / 160 characters</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <div class="action-left">
+        <i class="bi bi-info-circle"></i>
+        All fields marked with <span class="required-mark">*</span> are required
+      </div>
+      <div class="action-right">
+        <%= link_to "Cancel", store_admin_products_path, class: "btn btn-secondary" %>
+        <%= form.submit product.new_record? ? "Create Product" : "Update Product",
+            class: "btn btn-primary",
+            data: { disable_with: "Saving..." } %>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<!-- Include Select2 CSS & JS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // 🔧 Initialize Select2 for Delivery Rules
+
+  // States multi-select with search
+  $('.select2-states').select2({
+    placeholder: "🔍 Search and select states...",
+    allowClear: true,
+    width: '100%',
+    closeOnSelect: false,
+    searchInputPlaceholder: 'Type to search states...'
+  });
+
+  // State filter for cities (single select)
+  $('.select2-single').select2({
+    placeholder: "🏛️ Select a state to load cities...",
+    allowClear: true,
+    width: '100%'
+  });
+
+  // Cities multi-select (initially disabled)
+  $('.select2-cities').select2({
+    placeholder: "🏙️ First select a state above to load cities...",
+    allowClear: true,
+    width: '100%',
+    closeOnSelect: false
+  });
+
+  // 📦 Enhanced Delivery Rules Handler
+  const deliveryType = document.getElementById('delivery-type');
+  const deliveryRuleType = document.getElementById('delivery-rule-type');
+  const statesSelection = document.getElementById('states-selection');
+  const citiesSelection = document.getElementById('cities-selection');
+  const pincodesSelection = document.getElementById('pincodes-selection');
+
+  deliveryType.addEventListener('change', function() {
+    // Hide all selections first
+    statesSelection.style.display = 'none';
+    citiesSelection.style.display = 'none';
+    pincodesSelection.style.display = 'none';
+
+    // Update hidden field for backend
+    deliveryRuleType.value = this.value;
+
+    // Show relevant selection based on choice
+    switch(this.value) {
+      case 'state':
+        statesSelection.style.display = 'block';
+        break;
+      case 'city':
+        citiesSelection.style.display = 'block';
+        break;
+      case 'pincode':
+        pincodesSelection.style.display = 'block';
+        break;
+      case 'everywhere':
+      default:
+        // No additional fields needed for everywhere
+        break;
+    }
+  });
+
+  // 🏙️ Dynamic Cities Loading Handler
+  const stateFilterForCities = document.getElementById('state-filter-for-cities');
+  const deliveryCities = document.getElementById('delivery-cities');
+
+  // 📍 Comprehensive Cities Data by State
+  const citiesByState = {
+    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem', 'Tirunelveli', 'Tiruppur', 'Erode', 'Vellore', 'Thoothukudi', 'Dindigul', 'Thanjavur', 'Ranipet', 'Sivakasi', 'Karur'],
+    'Karnataka': ['Bangalore', 'Mysore', 'Hubli-Dharwad', 'Mangalore', 'Belgaum', 'Gulbarga', 'Davanagere', 'Bellary', 'Bijapur', 'Shimoga', 'Tumkur', 'Raichur', 'Bidar', 'Hospet', 'Hassan'],
+    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik', 'Kalyan-Dombivli', 'Vasai-Virar', 'Aurangabad', 'Navi Mumbai', 'Solapur', 'Amravati', 'Sangli', 'Malegaon', 'Akola', 'Latur'],
+    'Kerala': ['Thiruvananthapuram', 'Kochi', 'Kozhikode', 'Thrissur', 'Kollam', 'Palakkad', 'Alappuzha', 'Kannur', 'Kottayam', 'Malappuram', 'Trichur', 'Alathur', 'Vatakara', 'Kanhangad', 'Payyanur'],
+    'Delhi': ['New Delhi', 'Delhi Cantonment', 'Narela', 'Najafgarh', 'Alipur'],
+    'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar', 'Jamnagar', 'Junagadh', 'Gandhinagar', 'Akola', 'Anand'],
+    'West Bengal': ['Kolkata', 'Asansol', 'Siliguri', 'Durgapur', 'Bardhaman', 'Malda', 'Baharampur', 'Habra', 'Kharagpur', 'Shantipur'],
+    'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Ghaziabad', 'Agra', 'Varanasi', 'Meerut', 'Allahabad', 'Bareilly', 'Aligarh', 'Moradabad'],
+    'Rajasthan': ['Jaipur', 'Jodhpur', 'Kota', 'Bikaner', 'Ajmer', 'Udaipur', 'Bhilwara', 'Alwar', 'Bharatpur', 'Sikar'],
+    'Punjab': ['Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala', 'Bathinda', 'Mohali', 'Firozpur', 'Batala', 'Pathankot', 'Moga'],
+    'Haryana': ['Faridabad', 'Gurgaon', 'Panipat', 'Ambala', 'Yamunanagar', 'Rohtak', 'Hisar', 'Karnal', 'Sonipat', 'Panchkula'],
+    'Madhya Pradesh': ['Indore', 'Bhopal', 'Jabalpur', 'Gwalior', 'Ujjain', 'Sagar', 'Dewas', 'Satna', 'Ratlam', 'Rewa'],
+    'Bihar': ['Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Purnia', 'Darbhanga', 'Bihar Sharif', 'Arrah', 'Begusarai', 'Katihar'],
+    'Odisha': ['Bhubaneswar', 'Cuttack', 'Rourkela', 'Brahmapur', 'Sambalpur', 'Puri', 'Balasore', 'Bhadrak', 'Baripada', 'Jharsuguda'],
+    'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad', 'Khammam', 'Karimnagar', 'Ramagundam', 'Mahabubnagar', 'Nalgonda', 'Adilabad', 'Suryapet'],
+    'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Kurnool', 'Rajahmundry', 'Tirupati', 'Kakinada', 'Anantapur', 'Vizianagaram']
+  };
+
+  // Dynamic Cities Loading when State Filter changes
+  stateFilterForCities.addEventListener('change', function() {
+    const selectedState = this.value;
+
+    // Clear existing cities
+    deliveryCities.innerHTML = '';
+
+    if (selectedState && citiesByState[selectedState]) {
+      // Add cities for selected state
+      citiesByState[selectedState].forEach(city => {
+        const option = new Option(city, city);
+        deliveryCities.add(option);
+      });
+
+      // Update placeholder and reinitialize Select2
+      $(deliveryCities).select2('destroy');
+      $(deliveryCities).select2({
+        placeholder: `Select cities from ${selectedState}...`,
+        allowClear: true,
+        width: '100%',
+        searchInputPlaceholder: 'Search cities...'
+      });
+    } else {
+      // Reset to default state
+      $(deliveryCities).select2('destroy');
+      $(deliveryCities).select2({
+        placeholder: 'First select a state above to load cities...',
+        allowClear: true,
+        width: '100%'
+      });
+    }
+  });
+
+  // Occasional Product Toggle
+  const occasionalToggle = document.getElementById('occasional-toggle');
+  const occasionalSettings = document.getElementById('occasional-settings');
+
+  occasionalToggle.addEventListener('change', function() {
+    occasionalSettings.style.display = this.checked ? 'block' : 'none';
+  });
+
+  // Occasional Type Handler
+  const oneTimeRadio = document.getElementById('one-time');
+  const recurringRadio = document.getElementById('recurring');
+  const oneTimeSettings = document.getElementById('one-time-settings');
+  const recurringSettings = document.getElementById('recurring-settings');
+
+  function handleOccasionalType() {
+    if (oneTimeRadio.checked) {
+      oneTimeSettings.style.display = 'block';
+      recurringSettings.style.display = 'none';
+    } else {
+      oneTimeSettings.style.display = 'none';
+      recurringSettings.style.display = 'block';
+    }
+  }
+
+  oneTimeRadio.addEventListener('change', handleOccasionalType);
+  recurringRadio.addEventListener('change', handleOccasionalType);
+
+  // Recurring Type Handler
+  const recurringType = document.getElementById('recurring-type');
+  const weeklySettings = document.getElementById('weekly-settings');
+  const monthlySettings = document.getElementById('monthly-settings');
+
+  recurringType.addEventListener('change', function() {
+    weeklySettings.style.display = 'none';
+    monthlySettings.style.display = 'none';
+
+    if (this.value === 'weekly') {
+      weeklySettings.style.display = 'block';
+    } else if (this.value === 'monthly') {
+      monthlySettings.style.display = 'block';
+    }
+  });
+
+  // Discount Configuration
+  const discountToggle = document.getElementById('discount-toggle');
+  const discountConfig = document.getElementById('discount-config');
+  const discountPercentageRadio = document.getElementById('discount-percentage');
+  const discountFixedRadio = document.getElementById('discount-fixed');
+  const percentageInput = document.getElementById('percentage-input');
+  const fixedInput = document.getElementById('fixed-input');
+  const sellingPriceInput = document.getElementById('selling-price');
+  const buyingPriceInput = document.getElementById('buying-price');
+  const discountPercentageValue = document.getElementById('discount-percentage-value');
+  const discountFixedValue = document.getElementById('discount-fixed-value');
+  const finalPriceInput = document.getElementById('final-price');
+  const discountPriceHidden = document.getElementById('discount-price-hidden');
+  const discountSummary = document.getElementById('discount-summary');
+  const discountSummaryText = document.getElementById('discount-summary-text');
+
+  // Show/hide discount configuration
+  if (discountToggle) {
+    discountToggle.addEventListener('change', function() {
+      if (this.checked) {
+        discountConfig.style.display = 'block';
+        // Show default discount type
+        if (discountPercentageRadio.checked) {
+          percentageInput.style.display = 'block';
+          fixedInput.style.display = 'none';
+        } else if (discountFixedRadio.checked) {
+          fixedInput.style.display = 'block';
+          percentageInput.style.display = 'none';
+        } else {
+          // Default to percentage if nothing selected
+          discountPercentageRadio.checked = true;
+          percentageInput.style.display = 'block';
+          fixedInput.style.display = 'none';
+        }
+        calculateFinalPrice();
+      } else {
+        discountConfig.style.display = 'none';
+        finalPriceInput.value = sellingPriceInput.value || '0.00';
+        discountPriceHidden.value = '';
+        discountSummary.style.display = 'none';
+      }
+    });
+
+    // Trigger on page load if discount is enabled
+    if (discountToggle.checked) {
+      discountConfig.style.display = 'block';
+      if (discountPercentageRadio.checked) {
+        percentageInput.style.display = 'block';
+      } else if (discountFixedRadio.checked) {
+        fixedInput.style.display = 'block';
+      }
+      calculateFinalPrice();
+    }
+  }
+
+  // Handle discount type change
+  if (discountPercentageRadio) {
+    discountPercentageRadio.addEventListener('change', function() {
+      if (this.checked) {
+        percentageInput.style.display = 'block';
+        fixedInput.style.display = 'none';
+        discountFixedValue.value = '';
+        calculateFinalPrice();
+      }
+    });
+  }
+
+  if (discountFixedRadio) {
+    discountFixedRadio.addEventListener('change', function() {
+      if (this.checked) {
+        fixedInput.style.display = 'block';
+        percentageInput.style.display = 'none';
+        discountPercentageValue.value = '';
+        calculateFinalPrice();
+      }
+    });
+  }
+
+  // Calculate final price function
+  function calculateFinalPrice() {
+    if (!discountToggle.checked) {
+      finalPriceInput.value = sellingPriceInput.value || '0.00';
+      discountPriceHidden.value = '';
+      return;
+    }
+
+    const sellingPrice = parseFloat(sellingPriceInput.value) || 0;
+    let finalPrice = sellingPrice;
+    let discountAmount = 0;
+    let summaryText = '';
+
+    if (discountPercentageRadio.checked) {
+      const percentage = parseFloat(discountPercentageValue.value) || 0;
+
+      // Validation
+      if (percentage > 100) {
+        discountPercentageValue.value = 100;
+        percentage = 100;
+      }
+      if (percentage < 0) {
+        discountPercentageValue.value = 0;
+        percentage = 0;
+      }
+
+      discountAmount = (sellingPrice * percentage) / 100;
+      finalPrice = sellingPrice - discountAmount;
+      summaryText = `${percentage}% off (₹${discountAmount.toFixed(2)} discount)`;
+    } else if (discountFixedRadio.checked) {
+      discountAmount = parseFloat(discountFixedValue.value) || 0;
+
+      // Validation
+      if (discountAmount > sellingPrice) {
+        alert('Discount cannot be greater than selling price!');
+        discountFixedValue.value = sellingPrice;
+        discountAmount = sellingPrice;
+      }
+      if (discountAmount < 0) {
+        discountFixedValue.value = 0;
+        discountAmount = 0;
+      }
+
+      finalPrice = sellingPrice - discountAmount;
+      const percentage = sellingPrice > 0 ? ((discountAmount / sellingPrice) * 100).toFixed(1) : 0;
+      summaryText = `₹${discountAmount.toFixed(2)} off (${percentage}% discount)`;
+    }
+
+    // Ensure final price is never negative
+    if (finalPrice < 0) {
+      finalPrice = 0;
+    }
+
+    finalPriceInput.value = finalPrice.toFixed(2);
+    discountPriceHidden.value = finalPrice.toFixed(2);
+
+    // Show discount summary
+    if (discountAmount > 0) {
+      discountSummaryText.textContent = summaryText;
+      discountSummary.style.display = 'block';
+    } else {
+      discountSummary.style.display = 'none';
+    }
+  }
+
+  // Add event listeners for price calculations
+  if (sellingPriceInput) {
+    sellingPriceInput.addEventListener('input', function() {
+      calculateFinalPrice();
+      calculateGSTAmounts();
+    });
+  }
+  if (discountPercentageValue) {
+    discountPercentageValue.addEventListener('input', function() {
+      calculateFinalPrice();
+      calculateGSTAmounts();
+    });
+  }
+  if (discountFixedValue) {
+    discountFixedValue.addEventListener('input', function() {
+      calculateFinalPrice();
+      calculateGSTAmounts();
+    });
+  }
+
+  // GST Configuration Handlers
+  const gstToggle = document.getElementById('gst-toggle');
+  const gstConfig = document.getElementById('gst-config');
+  const gstSimpleRadio = document.getElementById('gst-simple');
+  const gstDetailedRadio = document.getElementById('gst-detailed');
+  const simpleGstConfig = document.getElementById('simple-gst-config');
+  const detailedGstConfig = document.getElementById('detailed-gst-config');
+
+  // GST Input fields
+  const gstPercentageInput = document.getElementById('gst-percentage-input');
+  const cgstPercentageInput = document.getElementById('cgst-percentage');
+  const sgstPercentageInput = document.getElementById('sgst-percentage');
+  const igstPercentageInput = document.getElementById('igst-percentage');
+
+  // GST Display fields
+  const gstAmountDisplay = document.getElementById('gst-amount-display');
+  const cgstAmountDisplay = document.getElementById('cgst-amount-display');
+  const sgstAmountDisplay = document.getElementById('sgst-amount-display');
+  const igstAmountDisplay = document.getElementById('igst-amount-display');
+  const finalPriceWithGST = document.getElementById('final-price-with-gst');
+  const basePriceDisplay = document.getElementById('base-price-display');
+  const basePriceDetailedDisplay = document.getElementById('base-price-detailed-display');
+
+  // GST Hidden fields
+  const gstAmountHidden = document.getElementById('gst-amount-hidden');
+  const cgstAmountHidden = document.getElementById('cgst-amount-hidden');
+  const sgstAmountHidden = document.getElementById('sgst-amount-hidden');
+  const igstAmountHidden = document.getElementById('igst-amount-hidden');
+  const finalAmountWithGSTHidden = document.getElementById('final-amount-with-gst-hidden');
+  const basePriceHidden = document.getElementById('base-price-hidden');
+
+  // GST Summary elements
+  const gstSummary = document.getElementById('gst-summary');
+  const gstSummaryBreakdown = document.getElementById('gst-summary-breakdown');
+  const gstSummaryTaxes = document.getElementById('gst-summary-taxes');
+
+  // GST Toggle Handler
+  if (gstToggle) {
+    gstToggle.addEventListener('change', function() {
+      if (this.checked) {
+        gstConfig.style.display = 'block';
+        // Show default GST type
+        if (gstSimpleRadio.checked) {
+          simpleGstConfig.style.display = 'block';
+          detailedGstConfig.style.display = 'none';
+        } else {
+          simpleGstConfig.style.display = 'none';
+          detailedGstConfig.style.display = 'block';
+        }
+        calculateGSTAmounts();
+      } else {
+        gstConfig.style.display = 'none';
+        resetGSTCalculations();
+      }
+    });
+
+    // Trigger on page load if GST is enabled
+    if (gstToggle.checked) {
+      gstConfig.style.display = 'block';
+      if (gstSimpleRadio.checked) {
+        simpleGstConfig.style.display = 'block';
+      } else {
+        detailedGstConfig.style.display = 'block';
+      }
+      calculateGSTAmounts();
+    }
+  }
+
+  // GST Type Selection Handlers
+  if (gstSimpleRadio) {
+    gstSimpleRadio.addEventListener('change', function() {
+      if (this.checked) {
+        simpleGstConfig.style.display = 'block';
+        detailedGstConfig.style.display = 'none';
+        // Clear detailed GST values
+        if (cgstPercentageInput) cgstPercentageInput.value = '';
+        if (sgstPercentageInput) sgstPercentageInput.value = '';
+        if (igstPercentageInput) igstPercentageInput.value = '';
+        calculateGSTAmounts();
+      }
+    });
+  }
+
+  if (gstDetailedRadio) {
+    gstDetailedRadio.addEventListener('change', function() {
+      if (this.checked) {
+        simpleGstConfig.style.display = 'none';
+        detailedGstConfig.style.display = 'block';
+        // Clear simple GST value
+        if (gstPercentageInput) gstPercentageInput.value = '';
+        calculateGSTAmounts();
+      }
+    });
+  }
+
+  // GST Calculation Function - REVERSE CALCULATION (Inclusive GST)
+  function calculateGSTAmounts() {
+    if (!gstToggle || !gstToggle.checked) {
+      resetGSTCalculations();
+      return;
+    }
+
+    // Get the selling price (inclusive of GST)
+    let sellingPriceInclusive = parseFloat(sellingPriceInput?.value) || 0;
+
+    // If discount is enabled, use the discounted price as the inclusive price
+    if (discountToggle && discountToggle.checked) {
+      const discountedPrice = parseFloat(finalPriceInput?.value) || 0;
+      if (discountedPrice > 0) {
+        sellingPriceInclusive = discountedPrice;
+      }
+    }
+
+    // Round the selling price to avoid floating point precision issues
+    sellingPriceInclusive = Math.round(sellingPriceInclusive * 100) / 100;
+
+    let totalGSTAmount = 0;
+    let basePrice = 0;
+    let cgstAmount = 0;
+    let sgstAmount = 0;
+    let igstAmount = 0;
+    let breakdown = '';
+    let taxDetails = '';
+
+    if (gstSimpleRadio && gstSimpleRadio.checked) {
+      // Simple GST Reverse Calculation
+      const gstPercentage = parseFloat(gstPercentageInput?.value) || 0;
+
+      if (gstPercentage > 100) {
+        gstPercentageInput.value = 100;
+        gstPercentage = 100;
+      }
+
+      // Fixed calculation: Base Price = Inclusive Price / (1 + GST Rate) but round to whole number for clean display
+      basePrice = sellingPriceInclusive / (1 + (gstPercentage / 100));
+      // Round base price to nearest whole number for clean display (e.g., 95.24 becomes 95)
+      basePrice = Math.round(basePrice);
+      // Calculate GST as the difference to ensure totals match
+      totalGSTAmount = sellingPriceInclusive - basePrice;
+      // Round GST amount to 2 decimal places
+      totalGSTAmount = Math.round(totalGSTAmount * 100) / 100;
+
+      // Update displays
+      if (basePriceDisplay) basePriceDisplay.value = basePrice.toFixed(2);
+      if (basePriceHidden) basePriceHidden.value = basePrice.toFixed(2);
+      if (gstAmountDisplay) gstAmountDisplay.value = totalGSTAmount.toFixed(2);
+      if (gstAmountHidden) gstAmountHidden.value = totalGSTAmount.toFixed(2);
+
+      breakdown = `Selling Price (Inclusive): ₹${sellingPriceInclusive.toFixed(2)}<br>Base Price: ₹${basePrice.toFixed(2)}<br>GST (${gstPercentage}%): ₹${totalGSTAmount.toFixed(2)}`;
+      taxDetails = `GST: ${gstPercentage}%`;
+
+    } else if (gstDetailedRadio && gstDetailedRadio.checked) {
+      // Detailed GST Reverse Calculation
+      const cgstPercentage = parseFloat(cgstPercentageInput?.value) || 0;
+      const sgstPercentage = parseFloat(sgstPercentageInput?.value) || 0;
+      const igstPercentage = parseFloat(igstPercentageInput?.value) || 0;
+
+      const totalGSTPercentage = cgstPercentage + sgstPercentage + igstPercentage;
+
+      // Fixed calculation: Base Price = Inclusive Price / (1 + Total GST Rate) but round to whole number for clean display
+      basePrice = sellingPriceInclusive / (1 + (totalGSTPercentage / 100));
+      // Round base price to nearest whole number for clean display
+      basePrice = Math.round(basePrice);
+
+      // Calculate total GST as difference first
+      totalGSTAmount = sellingPriceInclusive - basePrice;
+      totalGSTAmount = Math.round(totalGSTAmount * 100) / 100;
+
+      // Proportionally distribute GST among components based on their percentages
+      if (totalGSTPercentage > 0) {
+        cgstAmount = (totalGSTAmount * cgstPercentage) / totalGSTPercentage;
+        sgstAmount = (totalGSTAmount * sgstPercentage) / totalGSTPercentage;
+        igstAmount = (totalGSTAmount * igstPercentage) / totalGSTPercentage;
+
+        // Round individual GST amounts
+        cgstAmount = Math.round(cgstAmount * 100) / 100;
+        sgstAmount = Math.round(sgstAmount * 100) / 100;
+        igstAmount = Math.round(igstAmount * 100) / 100;
+      } else {
+        cgstAmount = sgstAmount = igstAmount = 0;
+      }
+
+      // Update displays
+      if (basePriceDetailedDisplay) basePriceDetailedDisplay.value = basePrice.toFixed(2);
+      if (basePriceHidden) basePriceHidden.value = basePrice.toFixed(2);
+      if (cgstAmountDisplay) cgstAmountDisplay.value = cgstAmount.toFixed(2);
+      if (sgstAmountDisplay) sgstAmountDisplay.value = sgstAmount.toFixed(2);
+      if (igstAmountDisplay) igstAmountDisplay.value = igstAmount.toFixed(2);
+
+      // Update hidden fields
+      if (cgstAmountHidden) cgstAmountHidden.value = cgstAmount.toFixed(2);
+      if (sgstAmountHidden) sgstAmountHidden.value = sgstAmount.toFixed(2);
+      if (igstAmountHidden) igstAmountHidden.value = igstAmount.toFixed(2);
+
+      breakdown = `Selling Price (Inclusive): ₹${sellingPriceInclusive.toFixed(2)}<br>Base Price: ₹${basePrice.toFixed(2)}<br>CGST @ ${cgstPercentage}%: ₹${cgstAmount.toFixed(2)}<br>SGST @ ${sgstPercentage}%: ₹${sgstAmount.toFixed(2)}<br>IGST @ ${igstPercentage}%: ₹${igstAmount.toFixed(2)}`;
+
+      let activeTaxes = [];
+      if (cgstPercentage > 0) activeTaxes.push(`CGST: ${cgstPercentage}%`);
+      if (sgstPercentage > 0) activeTaxes.push(`SGST: ${sgstPercentage}%`);
+      if (igstPercentage > 0) activeTaxes.push(`IGST: ${igstPercentage}%`);
+      taxDetails = activeTaxes.join('<br>');
+    }
+
+    // The final amount should match the selling price (confirmation)
+    if (finalPriceWithGST) finalPriceWithGST.value = sellingPriceInclusive.toFixed(2);
+    if (finalAmountWithGSTHidden) finalAmountWithGSTHidden.value = sellingPriceInclusive.toFixed(2);
+
+    // Update total GST amount
+    if (gstAmountHidden) gstAmountHidden.value = totalGSTAmount.toFixed(2);
+
+    // Show GST summary
+    if (totalGSTAmount > 0 && gstSummary) {
+      if (gstSummaryBreakdown) gstSummaryBreakdown.innerHTML = breakdown;
+      if (gstSummaryTaxes) gstSummaryTaxes.innerHTML = taxDetails;
+      gstSummary.style.display = 'block';
+    } else if (gstSummary) {
+      gstSummary.style.display = 'none';
+    }
+  }
+
+  function resetGSTCalculations() {
+    // Reset all GST displays
+    if (basePriceDisplay) basePriceDisplay.value = '0.00';
+    if (basePriceDetailedDisplay) basePriceDetailedDisplay.value = '0.00';
+    if (gstAmountDisplay) gstAmountDisplay.value = '0.00';
+    if (cgstAmountDisplay) cgstAmountDisplay.value = '0.00';
+    if (sgstAmountDisplay) sgstAmountDisplay.value = '0.00';
+    if (igstAmountDisplay) igstAmountDisplay.value = '0.00';
+    if (finalPriceWithGST) {
+      // Set to selling price or discounted price if available
+      const currentPrice = discountToggle?.checked ?
+        (parseFloat(finalPriceInput?.value) || 0) :
+        (parseFloat(sellingPriceInput?.value) || 0);
+      finalPriceWithGST.value = currentPrice.toFixed(2);
+    }
+
+    // Reset hidden fields
+    if (gstAmountHidden) gstAmountHidden.value = '';
+    if (cgstAmountHidden) cgstAmountHidden.value = '';
+    if (sgstAmountHidden) sgstAmountHidden.value = '';
+    if (igstAmountHidden) igstAmountHidden.value = '';
+    if (finalAmountWithGSTHidden) {
+      const currentPrice = discountToggle?.checked ?
+        (parseFloat(finalPriceInput?.value) || 0) :
+        (parseFloat(sellingPriceInput?.value) || 0);
+      finalAmountWithGSTHidden.value = currentPrice.toFixed(2);
+    }
+
+    // Hide summary
+    if (gstSummary) gstSummary.style.display = 'none';
+  }
+
+  // Add event listeners for GST inputs
+  if (gstPercentageInput) {
+    gstPercentageInput.addEventListener('input', calculateGSTAmounts);
+  }
+
+  const gstComponentInputs = document.querySelectorAll('.gst-component');
+  gstComponentInputs.forEach(input => {
+    input.addEventListener('input', calculateGSTAmounts);
+  });
+
+  // SEO Character Counters
+  const metaTitleInput = document.getElementById('meta-title');
+  const metaTitleCount = document.getElementById('meta-title-count');
+  const metaDescriptionInput = document.getElementById('meta-description');
+  const metaDescriptionCount = document.getElementById('meta-description-count');
+
+  if (metaTitleInput && metaTitleCount) {
+    metaTitleInput.addEventListener('input', function() {
+      const length = this.value.length;
+      metaTitleCount.textContent = `${length} / 60 characters`;
+      metaTitleCount.className = 'character-count';
+      if (length > 60) {
+        metaTitleCount.className += ' error';
+      } else if (length > 50) {
+        metaTitleCount.className += ' warning';
+      }
+    });
+    // Trigger on load
+    metaTitleInput.dispatchEvent(new Event('input'));
+  }
+
+  if (metaDescriptionInput && metaDescriptionCount) {
+    metaDescriptionInput.addEventListener('input', function() {
+      const length = this.value.length;
+      metaDescriptionCount.textContent = `${length} / 160 characters`;
+      metaDescriptionCount.className = 'character-count';
+      if (length > 160) {
+        metaDescriptionCount.className += ' error';
+      } else if (length > 150) {
+        metaDescriptionCount.className += ' warning';
+      }
+    });
+    // Trigger on load
+    metaDescriptionInput.dispatchEvent(new Event('input'));
+  }
+
+  // Form submission handler
+  const form = document.getElementById('enhanced-product-form');
+  form.addEventListener('submit', function(e) {
+    // Validate discount if enabled
+    if (discountToggle.checked) {
+      const sellingPrice = parseFloat(sellingPriceInput.value) || 0;
+
+      if (discountPercentageRadio.checked) {
+        const percentage = parseFloat(discountPercentageValue.value) || 0;
+        if (percentage > 100) {
+          e.preventDefault();
+          alert('Discount percentage cannot exceed 100%');
+          return false;
+        }
+      } else if (discountFixedRadio.checked) {
+        const fixedAmount = parseFloat(discountFixedValue.value) || 0;
+        if (fixedAmount > sellingPrice) {
+          e.preventDefault();
+          alert('Discount amount cannot be greater than selling price');
+          return false;
+        }
+      }
+    }
+
+    // Collect delivery rules data
+    const deliveryTypeValue = deliveryType.value;
+
+    if (deliveryTypeValue === 'states') {
+      const selectedStates = $('#delivery-states').val();
+      // Add to form data
+    } else if (deliveryTypeValue === 'cities') {
+      const selectedCities = $('#delivery-cities').val();
+      // Add to form data
+    } else if (deliveryTypeValue === 'pincodes') {
+      const pincodes = document.getElementById('delivery-pincodes').value;
+      // Add to form data
+    }
+  });
+});
+
+  // Stock Update Vendor Purchase Linking
+  <% if product.persisted? %>
+    document.addEventListener('DOMContentLoaded', function() {
+      const stockField = document.getElementById('product_stock');
+      const vendorPurchaseSection = document.getElementById('vendor-purchase-section');
+      let originalStock = parseInt(stockField.value) || 0;
+
+      stockField.addEventListener('input', function() {
+        const currentStock = parseInt(this.value) || 0;
+
+        // Show vendor purchase section only if stock has changed
+        if (currentStock !== originalStock) {
+          vendorPurchaseSection.style.display = 'block';
+        } else {
+          vendorPurchaseSection.style.display = 'none';
+        }
+      });
+
+      // Update original stock when page loads
+      stockField.addEventListener('focus', function() {
+        originalStock = parseInt(this.value) || 0;
+      });
+    });
+  <% end %>
+
+  // Initialize form fields for existing delivery rules when editing
+  <% if @existing_rule %>
+    document.addEventListener('DOMContentLoaded', function() {
+      const deliveryType = document.getElementById('delivery-type');
+      const existingRuleType = '<%= @existing_rule.rule_type %>';
+      const existingLocationData = '<%= @existing_rule.location_data || "[]" %>';
+
+      // Set the delivery type dropdown
+      deliveryType.value = existingRuleType;
+
+      // Show the appropriate section and populate data
+      const statesSelection = document.getElementById('states-selection');
+      const citiesSelection = document.getElementById('cities-selection');
+      const pincodesSelection = document.getElementById('pincodes-selection');
+
+      // Hide all sections first
+      statesSelection.style.display = 'none';
+      citiesSelection.style.display = 'none';
+      pincodesSelection.style.display = 'none';
+
+      try {
+        const locationData = JSON.parse(existingLocationData);
+
+        switch(existingRuleType) {
+          case 'state':
+            statesSelection.style.display = 'block';
+            if (locationData.length > 0) {
+              const statesSelect = document.getElementById('delivery-states');
+              locationData.forEach(function(state) {
+                const option = statesSelect.querySelector('option[value="' + state + '"]');
+                if (option) option.selected = true;
+              });
+              // Trigger Select2 update if using Select2
+              if (typeof $ !== 'undefined' && $('#delivery-states').hasClass('select2-states')) {
+                $('#delivery-states').trigger('change');
+              }
+            }
+            break;
+          case 'city':
+            citiesSelection.style.display = 'block';
+            if (locationData.length > 0) {
+              const citiesSelect = document.getElementById('delivery-cities');
+              locationData.forEach(function(city) {
+                const option = citiesSelect.querySelector('option[value="' + city + '"]');
+                if (option) option.selected = true;
+              });
+              // Trigger Select2 update if using Select2
+              if (typeof $ !== 'undefined' && $('#delivery-cities').hasClass('select2-cities')) {
+                $('#delivery-cities').trigger('change');
+              }
+            }
+            break;
+          case 'pincode':
+            pincodesSelection.style.display = 'block';
+            if (locationData.length > 0) {
+              const pincodesTextarea = document.getElementById('delivery-pincodes');
+              if (pincodesTextarea) {
+                pincodesTextarea.value = locationData.join(', ');
+              }
+            }
+            break;
+        }
+      } catch (e) {
+        console.warn('Error parsing existing location data:', e);
+      }
+    });
+  <% end %>
+
+// SEO Section Toggle Function
+function toggleSeoSection() {
+  const seoContent = document.getElementById('seo-content');
+  const seoToggleIcon = document.getElementById('seo-toggle-icon');
+
+  if (seoContent.classList.contains('show')) {
+    seoContent.classList.remove('show');
+    seoToggleIcon.classList.remove('rotated');
+  } else {
+    seoContent.classList.add('show');
+    seoToggleIcon.classList.add('rotated');
+  }
+}
+
+// Cloudinary Upload Management
+document.addEventListener('DOMContentLoaded', function() {
+  const cloudinaryInput = document.getElementById('cloudinaryImageInput');
+  const cloudinaryPreview = document.getElementById('cloudinaryPreview');
+  const imageUrlField = document.getElementById('product_image_url');
+  const additionalImagesUrlsField = document.getElementById('product_additional_images_urls');
+
+  let cloudinaryImages = [];
+  let isUploading = false;
+
+  if (cloudinaryInput) {
+    cloudinaryInput.addEventListener('change', function(e) {
+      const files = Array.from(e.target.files);
+      if (files.length > 0) {
+        handleCloudinaryUploads(files);
+      }
+    });
+  }
+
+  async function handleCloudinaryUploads(files) {
+    if (isUploading) return;
+
+    isUploading = true;
+    const uploadButton = document.querySelector('.upload-btn');
+    const originalButtonText = uploadButton.innerHTML;
+
+    uploadButton.disabled = true;
+    uploadButton.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Uploading...';
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        await uploadSingleImageToCloudinary(file, i);
+      }
+
+      showNotification('Images uploaded successfully to Cloudinary!', 'success');
+      updateCloudinaryFields();
+    } catch (error) {
+      console.error('Upload error:', error);
+      showNotification('Upload failed: ' + error.message, 'error');
+    } finally {
+      isUploading = false;
+      uploadButton.disabled = false;
+      uploadButton.innerHTML = originalButtonText;
+    }
+  }
+
+  async function uploadSingleImageToCloudinary(file, index) {
+    return new Promise((resolve, reject) => {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      fetch('/store_admin/products/upload_cloudinary_image', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          cloudinaryImages.push({
+            public_id: data.public_id,
+            url: data.url,
+            thumbnail_url: data.thumbnail_url,
+            filename: file.name,
+            size: file.size
+          });
+
+          displayCloudinaryPreview(data, file);
+          resolve(data);
+        } else {
+          reject(new Error(data.error));
+        }
+      })
+      .catch(error => {
+        reject(error);
+      });
+    });
+  }
+
+  function displayCloudinaryPreview(imageData, file) {
+    const previewHtml = `
+      <div class="cloudinary-image-item d-flex align-items-center mb-3 p-3 border rounded" data-public-id="${imageData.public_id}">
+        <img src="${imageData.thumbnail_url}" alt="Preview" class="me-3" style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px;">
+        <div class="flex-grow-1">
+          <h6 class="mb-1">${file.name}</h6>
+          <small class="text-muted">${formatFileSize(file.size)} • Cloudinary</small>
+          <br>
+          <small class="text-success">
+            <i class="bi bi-check-circle me-1"></i>Uploaded successfully
+          </small>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger remove-cloudinary-image" data-public-id="${imageData.public_id}">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+    `;
+
+    cloudinaryPreview.insertAdjacentHTML('beforeend', previewHtml);
+
+    // Add remove functionality
+    const removeButton = cloudinaryPreview.querySelector(`[data-public-id="${imageData.public_id}"] .remove-cloudinary-image`);
+    removeButton.addEventListener('click', function() {
+      removeCloudinaryImage(imageData.public_id);
+    });
+  }
+
+  function removeCloudinaryImage(publicId) {
+    cloudinaryImages = cloudinaryImages.filter(img => img.public_id !== publicId);
+    const imageItem = cloudinaryPreview.querySelector(`[data-public-id="${publicId}"]`);
+    if (imageItem) {
+      imageItem.remove();
+    }
+    updateCloudinaryFields();
+  }
+
+  function updateCloudinaryFields() {
+    if (cloudinaryImages.length > 0) {
+      // Set main image (first image)
+      if (imageUrlField) imageUrlField.value = cloudinaryImages[0].public_id;
+
+      // Set additional images (rest of the images)
+      if (cloudinaryImages.length > 1 && additionalImagesUrlsField) {
+        const additionalImages = cloudinaryImages.slice(1).map(img => img.public_id);
+        additionalImagesUrlsField.value = JSON.stringify(additionalImages);
+      } else if (additionalImagesUrlsField) {
+        additionalImagesUrlsField.value = '';
+      }
+    } else {
+      if (imageUrlField) imageUrlField.value = '';
+      if (additionalImagesUrlsField) additionalImagesUrlsField.value = '';
+    }
+  }
+
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  function showNotification(message, type = 'info') {
+    // Simple notification system
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x`;
+    alert.style.zIndex = '9999';
+    alert.innerHTML = `
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alert);
+
+    setTimeout(() => {
+      if (alert.parentNode) {
+        alert.parentNode.removeChild(alert);
+      }
+    }, 5000);
+  }
+
+});
+
+// Global functions for image management (outside DOMContentLoaded)
+function viewImage(imageUrl, title) {
+  // Create and show image modal
+  const modal = document.createElement('div');
+  modal.className = 'modal fade image-modal';
+  modal.innerHTML = `
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title text-white">${title}</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <img src="${imageUrl}" alt="${title}" class="img-fluid">
+          <div class="image-url-display text-white bg-dark mt-3">
+            <strong>Public URL:</strong><br>
+            <code class="text-light">${imageUrl}</code>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-light" onclick="copyImageUrl('${imageUrl}')">
+            <i class="bi bi-copy me-1"></i>Copy URL
+          </button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  const bootstrapModal = new bootstrap.Modal(modal);
+  bootstrapModal.show();
+
+  modal.addEventListener('hidden.bs.modal', function() {
+    modal.remove();
+  });
+}
+
+function copyImageUrl(imageUrl) {
+  navigator.clipboard.writeText(imageUrl).then(function() {
+    showNotification('Image URL copied to clipboard!', 'success');
+  }).catch(function(err) {
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = imageUrl;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    showNotification('Image URL copied to clipboard!', 'success');
+  });
+}
+
+// ---- Multi-quantity variants logic ----
+(function() {
+  const multiQtyToggle = document.getElementById('has_multiple_quantities');
+  const variantsSection = document.getElementById('variants_section');
+  const singlePricingSection = document.getElementById('single_pricing_section');
+  const productGstSection = document.getElementById('product_gst_section');
+
+  function toggleVariantMode() {
+    const multiOn = multiQtyToggle && multiQtyToggle.checked;
+
+    if (variantsSection) {
+      variantsSection.style.display = multiOn ? '' : 'none';
+      // Disable variant inputs when section is hidden so browser skips required validation
+      variantsSection.querySelectorAll('input, select, textarea').forEach(el => {
+        el.disabled = !multiOn;
+      });
+    }
+    if (productGstSection) {
+      productGstSection.style.display = multiOn ? 'none' : '';
+      productGstSection.querySelectorAll('input, select, textarea').forEach(el => {
+        el.disabled = multiOn;
+      });
+    }
+
+    if (singlePricingSection) {
+      singlePricingSection.style.display = multiOn ? 'none' : '';
+      // Disable hidden required fields so browser validation skips them
+      singlePricingSection.querySelectorAll('input, select, textarea').forEach(el => {
+        el.disabled = multiOn;
+      });
+    }
+  }
+
+  if (multiQtyToggle) {
+    multiQtyToggle.addEventListener('change', toggleVariantMode);
+    toggleVariantMode();
+  }
+
+  let variantIndex = Date.now();
+
+  document.getElementById('add_variant_row')?.addEventListener('click', function() {
+    const template = document.getElementById('variant_row_template');
+    if (!template) return;
+    const idx = variantIndex++;
+    const html = template.innerHTML.replace(/NEW_IDX/g, idx);
+    const container = document.getElementById('variants_body');
+    container.insertAdjacentHTML('beforeend', html);
+    bindVariantRowEvents(container.lastElementChild);
+  });
+
+  const productGstPct = parseFloat('<%= @product.gst_percentage || 0 %>') || 0;
+
+  function recalcVariantRow(row) {
+    const sellingPrice = parseFloat(row.querySelector('.variant-selling-price')?.value) || 0;
+
+    // Only apply discount when the checkbox is explicitly checked
+    const discountToggle = row.querySelector('.variant-discount-toggle');
+    const discountEnabled = discountToggle ? discountToggle.checked : false;
+    const discountType  = row.querySelector('.variant-discount-type')?.value || '';
+    const discountValue = parseFloat(row.querySelector('.variant-discount-value')?.value) || 0;
+
+    // GST: use per-row value if entered, else fall back to product-level GST
+    const gstPctRaw = row.querySelector('.variant-gst-pct')?.value;
+    const gstPct = (gstPctRaw !== '' && gstPctRaw !== null && !isNaN(parseFloat(gstPctRaw)))
+                   ? parseFloat(gstPctRaw)
+                   : productGstPct;
+
+    // Step 1: price after discount
+    let effectivePrice = sellingPrice;
+    if (discountEnabled && discountValue > 0) {
+      if (discountType === 'percentage') {
+        effectivePrice = sellingPrice - (sellingPrice * discountValue / 100);
+      } else if (discountType === 'fixed') {
+        effectivePrice = sellingPrice - discountValue;
+      }
+      effectivePrice = Math.max(0, effectivePrice);
+    }
+
+    // Step 2: GST = simple percentage of effective price (not backward extraction)
+    // The selling price is treated as GST-inclusive — we show the GST component
+    const gstAmt = gstPct > 0 ? parseFloat((effectivePrice * gstPct / 100).toFixed(2)) : 0;
+
+    // Step 3: Final = effective price (what customer pays; GST is a component within it)
+    const finalPrice = parseFloat(effectivePrice.toFixed(2));
+
+    const gstBadge   = row.querySelector('.variant-gst-amt');
+    const finalBadge = row.querySelector('.variant-final-price');
+    if (gstBadge)   gstBadge.textContent   = gstAmt.toFixed(2);
+    if (finalBadge) finalBadge.textContent = finalPrice.toFixed(2);
+  }
+
+  function bindVariantRowEvents(card) {
+    const discToggle = card.querySelector('.variant-discount-toggle');
+    discToggle?.addEventListener('change', function() {
+      card.querySelectorAll('.variant-discount-fields').forEach(el => {
+        el.style.display = this.checked ? '' : 'none';
+      });
+      recalcVariantRow(card);
+    });
+    card.querySelector('.variant-selling-price')?.addEventListener('input', () => recalcVariantRow(card));
+    card.querySelector('.variant-gst-pct')?.addEventListener('input', () => recalcVariantRow(card));
+    card.querySelector('.variant-discount-type')?.addEventListener('change', () => recalcVariantRow(card));
+    card.querySelector('.variant-discount-value')?.addEventListener('input', () => recalcVariantRow(card));
+    card.querySelector('.remove-variant-row')?.addEventListener('click', function() {
+      const destroyField = card.querySelector('.destroy-field');
+      if (destroyField && card.querySelector('input[name*="[id]"]')) {
+        destroyField.value = '1';
+        card.style.display = 'none';
+      } else {
+        card.remove();
+      }
+    });
+    recalcVariantRow(card);
+  }
+
+  document.querySelectorAll('#variants_body .variant-row').forEach(bindVariantRowEvents);
+})();
+// ---- End multi-quantity logic ----
+
+// Enhanced notification function (outside DOMContentLoaded)
+function showNotification(message, type = 'info') {
+  const alert = document.createElement('div');
+  alert.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x`;
+  alert.style.zIndex = '9999';
+  alert.style.marginTop = '20px';
+  alert.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  document.body.appendChild(alert);
+
+  setTimeout(() => {
+    if (alert.parentNode) {
+      alert.parentNode.removeChild(alert);
+    }
+  }, 5000);
+}
+</script>

@@ -1,134 +1,469 @@
 <% content_for :page_title, "Products" %>
+<% store_stock_for = ->(product) {
+     if product.product_variants.any?
+       product.product_variants.sum { |v| (@variant_store_stock[v.id] || v.available_stock).to_f }
+     else
+       @store_stock[product.id].to_f
+     end
+   } %>
+
+<!-- Hidden delete form — reused for all product deletes -->
+<form id="deleteProductForm" method="post" style="display:none">
+  <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+  <%= hidden_field_tag :_method, "delete" %>
+</form>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h4 class="mb-1">Store Products</h4>
+    <h4 class="mb-1">Product Management</h4>
     <small class="text-muted">Products stocked or sold at <%= @current_store.name %></small>
   </div>
-  <%= link_to new_store_admin_product_path, class: "btn btn-primary" do %>
-    <i class="bi bi-plus-circle me-2"></i>Add Product
-  <% end %>
+  <div>
+    <%= link_to new_store_admin_product_path, class: "btn btn-primary" do %>
+      <i class="bi bi-plus-lg me-1"></i>Add New Product
+    <% end %>
+  </div>
 </div>
 
+<!-- Stats Cards -->
 <div class="row mb-4">
-  <div class="col-md-4 mb-3">
-    <div class="card shadow-sm border-0" style="border-left: 4px solid #0ea5e9 !important;">
-      <div class="card-body d-flex justify-content-between align-items-center">
-        <div>
-          <h6 class="card-title mb-2" style="color: #2d3748; font-weight: 600;">Products</h6>
-          <div style="color: #1a202c; font-weight: 800; font-size: 1.8rem;"><%= number_with_delimiter(@total_products) %></div>
-          <small class="text-muted">available at this store</small>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm"><div class="card-body">
+      <div class="d-flex align-items-center">
+        <div class="flex-grow-1"><h6 class="text-muted mb-1">Total Products</h6>
+          <h4 class="mb-0"><%= number_with_delimiter(@total_products) %></h4></div>
+        <div class="text-primary"><i class="bi bi-box-seam fs-2"></i></div>
+      </div>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm"><div class="card-body">
+      <div class="d-flex align-items-center">
+        <div class="flex-grow-1"><h6 class="text-muted mb-1">Active (this page)</h6>
+          <h4 class="mb-0"><%= @products.count { |p| p.status == 'active' } %></h4></div>
+        <div class="text-success"><i class="bi bi-check-circle fs-2"></i></div>
+      </div>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm"><div class="card-body">
+      <div class="d-flex align-items-center">
+        <div class="flex-grow-1"><h6 class="text-muted mb-1">In Stock (this page)</h6>
+          <h4 class="mb-0"><%= @products.count { |p| store_stock_for.call(p) > 0 } %></h4></div>
+        <div class="text-info"><i class="bi bi-box fs-2"></i></div>
+      </div>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm"><div class="card-body">
+      <div class="d-flex align-items-center">
+        <div class="flex-grow-1"><h6 class="text-muted mb-1">Low Stock (this page)</h6>
+          <h4 class="mb-0"><%= @products.count { |p| s = store_stock_for.call(p); s > 0 && s <= (p.low_stock_threshold || 10) } %></h4></div>
+        <div class="text-warning"><i class="bi bi-exclamation-triangle fs-2"></i></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<script>
+function submitProductDelete(deleteUrl) {
+  var form = document.getElementById('deleteProductForm');
+  form.action = deleteUrl;
+  form.submit();
+}
+function confirmDeleteProduct(productName, deleteUrl, btn) {
+  if (btn) { btn.disabled = true; }
+  var reEnable = function () { if (btn) { btn.disabled = false; } };
+  fetch(deleteUrl + '/dependencies', { headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+    .then(function (data) {
+      var msg = 'Delete "' + productName + '"?\n\n';
+      var groups = (data && data.groups) || [];
+      if (groups.length) {
+        msg += 'The following ' + (data.total || 0) + ' connected record(s) will also be permanently removed:\n\n';
+        groups.forEach(function (g) { msg += '  • ' + g.label + ': ' + g.count + '\n'; });
+        msg += '\n';
+      } else { msg += 'No other records are connected to this product.\n\n'; }
+      msg += 'This also removes it from the public website. This cannot be undone.';
+      reEnable();
+      if (confirm(msg)) { submitProductDelete(deleteUrl); }
+    })
+    .catch(function () {
+      reEnable();
+      if (confirm('Delete "' + productName + '"?\n\nThis permanently removes the product and all associated data (website included). This cannot be undone.')) {
+        submitProductDelete(deleteUrl);
+      }
+    });
+}
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('productSearchInput');
+  const filterForm = document.getElementById('productFilterForm');
+  let searchDebounce;
+  searchInput?.addEventListener('input', function() {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(function() { filterForm.requestSubmit(); }, 450);
+  });
+
+  const selectAll = document.getElementById('selectAllProducts');
+  const productCheckboxes = document.querySelectorAll('.product-checkbox');
+  const bulkBar = document.getElementById('bulkActionBar');
+  const selectedCount = document.getElementById('selectedCount');
+  const bulkActionInput = document.getElementById('bulkActionInput');
+
+  function updateBulkBar() {
+    const checked = document.querySelectorAll('.product-checkbox:checked').length;
+    if (checked > 0) {
+      bulkBar.classList.remove('d-none');
+      selectedCount.textContent = checked + ' product' + (checked === 1 ? '' : 's') + ' selected';
+    } else { bulkBar.classList.add('d-none'); }
+    if (selectAll) {
+      selectAll.indeterminate = checked > 0 && checked < productCheckboxes.length;
+      selectAll.checked = checked === productCheckboxes.length && productCheckboxes.length > 0;
+    }
+  }
+  selectAll?.addEventListener('change', function() {
+    productCheckboxes.forEach(cb => cb.checked = this.checked);
+    updateBulkBar();
+  });
+  productCheckboxes.forEach(cb => cb.addEventListener('change', updateBulkBar));
+
+  document.querySelectorAll('[data-bulk-action]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const action = this.dataset.bulkAction;
+      const checked = document.querySelectorAll('.product-checkbox:checked');
+      if (checked.length === 0) return;
+      const confirmMessages = {
+        delete: 'Delete ' + checked.length + ' selected product(s)?\n\nEvery connected record (bookings, invoices, subscriptions, stock, store inventory, etc.) and the website listing will be permanently removed. This cannot be undone.',
+        deactivate: 'Deactivate ' + checked.length + ' selected product(s)?',
+        activate: 'Activate ' + checked.length + ' selected product(s)?'
+      };
+      if (!confirm(confirmMessages[action] || 'Confirm action?')) return;
+      bulkActionInput.value = action;
+      document.getElementById('bulkActionForm').submit();
+    });
+  });
+});
+</script>
+
+<!-- Filter Bar -->
+<%= form_with url: store_admin_products_path, method: :get, local: true, class: "mb-3", id: "productFilterForm" do |f| %>
+  <div class="card border-0 shadow-sm">
+    <div class="card-body py-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label small text-muted mb-1">Search</label>
+          <%= f.text_field :search, value: params[:search], class: "form-control", id: "productSearchInput", placeholder: "Search products...", autocomplete: "off" %>
         </div>
-        <i class="bi bi-box-seam" style="color: rgba(45,55,72,0.2); font-size: 3rem;"></i>
+        <div class="col-md-3">
+          <label class="form-label small text-muted mb-1">Category</label>
+          <%= f.select :category_id, options_for_select([['All Categories', '']] + @filter_categories.map { |c| [c.name, c.id] }, params[:category_id]), {}, class: "form-select" %>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small text-muted mb-1">Status</label>
+          <%= f.select :status, options_for_select([['All Statuses', ''], ['Active', 'active'], ['Inactive', 'inactive'], ['Draft', 'draft']], params[:status]), {}, class: "form-select" %>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small text-muted mb-1">Stock</label>
+          <%= f.select :stock_status, options_for_select([['All Stock', ''], ['In Stock', 'in_stock'], ['Low Stock', 'low_stock'], ['Out of Stock', 'out_of_stock']], params[:stock_status]), {}, class: "form-select" %>
+        </div>
+        <div class="col-md-1 d-flex gap-1">
+          <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i></button>
+          <% if params[:search].present? || params[:category_id].present? || params[:status].present? || params[:stock_status].present? %>
+            <%= link_to store_admin_products_path, class: "btn btn-outline-secondary" do %><i class="bi bi-x-lg"></i><% end %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<!-- Products Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent border-0">
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Product Catalog</h5>
+      <small class="text-muted"><%= @products.respond_to?(:total_count) ? @products.total_count : @products.count %> product(s)</small>
+    </div>
+  </div>
+
+  <div id="bulkActionBar" class="d-none px-3 py-2 bg-primary-subtle border-bottom d-flex align-items-center gap-3 flex-wrap">
+    <span id="selectedCount" class="fw-medium text-primary small"></span>
+    <button type="button" class="btn btn-sm btn-primary" id="bulkEditBtn"><i class="bi bi-pencil-square me-1"></i>Bulk Edit</button>
+    <button type="button" class="btn btn-sm btn-success" data-bulk-action="activate"><i class="bi bi-check-circle me-1"></i>Activate</button>
+    <button type="button" class="btn btn-sm btn-warning" data-bulk-action="deactivate"><i class="bi bi-dash-circle me-1"></i>Deactivate</button>
+    <button type="button" class="btn btn-sm btn-danger" data-bulk-action="delete"><i class="bi bi-trash me-1"></i>Delete Selected</button>
+  </div>
+
+  <div class="card-body p-0">
+    <% if @products.any? %>
+      <%= form_with url: bulk_action_store_admin_products_path, method: :post, id: "bulkActionForm", local: true do %>
+        <%= hidden_field_tag :bulk_action, '', id: 'bulkActionInput' %>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="border-0 ps-3" style="width: 40px;"><input type="checkbox" id="selectAllProducts" class="form-check-input"></th>
+                <th class="border-0 fw-semibold">Product</th>
+                <th class="border-0 fw-semibold">Category</th>
+                <th class="border-0 fw-semibold">Price &amp; Profit</th>
+                <th class="border-0 fw-semibold">Stock @ Store &amp; Status</th>
+                <th class="border-0 fw-semibold text-end pe-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @products.each do |product| %>
+                <% s_stock = store_stock_for.call(product) %>
+                <tr data-product-id="<%= product.id %>"
+                    data-product='<%= {
+                      id: product.id, name: product.name, price: product.price.to_f,
+                      buying_price: product.buying_price.to_f, purchase_price: product.purchase_price.to_f,
+                      stock: s_stock.to_i, unit_type: product.unit_type, status: product.status,
+                      category_id: product.category_id,
+                      has_variants: product.has_multiple_quantities?,
+                      variants: product.product_variants.sort_by { |v| [v.display_order || 0, v.weight.to_f] }.map { |v|
+                        { id: v.id, label: v.label, unit: v.unit, weight: v.weight.to_f,
+                          selling_price: v.selling_price.to_f, buying_price: v.buying_price.to_f,
+                          purchase_price: v.purchase_price.to_f,
+                          available_stock: (@variant_store_stock[v.id] || v.available_stock).to_i }
+                      }
+                    }.to_json %>'>
+                  <td class="align-middle ps-3">
+                    <input type="checkbox" name="product_ids[]" value="<%= product.id %>" class="form-check-input product-checkbox">
+                  </td>
+                  <td class="align-middle">
+                    <div class="d-flex align-items-center">
+                      <div class="position-relative me-3">
+                        <% if product.r2_image_url.present? %>
+                          <img src="<%= product.r2_image_url %>" alt="<%= product.name %>" class="rounded-circle object-fit-cover" style="width: 40px; height: 40px;">
+                        <% elsif product.respond_to?(:main_image_url) && product.main_image_url.present? %>
+                          <img src="<%= product.main_image_url(width: 60, height: 60) %>" alt="<%= product.name %>" class="rounded-circle object-fit-cover" style="width: 40px; height: 40px;">
+                        <% elsif product.image.attached? %>
+                          <%= image_tag product.image, alt: product.name, class: "rounded-circle object-fit-cover", style: "width: 40px; height: 40px;" %>
+                        <% else %>
+                          <div class="bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="bi bi-box-seam text-primary"></i></div>
+                        <% end %>
+                      </div>
+                      <div>
+                        <h6 class="mb-0">
+                          <%= link_to product.name, store_admin_product_path(product), class: "text-dark text-decoration-none fw-semibold" %>
+                          <% variant_count = product.product_variants.size %>
+                          <% if variant_count > 0 %>
+                            <span class="badge bg-info-subtle text-info border ms-1"><i class="bi bi-diagram-3 me-1"></i><%= pluralize(variant_count, 'variant') %></span>
+                          <% end %>
+                        </h6>
+                        <small class="text-muted">SKU: <%= product.sku || 'N/A' %></small>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="align-middle">
+                    <span class="badge bg-secondary-subtle text-secondary"><%= product.category&.name || 'No Category' %></span>
+                  </td>
+                  <td class="align-middle">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="fw-medium">
+                        <%= product.respond_to?(:formatted_selling_price) ? product.formatted_selling_price : number_to_currency(product.try(:final_price_after_discount) || product.price) %>
+                      </span>
+                      <% if product.try(:discounted?) %>
+                        <small class="badge bg-success-subtle text-success"><%= product.discount_percentage.round(1) %>% OFF</small>
+                      <% end %>
+                    </div>
+                    <% if product.buying_price.present? %>
+                      <div class="small mt-1">
+                        <span class="text-muted">Cost: ₹<%= product.buying_price.round(2) %></span>
+                        <% if product.respond_to?(:profit_amount) %>
+                          <span class="mx-1">•</span>
+                          <span class="<%= product.try(:profit_status_class) %> fw-medium">Profit: ₹<%= product.profit_amount.round(2) %></span>
+                        <% end %>
+                      </div>
+                    <% else %>
+                      <small class="text-muted">No cost price set</small>
+                    <% end %>
+                  </td>
+                  <td class="align-middle">
+                    <% threshold = product.low_stock_threshold || 10 %>
+                    <div class="d-flex flex-column gap-1">
+                      <div>
+                        <% if s_stock > threshold %>
+                          <span class="text-success fw-medium"><%= number_with_delimiter(s_stock.round(2)) %> <%= product.unit_type %></span>
+                          <span class="small text-muted ms-1">In Stock</span>
+                        <% elsif s_stock > 0 %>
+                          <span class="text-warning fw-medium"><%= number_with_delimiter(s_stock.round(2)) %> <%= product.unit_type %></span>
+                          <span class="small text-warning ms-1"><i class="bi bi-exclamation-triangle me-1"></i>Low Stock</span>
+                        <% else %>
+                          <span class="text-danger fw-medium">0 <%= product.unit_type %></span>
+                          <span class="small text-muted ms-1">Out of Stock</span>
+                        <% end %>
+                        <div class="small text-muted">Threshold: <%= threshold %></div>
+                      </div>
+                      <div>
+                        <% if product.status == 'active' %>
+                          <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Active</span>
+                        <% elsif product.status == 'inactive' %>
+                          <span class="badge bg-danger-subtle text-danger"><i class="bi bi-x-circle me-1"></i>Inactive</span>
+                        <% elsif product.status == 'draft' %>
+                          <span class="badge bg-warning-subtle text-warning"><i class="bi bi-clock me-1"></i>Draft</span>
+                        <% else %>
+                          <span class="badge bg-secondary-subtle text-secondary"><%= product.status&.humanize || 'Unknown' %></span>
+                        <% end %>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="align-middle text-end pe-3">
+                    <div class="btn-group btn-group-sm" role="group">
+                      <%= link_to store_admin_product_path(product), class: "btn btn-outline-secondary", title: "View Details" do %><i class="bi bi-eye"></i><% end %>
+                      <%= link_to edit_store_admin_product_path(product), class: "btn btn-outline-primary", title: "Edit Product" do %><i class="bi bi-pencil"></i><% end %>
+                      <%= link_to manage_images_store_admin_product_path(product), class: "btn btn-outline-secondary", title: "Change Image" do %><i class="bi bi-image"></i><% end %>
+                      <button type="button" class="btn btn-outline-danger" title="Delete Product"
+                              onclick="confirmDeleteProduct('<%= j(product.name) %>', '<%= store_admin_product_path(product) %>', this)">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+
+      <% if @products.respond_to?(:total_pages) %>
+        <div class="card-footer bg-transparent border-0"><%= paginate @products %></div>
+      <% end %>
+
+      <form id="bulkEditForm" method="post" action="<%= bulk_update_store_admin_products_path %>">
+        <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+        <div id="bulkEditFields"></div>
+      </form>
+    <% else %>
+      <div class="text-center py-5">
+        <div class="mb-3"><i class="bi bi-box-seam fs-1 text-muted"></i></div>
+        <% if params[:search].present? %>
+          <h5 class="text-muted mb-3">No products found for "<%= params[:search] %>"</h5>
+          <%= link_to new_store_admin_product_path(name: params[:search]), class: "btn btn-primary" do %>
+            <i class="bi bi-plus-lg me-1"></i>Create "<%= params[:search] %>"
+          <% end %>
+        <% else %>
+          <h5 class="text-muted mb-3">No Products Found</h5>
+          <%= link_to "Add Product", new_store_admin_product_path, class: "btn btn-primary" %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- Bulk Edit Modal -->
+<div class="modal fade" id="bulkEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Bulk Edit Products</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="alert alert-light border-0 rounded-0 mb-0 py-2 px-3 small text-muted">
+          <i class="bi bi-info-circle me-1"></i>
+          Products with variants show their variant rows below them. <strong>Increasing stock</strong> creates a
+          FIFO stock batch for the added units <strong>at this store</strong> (needs a Cost Price).
+        </div>
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle mb-0" id="bulkEditTable">
+            <thead class="sticky-top" style="background:#f1f3f5;">
+              <tr>
+                <th style="min-width:160px;">Product / Variant</th>
+                <th style="min-width:100px;">Sell Price (₹)</th>
+                <th style="min-width:100px;">Cost Price (₹)</th>
+                <th style="min-width:110px;">Purchase Price (₹)</th>
+                <th style="min-width:80px;">Store Stock</th>
+                <th style="min-width:110px;">Unit</th>
+                <th style="min-width:100px;">Status</th>
+                <th style="min-width:140px;">Category</th>
+              </tr>
+            </thead>
+            <tbody id="bulkEditBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="bulkEditSaveBtn"><i class="bi bi-check-lg me-1"></i>Save All Changes</button>
       </div>
     </div>
   </div>
 </div>
 
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-body py-3">
-    <%= form_tag store_admin_products_path, method: :get, local: true, class: "row g-3 align-items-end" do %>
-      <div class="col-md-3">
-        <label class="form-label small">Search</label>
-        <%= text_field_tag :search, params[:search], class: "form-control form-control-sm", placeholder: "Name or SKU" %>
-      </div>
-      <div class="col-md-3">
-        <label class="form-label small">Category</label>
-        <%= select_tag :category_id,
-              options_from_collection_for_select(@filter_categories, :id, :name, params[:category_id]),
-              include_blank: "All categories", class: "form-select form-select-sm" %>
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small">Status</label>
-        <%= select_tag :status, options_for_select([['All', ''], ['Active', 'active'], ['Inactive', 'inactive']], params[:status]), class: "form-select form-select-sm" %>
-      </div>
-      <div class="col-md-3">
-        <%= submit_tag "Filter", class: "btn btn-primary btn-sm" %>
-        <%= link_to "Clear", store_admin_products_path, class: "btn btn-outline-secondary btn-sm" %>
-      </div>
-    <% end %>
-  </div>
-</div>
+<script>
+(function() {
+  const UNIT_TYPES = <%= (defined?(Product::UNIT_TYPES) ? Product::UNIT_TYPES.map(&:last) : %w[piece kg gram litre ml pack box dozen]).to_json.html_safe %>;
+  const CATEGORIES = <%= @filter_categories.map { |c| [c.id, c.name] }.to_json.html_safe %>;
+  const STATUSES   = [['active','Active'],['inactive','Inactive'],['draft','Draft']];
 
-<div class="card border-0 shadow-sm">
-  <div class="card-header bg-white border-0">
-    <h6 class="mb-0"><i class="bi bi-list me-2"></i>Product List</h6>
-  </div>
-  <div class="card-body p-0">
-    <% if @products.any? %>
-      <div class="table-responsive">
-        <table class="table table-hover mb-0">
-          <thead class="table-light">
-            <tr>
-              <th>Name</th>
-              <th>SKU</th>
-              <th>Category</th>
-              <th>Variant</th>
-              <th>Price</th>
-              <th>Stock @ Store</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @products.each do |product| %>
-              <% variants = product.product_variants.any? ? product.sorted_variants : [] %>
-              <tr>
-                <td>
-                  <%= link_to product.name, store_admin_product_path(product), class: "fw-semibold text-decoration-none" %>
-                </td>
-                <td><small class="text-muted"><%= product.sku %></small></td>
-                <td><%= product.category&.name %></td>
-                <td>
-                  <% if variants.any? %>
-                    <%= link_to store_admin_product_path(product), class: "text-decoration-none" do %>
-                      <span class="badge bg-primary-subtle text-primary border"><%= pluralize(variants.size, 'variant') %></span>
-                    <% end %>
-                  <% else %>
-                    <span class="text-muted">No variant</span>
-                  <% end %>
-                </td>
-                <td>
-                  <% if variants.any? %>
-                    <span class="text-muted">₹<%= number_with_delimiter(variants.map(&:effective_price).min.to_f.round(2)) %>&ndash;<%= number_with_delimiter(variants.map(&:effective_price).max.to_f.round(2)) %></span>
-                  <% else %>
-                    ₹<%= number_with_delimiter(product.price.to_f.round(2)) %>
-                  <% end %>
-                </td>
-                <td>
-                  <% if variants.any? %>
-                    <span class="text-muted"><%= number_with_delimiter(variants.sum { |v| @variant_store_stock[v.id] || v.available_stock.to_f }.round(2)) %> total</span>
-                  <% else %>
-                    <%= number_with_delimiter(@store_stock[product.id].to_f) %> <%= product.unit_type %>
-                  <% end %>
-                </td>
-                <td>
-                  <span class="badge <%= product.status == 'active' ? 'bg-success' : 'bg-secondary' %>"><%= product.status&.humanize %></span>
-                </td>
-                <td>
-                  <div class="btn-group" role="group">
-                    <%= link_to store_admin_product_path(product), class: "btn btn-sm btn-outline-primary" do %>
-                      <i class="bi bi-eye"></i>
-                    <% end %>
-                    <%= link_to edit_store_admin_product_path(product), class: "btn btn-sm btn-outline-secondary" do %>
-                      <i class="bi bi-pencil"></i>
-                    <% end %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-      <div class="p-3">
-        <%= paginate @products if @products.respond_to?(:current_page) %>
-      </div>
-    <% else %>
-      <div class="text-center py-5">
-        <i class="bi bi-box-seam fs-1 text-muted mb-3"></i>
-        <h5 class="text-muted">No Products Found</h5>
-        <%= link_to "Add Product", new_store_admin_product_path, class: "btn btn-primary" %>
-      </div>
-    <% end %>
-  </div>
-</div>
+  function buildSelect(name, options, selected, extraClass) {
+    let html = `<select name="${name}" class="form-select form-select-sm ${extraClass||''}">`;
+    options.forEach(([val, label]) => { html += `<option value="${val}"${val == selected ? ' selected' : ''}>${label}</option>`; });
+    return html + '</select>';
+  }
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function openBulkEditModal() {
+    const checked = document.querySelectorAll('.product-checkbox:checked');
+    if (checked.length === 0) return;
+    const tbody = document.getElementById('bulkEditBody');
+    tbody.innerHTML = '';
+    checked.forEach(cb => {
+      const p = JSON.parse(cb.closest('tr').dataset.product);
+      const id = p.id;
+      const unitOptions = UNIT_TYPES.map(u => [u, u]);
+      const catOptions  = [['', '— No Category —'], ...CATEGORIES];
+      const hasVariants = p.has_variants && p.variants && p.variants.length > 0;
+      const dis = hasVariants ? 'disabled' : '';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="text" name="products[${id}][name]" class="form-control form-control-sm" value="${escHtml(p.name)}" required>
+          ${hasVariants ? `<span class="badge bg-info-subtle text-info mt-1"><i class="bi bi-diagram-3 me-1"></i>${p.variants.length} variant(s) — edit below</span>` : ''}</td>
+        <td><input type="number" name="products[${id}][price]" class="form-control form-control-sm ${dis?'bg-light':''}" value="${p.price}" min="0" step="0.01" ${dis}></td>
+        <td><input type="number" name="products[${id}][buying_price]" class="form-control form-control-sm ${dis?'bg-light':''}" value="${p.buying_price}" min="0" step="0.01" ${dis}></td>
+        <td><input type="number" name="products[${id}][purchase_price]" class="form-control form-control-sm ${dis?'bg-light':''}" value="${p.purchase_price}" min="0" step="0.01" ${dis}></td>
+        <td><input type="number" name="products[${id}][stock]" class="form-control form-control-sm ${dis?'bg-light':''}" value="${p.stock}" min="0" step="1" ${dis}></td>
+        <td>${buildSelect(`products[${id}][unit_type]`, unitOptions, p.unit_type)}</td>
+        <td>${buildSelect(`products[${id}][status]`, STATUSES, p.status)}</td>
+        <td>${buildSelect(`products[${id}][category_id]`, catOptions, p.category_id)}</td>`;
+      tbody.appendChild(tr);
+      if (hasVariants) {
+        p.variants.forEach(v => {
+          const vtr = document.createElement('tr');
+          vtr.className = 'table-light';
+          vtr.innerHTML = `
+            <td class="ps-4"><i class="bi bi-arrow-return-right text-muted me-1"></i><span class="fw-medium">${escHtml(v.label)}</span>
+              <input type="hidden" name="variants[${v.id}][unit]" value="${escHtml(v.unit)}"></td>
+            <td><input type="number" name="variants[${v.id}][selling_price]" class="form-control form-control-sm" value="${v.selling_price}" min="0" step="0.01"></td>
+            <td><input type="number" name="variants[${v.id}][buying_price]" class="form-control form-control-sm" value="${v.buying_price}" min="0" step="0.01"></td>
+            <td><input type="number" name="variants[${v.id}][purchase_price]" class="form-control form-control-sm" value="${v.purchase_price}" min="0" step="0.01"></td>
+            <td><input type="number" name="variants[${v.id}][available_stock]" class="form-control form-control-sm" value="${v.available_stock}" min="0" step="1"></td>
+            <td class="text-muted small align-middle">${escHtml(v.unit)}</td>
+            <td colspan="2" class="text-muted small align-middle">Increasing stock adds a store batch</td>`;
+          tbody.appendChild(vtr);
+        });
+      }
+    });
+    new bootstrap.Modal(document.getElementById('bulkEditModal')).show();
+  }
+
+  document.getElementById('bulkEditBtn').addEventListener('click', openBulkEditModal);
+  document.getElementById('bulkEditSaveBtn').addEventListener('click', function() {
+    const tbody = document.getElementById('bulkEditBody');
+    if (tbody.children.length === 0) return;
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+    const container = document.getElementById('bulkEditFields');
+    container.innerHTML = '';
+    tbody.querySelectorAll('input, select').forEach(el => {
+      if (el.disabled || !el.name) return;
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden'; hidden.name = el.name; hidden.value = el.value;
+      container.appendChild(hidden);
+    });
+    document.getElementById('bulkEditForm').submit();
+  });
+})();
+</script>

@@ -224,7 +224,7 @@ class Admin::MobileUiController < ActionController::Base
     @vendor_purchase = VendorPurchase.new
     @vendor_purchase.vendor_purchase_items.build
     @vendors  = Vendor.active.order(:name)
-    @products = Product.active.order(:name)
+    @products = Product.active.includes(:product_variants).order(:name)
     @preselected_vendor_id = params[:vendor_id]
   end
 
@@ -237,7 +237,7 @@ class Admin::MobileUiController < ActionController::Base
                   notice: "Purchase ##{@vendor_purchase.purchase_number} created and stock batches generated!"
     else
       @vendors  = Vendor.active.order(:name)
-      @products = Product.active.order(:name)
+      @products = Product.active.includes(:product_variants).order(:name)
       @preselected_vendor_id = params.dig(:vendor_purchase, :vendor_id)
       flash.now[:error] = @vendor_purchase.errors.full_messages.join(', ')
       render :new_vendor_purchase, status: :unprocessable_entity
@@ -350,7 +350,7 @@ class Admin::MobileUiController < ActionController::Base
   def vendor_purchase_params
     params.require(:vendor_purchase).permit(
       :vendor_id, :purchase_date, :notes, :paid_amount,
-      vendor_purchase_items_attributes: [:id, :product_id, :quantity, :purchase_price, :selling_price, :_destroy]
+      vendor_purchase_items_attributes: [:id, :product_id, :product_variant_id, :quantity, :purchase_price, :selling_price, :_destroy]
     )
   end
 

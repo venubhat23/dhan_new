@@ -4,21 +4,100 @@ Rails.application.routes.draw do
     root 'dashboard#index'
     resources :bookings do
       member do
+        get   :generate_invoice
+        post  :generate_invoice
+        post  :convert_to_order
+        get   :invoice
         patch :update_status
         patch :cancel
+        patch :cancel_order
+        patch :mark_delivered
+        patch :mark_completed
+        patch :mark_paid
+        get   :stage_transition
+        get   :manage_stage
+        patch :process_stage_transition
+        patch :update_stage
+        patch :update_delivery_charge
       end
       collection do
         get :search_products
+        get :search_customers
+        get :realtime_data
+        get :pending
+        get :confirmed
+        get :processing
+        get :packed
+        get :shipped
+        get :out_for_delivery
+        get :delivered
+        get :completed
+        get :cancelled
+        get :returned
       end
     end
     resources :expenses
-    resources :customers
-    resources :products
+
+    get   'product-summary', to: 'product_summary#index',  as: 'product_summary'
+    patch 'product-summary', to: 'product_summary#update'
+
+    resources :customers do
+      member do
+        get   :generate_password
+        patch :toggle_status
+      end
+      collection do
+        get  :quick_new
+        post :quick_create
+        get  :check_mobile
+        get  :search_by_name
+        post :bulk_delete
+        get  :export
+      end
+    end
+    resources :products do
+      member do
+        patch  :toggle_status
+        post   :bulk_action
+        get    :detail
+        get    :dependencies
+        get    :manage_images
+        post   :upload_main_image
+        post   :upload_additional_image
+        delete :destroy_gallery_image
+      end
+      collection do
+        get    :search
+        post   :bulk_action
+        post   :bulk_update
+        get    :categories_for_select
+        get    :products_chart
+        post   :upload_r2_image
+        post   :upload_cloudinary_image
+        delete :delete_r2_image
+      end
+    end
     get 'store_inventory', to: 'store_inventory#index', as: 'store_inventory'
-    resources :invoices, only: [:index, :show, :edit, :update, :destroy] do
+    get 'qr_codes',        to: 'qr_codes#index',  as: :qr_codes
+    get 'qr_codes/lookup', to: 'qr_codes#lookup', as: :qr_codes_lookup
+    resources :invoices do
       member do
         patch :mark_as_paid
-        get :download_pdf
+        get   :download_pdf
+        get   :show_premium
+        get   :download_premium_pdf
+      end
+      collection do
+        post :generate_invoice
+        post :generate_bulk_invoices
+        post :bulk_mark_as_paid
+        post :bulk_delete
+        post :bulk_delete_preview
+        post :partial_payment
+        post :generate
+        get  :customers
+        get  :delivery_persons
+        get  :customers_by_delivery_person
       end
     end
     resources :inventory, only: [:index, :new, :create] do

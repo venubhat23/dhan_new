@@ -1,185 +1,2259 @@
-<%- content_for :title, "Bookings - #{@current_store.name}" %>
 
-<div class="row">
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h4 class="card-title mb-0">Store Bookings - <%= @current_store.name %></h4>
-        <%= link_to "New Booking", new_store_admin_booking_path, class: "btn btn-primary" %>
+<!-- Actions Column Icons Styling -->
+<style>
+/* Actions column with icons */
+.actions-column {
+  text-align: center;
+  width: 120px;
+  min-width: 120px;
+}
+
+.action-icons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
+}
+
+.action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.action-icon:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* View icon - blue */
+.action-icon.view {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+.action-icon.view:hover {
+  background: #bbdefb;
+  color: #0d47a1;
+}
+
+/* Edit icon - green */
+.action-icon.edit {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+.action-icon.edit:hover {
+  background: #c8e6c9;
+  color: #1b5e20;
+}
+
+/* Delete icon - red */
+.action-icon.delete {
+  background: #ffebee;
+  color: #d32f2f;
+}
+.action-icon.delete:hover {
+  background: #ffcdd2;
+  color: #b71c1c;
+}
+
+/* Invoice icon - purple */
+.action-icon.invoice {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+.action-icon.invoice:hover {
+  background: #e1bee7;
+  color: #4a148c;
+}
+
+/* WhatsApp icon */
+.action-icon.whatsapp {
+  background: #e8f8ee;
+  color: #25d366;
+}
+.action-icon.whatsapp:hover {
+  background: #25d366;
+  color: #ffffff;
+}
+
+.action-icon i {
+  font-size: 14px;
+}
+
+/* Franchise booking highlighting */
+.franchise-booking {
+  background-color: #e8f4f8 !important;
+  border-left: 4px solid #0dcaf0 !important;
+}
+
+.franchise-booking:hover {
+  background-color: #d1ecf1 !important;
+}
+
+/* Booking source badges */
+.source-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.source-mobile {
+  background-color: rgba(111,66,193,0.1);
+  color: #6f42c1;
+  border: 1px solid rgba(111,66,193,0.3);
+}
+.source-customer {
+  background-color: rgba(13,110,253,0.1);
+  color: #0d6efd;
+  border: 1px solid rgba(13,110,253,0.3);
+}
+.source-franchise {
+  background-color: rgba(13,202,240,0.12);
+  color: #0a7a96;
+  border: 1px solid rgba(13,202,240,0.35);
+}
+.source-store {
+  background-color: rgba(108,117,125,0.1);
+  color: #495057;
+  border: 1px solid rgba(108,117,125,0.3);
+}
+</style>
+
+
+
+
+
+
+
+<% list_state = params.permit(:page, :search, :status, :date_from, :date_to, :customer_id, :b2b, :booked_by, :payment_status, :delivery_pending).to_h %>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Booking Management</h2>
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    <!-- Real-time Status -->
+    <div class="d-flex align-items-center gap-2">
+    </div>
+    <%= link_to quick_new_store_admin_customers_path, class: "btn btn-success" do %>
+      <i class="bi bi-person-plus me-1"></i>
+      Booking with Customer Creation
+    <% end %>
+    <%= link_to new_store_admin_booking_path, class: "btn btn-primary" do %>
+      <i class="bi bi-plus-lg me-1"></i>
+      Create New Booking
+    <% end %>
+  </div>
+</div>
+
+<!-- Stage Statistics Cards -->
+<div class="row mb-4">
+  <div class="col-md-2">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h6 class="text-muted mb-1">Draft</h6>
+            <h5 class="mb-0"><%= @booking_stats[:draft] %></h5>
+          </div>
+          <div class="text-secondary">
+            <i class="bi bi-pencil fs-3"></i>
+          </div>
+        </div>
       </div>
-
-      <div class="card-body">
-        <!-- Booking Summary Cards -->
-        <div class="row mb-4">
-          <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="background: #0d6efd !important; color: white !important; min-height: 120px !important;">
-              <div class="card-body" style="background: transparent !important; padding: 1.5rem !important;">
-                <div class="d-flex justify-content-between align-items-center" style="display: flex !important;">
-                  <div>
-                    <h5 class="card-title mb-1" style="color: white !important; font-weight: 600 !important; font-size: 1rem !important;">Total Bookings</h5>
-                    <h3 class="mb-0" style="color: white !important; font-weight: 700 !important; font-size: 2rem !important;"><%= @summary[:total_bookings] %></h3>
-                  </div>
-                  <i class="bi bi-calendar-check fs-1" style="color: rgba(255,255,255,0.5) !important; font-size: 3rem !important;"></i>
-                </div>
-              </div>
-            </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h6 class="text-muted mb-1">Pending</h6>
+            <h5 class="mb-0"><%= @booking_stats[:pending] %></h5>
           </div>
-          <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="background: #ffc107 !important; color: #212529 !important; min-height: 120px !important;">
-              <div class="card-body" style="background: transparent !important; padding: 1.5rem !important;">
-                <div class="d-flex justify-content-between align-items-center" style="display: flex !important;">
-                  <div>
-                    <h5 class="card-title mb-1" style="color: #212529 !important; font-weight: 600 !important; font-size: 1rem !important;">Pending</h5>
-                    <h3 class="mb-0" style="color: #212529 !important; font-weight: 700 !important; font-size: 2rem !important;"><%= @summary[:pending_bookings] %></h3>
-                  </div>
-                  <i class="bi bi-hourglass-split fs-1" style="color: rgba(33,37,41,0.5) !important; font-size: 3rem !important;"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="background: #0dcaf0 !important; color: white !important; min-height: 120px !important;">
-              <div class="card-body" style="background: transparent !important; padding: 1.5rem !important;">
-                <div class="d-flex justify-content-between align-items-center" style="display: flex !important;">
-                  <div>
-                    <h5 class="card-title mb-1" style="color: white !important; font-weight: 600 !important; font-size: 1rem !important;">Processing</h5>
-                    <h3 class="mb-0" style="color: white !important; font-weight: 700 !important; font-size: 2rem !important;"><%= @summary[:processing_bookings] %></h3>
-                  </div>
-                  <i class="bi bi-gear fs-1" style="color: rgba(255,255,255,0.5) !important; font-size: 3rem !important;"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="background: #198754 !important; color: white !important; min-height: 120px !important;">
-              <div class="card-body" style="background: transparent !important; padding: 1.5rem !important;">
-                <div class="d-flex justify-content-between align-items-center" style="display: flex !important;">
-                  <div>
-                    <h5 class="card-title mb-1" style="color: white !important; font-weight: 600 !important; font-size: 1rem !important;">Completed</h5>
-                    <h3 class="mb-0" style="color: white !important; font-weight: 700 !important; font-size: 2rem !important;"><%= @summary[:completed_bookings] %></h3>
-                  </div>
-                  <i class="bi bi-check-circle fs-1" style="color: rgba(255,255,255,0.5) !important; font-size: 3rem !important;"></i>
-                </div>
-              </div>
-            </div>
+          <div class="text-warning">
+            <i class="bi bi-clock fs-3"></i>
           </div>
         </div>
-
-        <!-- Filters -->
-        <%= form_with url: store_admin_bookings_path, method: :get, local: true, class: "mb-3" do |form| %>
-          <div class="row">
-            <div class="col-md-3">
-              <%= form.text_field :search, value: params[:search], placeholder: "Search bookings...", class: "form-control" %>
-            </div>
-            <div class="col-md-3">
-              <%= form.select :status,
-                  options_for_select([["All Statuses", ""]] + (Booking.statuses.keys rescue []).map { |s| [s.humanize, s] }, params[:status]),
-                  {}, { class: "form-select" } %>
-            </div>
-            <div class="col-md-2">
-              <%= form.date_field :date_from, value: params[:date_from], class: "form-control" %>
-            </div>
-            <div class="col-md-2">
-              <%= form.date_field :date_to, value: params[:date_to], class: "form-control" %>
-            </div>
-            <div class="col-md-2">
-              <%= form.submit "Filter", class: "btn btn-outline-primary w-100" %>
-            </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h6 class="text-muted mb-1">Processing</h6>
+            <h5 class="mb-0"><%= @booking_stats[:processing] %></h5>
           </div>
-        <% end %>
-
-        <!-- Bookings Table -->
-        <div class="table-responsive">
-          <table class="table table-striped">
-            <thead>
-              <tr>
-                <th>Booking #</th>
-                <th>Customer</th>
-                <th>Items</th>
-                <th>Total Amount</th>
-                <th>Payment</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% @bookings.each do |booking| %>
-                <tr>
-                  <td><strong><%= booking.booking_number || "##{booking.id}" %></strong></td>
-                  <td>
-                    <% if booking.customer %>
-                      <%= booking.customer.full_name %><br>
-                      <small class="text-muted"><%= booking.customer.mobile %></small>
-                    <% else %>
-                      <span class="text-muted">Walk-in Customer</span>
-                    <% end %>
-                  </td>
-                  <td>
-                    <% booking.booking_items.each do |item| %>
-                      <small class="d-block"><%= item.product&.name %> (×<%= item.quantity %>)</small>
-                    <% end %>
-                  </td>
-                  <td><strong>₹<%= number_with_precision(booking.total_amount || 0, precision: 2) %></strong></td>
-                  <td>
-                    <% if booking.payment_status == 'paid' %>
-                      <span class="badge bg-success">Paid</span>
-                    <% else %>
-                      <span class="badge bg-warning text-dark">Unpaid</span>
-                    <% end %>
-                  </td>
-                  <td>
-                    <% case booking.status %>
-                    <% when 'draft', 'ordered_and_delivery_pending' %>
-                      <span class="badge bg-warning text-dark"><%= booking.status.humanize %></span>
-                    <% when 'confirmed', 'processing', 'packed' %>
-                      <span class="badge bg-info"><%= booking.status.humanize %></span>
-                    <% when 'shipped', 'out_for_delivery' %>
-                      <span class="badge bg-primary"><%= booking.status.humanize %></span>
-                    <% when 'delivered', 'completed' %>
-                      <span class="badge bg-success"><%= booking.status.humanize %></span>
-                    <% when 'cancelled', 'returned' %>
-                      <span class="badge bg-danger"><%= booking.status.humanize %></span>
-                    <% else %>
-                      <span class="badge bg-secondary"><%= booking.status&.humanize || 'Unknown' %></span>
-                    <% end %>
-                  </td>
-                  <td>
-                    <%= booking.created_at.strftime("%d %b %Y") %><br>
-                    <small class="text-muted"><%= booking.created_at.strftime("%I:%M %p") %></small>
-                  </td>
-                  <td>
-                    <div class="btn-group btn-group-sm">
-                      <%= link_to "View", store_admin_booking_path(booking), class: "btn btn-outline-primary" %>
-                      <% if ['draft', 'confirmed'].include?(booking.status) %>
-                        <%= link_to "Edit", edit_store_admin_booking_path(booking), class: "btn btn-outline-secondary" %>
-                      <% end %>
-                    </div>
-                  </td>
-                </tr>
-              <% end %>
-
-              <% if @bookings.empty? %>
-                <tr>
-                  <td colspan="8" class="text-center py-4">
-                    <div class="text-muted">
-                      <i class="fas fa-clipboard-list fa-3x mb-3"></i>
-                      <h5>No bookings found</h5>
-                      <%= link_to "Create First Booking", new_store_admin_booking_path, class: "btn btn-primary" %>
-                    </div>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
+          <div class="text-info">
+            <i class="bi bi-gear fs-3"></i>
+          </div>
         </div>
-
-        <% if @bookings.respond_to?(:current_page) %>
-          <div class="d-flex justify-content-center mt-3">
-            <%= paginate @bookings %>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h6 class="text-muted mb-1">Shipped</h6>
+            <h5 class="mb-0"><%= @booking_stats[:shipped] %></h5>
           </div>
-        <% end %>
+          <div class="text-primary">
+            <i class="bi bi-truck fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h6 class="text-muted mb-1">Completed</h6>
+            <h5 class="mb-0"><%= @booking_stats[:completed] %></h5>
+          </div>
+          <div class="text-success">
+            <i class="bi bi-check-circle fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h6 class="text-muted mb-1">Issues</h6>
+            <h5 class="mb-0"><%= @booking_stats[:issues] %></h5>
+          </div>
+          <div class="text-danger">
+            <i class="bi bi-exclamation-triangle fs-3"></i>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- Bookings Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent border-0 pb-0">
+    <!-- Enhanced Filters Bar -->
+    <div class="filters-container bg-light rounded-3 p-3 mb-3">
+      <%= form_with url: store_admin_bookings_path, method: :get, local: true, class: "filter-form" do |form| %>
+        <div class="row g-2 align-items-end flex-nowrap">
+          <!-- Customer Filter -->
+          <div class="col">
+            <label class="form-label text-muted mb-1 small fw-semibold">
+              <i class="bi bi-person me-1"></i>Customer
+            </label>
+            <%= form.select :customer_id,
+                options_from_collection_for_select(@customers, :id, :display_name, params[:customer_id]),
+                { prompt: 'All Customers' },
+                {
+                  class: "form-select form-select-sm customer-select shadow-sm",
+                  data: { placeholder: "Select Customer...", allow_clear: true }
+                } %>
+          </div>
+
+          <!-- Status Filter -->
+          <div class="col">
+            <label class="form-label text-muted mb-1 small fw-semibold">
+              <i class="bi bi-flag me-1"></i>Status
+            </label>
+            <%= form.select :status,
+                options_for_select([
+                  ['All Stages', ''],
+                  ['Draft', 'draft'],
+                  ['Pending Delivery', 'ordered_and_delivery_pending'],
+                  ['Confirmed', 'confirmed'],
+                  ['Processing', 'processing'],
+                  ['Packed', 'packed'],
+                  ['Shipped', 'shipped'],
+                  ['Out for Delivery', 'out_for_delivery'],
+                  ['Delivered', 'delivered'],
+                  ['Completed', 'completed'],
+                  ['Cancelled', 'cancelled'],
+                  ['Returned', 'returned']
+                ], params[:status]),
+                {},
+                { class: "form-select form-select-sm shadow-sm", onchange: "this.form.submit();" } %>
+          </div>
+
+          <!-- Search Input -->
+          <div class="col">
+            <label class="form-label text-muted mb-1 small fw-semibold">
+              <i class="bi bi-search me-1"></i>Search
+            </label>
+            <div class="position-relative">
+              <%= form.text_field :search,
+                  value: params[:search],
+                  class: "form-control form-control-sm shadow-sm search-input",
+                  placeholder: "Booking #, customer, phone...",
+                  id: "searchInput" %>
+              <button type="button" class="btn btn-link position-absolute top-50 end-0 translate-middle-y me-1 p-1"
+                      onclick="document.getElementById('searchInput').value=''; this.form.submit();"
+                      title="Clear search"
+                      style="<%= params[:search].present? ? '' : 'display: none;' %>">
+                <i class="bi bi-x text-muted"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- B2B Filter -->
+          <div class="col-auto">
+            <label class="form-label text-muted mb-1 small fw-semibold d-block">
+              <i class="bi bi-building me-1"></i>B2B
+            </label>
+            <div class="form-check form-switch mt-1 pt-1">
+              <%= form.check_box :b2b, checked: params[:b2b] == '1',
+                  class: 'form-check-input',
+                  id: 'b2bFilterToggle',
+                  role: 'switch',
+                  onchange: 'this.form.submit();' %>
+              <label class="form-check-label small" for="b2bFilterToggle">B2B only</label>
+            </div>
+          </div>
+
+          <!-- Filter Actions -->
+          <div class="col-auto">
+            <div class="filter-actions d-flex gap-2 align-items-center">
+              <%= form.submit "Apply", class: "btn btn-primary btn-sm px-3 shadow-sm d-none" %>
+              <% active_filter = params[:search].present? || params[:status].present? || params[:customer_id].present? || params[:b2b].present? || params[:payment_status].present? || params[:delivery_pending].present? %>
+              <% if active_filter %>
+                <%= link_to store_admin_bookings_path, class: "btn btn-outline-secondary btn-sm px-3 shadow-sm", title: "Clear all filters" do %>
+                  <i class="bi bi-arrow-clockwise me-1"></i>Reset
+                <% end %>
+              <% end %>
+              <div class="filter-status small text-muted align-self-center text-nowrap">
+                <%= pluralize(@bookings.respond_to?(:total_count) ? @bookings.total_count : @bookings.count, 'result') %>
+                <% if params[:payment_status] == 'unpaid' %>
+                  <span class="badge bg-danger-subtle text-danger ms-1">Unpaid only</span>
+                <% elsif params[:delivery_pending] == '1' %>
+                  <span class="badge bg-primary-subtle text-primary ms-1">Delivery pending</span>
+                <% elsif active_filter %>
+                  <span class="text-primary">(filtered)</span>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <% if @bookings.any? %>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="border-0 fw-semibold">Booking Details</th>
+              <th class="border-0 fw-semibold">Customer</th>
+              <th class="border-0 fw-semibold">Items & Amount</th>
+              <th class="border-0 fw-semibold">Payment & Status</th>
+              <th class="border-0 fw-semibold">Progress</th>
+              <th class="border-0 fw-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @bookings.each do |booking| %>
+              <tr class="<%= 'franchise-booking' if booking.user&.franchise? %>">
+                <td class="align-middle">
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center me-3">
+                      <i class="bi bi-cart text-primary"></i>
+                    </div>
+                    <div>
+                      <h6 class="mb-0">#<%= booking.booking_number %></h6>
+                      <small class="text-muted"><%= booking.created_at.strftime("%d %b %Y") if booking.created_at %></small>
+                      <% if booking.user&.franchise? %>
+                        <div class="mt-1">
+                          <span class="badge bg-info-subtle text-info">
+                            <i class="bi bi-building me-1"></i>
+                            <%= booking.user.franchise.name %>
+                          </span>
+                        </div>
+                      <% end %>
+                      <% if booking.is_b2b? %>
+                        <div class="mt-1">
+                          <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                            <i class="bi bi-briefcase me-1"></i>B2B
+                          </span>
+                        </div>
+                      <% end %>
+                      <%# Booking source label %>
+                      <div class="mt-1">
+                        <% case booking.booked_by
+                           when 'mobile_api' %>
+                          <span class="badge source-badge source-mobile">
+                            <i class="bi bi-phone me-1"></i>Mobile App
+                          </span>
+                        <% when 'customer' %>
+                          <span class="badge source-badge source-customer">
+                            <i class="bi bi-globe me-1"></i>Customer Website
+                          </span>
+                        <% when 'franchise' %>
+                          <span class="badge source-badge source-franchise">
+                            <i class="bi bi-shop me-1"></i>Franchise
+                          </span>
+                        <% else %>
+                          <span class="badge source-badge source-store">
+                            <i class="bi bi-person-gear me-1"></i>Store
+                          </span>
+                        <% end %>
+                      </div>
+                      <%# Store badge — shown when booking was created from a store login %>
+                      <% if booking.store.present? %>
+                        <div class="mt-1">
+                          <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:0.7rem;">
+                            <i class="bi bi-shop-window me-1"></i><%= booking.store.name %>
+                          </span>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                </td>
+                <td class="align-middle">
+                  <div>
+                    <% customer_display = booking.customer&.display_name || booking.customer_name.presence %>
+                    <% if customer_display.present? %>
+                      <h6 class="mb-0"><%= customer_display %></h6>
+                    <% else %>
+                      <span class="badge bg-secondary-subtle text-secondary fw-semibold" style="font-size:0.78rem;">
+                        <i class="bi bi-person me-1"></i>Walk-in Customer
+                      </span>
+                    <% end %>
+                    <% if booking.customer&.mobile || booking.customer_phone %>
+                      <small class="text-muted d-block">
+                        <i class="bi bi-telephone me-1"></i>
+                        <%= booking.customer&.mobile || booking.customer_phone %>
+                      </small>
+                    <% end %>
+                    <% if booking.delivery_store.present? %>
+                      <small class="text-muted d-block">
+                        <i class="bi bi-shop me-1"></i>
+                        <span class="badge bg-warning-subtle text-warning">Pickup</span>
+                      </small>
+                      <small class="text-muted">
+                        <%= booking.delivery_store %>
+                      </small>
+                    <% end %>
+                  </div>
+                </td>
+                <td class="align-middle">
+                  <div>
+                    <span class="badge bg-info-subtle text-info">
+                      <%= pluralize(booking.booking_items.size, 'item') %>
+                    </span>
+                    <div class="fw-medium text-success mt-1">
+                      ₹<%= number_with_delimiter(booking.total_amount || 0) %>
+                    </div>
+                  </div>
+                </td>
+                <td class="align-middle">
+                  <!-- Payment Status -->
+                  <div class="mb-2">
+                    <% payment_class = case booking.payment_status
+                                      when 'paid' then 'bg-success-subtle text-success'
+                                      when 'unpaid' then 'bg-danger-subtle text-danger'
+                                      when 'partially_paid' then 'bg-warning-subtle text-warning'
+                                      else 'bg-secondary-subtle text-secondary'
+                                      end %>
+                    <span class="badge <%= payment_class %>">
+                      <i class="bi bi-credit-card me-1"></i>
+                      <%= booking.payment_status_display %>
+                    </span>
+                    <% if booking.payment_method.present? %>
+                      <small class="text-muted ms-1">(<%= booking.payment_method_display %>)</small>
+                    <% end %>
+                  </div>
+
+                  <!-- Invoice Status -->
+                  <div class="mb-2">
+                    <% if booking.has_invoice? %>
+                      <% if booking.invoice_link_path %>
+                        <%= link_to booking.invoice_link_path, class: "badge bg-success-subtle text-success text-decoration-none", target: "_blank", title: "View Invoice ##{booking.display_invoice_number}" do %>
+                          <i class="bi bi-receipt me-1"></i>
+                          <%= booking.display_invoice_number %>
+                        <% end %>
+                      <% else %>
+                        <span class="badge bg-warning-subtle text-warning">
+                          <i class="bi bi-exclamation-triangle me-1"></i>
+                          Generated
+                        </span>
+                      <% end %>
+                    <% else %>
+                      <span class="badge bg-secondary-subtle text-secondary">
+                        <i class="bi bi-file-x me-1"></i>
+                        No Invoice
+                      </span>
+                    <% end %>
+                  </div>
+
+                  <!-- Current Status -->
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-<%= booking.status_color %> px-2 py-1" title="<%= booking.status&.humanize || 'Unknown' %>">
+                      <i class="bi <%= booking.status_icon %> me-1"></i>
+                      <% status_text = booking.status&.humanize || 'Unknown' %>
+                      <%= status_text.length > 12 ? status_text[0..11] + '...' : status_text %>
+                    </span>
+
+                    <% if booking.next_possible_statuses.any? %>
+                      <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Quick Stage Update">
+                          <i class="bi bi-gear"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                          <li class="dropdown-header">Quick Stage Update</li>
+                          <% booking.next_possible_statuses.each do |status| %>
+                            <li>
+                              <%= link_to update_status_store_admin_booking_path(booking, status: status, list_state: list_state, return_to: 'index'),
+                                  method: :patch, class: "dropdown-item",
+                                  confirm: status == 'cancelled' ? 'Are you sure you want to cancel this order?' : nil do %>
+                                <i class="bi bi-arrow-right me-2"></i>
+                                <%= status.humanize %>
+                              <% end %>
+                            </li>
+                          <% end %>
+                        </ul>
+                      </div>
+                    <% end %>
+                  </div>
+                </td>
+                <td class="align-middle">
+                  <div class="progress-container">
+                    <%
+                      stages = ['draft', 'ordered_and_delivery_pending', 'confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'completed']
+                      current_stage_index = stages.index(booking.status) || 0
+                      total_stages = stages.length
+                      progress_percentage = ((current_stage_index + 1).to_f / total_stages * 100).round(0)
+
+                      # Special handling for cancelled/returned
+                      if ['cancelled', 'returned'].include?(booking.status)
+                        progress_percentage = 0
+                        progress_color = 'bg-danger'
+                      else
+                        progress_color = case progress_percentage
+                                        when 0..20 then 'bg-secondary'
+                                        when 21..40 then 'bg-warning'
+                                        when 41..60 then 'bg-info'
+                                        when 61..80 then 'bg-primary'
+                                        else 'bg-success'
+                                        end
+                      end
+                    %>
+
+                    <div class="progress mb-1" style="height: 8px;">
+                      <div class="progress-bar <%= progress_color %>"
+                           role="progressbar"
+                           style="width: <%= progress_percentage %>%"
+                           aria-valuenow="<%= progress_percentage %>"
+                           aria-valuemin="0"
+                           aria-valuemax="100">
+                      </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                      <small class="text-muted">
+                        Stage <%= current_stage_index + 1 %>/9
+                      </small>
+                      <small class="text-muted">
+                        <%= progress_percentage %>%
+                      </small>
+                    </div>
+
+                    <!-- Next Steps -->
+                    <% if booking.next_possible_statuses.any? %>
+                      <div class="mt-1">
+                        <small class="text-primary">
+                          <i class="bi bi-arrow-right me-1"></i>
+                          Next: <%= booking.next_possible_statuses.first.humanize %>
+                        </small>
+                      </div>
+                    <% elsif booking.status == 'completed' %>
+                      <div class="mt-1">
+                        <small class="text-success">
+                          <i class="bi bi-check-all me-1"></i>
+                          Order Complete
+                        </small>
+                      </div>
+                    <% end %>
+                  </div>
+                </td>
+                <td class="align-middle">
+                  <div class="d-flex gap-2 align-items-center">
+                    <!-- Stage Management Icon -->
+                    <%= link_to manage_stage_store_admin_booking_path(booking, list_state: list_state),
+                        class: "btn btn-sm btn-outline-primary stage-management-btn",
+                        title: "Manage Order Stages" do %>
+                      <i class="bi bi-arrows-move"></i>
+                    <% end %>
+
+                    <!-- Actions Icons -->
+                    <div class="action-icons">
+                      <%= link_to store_admin_booking_path(booking, list_state: list_state), class: "action-icon view", title: "View Booking" do %>
+                        <i class="bi bi-eye"></i>
+                      <% end %>
+                      <%= link_to edit_store_admin_booking_path(booking, list_state: list_state), class: "action-icon edit", title: "Edit Booking" do %>
+                        <i class="bi bi-pencil"></i>
+                      <% end %>
+                      <a href="#" class="action-icon delete" title="Delete Booking" onclick="confirmDelete(<%= booking.id %>, '<%= booking.booking_number %>', '<%= booking.customer&.display_name || 'Unknown' %>', '<%= list_state.to_query('list_state') %>')">
+                        <i class="bi bi-trash"></i>
+                      </a>
+                      <%
+                        wa_phone_raw = (booking.customer&.mobile || booking.customer_phone).to_s
+                        wa_phone_clean = wa_phone_raw.gsub(/\D/, '').sub(/^0+/, '').sub(/^91/, '')
+                        wa_phone_full = wa_phone_clean.present? ? "91#{wa_phone_clean}" : nil
+                        wa_cname = booking.customer&.display_name || booking.customer_name.presence || 'Customer'
+                        wa_amount = number_with_delimiter(booking.total_amount || 0)
+                        wa_date = (booking.respond_to?(:booking_date) && booking.booking_date.present? ? booking.booking_date : booking.created_at)&.strftime('%d %b %Y')
+                        booking.ensure_share_token!
+                        wa_public_url = "#{request.base_url}/booking/#{booking.share_token}"
+                        wa_bi = booking.booking_invoices.first
+                        wa_pdf_line = wa_bi&.share_token.present? ? "\n📄 Download Invoice PDF: #{request.base_url}/invoice/#{wa_bi.share_token}/download" : ""
+                        wa_msg = "Dear #{wa_cname},\n\nThank you for your booking with Dhanvantari Naturals! 🌿\n\nBooking #: #{booking.booking_number}\nDate: #{wa_date}\nAmount: ₹#{wa_amount}\n\n📋 View your booking: #{wa_public_url}#{wa_pdf_line}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
+                      %>
+                      <% if wa_phone_full.present? %>
+                        <a href="https://wa.me/<%= wa_phone_full %>?text=<%= ERB::Util.url_encode(wa_msg) %>"
+                           class="action-icon whatsapp"
+                           target="_blank"
+                           title="Send Thank You on WhatsApp">
+                          <i class="bi bi-whatsapp"></i>
+                        </a>
+                      <% end %>
+                      <% if booking.has_invoice? %>
+                        <% if booking.invoice_link_path %>
+                          <%= link_to booking.invoice_link_path, class: "action-icon invoice", title: "View Invoice", target: "_blank" do %>
+                            <i class="bi bi-receipt"></i>
+                          <% end %>
+                        <% else %>
+                          <%= link_to "#", class: "action-icon invoice", title: "Invoice Generated", onclick: "alert('Invoice generated but link not available')" do %>
+                            <i class="bi bi-receipt-cutoff"></i>
+                          <% end %>
+                        <% end %>
+                        <% bi = booking.booking_invoices.first %>
+                        <% if bi&.share_token.present? %>
+                          <% wa_inv_url = public_invoice_url(token: bi.share_token) %>
+                          <% wa_inv_pdf_url = "#{request.base_url}/invoice/#{bi.share_token}/download" %>
+                          <% wa_text = "Dear #{wa_cname},\n\nHere is your invoice from Dhanvantari Naturals 🌿\n\nBooking #: #{booking.booking_number}\nAmount: ₹#{wa_amount}\n\n📋 View Invoice: #{wa_inv_url}\n📄 Download PDF: #{wa_inv_pdf_url}\n\nThank you!\n🙏 Dhanvantari Naturals Team" %>
+                          <a href="https://wa.me/<%= wa_phone_full.present? ? wa_phone_full : '' %>?text=<%= ERB::Util.url_encode(wa_text) %>"
+                             class="action-icon whatsapp"
+                             target="_blank"
+                             title="Share Invoice on WhatsApp">
+                            <i class="bi bi-whatsapp"></i>
+                          </a>
+                        <% end %>
+                      <% else %>
+                        <%= link_to "#", class: "action-icon invoice", title: "Generate Invoice", onclick: "alert('Invoice not generated yet')" do %>
+                          <i class="bi bi-receipt-cutoff"></i>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <% if respond_to?(:paginate) && @bookings.respond_to?(:total_pages) %>
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-between align-items-center">
+          <div>
+            <small class="text-muted">
+              Showing <%= @bookings.offset_value + 1 %> - <%= [@bookings.offset_value + @bookings.length, @bookings.total_count].min %> of <%= @bookings.total_count %> bookings
+              <span class="ms-2 badge bg-primary-subtle text-primary">
+                <i class="bi bi-gear me-1"></i>
+                <%= @per_page %> per page (from system settings)
+              </span>
+            </small>
+          </div>
+          <div>
+            <%= paginate @bookings %>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="text-center py-5">
+        <div class="mb-3">
+          <i class="bi bi-cart-x fs-1 text-muted"></i>
+        </div>
+        <h5 class="text-muted mb-3">No Bookings Found</h5>
+        <p class="text-muted mb-4">Start creating bookings for your customers to manage orders and sales.</p>
+        <%= link_to "Create Booking", new_store_admin_booking_path, class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- Stage Management Modal -->
+<div class="modal fade" id="stageManagementModal" tabindex="-1" aria-labelledby="stageManagementModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-gradient-primary text-white">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-arrows-move me-2 fs-4"></i>
+          <div>
+            <h5 class="modal-title mb-0" id="stageManagementModalLabel">Stage Management</h5>
+            <small class="opacity-75" id="bookingNumberDisplay">Order #</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body p-4" id="stageManagementContent">
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-5">
+          <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="text-muted mb-0">Loading stage information...</p>
+        </div>
+
+        <!-- Stage Content -->
+        <div id="stageContent" style="display: none;">
+          <!-- Current Stage Display -->
+          <div class="current-stage-card mb-4">
+            <div class="card border-primary">
+              <div class="card-body text-center">
+                <div class="stage-icon-large mb-3">
+                  <i id="currentStageIcon" class="bi bi-clock-history display-4 text-primary"></i>
+                </div>
+                <h4 class="mb-2" id="currentStageName">Current Stage</h4>
+                <p class="text-muted mb-0" id="currentStageDescription">Stage description will appear here</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stage Progression Timeline -->
+          <div class="stage-timeline mb-4">
+            <h6 class="text-muted mb-3">
+              <i class="bi bi-list-ol me-2"></i>Order Progress Timeline
+            </h6>
+            <div class="timeline-container" id="stageTimeline">
+              <!-- Timeline will be populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Available Stage Transitions -->
+          <div class="available-transitions">
+            <h6 class="text-muted mb-3">
+              <i class="bi bi-arrow-right-circle me-2"></i>Available Actions
+            </h6>
+            <div class="row g-3" id="stageTransitions">
+              <!-- Stage transition buttons will be populated dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal removed - using manage_stage page instead -->
+
+<script>
+// Delete confirmation function
+function confirmDelete(bookingId, bookingNumber, customerName, listStateQuery) {
+  const confirmation = confirm(
+    `⚠️ DELETE BOOKING CONFIRMATION ⚠️\n\n` +
+    `Booking: ${bookingNumber}\n` +
+    `Customer: ${customerName}\n\n` +
+    `This will permanently delete:\n` +
+    `• The booking record\n` +
+    `• All booking items\n` +
+    `• Any associated invoices\n` +
+    `• Sale items and inventory records\n\n` +
+    `❌ This action CANNOT be undone!\n\n` +
+    `Are you absolutely sure you want to delete this booking?`
+  );
+
+  if (confirmation) {
+    // Create a form and submit it to delete the booking
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = listStateQuery ? `/store_admin/bookings/${bookingId}?${listStateQuery}` : `/store_admin/bookings/${bookingId}`;
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'authenticity_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    // Add method override for DELETE
+    const methodInput = document.createElement('input');
+    methodInput.type = 'hidden';
+    methodInput.name = '_method';
+    methodInput.value = 'DELETE';
+    form.appendChild(methodInput);
+
+    // Submit the form
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize Select2 for customer dropdown
+  $('.customer-select').select2({
+    theme: 'bootstrap-5',
+    placeholder: 'Select Customer...',
+    allowClear: true,
+    width: '100%'
+  });
+
+  // Auto-submit form when customer selection changes
+  $('.customer-select').on('change', function() {
+    const form = $(this).closest('form');
+    form.addClass('loading');
+    this.form.submit();
+  });
+
+  // Enhanced search functionality with debounce
+  let searchTimeout;
+  $('#searchInput').on('input', function() {
+    const searchValue = $(this).val();
+    const clearBtn = $(this).siblings('button');
+
+    // Show/hide clear button
+    if (searchValue.length > 0) {
+      clearBtn.show();
+    } else {
+      clearBtn.hide();
+    }
+
+    // Debounced search submission
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      if (searchValue !== $(this).data('last-value')) {
+        $(this).data('last-value', searchValue);
+        const form = $(this).closest('form');
+        form.addClass('loading');
+        form.submit();
+      }
+    }, 500);
+  });
+
+  // Clear search functionality
+  $('.btn-link').on('click', function() {
+    const form = $(this).closest('form');
+    form.addClass('loading');
+  });
+  // Real-time data functionality
+  let realtimeInterval = null;
+  const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+  const realtimeStatus = document.getElementById('realtimeStatus');
+  const updateTime = document.getElementById('updateTime');
+
+  // Update real-time status indicator
+  function updateRealtimeStatus(isActive, isLoading = false) {
+    if (isLoading) {
+      realtimeStatus.className = 'status-dot status-loading';
+    } else if (isActive) {
+      realtimeStatus.className = 'status-dot status-active';
+    } else {
+      realtimeStatus.className = 'status-dot status-inactive';
+    }
+  }
+
+  // Fetch and update real-time data
+  function fetchRealtimeData() {
+    updateRealtimeStatus(autoRefreshToggle.checked, true);
+
+    fetch('<%= realtime_data_store_admin_bookings_path %>', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Update statistics cards
+        updateStatisticsCards(data.stats);
+
+        // Update last updated time
+        updateTime.textContent = data.stats.last_updated;
+
+        // Show success notification occasionally
+        if (Math.random() < 0.1) { // 10% chance
+          showNotification('Data refreshed successfully', 'success', 2000);
+        }
+      } else {
+        console.error('Real-time update failed:', data.error);
+        showNotification('Failed to refresh data', 'error', 3000);
+      }
+
+      updateRealtimeStatus(autoRefreshToggle.checked, false);
+    })
+    .catch(error => {
+      console.error('Real-time update error:', error);
+      updateRealtimeStatus(autoRefreshToggle.checked, false);
+      showNotification('Connection error while refreshing data', 'error', 3000);
+    });
+  }
+
+  // Update statistics cards with new data
+  function updateStatisticsCards(stats) {
+    const statsMapping = {
+      'draft': stats.draft,
+      'pending': stats.pending,
+      'processing': stats.processing,
+      'shipped': stats.shipped,
+      'delivered': stats.delivered,
+      'issues': stats.issues
+    };
+
+    // Update each card with animation
+    Object.keys(statsMapping).forEach(key => {
+      const cardElements = document.querySelectorAll(`.col-md-2 .card-body`);
+      cardElements.forEach(cardBody => {
+        const titleElement = cardBody.querySelector('h6');
+        const countElement = cardBody.querySelector('h5');
+
+        if (titleElement && countElement) {
+          const cardType = titleElement.textContent.toLowerCase();
+          const mappedKey = {
+            'draft': 'draft',
+            'pending': 'pending',
+            'processing': 'processing',
+            'shipped': 'shipped',
+            'delivered': 'delivered',
+            'issues': 'issues'
+          }[cardType];
+
+          if (mappedKey && statsMapping[mappedKey] !== undefined) {
+            const newValue = statsMapping[mappedKey];
+            const currentValue = parseInt(countElement.textContent) || 0;
+
+            if (newValue !== currentValue) {
+              // Add animation class
+              countElement.style.transition = 'all 0.3s ease';
+              countElement.style.transform = 'scale(1.1)';
+              countElement.style.color = '#007bff';
+
+              // Update value
+              setTimeout(() => {
+                countElement.textContent = newValue;
+
+                // Reset animation
+                setTimeout(() => {
+                  countElement.style.transform = 'scale(1)';
+                  countElement.style.color = '';
+                }, 200);
+              }, 100);
+            }
+          }
+        }
+      });
+    });
+  }
+
+  // Show notification
+  function showNotification(message, type = 'info', duration = 3000) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} notification-toast`;
+    notification.innerHTML = `
+      <div class="d-flex align-items-center">
+        <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+        <span>${message}</span>
+      </div>
+    `;
+
+    // Position it
+    notification.style.position = 'fixed';
+    notification.style.top = '20px';
+    notification.style.right = '20px';
+    notification.style.zIndex = '9999';
+    notification.style.minWidth = '300px';
+    notification.style.opacity = '0';
+    notification.style.transform = 'translateX(100%)';
+    notification.style.transition = 'all 0.3s ease';
+
+    document.body.appendChild(notification);
+
+    // Animate in
+    setTimeout(() => {
+      notification.style.opacity = '1';
+      notification.style.transform = 'translateX(0)';
+    }, 10);
+
+    // Animate out and remove
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateX(100%)';
+
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, duration);
+  }
+
+  // Auto-refresh toggle functionality
+  autoRefreshToggle?.addEventListener('change', function() {
+    if (this.checked) {
+      // Start real-time updates every 30 seconds
+      realtimeInterval = setInterval(fetchRealtimeData, 30000);
+      updateRealtimeStatus(true);
+      fetchRealtimeData(); // Fetch immediately
+      showNotification('Real-time updates enabled', 'success', 2000);
+    } else {
+      // Stop real-time updates
+      if (realtimeInterval) {
+        clearInterval(realtimeInterval);
+        realtimeInterval = null;
+      }
+      updateRealtimeStatus(false);
+      showNotification('Real-time updates disabled', 'info', 2000);
+    }
+  });
+
+  // Initialize real-time updates if toggle is checked
+  if (autoRefreshToggle?.checked) {
+    realtimeInterval = setInterval(fetchRealtimeData, 30000);
+    updateRealtimeStatus(true);
+
+    // Initial fetch after a short delay
+    setTimeout(fetchRealtimeData, 2000);
+  }
+
+  // Search functionality
+  const searchInput = document.getElementById('searchInput');
+  const tableRows = document.querySelectorAll('tbody tr');
+
+  searchInput?.addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+
+    tableRows.forEach(row => {
+      const bookingNumber = row.cells[0]?.textContent.toLowerCase() || '';
+      const customerName = row.cells[1]?.textContent.toLowerCase() || '';
+      const paymentInfo = row.cells[3]?.textContent.toLowerCase() || '';
+      const statusInfo = row.cells[4]?.textContent.toLowerCase() || '';
+      const progressInfo = row.cells[5]?.textContent.toLowerCase() || '';
+
+      if (bookingNumber.includes(searchTerm) ||
+          customerName.includes(searchTerm) ||
+          paymentInfo.includes(searchTerm) ||
+          statusInfo.includes(searchTerm) ||
+          progressInfo.includes(searchTerm)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  });
+
+  // Cleanup interval when page is unloaded
+  window.addEventListener('beforeunload', function() {
+    if (realtimeInterval) {
+      clearInterval(realtimeInterval);
+    }
+  });
+
+  // Stage Management Functions
+  // Stage management moved to separate page - manage_stage action
+  // Old modal-based stage management functions removed
+
+  function populateStageInformation(bookingId, currentStatus) {
+    // Hide loading state
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('stageContent').style.display = 'block';
+
+    // Stage configuration
+    const stageConfig = {
+      'draft': {
+        name: 'Draft',
+        icon: 'bi-pencil',
+        color: 'text-secondary',
+        description: 'Order is being prepared and not yet confirmed',
+        nextStages: ['ordered_and_delivery_pending', 'cancelled']
+      },
+      'ordered_and_delivery_pending': {
+        name: 'Pending Delivery',
+        icon: 'bi-clock-history',
+        color: 'text-warning',
+        description: 'Order received and waiting to be processed',
+        nextStages: ['confirmed', 'cancelled']
+      },
+      'confirmed': {
+        name: 'Confirmed',
+        icon: 'bi-check-circle',
+        color: 'text-success',
+        description: 'Order confirmed and ready for processing',
+        nextStages: ['processing', 'cancelled']
+      },
+      'processing': {
+        name: 'Processing',
+        icon: 'bi-gear',
+        color: 'text-info',
+        description: 'Order is being prepared and processed',
+        nextStages: ['packed', 'cancelled']
+      },
+      'packed': {
+        name: 'Packed',
+        icon: 'bi-box',
+        color: 'text-primary',
+        description: 'Items are packed and ready for shipment',
+        nextStages: ['shipped', 'cancelled']
+      },
+      'shipped': {
+        name: 'Shipped',
+        icon: 'bi-truck',
+        color: 'text-primary',
+        description: 'Order has been shipped and is in transit',
+        nextStages: ['out_for_delivery', 'returned']
+      },
+      'out_for_delivery': {
+        name: 'Out for Delivery',
+        icon: 'bi-geo-alt',
+        color: 'text-warning',
+        description: 'Order is out for delivery and will arrive soon',
+        nextStages: ['delivered', 'returned']
+      },
+      'delivered': {
+        name: 'Delivered',
+        icon: 'bi-house-check',
+        color: 'text-success',
+        description: 'Order has been successfully delivered',
+        nextStages: ['completed', 'returned']
+      },
+      'completed': {
+        name: 'Completed',
+        icon: 'bi-check-all',
+        color: 'text-success',
+        description: 'Order transaction is complete',
+        nextStages: []
+      },
+      'cancelled': {
+        name: 'Cancelled',
+        icon: 'bi-x-circle',
+        color: 'text-danger',
+        description: 'Order has been cancelled',
+        nextStages: []
+      },
+      'returned': {
+        name: 'Returned',
+        icon: 'bi-arrow-return-left',
+        color: 'text-warning',
+        description: 'Order has been returned',
+        nextStages: ['completed']
+      }
+    };
+
+    const currentStageInfo = stageConfig[currentStatus];
+
+    // Update current stage display
+    document.getElementById('currentStageIcon').className = `bi ${currentStageInfo.icon} display-4 ${currentStageInfo.color}`;
+    document.getElementById('currentStageName').textContent = currentStageInfo.name;
+    document.getElementById('currentStageDescription').textContent = currentStageInfo.description;
+
+    // Populate timeline
+    populateTimeline(currentStatus, stageConfig);
+
+    // Populate available transitions
+    populateTransitions(bookingId, currentStageInfo.nextStages, stageConfig);
+  }
+
+  function populateTimeline(currentStatus, stageConfig) {
+    const allStages = ['draft', 'ordered_and_delivery_pending', 'confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'completed'];
+    const currentIndex = allStages.indexOf(currentStatus);
+
+    let timelineHTML = '<div class="timeline">';
+
+    allStages.forEach((stage, index) => {
+      const stageInfo = stageConfig[stage];
+      const isCompleted = index <= currentIndex;
+      const isCurrent = index === currentIndex;
+
+      timelineHTML += `
+        <div class="timeline-item ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''}">
+          <div class="timeline-marker">
+            <i class="bi ${stageInfo.icon} ${isCompleted ? stageInfo.color : 'text-muted'}"></i>
+          </div>
+          <div class="timeline-content">
+            <h6 class="mb-1 ${isCompleted ? stageInfo.color : 'text-muted'}">${stageInfo.name}</h6>
+            <small class="text-muted">${stageInfo.description}</small>
+          </div>
+        </div>
+      `;
+    });
+
+    timelineHTML += '</div>';
+    document.getElementById('stageTimeline').innerHTML = timelineHTML;
+  }
+
+  function populateTransitions(bookingId, nextStages, stageConfig) {
+    const transitionsContainer = document.getElementById('stageTransitions');
+
+    if (nextStages.length === 0) {
+      transitionsContainer.innerHTML = `
+        <div class="col-12">
+          <div class="alert alert-info text-center">
+            <i class="bi bi-info-circle me-2"></i>
+            No further stage transitions available for this order.
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    let transitionsHTML = '';
+
+    nextStages.forEach(stage => {
+      const stageInfo = stageConfig[stage];
+      transitionsHTML += `
+        <div class="col-md-6">
+          <button type="button"
+                  class="btn btn-outline-primary w-100 stage-transition-btn"
+                  data-booking-id="${bookingId}"
+                  data-target-stage="${stage}"
+                  onclick="openStageTransitionForm(${bookingId}, '${stage}')">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center">
+                <i class="bi ${stageInfo.icon} me-2 ${stageInfo.color}"></i>
+                <div class="text-start">
+                  <div class="fw-semibold">${stageInfo.name}</div>
+                  <small class="text-muted">${stageInfo.description}</small>
+                </div>
+              </div>
+              <i class="bi bi-arrow-right text-muted"></i>
+            </div>
+          </button>
+        </div>
+      `;
+    });
+
+    transitionsContainer.innerHTML = transitionsHTML;
+  }
+
+  window.openStageTransitionForm = function(bookingId, targetStage) {
+    // Close stage management modal
+    bootstrap.Modal.getInstance(document.getElementById('stageManagementModal')).hide();
+
+    // Open transition form modal
+    const transitionModal = new bootstrap.Modal(document.getElementById('stageTransitionModal'));
+
+    // Set target stage
+    document.getElementById('targetStage').value = targetStage;
+
+    // Set form action
+    const form = document.getElementById('stageTransitionForm');
+    form.action = `/store_admin/bookings/${bookingId}/stage_transition`;
+
+    // Update modal title and description
+    const stageNames = {
+      'confirmed': 'Confirm Order',
+      'processing': 'Start Processing',
+      'packed': 'Mark as Packed',
+      'shipped': 'Mark as Shipped',
+      'out_for_delivery': 'Out for Delivery',
+      'delivered': 'Mark as Delivered',
+      'completed': 'Complete Order',
+      'cancelled': 'Cancel Order',
+      'returned': 'Process Return'
+    };
+
+    document.getElementById('stageTransitionModalLabel').textContent = stageNames[targetStage] || 'Stage Transition';
+    document.getElementById('transitionDescription').textContent = `Moving order to ${targetStage.replace(/_/g, ' ')} stage`;
+
+    // Populate form fields based on target stage
+    populateTransitionForm(targetStage);
+
+    transitionModal.show();
+  };
+
+  function populateTransitionForm(targetStage) {
+    const formFields = document.getElementById('transitionFormFields');
+    let fieldsHTML = '';
+
+    switch(targetStage) {
+      case 'confirmed':
+        fieldsHTML = `
+          <div class="mb-3">
+            <label class="form-label">Confirmation Notes</label>
+            <textarea class="form-control" name="transition_notes" rows="3" placeholder="Enter any confirmation notes or special instructions..."></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Estimated Processing Time</label>
+            <select class="form-select" name="estimated_processing_time">
+              <option value="1-2 hours">1-2 hours</option>
+              <option value="2-4 hours">2-4 hours</option>
+              <option value="4-8 hours">4-8 hours</option>
+              <option value="1 day">1 day</option>
+              <option value="2-3 days">2-3 days</option>
+            </select>
+          </div>
+        `;
+        break;
+
+      case 'processing':
+        fieldsHTML = `
+          <div class="mb-3">
+            <label class="form-label">Processing Team</label>
+            <select class="form-select" name="processing_team" required>
+              <option value="">Select processing team</option>
+              <option value="Team A">Team A - Kitchen</option>
+              <option value="Team B">Team B - Packaging</option>
+              <option value="Team C">Team C - Quality Check</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Expected Completion Time</label>
+            <input type="datetime-local" class="form-control" name="expected_completion_time" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Processing Notes</label>
+            <textarea class="form-control" name="transition_notes" rows="3" placeholder="Enter processing details and any special requirements..."></textarea>
+          </div>
+        `;
+        break;
+
+      case 'packed':
+        fieldsHTML = `
+          <div class="mb-3">
+            <label class="form-label">Package Weight (kg)</label>
+            <input type="number" class="form-control" name="package_weight" step="0.1" placeholder="Enter package weight">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Package Dimensions</label>
+            <input type="text" class="form-control" name="package_dimensions" placeholder="Length x Width x Height (cm)">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Quality Check Status</label>
+            <select class="form-select" name="quality_status" required>
+              <option value="passed">Quality Check Passed</option>
+              <option value="passed_with_notes">Passed with Notes</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Packing Notes</label>
+            <textarea class="form-control" name="transition_notes" rows="3" placeholder="Enter packing details and quality notes..."></textarea>
+          </div>
+        `;
+        break;
+
+      case 'shipped':
+        fieldsHTML = `
+          <div class="mb-3">
+            <label class="form-label">Courier Service *</label>
+            <select class="form-select" name="courier_service" required>
+              <option value="">Select courier service</option>
+              <option value="BlueDart">BlueDart</option>
+              <option value="DTDC">DTDC</option>
+              <option value="FedEx">FedEx</option>
+              <option value="Delhivery">Delhivery</option>
+              <option value="India Post">India Post</option>
+              <option value="Ecom Express">Ecom Express</option>
+              <option value="XpressBees">XpressBees</option>
+              <option value="Own Delivery">Own Delivery Team</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Tracking Number *</label>
+            <input type="text" class="form-control" name="tracking_number" required placeholder="Enter tracking number">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Shipping Charges</label>
+            <input type="number" class="form-control" name="shipping_charges" step="0.01" placeholder="Enter shipping charges">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Expected Delivery Date</label>
+            <input type="date" class="form-control" name="expected_delivery_date" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Shipping Notes</label>
+            <textarea class="form-control" name="transition_notes" rows="3" placeholder="Enter shipping details and instructions..."></textarea>
+          </div>
+        `;
+        break;
+
+      case 'out_for_delivery':
+        fieldsHTML = `
+          <div class="mb-3">
+            <label class="form-label">Delivery Person</label>
+            <input type="text" class="form-control" name="delivery_person" placeholder="Enter delivery person name">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Delivery Person Contact</label>
+            <input type="tel" class="form-control" name="delivery_contact" placeholder="Enter contact number">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Estimated Delivery Time</label>
+            <select class="form-select" name="estimated_delivery_time">
+              <option value="Within 2 hours">Within 2 hours</option>
+              <option value="Within 4 hours">Within 4 hours</option>
+              <option value="By end of day">By end of day</option>
+              <option value="Next day">Next day</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Delivery Notes</label>
+            <textarea class="form-control" name="transition_notes" rows="3" placeholder="Enter delivery instructions and notes..."></textarea>
+          </div>
+        `;
+        break;
+
+      case 'delivered':
+        fieldsHTML = `
+          <div class="mb-3">
+            <label class="form-label">Delivered To</label>
+            <input type="text" class="form-control" name="delivered_to" required placeholder="Who received the order?">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Delivery Time</label>
+            <input type="datetime-local" class="form-control" name="delivery_time" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Customer Satisfaction</label>
+            <select class="form-select" name="customer_satisfaction">
+              <option value="5">Excellent (5 stars)</option>
+              <option value="4">Good (4 stars)</option>
+              <option value="3">Average (3 stars)</option>
+              <option value="2">Below Average (2 stars)</option>
+              <option value="1">Poor (1 star)</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Delivery Notes</label>
+            <textarea class="form-control" name="transition_notes" rows="3" placeholder="Enter delivery confirmation details and customer feedback..."></textarea>
+          </div>
+        `;
+        break;
+
+      case 'cancelled':
+        fieldsHTML = `
+          <div class="mb-3">
+            <label class="form-label">Cancellation Reason *</label>
+            <select class="form-select" name="cancellation_reason" required>
+              <option value="">Select cancellation reason</option>
+              <option value="Customer Request">Customer Request</option>
+              <option value="Out of Stock">Out of Stock</option>
+              <option value="Payment Issues">Payment Issues</option>
+              <option value="Quality Issues">Quality Issues</option>
+              <option value="Delivery Issues">Delivery Issues</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Refund Amount</label>
+            <input type="number" class="form-control" name="refund_amount" step="0.01" placeholder="Enter refund amount">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Refund Method</label>
+            <select class="form-select" name="refund_method">
+              <option value="Original Payment Method">Original Payment Method</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Cash">Cash</option>
+              <option value="Store Credit">Store Credit</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Cancellation Notes</label>
+            <textarea class="form-control" name="transition_notes" rows="3" placeholder="Enter detailed cancellation reason and any additional information..." required></textarea>
+          </div>
+        `;
+        break;
+
+      case 'returned':
+        fieldsHTML = `
+          <div class="mb-3">
+            <label class="form-label">Return Reason *</label>
+            <select class="form-select" name="return_reason" required>
+              <option value="">Select return reason</option>
+              <option value="Defective Product">Defective Product</option>
+              <option value="Wrong Item">Wrong Item Delivered</option>
+              <option value="Customer Dissatisfaction">Customer Dissatisfaction</option>
+              <option value="Damaged in Transit">Damaged in Transit</option>
+              <option value="Late Delivery">Late Delivery</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Return Condition</label>
+            <select class="form-select" name="return_condition">
+              <option value="Good">Good Condition</option>
+              <option value="Slightly Damaged">Slightly Damaged</option>
+              <option value="Heavily Damaged">Heavily Damaged</option>
+              <option value="Unusable">Unusable</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Refund Amount</label>
+            <input type="number" class="form-control" name="refund_amount" step="0.01" placeholder="Enter refund amount">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Return Notes</label>
+            <textarea class="form-control" name="transition_notes" rows="3" placeholder="Enter return processing details..." required></textarea>
+          </div>
+        `;
+        break;
+
+      default:
+        fieldsHTML = `
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea class="form-control" name="transition_notes" rows="3" placeholder="Enter any notes for this stage transition..."></textarea>
+          </div>
+        `;
+    }
+
+    formFields.innerHTML = fieldsHTML;
+  }
+
+  // Handle form submission
+  document.getElementById('stageTransitionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const submitBtn = document.getElementById('confirmTransitionBtn');
+
+    // Show loading state
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Processing...';
+    submitBtn.disabled = true;
+
+    // Submit form
+    fetch(this.action, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Close modal
+        bootstrap.Modal.getInstance(document.getElementById('stageTransitionModal')).hide();
+
+        // Show success notification
+        showNotification('Stage transition completed successfully!', 'success');
+
+        // Reload page to show updated status
+        setTimeout(() => {
+          location.reload();
+        }, 1500);
+      } else {
+        showNotification(data.error || 'Failed to update stage', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showNotification('An error occurred while updating the stage', 'error');
+    })
+    .finally(() => {
+      // Reset button
+      submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Confirm Transition';
+      submitBtn.disabled = false;
+    });
+  });
+});
+</script>
+
+<!-- Custom CSS for Booking Stage Progress -->
+<style>
+/* Ensure table headers are always visible */
+.table-light th {
+  color: #212529 !important;
+  background-color: #f8f9fa !important;
+}
+
+/* Ensure badge text is always visible */
+.badge.bg-primary {
+  background-color: #0d6efd !important;
+  color: #fff !important;
+}
+
+.badge.bg-secondary {
+  background-color: #6c757d !important;
+  color: #fff !important;
+}
+
+.badge.bg-success {
+  background-color: #198754 !important;
+  color: #fff !important;
+}
+
+.badge.bg-danger {
+  background-color: #dc3545 !important;
+  color: #fff !important;
+}
+
+.badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+.badge.bg-info {
+  background-color: #0dcaf0 !important;
+  color: #212529 !important;
+}
+
+/* Add subtle badge styles */
+.badge.bg-info-subtle {
+  background-color: rgba(13, 202, 240, 0.1) !important;
+  color: #0dcaf0 !important;
+  border: 1px solid rgba(13, 202, 240, 0.3);
+}
+
+.progress-container {
+  min-width: 150px;
+}
+
+.progress {
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.progress-bar {
+  border-radius: 10px;
+  transition: width 0.6s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* Invoice link badge styling */
+.badge.bg-success-subtle.text-decoration-none:hover {
+  background-color: rgba(25, 135, 84, 0.2) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(25, 135, 84, 0.15);
+  transition: all 0.2s ease;
+}
+
+.badge.bg-success-subtle.text-decoration-none:active {
+  transform: translateY(0);
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+
+.card {
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+
+/* Stage Statistics Cards Hover Effects */
+.col-md-2 .card:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
+}
+
+/* Custom scrollbar for table */
+.table-responsive::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Real-time status indicator */
+.real-time-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.status-dot.status-active {
+  background-color: #28a745;
+  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+  animation: pulse 2s infinite;
+}
+
+.status-dot.status-inactive {
+  background-color: #6c757d;
+}
+
+.status-dot.status-loading {
+  background-color: #ffc107;
+  animation: blink 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(40, 167, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+  }
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0.3;
+  }
+}
+
+/* Notification toast styling */
+.notification-toast {
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Enhanced form switch styling */
+.form-check-input:checked {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.form-check-input:focus {
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+/* Enhanced pagination info styling */
+.badge.bg-primary-subtle {
+  background-color: rgba(13, 110, 253, 0.1) !important;
+  border: 1px solid rgba(13, 110, 253, 0.2);
+}
+
+/* Stage Management Modal Styles */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.bg-gradient-success {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+}
+
+.stage-management-btn {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+}
+
+.stage-management-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* Fix dropdown overlap with Manage Order Stages button */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute !important;
+  z-index: 1100 !important;
+  min-width: 180px;
+}
+
+/* Ensure dropdowns at the bottom of the table open upward */
+tbody tr:last-child .dropdown-menu,
+tbody tr:nth-last-child(2) .dropdown-menu,
+tbody tr:nth-last-child(3) .dropdown-menu {
+  bottom: 100%;
+  top: auto;
+}
+
+/* Add spacing between action buttons */
+td .d-flex.gap-2 {
+  gap: 0.5rem !important;
+}
+
+/* Timeline Styles */
+.timeline {
+  position: relative;
+  padding-left: 2rem;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 1.5rem;
+  padding-left: 2rem;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -1rem;
+  top: 2rem;
+  width: 2px;
+  height: calc(100% + 0.5rem);
+  background: #dee2e6;
+}
+
+.timeline-item:last-child::before {
+  display: none;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: -1.5rem;
+  top: 0;
+  width: 2rem;
+  height: 2rem;
+  background: white;
+  border: 2px solid #dee2e6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+.timeline-item.completed .timeline-marker {
+  border-color: #28a745;
+  background: #28a745;
+  color: white;
+}
+
+.timeline-item.current .timeline-marker {
+  border-color: #007bff;
+  background: #007bff;
+  color: white;
+  transform: scale(1.2);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+
+.timeline-content {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  border-left: 3px solid #dee2e6;
+  transition: all 0.3s ease;
+}
+
+.timeline-item.completed .timeline-content {
+  border-left-color: #28a745;
+  background: #d4edda;
+}
+
+.timeline-item.current .timeline-content {
+  border-left-color: #007bff;
+  background: #cce7ff;
+}
+
+/* Stage Transition Buttons */
+.stage-transition-btn {
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: left;
+}
+
+.stage-transition-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 123, 255, 0.2);
+  border-color: #007bff;
+}
+
+.stage-transition-btn:active {
+  transform: translateY(0);
+}
+
+/* Current Stage Card */
+.current-stage-card .card {
+  border-width: 2px;
+  transition: all 0.3s ease;
+}
+
+.current-stage-card .card:hover {
+  box-shadow: 0 8px 25px rgba(0, 123, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.stage-icon-large {
+  padding: 1rem;
+  background: rgba(0, 123, 255, 0.1);
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal Enhancements */
+.modal-content {
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.modal-header {
+  border-bottom: none;
+  padding: 1.5rem 2rem;
+}
+
+.modal-body {
+  padding: 2rem;
+}
+
+.modal-footer {
+  border-top: 1px solid #dee2e6;
+  padding: 1rem 2rem;
+}
+
+/* Form Field Enhancements */
+.form-label {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.5rem;
+}
+
+.form-control, .form-select {
+  border-radius: 8px;
+  border: 1px solid #ced4da;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Loading State Enhancements */
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+/* Button Enhancements */
+.btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* Alert Enhancements */
+.alert {
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .timeline {
+    padding-left: 1rem;
+  }
+
+  .timeline-item {
+    padding-left: 1.5rem;
+  }
+
+  .timeline-marker {
+    left: -1rem;
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .stage-transition-btn {
+    padding: 0.8rem;
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+}
+
+/* Animation for stage transitions */
+@keyframes stageTransition {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stage-transition-btn {
+  animation: stageTransition 0.5s ease-out;
+}
+
+/* Enhanced notification positioning */
+.notification-toast {
+  z-index: 99999;
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Enhanced Filters Container Styling */
+.filters-container {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  transition: all 0.3s ease;
+}
+
+.filters-container:hover {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.filter-group {
+  position: relative;
+}
+
+.filter-group .form-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.filter-group .form-label i {
+  color: #6c757d;
+}
+
+.filter-group .form-select,
+.filter-group .form-control {
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.filter-group .form-select:focus,
+.filter-group .form-control:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+  transform: translateY(-1px);
+}
+
+.filter-group .form-select:hover,
+.filter-group .form-control:hover {
+  border-color: #adb5bd;
+}
+
+/* Search Input Enhancements */
+.search-input {
+  padding-right: 35px;
+}
+
+.search-input:focus {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+/* Filter Actions */
+.filter-actions {
+  align-items: center;
+  min-height: 38px;
+}
+
+.filter-status {
+  background: white;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  font-weight: 500;
+}
+
+/* Select2 Customer Dropdown Styling */
+.select2-container--bootstrap-5 .select2-selection {
+  border-radius: 8px !important;
+  border: 1px solid #dee2e6 !important;
+  min-height: 31px !important;
+  background: white !important;
+  transition: all 0.3s ease !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  line-height: 29px !important;
+  font-size: 0.875rem !important;
+}
+
+.select2-container--bootstrap-5.select2-container--focus .select2-selection {
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15) !important;
+  transform: translateY(-1px) !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection:hover {
+  border-color: #adb5bd !important;
+}
+
+.select2-dropdown {
+  border-radius: 8px !important;
+  border: 1px solid #dee2e6 !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+  z-index: 1060 !important;
+}
+
+.select2-results__option--highlighted {
+  background-color: #0d6efd !important;
+  background: linear-gradient(135deg, #0d6efd 0%, #084298 100%) !important;
+}
+
+.select2-results__option {
+  font-size: 0.875rem !important;
+  padding: 8px 12px !important;
+}
+
+/* Clear button styling */
+.btn-link:hover i {
+  color: #dc3545 !important;
+}
+
+/* Responsive Filter Styling */
+@media (max-width: 992px) {
+  .filter-actions {
+    justify-content: center !important;
+    margin-top: 1rem;
+  }
+
+  .filter-status {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .filters-container {
+    padding: 1rem !important;
+    margin: 0 -0.5rem 1rem -0.5rem;
+    border-radius: 0 !important;
+  }
+
+  .filter-group .form-select,
+  .filter-group .form-control {
+    font-size: 0.875rem;
+  }
+
+  .col-lg-3,
+  .col-lg-4,
+  .col-lg-2 {
+    margin-bottom: 1rem;
+  }
+
+  .col-lg-2:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* Loading states for filters */
+.filter-form.loading .form-select,
+.filter-form.loading .form-control {
+  pointer-events: none;
+  opacity: 0.6;
+  background-image: linear-gradient(45deg, transparent 25%, rgba(255,255,255,.5) 25%, rgba(255,255,255,.5) 75%, transparent 75%, transparent),
+                    linear-gradient(45deg, transparent 25%, rgba(255,255,255,.5) 25%, rgba(255,255,255,.5) 75%, transparent 75%, transparent);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+  animation: loading-stripes 1s linear infinite;
+}
+
+@keyframes loading-stripes {
+  0% {
+    background-position: 0 0, 10px 10px;
+  }
+  100% {
+    background-position: 20px 20px, 30px 30px;
+  }
+}
+
+/* Filter container animation */
+.filters-container {
+  animation: slideInDown 0.5s ease-out;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>

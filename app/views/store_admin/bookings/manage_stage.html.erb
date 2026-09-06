@@ -1,0 +1,849 @@
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Order Stage Management</h2>
+    <p class="text-muted mb-0">Update order status for booking #<%= @booking.booking_number %></p>
+  </div>
+  <div class="d-flex gap-2">
+    <%= link_to store_admin_booking_path(@booking, list_state: @list_state), class: "btn btn-outline-primary" do %>
+      <i class="bi bi-eye me-1"></i>View Order
+    <% end %>
+    <%= link_to store_admin_bookings_path(@list_state), class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-arrow-left me-1"></i>Back to Bookings
+    <% end %>
+  </div>
+</div>
+
+<!-- Current Status Statistics Cards -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h6 class="text-muted mb-1">Current Stage</h6>
+            <h5 class="mb-0"><%= @booking.status&.humanize %></h5>
+          </div>
+          <div class="text-<%= @booking.status_color %>">
+            <i class="bi <%= @booking.status_icon %> fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h6 class="text-muted mb-1">Customer</h6>
+            <h5 class="mb-0"><%= @booking.customer_name || @booking.customer&.display_name %></h5>
+          </div>
+          <div class="text-primary">
+            <i class="bi bi-person fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h6 class="text-muted mb-1">Order Value</h6>
+            <h5 class="mb-0">₹<%= number_with_delimiter(@booking.total_amount || 0) %></h5>
+          </div>
+          <div class="text-success">
+            <i class="bi bi-currency-rupee fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h6 class="text-muted mb-1">Payment</h6>
+            <h5 class="mb-0"><%= @booking.payment_status&.humanize || 'Pending' %></h5>
+          </div>
+          <div class="text-<%= @booking.payment_status == 'paid' ? 'success' : 'warning' %>">
+            <i class="bi bi-<%= @booking.payment_status == 'paid' ? 'check-circle' : 'clock' %> fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent border-0">
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Update Order Stage</h5>
+      <span class="badge bg-<%= @booking.status_color %>-subtle text-<%= @booking.status_color %> px-3 py-2">
+        <i class="bi <%= @booking.status_icon %> me-1"></i>
+        <%= @booking.status&.humanize %>
+      </span>
+    </div>
+  </div>
+  <div class="card-body">
+    <%= form_with url: update_stage_store_admin_booking_path(@booking, list_state: @list_state), method: :patch, local: true, data: { turbo: false }, id: "stage_update_form" do |f| %>
+
+      <!-- Stage Selection -->
+      <div class="mb-4">
+        <label class="form-label fw-bold">Select New Stage</label>
+        <select name="target_stage" class="form-select form-select-lg" onchange="showStageFields(this.value)" required>
+          <option value="">-- Select Stage --</option>
+          <% all_stages = ['draft', 'ordered_and_delivery_pending', 'confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'completed', 'cancelled', 'returned'] %>
+          <% # Remove current stage from available stages %>
+          <% available_stages = all_stages.reject { |stage| stage == @booking.status } %>
+
+          <% available_stages.each do |stage| %>
+            <option value="<%= stage %>">
+              <%= stage.humanize %> - <%= stage_description_full(stage) %>
+            </option>
+          <% end %>
+        </select>
+        <div class="form-text">Available stages based on current order status</div>
+      </div>
+
+      <!-- Dynamic Stage-Specific Fields -->
+      <div id="stageSpecificFields" style="display: none;">
+
+        <!-- Draft Fields -->
+        <div id="draftFields" class="stage-fields" style="display: none;">
+          <h6 class="mb-3 text-muted">Draft Preparation</h6>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Draft Notes</label>
+              <textarea class="form-control" name="transition_notes" rows="3" placeholder="Add any preparation notes or requirements..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ordered and Delivery Pending Fields -->
+        <div id="ordered_and_delivery_pendingFields" class="stage-fields" style="display: none;">
+          <h6 class="mb-3 text-muted">Order Processing Setup</h6>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Priority Level</label>
+              <select class="form-select" name="priority_level">
+                <option value="">Select priority</option>
+                <option value="Low">Low Priority</option>
+                <option value="Normal">Normal Priority</option>
+                <option value="High">High Priority</option>
+                <option value="Urgent">Urgent</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Expected Processing Start</label>
+              <input type="datetime-local" class="form-control" name="expected_start_time">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Order Notes</label>
+              <textarea class="form-control" name="transition_notes" rows="3" placeholder="Order placement details and requirements..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Confirmed Fields -->
+        <div id="confirmedFields" class="stage-fields" style="display: none;">
+          <h6 class="mb-3 text-muted">Confirmation Details</h6>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Confirmation Notes</label>
+              <textarea class="form-control" name="transition_notes" rows="3" placeholder="Add any confirmation details or special instructions..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Processing Fields -->
+        <div id="processingFields" class="stage-fields" style="display: none;">
+          <h6 class="mb-3 text-muted">Processing Information</h6>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Processing Team</label>
+              <select class="form-select" name="processing_team">
+                <option value="">Select team</option>
+                <option value="Warehouse A">Warehouse A</option>
+                <option value="Warehouse B">Warehouse B</option>
+                <option value="Main Facility">Main Facility</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Estimated Processing Time</label>
+              <select class="form-select" name="estimated_processing_time">
+                <option value="">Select time</option>
+                <option value="1-2 hours">1-2 hours</option>
+                <option value="2-4 hours">2-4 hours</option>
+                <option value="4-8 hours">4-8 hours</option>
+                <option value="1 day">1 day</option>
+                <option value="2 days">2 days</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Processing Notes</label>
+              <textarea class="form-control" name="transition_notes" rows="3" placeholder="Enter processing details..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Packed Fields -->
+        <div id="packedFields" class="stage-fields" style="display: none;">
+          <h6 class="mb-3 text-muted">Packing Details</h6>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Package Weight (kg)</label>
+              <input type="number" class="form-control" name="package_weight" step="0.01" placeholder="0.00">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Package Dimensions</label>
+              <input type="text" class="form-control" name="package_dimensions" placeholder="L x W x H cm">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Quality Check</label>
+              <select class="form-select" name="quality_status">
+                <option value="passed">Passed</option>
+                <option value="pending">Pending Review</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Packing Notes</label>
+              <textarea class="form-control" name="transition_notes" rows="3" placeholder="Special packing instructions, fragile items, etc..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shipped Fields -->
+        <div id="shippedFields" class="stage-fields" style="display: none;">
+          <h6 class="mb-3 text-muted">Shipping Information</h6>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Courier Service <span class="text-danger">*</span></label>
+              <select class="form-select" name="courier_service" id="courier_service_field">
+                <option value="">Select courier service</option>
+                <option value="Blue Dart">Blue Dart</option>
+                <option value="DTDC">DTDC</option>
+                <option value="Delhivery">Delhivery</option>
+                <option value="FedEx">FedEx</option>
+                <option value="India Post">India Post</option>
+                <option value="DHL">DHL</option>
+                <option value="Ekart">Ekart Logistics</option>
+                <option value="Local Courier">Local Courier</option>
+                <option value="In-house Delivery">In-house Delivery</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tracking Number <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="tracking_number" id="tracking_number_field" placeholder="Enter tracking number">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Shipping Charges</label>
+              <input type="number" class="form-control" name="shipping_charges" step="0.01" placeholder="0.00">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Expected Delivery Date</label>
+              <input type="date" class="form-control" name="expected_delivery_date" min="<%= Date.today %>">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Shipping Notes</label>
+              <textarea class="form-control" name="transition_notes" rows="3" placeholder="Shipping instructions, special handling, etc..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Out for Delivery Fields -->
+        <div id="out_for_deliveryFields" class="stage-fields" style="display: none;">
+          <h6 class="mb-3 text-muted">Delivery Assignment</h6>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Delivery Person <span class="text-danger">*</span></label>
+              <select class="form-select" name="delivery_person_id" id="delivery_person_select" onchange="updateDeliveryPersonInfo()">
+                <option value="">Select Delivery Person</option>
+                <% DeliveryPerson.active.order(:first_name, :last_name).each do |dp| %>
+                  <option value="<%= dp.id %>"
+                          data-name="<%= dp.full_name %>"
+                          data-mobile="<%= dp.mobile %>"
+                          data-vehicle="<%= dp.vehicle_info %>"
+                          data-areas="<%= dp.delivery_areas %>">
+                    <%= dp.full_name %> - <%= dp.vehicle_info %>
+                  </option>
+                <% end %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Contact Number</label>
+              <input type="text" class="form-control" name="delivery_contact" id="delivery_contact" placeholder="Mobile number" readonly>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Delivery Executive Name</label>
+              <input type="text" class="form-control" name="delivery_person" id="delivery_person_name" placeholder="Delivery executive name" readonly>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Vehicle Information</label>
+              <input type="text" class="form-control" id="vehicle_info" placeholder="Vehicle details" readonly>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Delivery Areas</label>
+              <input type="text" class="form-control" id="delivery_areas" placeholder="Areas covered by delivery person" readonly>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Delivery Notes</label>
+              <textarea class="form-control" name="transition_notes" rows="3" placeholder="Route details, special instructions..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delivered Fields -->
+        <div id="deliveredFields" class="stage-fields" style="display: none;">
+          <h6 class="mb-3 text-muted">Delivery Confirmation</h6>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Delivered To</label>
+              <input type="text" class="form-control" name="delivered_to" placeholder="Recipient name">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Delivery Time</label>
+              <input type="datetime-local" class="form-control" name="delivery_time" value="<%= DateTime.now.strftime('%Y-%m-%dT%H:%M') %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Delivery Person</label>
+              <input type="text" class="form-control" name="delivery_person" placeholder="Delivery executive name">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Customer Satisfaction</label>
+              <select class="form-select" name="customer_satisfaction">
+                <option value="5">Excellent (5 stars)</option>
+                <option value="4">Good (4 stars)</option>
+                <option value="3">Average (3 stars)</option>
+                <option value="2">Below Average (2 stars)</option>
+                <option value="1">Poor (1 star)</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Delivery Notes</label>
+              <textarea class="form-control" name="transition_notes" rows="3" placeholder="Delivery confirmation details..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cancelled Fields -->
+        <div id="cancelledFields" class="stage-fields" style="display: none;">
+          <h6 class="mb-3 text-muted">Cancellation Process</h6>
+          <div class="alert alert-warning" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Warning:</strong> This action cannot be undone. Please ensure all details are correct.
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Cancellation Reason <span class="text-danger">*</span></label>
+              <select class="form-select" name="cancellation_reason" id="cancellation_reason_field">
+                <option value="">Select reason</option>
+                <option value="Customer Request">Customer Request</option>
+                <option value="Out of Stock">Out of Stock</option>
+                <option value="Payment Issues">Payment Issues</option>
+                <option value="Quality Issues">Quality Issues</option>
+                <option value="Delivery Issues">Delivery Issues</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Refund Amount</label>
+              <input type="number" class="form-control" name="refund_amount" step="0.01" placeholder="0.00" value="<%= @booking.total_amount %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Refund Method</label>
+              <select class="form-select" name="refund_method">
+                <option value="Original Payment Method">Original Payment Method</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Store Credit">Store Credit</option>
+                <option value="Cash">Cash</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Cancellation Notes</label>
+              <textarea class="form-control" name="transition_notes" rows="3" placeholder="Additional cancellation details..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Returned Fields -->
+        <div id="returnedFields" class="stage-fields" style="display: none;">
+          <h6 class="mb-3 text-muted">Return Process</h6>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Return Reason <span class="text-danger">*</span></label>
+              <select class="form-select" name="return_reason" id="return_reason_field">
+                <option value="">Select reason</option>
+                <option value="Defective Product">Defective Product</option>
+                <option value="Wrong Item">Wrong Item Delivered</option>
+                <option value="Customer Dissatisfaction">Customer Dissatisfaction</option>
+                <option value="Damaged in Transit">Damaged in Transit</option>
+                <option value="Late Delivery">Late Delivery</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Return Condition</label>
+              <select class="form-select" name="return_condition">
+                <option value="Good">Good Condition</option>
+                <option value="Slightly Damaged">Slightly Damaged</option>
+                <option value="Heavily Damaged">Heavily Damaged</option>
+                <option value="Unusable">Unusable</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Refund Amount</label>
+              <input type="number" class="form-control" name="refund_amount" step="0.01" placeholder="0.00" value="<%= @booking.total_amount %>">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Return Notes</label>
+              <textarea class="form-control" name="transition_notes" rows="3" placeholder="Return details..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Completed Fields -->
+        <div id="completedFields" class="stage-fields" style="display: none;">
+          <h6 class="mb-3 text-muted">Order Completion</h6>
+          <div class="alert alert-success" role="alert">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Success:</strong> This will mark the order as fully completed and close the transaction.
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Completion Date</label>
+              <input type="datetime-local" class="form-control" name="completion_time" value="<%= DateTime.now.strftime('%Y-%m-%dT%H:%M') %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Final Customer Rating</label>
+              <select class="form-select" name="final_customer_rating">
+                <option value="5">Excellent (5 stars)</option>
+                <option value="4">Good (4 stars)</option>
+                <option value="3">Average (3 stars)</option>
+                <option value="2">Below Average (2 stars)</option>
+                <option value="1">Poor (1 star)</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Completion Notes</label>
+              <textarea class="form-control" name="transition_notes" rows="3" placeholder="Final notes about the completed order..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit Buttons -->
+      <div class="mt-4 pt-3 border-top">
+        <button type="submit" class="btn btn-primary btn-lg me-2" id="update_stage_btn">
+          <i class="bi bi-check-circle me-2"></i>Update Stage
+        </button>
+        <%= link_to store_admin_bookings_path(@list_state), class: "btn btn-outline-secondary btn-lg" do %>
+          <i class="bi bi-x-circle me-2"></i>Cancel
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- Stage History -->
+<% if @booking.stage_history.present? && JSON.parse(@booking.stage_history).any? %>
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-transparent border-0">
+      <h5 class="mb-0">Stage History</h5>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Stage</th>
+              <th>Date & Time</th>
+              <th>Updated By</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% JSON.parse(@booking.stage_history).reverse.each do |history| %>
+              <tr>
+                <td>
+                  <span class="badge bg-primary-subtle text-primary px-3 py-2">
+                    <%= history['to_stage']&.humanize %>
+                  </span>
+                </td>
+                <td>
+                  <%= Time.parse(history['timestamp'].to_s).strftime("%d %b %Y at %I:%M %p") %>
+                </td>
+                <td>
+                  <%= history['user_name'] || 'System' %>
+                </td>
+                <td>
+                  <%= history['notes'] || '-' %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<style>
+/* Match bookings index page styling exactly */
+.badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+
+.card {
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+
+/* Stage Statistics Cards Hover Effects */
+.col-md-3 .card:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
+}
+
+/* Custom scrollbar for table */
+.table-responsive::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Form styling to match bookings page */
+.form-control, .form-select {
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.btn {
+  border-radius: 0.375rem;
+  font-weight: 400;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-lg {
+  padding: 0.5rem 1rem;
+  font-size: 1.25rem;
+}
+
+.stage-fields {
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 0.375rem;
+  margin-top: 1rem;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stage-card.current-stage .stage-label {
+  border-color: #0dcaf0 !important;
+  background: linear-gradient(135deg, #e0f8ff 0%, #f0fbff 100%) !important;
+  opacity: 0.8;
+  cursor: not-allowed !important;
+}
+
+.stage-card.recommended .stage-label {
+  border-color: #198754 !important;
+  border-width: 2px !important;
+  border-style: dashed !important;
+  box-shadow: 0 0 10px rgba(25, 135, 84, 0.2) !important;
+}
+
+.stage-card input[type="radio"]:checked + .stage-label {
+  border-color: #0d6efd !important;
+  background: linear-gradient(135deg, #f0f7ff 0%, #e7f3ff 100%) !important;
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2) !important;
+}
+
+.stage-card.selected .stage-label {
+  border-color: #0d6efd !important;
+  background: linear-gradient(135deg, #f0f7ff 0%, #e7f3ff 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(13, 110, 253, 0.25) !important;
+}
+
+.badge.position-absolute {
+  font-size: 0.65rem;
+  border-radius: 0.25rem;
+}
+
+.alert {
+  border-radius: 0.375rem;
+}
+
+/* Avatar for customer card */
+.avatar-sm {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: #f8f9fa;
+}
+
+/* Stage flow guide styling */
+.alert-light {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border: 1px solid #dee2e6;
+}
+</style>
+
+<script>
+// Form validation and submission
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('stage_update_form');
+  const submitBtn = document.getElementById('update_stage_btn');
+  const stageSelect = document.querySelector('select[name="target_stage"]');
+
+  if (!form || !submitBtn || !stageSelect) {
+    console.error('Form elements not found');
+    return;
+  }
+
+  console.log('Stage management form initialized');
+
+  // Initially disable submit button unless stage is already selected
+  if (!stageSelect.value) {
+    submitBtn.disabled = true;
+  }
+
+  // Enable submit when stage is selected
+  stageSelect.addEventListener('change', function() {
+    console.log('Stage selected:', this.value);
+    if (this.value) {
+      submitBtn.disabled = false;
+      showStageFields(this.value);
+    } else {
+      submitBtn.disabled = true;
+      const stageFieldsContainer = document.getElementById('stageSpecificFields');
+      if (stageFieldsContainer) {
+        stageFieldsContainer.style.display = 'none';
+      }
+    }
+  });
+
+  // Form submission validation
+  form.addEventListener('submit', function(e) {
+    console.log('Form submission attempted');
+    const selectedStage = stageSelect.value;
+
+    if (!selectedStage) {
+      e.preventDefault();
+      alert('Please select a stage first.');
+      console.log('No stage selected');
+      return false;
+    }
+
+    console.log('Submitting for stage:', selectedStage);
+
+    // Stage-specific validation
+    if (selectedStage === 'shipped') {
+      const courierService = document.querySelector('select[name="courier_service"]');
+      const trackingNumber = document.querySelector('input[name="tracking_number"]');
+
+      if (!courierService || !trackingNumber || !courierService.value || !trackingNumber.value) {
+        e.preventDefault();
+        alert('Courier service and tracking number are required for shipping.');
+        console.log('Shipping validation failed');
+        return false;
+      }
+    }
+
+    if (selectedStage === 'out_for_delivery') {
+      const deliveryPersonSelect = document.querySelector('select[name="delivery_person_id"]');
+
+      if (!deliveryPersonSelect || !deliveryPersonSelect.value) {
+        e.preventDefault();
+        alert('Please select a delivery person for out for delivery.');
+        console.log('Out for delivery validation failed');
+        return false;
+      }
+    }
+
+    if (selectedStage === 'cancelled') {
+      const cancellationReason = document.querySelector('select[name="cancellation_reason"]');
+
+      if (!cancellationReason || !cancellationReason.value) {
+        e.preventDefault();
+        alert('Cancellation reason is required.');
+        console.log('Cancellation validation failed');
+        return false;
+      }
+    }
+
+    if (selectedStage === 'returned') {
+      const returnReason = document.querySelector('select[name="return_reason"]');
+
+      if (!returnReason || !returnReason.value) {
+        e.preventDefault();
+        alert('Return reason is required.');
+        console.log('Return validation failed');
+        return false;
+      }
+    }
+
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Updating...';
+
+    console.log('Form submission proceeding...');
+    return true;
+  });
+});
+
+function selectStage(stage) {
+  // Don't allow selecting current stage
+  if (document.querySelector(`#stage_${stage}`)?.disabled) {
+    return;
+  }
+
+  // Reset all stage cards
+  document.querySelectorAll('.stage-card').forEach(card => {
+    card.classList.remove('selected');
+  });
+
+  // Mark selected card
+  const selectedCard = document.querySelector(`#stage_${stage}`).closest('.stage-card');
+  if (selectedCard) {
+    selectedCard.classList.add('selected');
+  }
+
+  // Check the radio button
+  document.getElementById(`stage_${stage}`).checked = true;
+
+  // Enable submit button
+  document.getElementById('update_stage_btn').disabled = false;
+
+  // Show stage fields
+  showStageFields(stage);
+}
+
+function showStageFields(stage) {
+  // Hide all stage-specific field sections
+  document.querySelectorAll('.stage-fields').forEach(el => {
+    el.style.display = 'none';
+  });
+
+  // Remove required attributes from all conditional fields
+  const cancellationReasonField = document.getElementById('cancellation_reason_field');
+  const returnReasonField = document.getElementById('return_reason_field');
+  const courierServiceField = document.getElementById('courier_service_field');
+  const trackingNumberField = document.getElementById('tracking_number_field');
+  const deliveryPersonField = document.getElementById('delivery_person_select');
+
+  if (cancellationReasonField) cancellationReasonField.removeAttribute('required');
+  if (returnReasonField) returnReasonField.removeAttribute('required');
+  if (courierServiceField) courierServiceField.removeAttribute('required');
+  if (trackingNumberField) trackingNumberField.removeAttribute('required');
+  if (deliveryPersonField) deliveryPersonField.removeAttribute('required');
+
+  // Show the container if stage is selected
+  const container = document.getElementById('stageSpecificFields');
+  if (stage) {
+    container.style.display = 'block';
+  } else {
+    container.style.display = 'none';
+    return;
+  }
+
+  // Show specific fields for selected stage and set required attributes
+  const stageFields = document.getElementById(stage + 'Fields');
+  if (stageFields) {
+    stageFields.style.display = 'block';
+
+    // Set required attributes based on the stage
+    if (stage === 'cancelled' && cancellationReasonField) {
+      cancellationReasonField.setAttribute('required', 'required');
+    }
+
+    if (stage === 'returned' && returnReasonField) {
+      returnReasonField.setAttribute('required', 'required');
+    }
+
+    if (stage === 'shipped') {
+      if (courierServiceField) courierServiceField.setAttribute('required', 'required');
+      if (trackingNumberField) trackingNumberField.setAttribute('required', 'required');
+    }
+
+    if (stage === 'out_for_delivery') {
+      if (deliveryPersonField) deliveryPersonField.setAttribute('required', 'required');
+    }
+  }
+}
+
+// Delivery person selection handler
+function updateDeliveryPersonInfo() {
+  const select = document.getElementById('delivery_person_select');
+  const selectedOption = select.options[select.selectedIndex];
+
+  if (selectedOption && selectedOption.value) {
+    // Update delivery person name
+    document.getElementById('delivery_person_name').value = selectedOption.dataset.name || '';
+
+    // Update contact number
+    document.getElementById('delivery_contact').value = selectedOption.dataset.mobile || '';
+
+    // Update vehicle information
+    document.getElementById('vehicle_info').value = selectedOption.dataset.vehicle || '';
+
+    // Update delivery areas
+    document.getElementById('delivery_areas').value = selectedOption.dataset.areas || '';
+  } else {
+    // Clear all fields if no selection
+    document.getElementById('delivery_person_name').value = '';
+    document.getElementById('delivery_contact').value = '';
+    document.getElementById('vehicle_info').value = '';
+    document.getElementById('delivery_areas').value = '';
+  }
+}
+
+// Stage management functionality
+</script>
+

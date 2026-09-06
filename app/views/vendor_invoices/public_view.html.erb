@@ -190,7 +190,7 @@
             <% @purchase_items.each do |item| %>
               <tr>
                 <td>
-                  <strong><%= item.product.name %></strong>
+                  <strong><%= item.display_name %></strong>
                   <% if item.product.description.present? %>
                     <br><small class="text-muted"><%= truncate(item.product.description, length: 100) %></small>
                   <% end %>

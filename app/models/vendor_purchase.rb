@@ -23,6 +23,46 @@ class VendorPurchase < ApplicationRecord
   after_save :create_stock_batches, if: :saved_change_to_id?
   after_update :update_stock_batches, if: :saved_change_to_vendor_purchase_items?
 
+  # Flat option list for the purchase form's product picker. Multi-quantity
+  # products expand to one entry per variant (so a purchase line can target a
+  # specific pack size); everything else stays a single product entry. `value`
+  # is the composite the <select> carries: "<product_id>" for a plain product
+  # or "<product_id>-v<variant_id>" for a variant.
+  def self.product_option_list(products)
+    products.flat_map do |product|
+      if product.has_multiple_quantities? && product.product_variants.any?
+        product.sorted_variants.map do |variant|
+          {
+            value: "#{product.id}-v#{variant.id}",
+            product_id: product.id,
+            variant_id: variant.id,
+            name: "#{product.name} — #{variant.label}",
+            unit_type: 'units',
+            default_selling_price: variant.effective_price.to_f,
+            default_purchase_price: variant_purchase_cost(variant)
+          }
+        end
+      else
+        [{
+          value: product.id.to_s,
+          product_id: product.id,
+          variant_id: nil,
+          name: product.name,
+          unit_type: product.unit_type || 'units',
+          default_selling_price: product.default_selling_price.to_f,
+          default_purchase_price: product.try(:buying_price).to_f
+        }]
+      end
+    end
+  end
+
+  # Last known cost for a variant, used only to prefill the purchase-price field.
+  def self.variant_purchase_cost(variant)
+    cost = variant.buying_price.to_f
+    cost = variant.try(:purchase_price).to_f if cost <= 0
+    cost
+  end
+
   def purchase_number
     "VP#{id.to_s.rjust(6, '0')}"
   end
@@ -125,11 +165,13 @@ class VendorPurchase < ApplicationRecord
   def create_stock_batches
     vendor_purchase_items.each do |item|
       product = item.product
-      current_stock = product.total_batch_stock
+      variant = item.product_variant
+      current_stock = variant ? variant.available_stock.to_f : product.total_batch_stock
 
       # Create stock batch
       StockBatch.create!(
-        product: item.product,
+        product: product,
+        product_variant: variant,
         vendor: vendor,
         vendor_purchase: self,
         quantity_purchased: item.quantity,
@@ -140,10 +182,16 @@ class VendorPurchase < ApplicationRecord
         status: 'active'
       )
 
-      # Update product stock field for backward compatibility
-      # Use update_column to skip validations since we're only updating stock
-      new_stock = product.total_batch_stock
-      product.update_column(:stock, new_stock)
+      # Update the on-hand stock field: variant available_stock for a variant
+      # line, product stock (kept in sync with batch totals) otherwise.
+      # Use update_column to skip validations since we're only updating stock.
+      if variant
+        new_stock = (variant.available_stock.to_f + item.quantity.to_f).round
+        variant.update_column(:available_stock, new_stock)
+      else
+        new_stock = product.total_batch_stock
+        product.update_column(:stock, new_stock)
+      end
 
       # Create stock movement record
       product.stock_movements.create!(
@@ -153,7 +201,7 @@ class VendorPurchase < ApplicationRecord
         quantity: item.quantity.to_f, # Positive for addition
         stock_before: current_stock,
         stock_after: new_stock,
-        notes: "Stock added from vendor purchase: #{purchase_number} - #{product.name} (Qty: #{item.quantity})"
+        notes: "Stock added from vendor purchase: #{purchase_number} - #{item.display_name} (Qty: #{item.quantity})"
       )
     end
   end
@@ -161,10 +209,11 @@ class VendorPurchase < ApplicationRecord
   def update_stock_batches
     # Update existing batches when purchase items are modified
     vendor_purchase_items.each do |item|
-      batch = stock_batches.find_by(product: item.product)
+      batch = stock_batches.find_by(product_id: item.product_id, product_variant_id: item.product_variant_id)
       if batch
         product = item.product
-        current_stock = product.total_batch_stock
+        variant = item.product_variant
+        current_stock = variant ? variant.available_stock.to_f : product.total_batch_stock
         old_quantity = batch.quantity_purchased.to_f
         new_quantity = item.quantity.to_f
         quantity_difference = new_quantity - old_quantity
@@ -176,10 +225,15 @@ class VendorPurchase < ApplicationRecord
           selling_price: item.selling_price
         )
 
-        # Update product stock field for backward compatibility
-        # Use update_column to skip validations since we're only updating stock
-        new_stock = product.total_batch_stock
-        product.update_column(:stock, new_stock)
+        # Update the on-hand stock field (variant available_stock or product
+        # stock). Use update_column to skip validations.
+        if variant
+          new_stock = [(variant.available_stock.to_f + quantity_difference).round, 0].max
+          variant.update_column(:available_stock, new_stock)
+        else
+          new_stock = product.total_batch_stock
+          product.update_column(:stock, new_stock)
+        end
 
         # Create stock movement record if quantity changed
         if quantity_difference != 0
@@ -192,7 +246,7 @@ class VendorPurchase < ApplicationRecord
             quantity: quantity_difference,
             stock_before: current_stock,
             stock_after: new_stock,
-            notes: "Vendor purchase updated: #{purchase_number} - #{product.name} quantity changed by #{quantity_difference}"
+            notes: "Vendor purchase updated: #{purchase_number} - #{item.display_name} quantity changed by #{quantity_difference}"
           )
         end
       end

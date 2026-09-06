@@ -92,6 +92,7 @@ class BookingItem < ApplicationRecord
 
     new_stock = stock_batches_scope.reload.sum(:quantity_remaining)
     product.update_column(:stock, product.total_batch_stock)
+    sync_store_inventory_row
 
     store_note = booking_store_id.present? ? " at #{booking.store.name}" : ''
     product.stock_movements.create!(
@@ -154,6 +155,7 @@ class BookingItem < ApplicationRecord
 
     new_stock = stock_batches_scope.reload.sum(:quantity_remaining)
     product.update_column(:stock, product.total_batch_stock)
+    sync_store_inventory_row
 
     # Create stock movement record for the change
     if quantity_difference != 0
@@ -199,6 +201,7 @@ class BookingItem < ApplicationRecord
 
     new_stock = stock_batches_scope.reload.sum(:quantity_remaining)
     product.update_column(:stock, product.total_batch_stock)
+    sync_store_inventory_row
 
     product.stock_movements.create!(
       reference_type: 'booking',
@@ -215,6 +218,23 @@ class BookingItem < ApplicationRecord
 
   def booking_store_id
     booking&.store_id
+  end
+
+  # When a booking is tied to a store, keep that store's store_inventories row
+  # (the overlay Store#available_stock_for and the store-inventory screen read
+  # from when a row exists) in step with the store's active batch on-hand —
+  # mirroring StoreAdmin::ProductsController#carry_product_at_store. No-op when
+  # the store has no row for this product, since the batch-sum fallback is
+  # already correct in that case. Only the product-level row is touched here,
+  # matching what the batch allocation above actually changes.
+  def sync_store_inventory_row
+    return unless booking_store_id.present?
+
+    row = StoreInventory.find_by(store_id: booking_store_id, product_id: product.id, product_variant_id: nil)
+    return unless row
+
+    on_hand = product.stock_batches.active.where(store_id: booking_store_id).sum(:quantity_remaining)
+    row.update_column(:quantity, [on_hand, 0].max)
   end
 
   def stock_batches_scope

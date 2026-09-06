@@ -11,21 +11,12 @@
           <i class="bi bi-arrow-clockwise"></i> Refresh
         </button>
       </div>
-      <%= f.select :product_id,
-          options_for_select(
-            @products.map { |p|
-              [p.name, p.id, {
-                'data-unit-type' => p.unit_type || 'units',
-                'data-default-price' => p.default_selling_price
-              }]
-            },
-            f.object.product_id
-          ),
-          { prompt: 'Select Product' },
-          {
-            class: "form-select product-select",
-            required: true
-          } %>
+      <%= f.hidden_field :product_id, class: "product-id-field" %>
+      <%= f.hidden_field :product_variant_id, class: "product-variant-id-field" %>
+      <select class="form-select product-select" required>
+        <option value="">Select Product</option>
+        <%= vendor_purchase_product_option_tags(@products, f.object.selected_option_value) %>
+      </select>
     </div>
 
     <div class="col-md-2">

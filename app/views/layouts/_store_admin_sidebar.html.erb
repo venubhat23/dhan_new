@@ -182,6 +182,14 @@
       <span class="nav-text">Products</span>
     <% end %>
 
+    <% if store_admin_sidebar_permissions['product_summary'] %>
+      <%= link_to store_admin_product_summary_path,
+          class: "nav-link-modern #{'active' if controller_name == 'product_summary'}" do %>
+        <div class="icon-bg"><i class="bi bi-table"></i></div>
+        <span class="nav-text">Product Summary</span>
+      <% end %>
+    <% end %>
+
     <%= link_to store_admin_invoices_path,
         class: "nav-link-modern #{'active' if controller_name == 'invoices'}" do %>
       <div class="icon-bg"><i class="bi bi-receipt"></i></div>

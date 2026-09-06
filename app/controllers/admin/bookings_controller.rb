@@ -108,13 +108,14 @@ class Admin::BookingsController < Admin::ApplicationController
       @booking.customer_email = @preselected_customer.email
     end
 
-    # Only count central/main inventory (store_id IS NULL) so transferred stock is not double-counted
-    @products = Product.active
-                       .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
-                       .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND stock_batches.store_id IS NULL")
-                       .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock")
-                       .group("products.id")
-                       .order(Arel.sql("CASE WHEN COALESCE(SUM(stock_batches.quantity_remaining), 0) > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
+    # When a store is chosen, the sale draws down that store's stock — so the
+    # product picker must show that store's on-hand, exactly like a store-side
+    # booking. Otherwise show central/main inventory (store_id IS NULL) so
+    # transferred stock is not double-counted.
+    @selected_store = Store.active.find_by(id: params[:store_id]) if params[:store_id].present?
+    @booking.store_id = @selected_store.id if @selected_store
+
+    @products = products_for_picker(@selected_store&.id)
 
     @categories = Category.where(status: true).order(:name)
     @customers = Customer.select(:id, :full_name, :email, :mobile)
@@ -169,7 +170,8 @@ class Admin::BookingsController < Admin::ApplicationController
 
     # Validate stock availability before saving
     unless validate_stock_availability(@booking)
-      @products = Product.active.includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
+      @selected_store = Store.active.find_by(id: @booking.store_id) if @booking.store_id.present?
+      @products = products_for_picker(@booking.store_id)
       @customers = Customer.all.order(:full_name)
       @stores = Store.where(status: true)
       render :new, status: :unprocessable_entity
@@ -219,7 +221,8 @@ class Admin::BookingsController < Admin::ApplicationController
       Rails.logger.error "Booking creation failed: #{@booking.errors.full_messages.join(', ')}"
       Rails.logger.error "Booking items errors: #{@booking.booking_items.map(&:errors).map(&:full_messages).flatten.join(', ')}"
 
-      @products = Product.active.includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
+      @selected_store = Store.active.find_by(id: @booking.store_id) if @booking.store_id.present?
+      @products = products_for_picker(@booking.store_id)
       @customers = Customer.all.order(:full_name)
       @stores = Store.where(status: true)
       flash.now[:alert] = @booking.errors.full_messages.join(', ')
@@ -592,9 +595,12 @@ class Admin::BookingsController < Admin::ApplicationController
     # cached_stock (COALESCE SUM) lets total_batch_stock/stock_status_enhanced/
     # out_of_stock?/low_stock? read the preloaded value instead of each firing
     # its own stock_batches query per product — was ~5-7 queries per result.
+    store = Store.active.find_by(id: params[:store_id]) if params[:store_id].present?
+    store_condition = store ? "stock_batches.store_id = #{store.id.to_i}" : "stock_batches.store_id IS NULL"
+
     @products = Product.active
                        .where("name ILIKE ? OR sku ILIKE ?", "%#{params[:q]}%", "%#{params[:q]}%")
-                       .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND stock_batches.store_id IS NULL")
+                       .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND #{store_condition}")
                        .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock")
                        .group("products.id")
                        .includes(image_attachment: :blob)
@@ -898,6 +904,20 @@ class Admin::BookingsController < Admin::ApplicationController
     )
   end
 
+  # Product grid for the new-booking picker. `cached_stock` is scoped to the
+  # given store's active batches when a store is selected (the sale deducts from
+  # that store), otherwise to central inventory (store_id IS NULL).
+  def products_for_picker(store_id = nil)
+    store_condition = store_id.present? ? "stock_batches.store_id = #{store_id.to_i}" : "stock_batches.store_id IS NULL"
+
+    Product.active
+           .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
+           .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND #{store_condition}")
+           .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock")
+           .group("products.id")
+           .order(Arel.sql("CASE WHEN COALESCE(SUM(stock_batches.quantity_remaining), 0) > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
+  end
+
   def validate_stock_availability(booking, is_update: false)
     stock_errors = []
     active_items = booking.booking_items.reject(&:marked_for_destruction?).select { |i| i.product_id.present? && i.quantity.to_i > 0 }
@@ -909,16 +929,20 @@ class Admin::BookingsController < Admin::ApplicationController
     products_by_id = Product.where(id: product_ids).index_by(&:id)
     variants_by_id = ProductVariant.where(id: variant_ids).index_by(&:id)
 
+    # When the booking is tagged to a store, it draws down that store's stock
+    # (see BookingItem#stock_batches_scope); otherwise it sells from central
+    # inventory (store_id IS NULL).
+    scope_store_id = booking.store_id
+
     active_items.each do |item|
       product = products_by_id[item.product_id]
       next unless product
 
-      # Admin bookings sell from central inventory only (store_id IS NULL)
       if product.has_multiple_quantities? && item.product_variant_id.present?
         variant = variants_by_id[item.product_variant_id]
         available_stock = variant ? variant.available_stock.to_f : 0.0
       else
-        available_stock = StockBatch.available_for_product(product.id, store_id: nil).sum(:quantity_remaining).to_f
+        available_stock = StockBatch.available_for_product(product.id, store_id: scope_store_id).sum(:quantity_remaining).to_f
       end
 
       # For updates, add back the current item's quantity if it exists

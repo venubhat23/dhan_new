@@ -1,76 +1,562 @@
-<% content_for :page_title, "Customer" %>
-
+<!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h4 class="mb-1"><%= @customer.full_name %></h4>
-    <small class="text-muted">Customer at <%= @current_store.name %></small>
+    <h2 class="mb-1"><%= @customer.display_name %></h2>
+    <p class="text-muted mb-0">
+      <span class="badge bg-primary me-2">
+        Customer
+      </span>
+      Customer ID: #<%= @customer.id %>
+    </p>
   </div>
   <div class="d-flex gap-2">
-    <%= link_to edit_store_admin_customer_path(@customer), class: "btn btn-outline-secondary" do %>
-      <i class="bi bi-pencil me-2"></i>Edit
+    <%= link_to edit_store_admin_customer_path(@customer), class: "btn btn-warning" do %>
+      <i class="bi bi-pencil me-1"></i>
+      Edit Customer
     <% end %>
     <%= link_to store_admin_customers_path, class: "btn btn-outline-secondary" do %>
-      <i class="bi bi-arrow-left me-2"></i>Back
-    <% end %>
-    <% if @store_bookings.none? %>
-      <%= link_to store_admin_customer_path(@customer),
-          data: { confirm: "Delete this customer?", turbo_method: :delete },
-          class: "btn btn-outline-danger" do %>
-        <i class="bi bi-trash me-2"></i>Delete
-      <% end %>
+      <i class="bi bi-arrow-left me-1"></i>
+      Back to Customers
     <% end %>
   </div>
 </div>
 
 <div class="row">
-  <div class="col-lg-4 mb-3">
-    <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white border-0"><h6 class="mb-0">Details</h6></div>
+  <!-- Main Customer Information -->
+  <div class="col-lg-8">
+    <!-- Basic Information -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Basic Information</h5>
+        <% customer_status = @customer.respond_to?(:status) ? @customer.status : true %>
+        <span class="badge bg-<%= customer_status ? 'success' : 'danger' %>">
+          <%= customer_status ? 'Active' : 'Inactive' %>
+        </span>
+      </div>
       <div class="card-body">
-        <dl class="row mb-0 small">
-          <dt class="col-5">Mobile</dt><dd class="col-7"><%= @customer.mobile %></dd>
-          <dt class="col-5">Email</dt><dd class="col-7"><%= @customer.placeholder_email? ? "—" : @customer.email.presence || "—" %></dd>
-          <dt class="col-5">WhatsApp</dt><dd class="col-7"><%= @customer.whatsapp_number.presence || "—" %></dd>
-          <dt class="col-5">Gender</dt><dd class="col-7"><%= @customer.gender.presence || "—" %></dd>
-          <dt class="col-5">Company</dt><dd class="col-7"><%= @customer.company_name.presence || "—" %></dd>
-          <dt class="col-5">GST No.</dt><dd class="col-7"><%= @customer.gst_no.presence || "—" %></dd>
-          <dt class="col-5">Address</dt><dd class="col-7"><%= @customer.address.presence || "—" %></dd>
-          <dt class="col-5">Status</dt><dd class="col-7"><%= @customer.status ? "Active" : "Inactive" %></dd>
-        </dl>
+        <div class="row g-3">
+          <% # All customers are treated as individual customers %>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">Full Name</strong>
+              <%= @customer.full_name || '-' %>
+            </div>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">WhatsApp Number</strong>
+              <% if @customer.whatsapp_number.present? %>
+                <a href="https://wa.me/<%= @customer.whatsapp_number.gsub(/\D/, '') %>"><%= @customer.whatsapp_number %></a>
+              <% else %>
+                -
+              <% end %>
+            </div>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">GST Number</strong>
+              <%= @customer.gst_no || '-' %>
+            </div>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">Nationality</strong>
+              <%= @customer.nationality || '-' %>
+            </div>
+
+          <div class="col-md-6">
+            <strong class="text-muted d-block">Email</strong>
+            <% if @customer.email.present? %>
+              <a href="mailto:<%= @customer.email %>"><%= @customer.email %></a>
+            <% else %>
+              -
+            <% end %>
+          </div>
+          <div class="col-md-6">
+            <strong class="text-muted d-block">Mobile</strong>
+            <% if @customer.mobile.present? %>
+              <a href="tel:<%= @customer.mobile %>"><%= @customer.mobile %></a>
+            <% else %>
+              -
+            <% end %>
+          </div>
+
+          <% # All customers are treated as individual customers %>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">Created At</strong>
+              <%= @customer.created_at&.strftime("%B %d, %Y at %I:%M %p") || '-' %>
+            </div>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">Last Updated</strong>
+              <%= @customer.updated_at&.strftime("%B %d, %Y at %I:%M %p") || '-' %>
+            </div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="col-lg-8 mb-3">
-    <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">Bookings at this store</h6>
-        <span class="fw-bold text-primary">₹<%= number_with_delimiter(@store_spend.to_f.round(2)) %> spent</span>
+    <!-- Login Credentials -->
+    <% user = @customer.linked_user %>
+    <% mobile_only_login = user && !@customer.real_email? %>
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-key me-2 text-primary"></i>
+          Login Credentials
+        </h5>
+        <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
+          <i class="bi bi-key me-1"></i><%= user ? "Reset Password" : "Create User & Set Password" %>
+        </button>
       </div>
-      <div class="card-body p-0">
-        <% if @store_bookings.any? %>
+      <% if user %>
+      <div class="card-body">
+        <% if mobile_only_login %>
+        <div class="alert alert-secondary small">
+          <i class="bi bi-phone me-1"></i>
+          This customer has no email on file, so they log in with their <strong>mobile number</strong>.
+        </div>
+        <% end %>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <strong class="text-muted d-block">Username (<%= mobile_only_login ? "Mobile" : "Email" %>)</strong>
+            <div class="d-flex align-items-center">
+              <span class="me-2"><%= @customer.login_identifier %></span>
+              <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= @customer.login_identifier %>')">
+                <i class="bi bi-copy"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <strong class="text-muted d-block">Password</strong>
+            <div class="d-flex align-items-center">
+              <span class="me-2 font-monospace">
+                <% if @customer.auto_generated_password.present? %>
+                  <%= @customer.auto_generated_password %>
+                <% else %>
+                  <span class="font-monospace">dhanvantari@123</span>
+                  <small class="text-muted">(default &ndash; unless the customer has changed it)</small>
+                <% end %>
+              </span>
+              <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= @customer.auto_generated_password.presence || 'dhanvantari@123' %>')">
+                <i class="bi bi-copy"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <strong class="text-muted d-block">User Type</strong>
+            <span class="badge bg-info"><%= user.user_type.titleize %></span>
+          </div>
+          <div class="col-md-6">
+            <strong class="text-muted d-block">Account Status</strong>
+            <span class="badge bg-<%= user.status? ? 'success' : 'danger' %>">
+              <%= user.status? ? 'Active' : 'Inactive' %>
+            </span>
+          </div>
+          <div class="col-12">
+            <div class="alert alert-info mb-0">
+              <i class="bi bi-info-circle me-2"></i>
+              <strong>Login URL:</strong>
+              <a href="https://dhanvantari-naturals.com/customer/login" target="_blank" class="alert-link">
+                https://dhanvantari-naturals.com/customer/login
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% else %>
+      <div class="card-body">
+        <div class="alert alert-info mb-0">
+          <i class="bi bi-info-circle me-2"></i>
+          <strong>No User Account:</strong> This customer doesn't have login credentials yet.
+          Click "Create User &amp; Set Password" above to create an account&mdash;
+          <% if @customer.real_email? %>
+            they'll log in with their email (<%= @customer.email %>).
+          <% else %>
+            with no email on file, they'll log in with their mobile number (<%= @customer.mobile %>).
+          <% end %>
+        </div>
+      </div>
+      <% end %>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <%= form_with url: generate_password_store_admin_customer_path(@customer), method: :post, local: true do |f| %>
+            <div class="modal-header">
+              <h5 class="modal-title"><i class="bi bi-key me-2"></i>Reset Customer Password</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="password_mode" id="password_mode_auto" value="auto" checked onchange="toggleCustomPasswordFields(this)">
+                  <label class="form-check-label" for="password_mode_auto">Auto-generate a secure password</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="password_mode" id="password_mode_custom" value="custom" onchange="toggleCustomPasswordFields(this)">
+                  <label class="form-check-label" for="password_mode_custom">Set a custom password</label>
+                </div>
+              </div>
+
+              <div id="customPasswordFields" style="display: none;">
+                <div class="mb-3">
+                  <label class="form-label">New Password</label>
+                  <input type="password" name="custom_password" id="custom_password" class="form-control" minlength="6" placeholder="At least 6 characters">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Confirm Password</label>
+                  <input type="password" name="custom_password_confirmation" id="custom_password_confirmation" class="form-control" minlength="6" placeholder="Re-enter password">
+                </div>
+              </div>
+
+              <div class="alert alert-warning mb-0 small">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                This immediately overwrites the customer's current password<%= user ? " and their mobile login account" : "" %>.
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <%= f.submit user ? "Reset Password" : "Create User & Set Password", class: "btn btn-success" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function toggleCustomPasswordFields(radio) {
+        const fieldsDiv = document.getElementById('customPasswordFields');
+        const isCustom = document.getElementById('password_mode_custom').checked;
+        fieldsDiv.style.display = isCustom ? 'block' : 'none';
+        document.getElementById('custom_password').required = isCustom;
+        document.getElementById('custom_password_confirmation').required = isCustom;
+      }
+    </script>
+
+    <!-- Address Information -->
+    <% if @customer.address.present? || @customer.latitude.present? || @customer.longitude.present? || @customer.location_link.present? %>
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h5 class="mb-0">Address & Location</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <% if @customer.address.present? %>
+          <div class="col-12">
+            <strong class="text-muted d-block">Address</strong>
+            <%= @customer.address %>
+          </div>
+          <% end %>
+
+          <% if @customer.location_link.present? %>
+          <div class="col-12">
+            <strong class="text-muted d-block">Location Link</strong>
+            <%= link_to @customer.location_link, @customer.location_link, target: "_blank", rel: "noopener" %>
+          </div>
+          <% end %>
+
+          <% if @customer.latitude.present? || @customer.longitude.present? %>
+              <div class="col-md-6">
+                <strong class="text-muted d-block">Latitude</strong>
+                <%= @customer.latitude || '-' %>
+              </div>
+              <div class="col-md-6">
+                <strong class="text-muted d-block">Longitude</strong>
+                <%= @customer.longitude || '-' %>
+              </div>
+              <div class="col-md-6">
+                <strong class="text-muted d-block">Location Accuracy</strong>
+                <%= @customer.location_accuracy || '-' %>
+              </div>
+              <div class="col-md-6">
+                <strong class="text-muted d-block">Location Obtained At</strong>
+                <%= @customer.location_obtained_at&.strftime("%B %d, %Y at %I:%M %p") || '-' %>
+              </div>
+            <% else %>
+              <div class="col-md-12">
+                <div class="alert alert-info">
+                  <i class="bi bi-info-circle me-2"></i>
+                  No location information available for this customer.
+                </div>
+              </div>
+            <% end %>
+        </div>
+      </div>
+    </div>
+    <% end %>
+
+    <!-- Images -->
+    <% if @customer.personal_image.attached? || @customer.house_image.attached? %>
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">Images</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <% if @customer.personal_image.attached? %>
+            <div class="col-md-6">
+              <strong class="text-muted d-block mb-2">Personal Image</strong>
+              <div class="card">
+                <%= image_tag @customer.personal_image, class: "card-img-top", style: "height: 200px; object-fit: cover;" %>
+                <div class="card-body p-2">
+                  <%= link_to @customer.personal_image, class: "btn btn-sm btn-outline-primary", target: "_blank" do %>
+                    <i class="bi bi-eye me-1"></i>View Full Size
+                  <% end %>
+                </div>
+              </div>
+            </div>
+            <% end %>
+            <% if @customer.house_image.attached? %>
+            <div class="col-md-6">
+              <strong class="text-muted d-block mb-2">House Image</strong>
+              <div class="card">
+                <%= image_tag @customer.house_image, class: "card-img-top", style: "height: 200px; object-fit: cover;" %>
+                <div class="card-body p-2">
+                  <%= link_to @customer.house_image, class: "btn btn-sm btn-outline-primary", target: "_blank" do %>
+                    <i class="bi bi-eye me-1"></i>View Full Size
+                  <% end %>
+                </div>
+              </div>
+            </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Additional Notes -->
+    <% if @customer.notes.present? %>
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h5 class="mb-0">
+          <i class="bi bi-journal-text me-2 text-info"></i>
+          Additional Notes
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="p-3 bg-light rounded">
+          <%= simple_format(@customer.notes) %>
+        </div>
+      </div>
+    </div>
+    <% end %>
+
+    <!-- E-commerce Activity -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h5 class="mb-0">
+          <i class="bi bi-cart me-2 text-primary"></i>
+          E-commerce Activity
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="text-center">
+              <h4 class="text-primary mb-1"><%= @customer.bookings.count %></h4>
+              <small class="text-muted">Total Bookings</small>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-center">
+              <h4 class="text-success mb-1"><%= @customer.orders.count %></h4>
+              <small class="text-muted">Total Orders</small>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-center">
+              <h4 class="text-info mb-1"><%= @customer.booking_schedules.count %></h4>
+              <small class="text-muted">Subscriptions</small>
+            </div>
+          </div>
+        </div>
+
+        <% if @customer.bookings.any? %>
+          <hr>
+          <h6 class="mb-3">Recent Bookings</h6>
           <div class="table-responsive">
-            <table class="table table-hover mb-0">
-              <thead class="table-light">
-                <tr><th>Booking #</th><th>Date</th><th>Status</th><th>Amount</th><th></th></tr>
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Booking #</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th>Actions</th>
+                </tr>
               </thead>
               <tbody>
-                <% @store_bookings.each do |booking| %>
+                <% @customer.bookings.order(created_at: :desc).limit(5).each do |booking| %>
                   <tr>
-                    <td><strong><%= booking.booking_number %></strong></td>
-                    <td><small><%= booking.created_at.strftime('%d %b %Y') %></small></td>
-                    <td><span class="badge bg-light text-dark"><%= booking.status&.humanize %></span></td>
-                    <td>₹<%= number_with_delimiter(booking.total_amount.to_f.round(2)) %></td>
-                    <td><%= link_to "View", store_admin_booking_path(booking), class: "btn btn-sm btn-outline-primary" %></td>
+                    <td><%= booking.booking_number || "##{booking.id}" %></td>
+                    <td><%= booking.created_at.strftime("%b %d, %Y") %></td>
+                    <td>
+                      <span class="badge bg-<%= booking.status == 'completed' ? 'success' : 'warning' %>">
+                        <%= booking.status&.titleize || 'Pending' %>
+                      </span>
+                    </td>
+                    <td>₹<%= number_with_delimiter(booking.total_amount.to_i) if booking.total_amount %></td>
+                    <td>
+                      <%= link_to "View", store_admin_booking_path(booking), class: "btn btn-sm btn-outline-primary" %>
+                    </td>
                   </tr>
                 <% end %>
               </tbody>
             </table>
           </div>
+          <div class="text-center mt-3">
+            <%= link_to "View All Bookings", store_admin_bookings_path(customer_id: @customer.id), class: "btn btn-outline-primary" %>
+          </div>
         <% else %>
-          <div class="text-center py-4 text-muted">No bookings at this store yet.</div>
+          <div class="text-center text-muted py-4">
+            <i class="bi bi-cart-x fs-1 d-block mb-3"></i>
+            <h6>No Bookings Yet</h6>
+            <p class="mb-0">This customer hasn't made any bookings yet.</p>
+          </div>
         <% end %>
       </div>
     </div>
   </div>
+
+  <!-- Sidebar -->
+  <div class="col-lg-4">
+    <!-- Quick Stats -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0">Quick Stats</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 text-center">
+          <div class="col-12">
+            <small class="text-muted d-block">Customer Since</small>
+            <strong><%= @customer.created_at.strftime("%B %Y") %></strong>
+          </div>
+          <hr>
+          <div class="col-6">
+            <small class="text-muted d-block">Total Bookings</small>
+            <h5 class="text-primary mb-0"><%= @customer.bookings.count %></h5>
+          </div>
+          <div class="col-6">
+            <small class="text-muted d-block">Total Orders</small>
+            <h5 class="text-success mb-0"><%= @customer.orders.count %></h5>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customer Timeline -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0">Customer Timeline</h6>
+      </div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-marker bg-success"></div>
+            <div class="timeline-content">
+              <small class="text-muted">Customer Created</small>
+              <div><%= @customer.created_at.strftime("%B %d, %Y at %I:%M %p") %></div>
+            </div>
+          </div>
+          <% if @customer.updated_at != @customer.created_at %>
+            <div class="timeline-item">
+              <div class="timeline-marker bg-info"></div>
+              <div class="timeline-content">
+                <small class="text-muted">Last Updated</small>
+                <div><%= @customer.updated_at.strftime("%B %d, %Y at %I:%M %p") %></div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
 </div>
+
+<style>
+.timeline {
+  position: relative;
+  padding-left: 20px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #dee2e6;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: -15px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
+.timeline-content {
+  padding-left: 10px;
+}
+</style>
+
+<script>
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    // Use modern clipboard API
+    navigator.clipboard.writeText(text).then(() => {
+      showCopySuccess();
+    }).catch(err => {
+      console.error('Failed to copy: ', err);
+      fallbackCopyTextToClipboard(text);
+    });
+  } else {
+    // Fallback for older browsers
+    fallbackCopyTextToClipboard(text);
+  }
+}
+
+function fallbackCopyTextToClipboard(text) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.position = "fixed";
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    const successful = document.execCommand('copy');
+    if (successful) {
+      showCopySuccess();
+    } else {
+      console.error('Fallback: Copying text command was unsuccessful');
+    }
+  } catch (err) {
+    console.error('Fallback: Oops, unable to copy', err);
+  }
+
+  document.body.removeChild(textArea);
+}
+
+function showCopySuccess() {
+  // Create a temporary success message
+  const message = document.createElement('div');
+  message.className = 'alert alert-success position-fixed top-0 end-0 m-3';
+  message.style.zIndex = '9999';
+  message.innerHTML = '<i class="bi bi-check-circle me-2"></i>Copied to clipboard!';
+  document.body.appendChild(message);
+
+  // Remove the message after 2 seconds
+  setTimeout(() => {
+    if (document.body.contains(message)) {
+      document.body.removeChild(message);
+    }
+  }, 2000);
+}
+</script>

@@ -1,0 +1,3727 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title><%= @product.name %> | Premium E-commerce Store</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="<%= @product.description %>">
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Custom Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Custom Styles -->
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f8fafc;
+    }
+
+
+    /* Product Detail Container */
+    .product-detail-container {
+      background: white;
+      padding: 2rem 0;
+    }
+
+    /* Product Gallery */
+    .product-gallery {
+      position: sticky;
+      top: 20px;
+    }
+
+    .main-image-container {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+
+    .main-product-image {
+      position: relative;
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      border-radius: 20px;
+      height: 500px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+    }
+
+    .image-placeholder {
+      font-size: 120px;
+      color: #64748b;
+      opacity: 0.6;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .product-badge {
+      position: absolute;
+      top: 20px;
+      z-index: 10;
+    }
+
+    .sale-badge {
+      left: 20px;
+      background: linear-gradient(135deg, #ff4757 0%, #ff3742 100%);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+      transform: rotate(-8deg);
+    }
+
+    .trending-badge {
+      right: 20px;
+      background: linear-gradient(135deg, #ff9500 0%, #ff6b00 100%);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 4px 15px rgba(255, 149, 0, 0.4);
+    }
+
+    .image-actions {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .action-btn:hover {
+      background: white;
+      transform: scale(1.1);
+    }
+
+    /* Thumbnail Gallery */
+    .thumbnail-gallery {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+
+    .thumbnail-item {
+      aspect-ratio: 1;
+      background: #f8fafc;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+
+    .thumbnail-item.active,
+    .thumbnail-item:hover {
+      border-color: #667eea;
+      background: #f0f4ff;
+      transform: scale(1.05);
+    }
+
+    .thumbnail-image {
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .empty-thumbnail {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .empty-thumbnail:hover {
+      transform: none;
+      border-color: transparent;
+      background: #f8fafc;
+    }
+
+    .thumbnail-placeholder {
+      font-size: 24px;
+      color: #64748b;
+    }
+
+    /* 360 View */
+    .view-360-container {
+      text-align: center;
+    }
+
+    .view-360-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 50px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 auto;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .view-360-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Product Info Section */
+    .product-info-section {
+      padding-left: 2rem;
+    }
+
+    .product-header {
+      margin-bottom: 1.5rem;
+    }
+
+    .brand-category {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+
+    .brand-name {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .category-badge {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .product-title {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: #1e293b;
+      line-height: 1.2;
+      margin-bottom: 0;
+    }
+
+    /* Rating Section */
+    .rating-section {
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: #f8fafc;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .rating-display {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+
+    .stars {
+      display: flex;
+      gap: 2px;
+    }
+
+    .star-icon {
+      font-size: 1.25rem;
+      color: #fbbf24;
+      filter: drop-shadow(0 1px 2px rgba(251, 191, 36, 0.3));
+    }
+
+    .star-icon.empty {
+      color: #d1d5db;
+    }
+
+    .rating-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .rating-text {
+      color: #64748b;
+    }
+
+    .rating-breakdown {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .reviews-link {
+      background: none;
+      border: none;
+      color: #667eea;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: underline;
+    }
+
+    .verified-purchases {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #059669;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    /* Key Features */
+    .key-features-section {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    .feature-highlight {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+    }
+
+    /* Pricing Section */
+    .pricing-section {
+      margin-bottom: 2rem;
+    }
+
+    .price-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 1rem;
+    }
+
+    .current-price {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .original-price {
+      font-size: 1.25rem;
+      color: #9ca3af;
+      text-decoration: line-through;
+    }
+
+    .savings-badge {
+      background: #dcfce7;
+      color: #16a34a;
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .price-benefits {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .benefit-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+
+    /* Delivery Section */
+    .delivery-section {
+      background: #f8fafc;
+      padding: 1.5rem;
+      border-radius: 16px;
+      margin-bottom: 2rem;
+      border: 1px solid #e2e8f0;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 1rem;
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .delivery-info {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .delivery-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .delivery-item i {
+      font-size: 1.25rem;
+      color: #10b981;
+      width: 24px;
+    }
+
+    .delivery-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .delivery-title {
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .delivery-subtitle {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+
+    .change-location-btn {
+      background: none;
+      border: 1px solid #667eea;
+      color: #667eea;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Stock Section */
+    .stock-section {
+      margin-bottom: 2rem;
+    }
+
+    .stock-available {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #10b981;
+      font-weight: 600;
+      background: #ecfdf5;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border-left: 4px solid #10b981;
+    }
+
+    .stock-warning {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #f59e0b;
+      font-weight: 600;
+      background: #fffbeb;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border-left: 4px solid #f59e0b;
+      animation: pulse 2s infinite;
+    }
+
+    .stock-out {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #ef4444;
+      font-weight: 600;
+      background: #fef2f2;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border-left: 4px solid #ef4444;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+
+    /* Purchase Section */
+    .purchase-section {
+      background: white;
+      padding: 2rem;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e2e8f0;
+    }
+
+    .quantity-selection {
+      margin-bottom: 1.5rem;
+    }
+
+    .quantity-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .quantity-control {
+      display: inline-flex;
+      align-items: center;
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .qty-btn {
+      width: 44px;
+      height: 44px;
+      border: none;
+      background: #f8fafc;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qty-btn:hover:not(:disabled) {
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    .qty-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .qty-input {
+      width: 80px;
+      height: 44px;
+      border: none;
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e293b;
+      background: white;
+    }
+
+    .qty-input:focus {
+      outline: none;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-add-to-cart {
+      flex: 1;
+      height: 56px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-add-to-cart:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+    }
+
+    .btn-buy-now {
+      flex: 1;
+      height: 56px;
+      background: #ff6b35;
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+    }
+
+    .btn-buy-now:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(255, 107, 53, 0.6);
+    }
+
+    .btn-notify-me {
+      width: 100%;
+      height: 56px;
+      background: #94a3b8;
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    /* Trust Indicators */
+    .trust-indicators {
+      display: flex;
+      justify-content: space-between;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .trust-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      text-align: center;
+    }
+
+    .trust-item i {
+      font-size: 1.5rem;
+      color: #10b981;
+    }
+
+    .trust-item span {
+      font-size: 0.75rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    /* Product Details Tabs */
+    .product-details-tabs {
+      background: white;
+      padding: 2rem 0;
+      margin-top: 3rem;
+    }
+
+    .tabs-navigation {
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 2rem;
+    }
+
+    .nav-tabs {
+      border: none;
+    }
+
+    .nav-link {
+      background: none;
+      border: none;
+      color: #64748b;
+      font-weight: 600;
+      padding: 1rem 2rem;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .nav-link.active,
+    .nav-link:hover {
+      color: #667eea;
+      border-bottom-color: #667eea;
+      background: none;
+    }
+
+    .tab-content {
+      min-height: 400px;
+    }
+
+    .tab-pane {
+      padding: 2rem 0;
+    }
+
+    /* Description Content */
+    .description-content h3 {
+      color: #1e293b;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .description-content h4 {
+      color: #1e293b;
+      margin: 1.5rem 0 1rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .description-content ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .description-content li {
+      padding: 0.5rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+
+    .description-content li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #10b981;
+      font-weight: 700;
+    }
+
+    /* Specifications */
+    .specifications-content h3 {
+      color: #1e293b;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .specs-grid {
+      display: grid;
+      gap: 1px;
+      background: #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .spec-row {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      background: white;
+    }
+
+    .spec-label {
+      padding: 1rem;
+      background: #f8fafc;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .spec-value {
+      padding: 1rem;
+      color: #1e293b;
+    }
+
+    /* Reviews Section */
+    .reviews-content h3 {
+      margin-bottom: 1.5rem;
+      color: #1e293b;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .reviews-header {
+      background: #f8fafc;
+      padding: 2rem;
+      border-radius: 16px;
+      margin-bottom: 2rem;
+    }
+
+    .reviews-summary {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .average-rating {
+      text-align: center;
+    }
+
+    .rating-number {
+      font-size: 3rem;
+      font-weight: 800;
+      color: #1e293b;
+      display: block;
+    }
+
+    .rating-stars {
+      margin: 0.5rem 0;
+    }
+
+    .total-reviews {
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+
+    .rating-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .rating-bar {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .star-label {
+      font-size: 0.875rem;
+      color: #64748b;
+      width: 30px;
+    }
+
+    .progress {
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: #fbbf24;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .rating-count {
+      font-size: 0.875rem;
+      color: #64748b;
+      width: 30px;
+      text-align: right;
+    }
+
+    /* Individual Reviews */
+    .reviews-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .review-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 1.5rem;
+      background: white;
+    }
+
+    .review-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+
+    .reviewer-info {
+      display: flex;
+      gap: 12px;
+    }
+
+    .reviewer-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+
+    .reviewer-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .reviewer-name {
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .verified-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #10b981;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .review-meta {
+      text-align: right;
+    }
+
+    .review-rating {
+      margin-bottom: 4px;
+    }
+
+    .review-date {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+
+    .review-content {
+      margin-bottom: 1rem;
+    }
+
+    .review-actions {
+      display: flex;
+      gap: 16px;
+    }
+
+    .review-action {
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 0.875rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .review-action:hover {
+      color: #667eea;
+    }
+
+    .write-review-section {
+      text-align: center;
+      margin-top: 2rem;
+    }
+
+    .btn-write-review {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 auto;
+      transition: all 0.3s ease;
+    }
+
+    .btn-write-review:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Shipping Content */
+    .shipping-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+    }
+
+    .shipping-section h3,
+    .returns-section h3 {
+      color: #1e293b;
+      margin-bottom: 1.5rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .shipping-details,
+    .returns-details {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .shipping-item,
+    .return-item {
+      display: flex;
+      gap: 16px;
+      padding: 1rem;
+      background: #f8fafc;
+      border-radius: 12px;
+      border-left: 4px solid #667eea;
+    }
+
+    .shipping-item i,
+    .return-item i {
+      font-size: 1.5rem;
+      color: #667eea;
+      margin-top: 4px;
+    }
+
+    .shipping-item strong,
+    .return-item strong {
+      color: #1e293b;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* Related Products */
+    .related-products-section {
+      background: #f8fafc;
+      padding: 3rem 0;
+      margin-top: 3rem;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .section-header h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-header p {
+      color: #64748b;
+      font-size: 1.125rem;
+    }
+
+    .related-products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+    }
+
+    .related-product-card {
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      transition: all 0.3s ease;
+      border: 1px solid #e2e8f0;
+    }
+
+    .related-product-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .related-product-image {
+      height: 200px;
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .related-product-image .product-placeholder {
+      font-size: 60px;
+      color: #64748b;
+    }
+
+    .related-product-info {
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .related-product-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+    }
+
+    .related-product-price {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #667eea;
+      margin-bottom: 1rem;
+    }
+
+    .btn-view-product {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-view-product:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Floating Cart */
+    .floating-cart-summary {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 400px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      border: 1px solid #e2e8f0;
+      max-height: 80vh;
+      overflow: hidden;
+    }
+
+    .cart-content {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .cart-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .cart-header h4 {
+      margin: 0;
+      font-weight: 600;
+    }
+
+    .close-cart {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.25rem;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+    }
+
+    .close-cart:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .cart-items {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+      max-height: 300px;
+    }
+
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .cart-item:last-child {
+      border-bottom: none;
+    }
+
+    .cart-item-info h5 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 0.25rem;
+    }
+
+    .cart-item-info p {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin: 0;
+    }
+
+    .remove-item {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .remove-item:hover {
+      background: #fee2e2;
+      border-color: #fca5a5;
+    }
+
+    .cart-footer {
+      background: #f8fafc;
+      padding: 1rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .cart-total {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .btn-checkout {
+      width: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-checkout:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+      .product-info-section {
+        padding-left: 1rem;
+        margin-top: 2rem;
+      }
+
+      .related-products-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      }
+
+      .floating-cart-summary {
+        width: 350px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .nav-content {
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .store-title {
+        font-size: 1.25rem;
+      }
+
+      .product-title {
+        font-size: 1.75rem;
+      }
+
+      .current-price {
+        font-size: 2rem;
+      }
+
+      .product-info-section {
+        padding-left: 0;
+      }
+
+      .purchase-section {
+        padding: 1.5rem;
+      }
+
+      .action-buttons {
+        flex-direction: column;
+      }
+
+      .trust-indicators {
+        justify-content: space-around;
+      }
+
+      .shipping-content {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+
+      .reviews-summary {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        text-align: center;
+      }
+
+      .related-products-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .floating-cart-summary {
+        width: calc(100vw - 40px);
+        left: 20px;
+        right: 20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 0 1rem;
+      }
+
+      .main-product-image {
+        height: 300px;
+      }
+
+      .image-placeholder {
+        font-size: 80px;
+      }
+
+      .thumbnail-gallery {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .product-title {
+        font-size: 1.5rem;
+      }
+
+      .current-price {
+        font-size: 1.75rem;
+      }
+
+      .key-features-section {
+        justify-content: center;
+      }
+
+      .feature-highlight {
+        font-size: 0.75rem;
+        padding: 6px 12px;
+      }
+    }
+
+    /* Price Chart Sidebar Styles */
+    .price-chart-sidebar {
+      position: sticky;
+      top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Clickable Sidebar Button Styles */
+    .chart-button-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .chart-button-icon {
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      margin-right: 15px;
+    }
+
+    .chart-button-content h6 {
+      color: white;
+      font-size: 18px;
+      margin-bottom: 2px;
+    }
+
+    .chart-button-content small {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 12px;
+    }
+
+    .quick-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .quick-stat-item {
+      text-align: center;
+      padding: 12px 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      backdrop-filter: blur(10px);
+    }
+
+    .quick-stat-item .stat-label {
+      display: block;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .quick-stat-item .stat-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .chart-button-action {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      backdrop-filter: blur(10px);
+    }
+
+    .action-text {
+      margin-right: 8px;
+      font-weight: 600;
+      color: white;
+    }
+
+    /* Price Chart Modal Styles */
+    .price-chart-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1050;
+      display: none;
+    }
+
+    .price-chart-modal.show {
+      display: flex;
+    }
+
+    .price-chart-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+    }
+
+    .price-chart-panel {
+      position: relative;
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      border-radius: 16px;
+      margin: 20px auto;
+      width: 95%;
+      max-width: 1200px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .price-chart-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 16px 16px 0 0;
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+    }
+
+    .modal-close-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.05);
+    }
+
+    .price-chart-modal-body {
+      padding: 24px;
+    }
+
+    /* Modal Content Styles */
+    .current-product-section {
+      padding: 20px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+      border-radius: 12px;
+      margin-bottom: 24px;
+    }
+
+    .product-focus-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .focus-indicator {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      margin-right: 16px;
+    }
+
+    .current-price-display {
+      text-align: center;
+    }
+
+    .price-main {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .currency-symbol {
+      font-size: 24px;
+      font-weight: 600;
+      color: #6c757d;
+      margin-right: 4px;
+    }
+
+    .price-value {
+      font-size: 36px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .change-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .change-badge.badge-up {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+
+    .change-badge.badge-down {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+    }
+
+    .change-badge.badge-stable {
+      background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+      color: white;
+    }
+
+    /* Modal Chart Container */
+    .modal-chart-container {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Section styles for modal */
+    .market-overview-section, .all-products-chart-section, .products-price-list-section, .top-movers-section {
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .section-title {
+      color: #374151;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      font-size: 16px;
+    }
+
+    .market-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .stat-card {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+    }
+
+    .stat-card:hover {
+      background: #e9ecef;
+      transform: scale(1.02);
+    }
+
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 12px;
+      font-size: 16px;
+    }
+
+    .stat-icon.up, .stat-icon.bullish {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+
+    .stat-icon.down, .stat-icon.bearish {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+    }
+
+    .stat-icon.stable {
+      background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+      color: white;
+    }
+
+    .stat-number {
+      font-weight: 700;
+      font-size: 18px;
+      color: #374151;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    /* Chart Legend Modal */
+    .chart-legend-modal {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 16px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .legend-item:hover {
+      background: #e9ecef;
+      transform: translateX(2px);
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+
+    .legend-text {
+      flex: 1;
+      color: #374151;
+      font-weight: 500;
+    }
+
+    .legend-price {
+      color: #6b7280;
+      font-size: 11px;
+      display: block;
+    }
+
+    .legend-change {
+      font-weight: 600;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+
+    /* Price List Modal */
+    .price-list-container-modal {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .price-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+      font-size: 14px;
+    }
+
+    .price-list-item:hover {
+      background: #e9ecef;
+      transform: translateX(2px);
+    }
+
+    .price-list-item.current-product {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 1px solid #f59e0b;
+    }
+
+    .product-info {
+      flex: 1;
+    }
+
+    .product-name {
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+
+    .product-link {
+      color: #374151;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .product-link:hover {
+      color: #667eea;
+    }
+
+    .current-price {
+      font-weight: 700;
+      color: #374151;
+      font-size: 15px;
+    }
+
+    .price-change {
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .trend-indicator {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .trend-indicator.up {
+      background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+      color: #059669;
+    }
+
+    .trend-indicator.down {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      color: #dc2626;
+    }
+
+    .trend-indicator.stable {
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+      color: #475569;
+    }
+
+    /* Movers */
+    .movers-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .mover-item {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+    }
+
+    .mover-item:hover {
+      transform: translateX(2px);
+    }
+
+    .mover-item.gainer {
+      background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+      border-left: 4px solid #10b981;
+    }
+
+    .mover-item.loser {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      border-left: 4px solid #ef4444;
+    }
+
+    .mover-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 16px;
+      font-size: 16px;
+    }
+
+    .mover-item.gainer .mover-icon {
+      background: #10b981;
+      color: white;
+    }
+
+    .mover-item.loser .mover-icon {
+      background: #ef4444;
+      color: white;
+    }
+
+    .mover-name {
+      font-weight: 600;
+      color: #374151;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .mover-change {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .price-chart-modal-footer {
+      padding: 20px 24px;
+      background: #f8f9fa;
+      border-radius: 0 0 16px 16px;
+    }
+
+    /* Responsive Modal */
+    @media (max-width: 1200px) {
+      .price-chart-trigger {
+        position: static;
+        margin-top: 24px;
+      }
+
+      .price-chart-panel {
+        margin: 10px;
+        width: calc(100% - 20px);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .market-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      .quick-stats {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .price-value {
+        font-size: 28px;
+      }
+
+      .modal-chart-container {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Main Product Section -->
+  <div class="product-detail-container">
+    <div class="container">
+      <div class="row">
+        <!-- Product Gallery Section -->
+        <div class="col-lg-5">
+          <div class="product-gallery">
+            <div class="main-image-container">
+              <div class="main-product-image" id="mainProductImage">
+                <% if @product.images.attached? && @product.images.any? %>
+                  <%= image_tag @product.images.first,
+                      class: "product-main-image",
+                      style: "width: 100%; height: 100%; object-fit: cover;",
+                      id: "currentMainImage" %>
+                <% else %>
+                  <div class="image-placeholder">
+                    <% if @product.name.downcase.include?('iphone') || @product.name.downcase.include?('phone') %>
+                      <i class="bi bi-phone"></i>
+                    <% elsif @product.name.downcase.include?('laptop') %>
+                      <i class="bi bi-laptop"></i>
+                    <% elsif @product.name.downcase.include?('watch') %>
+                      <i class="bi bi-smartwatch"></i>
+                    <% else %>
+                      <i class="bi bi-box-seam"></i>
+                    <% end %>
+                  </div>
+                <% end %>
+
+                <!-- Product Badges -->
+                <% if @product.respond_to?(:discount_price) && @product.discount_price.present? && @product.discount_price != @product.price %>
+                  <% discount_percent = ((@product.price - @product.discount_price) * 100 / @product.price).round %>
+                  <div class="product-badge sale-badge">
+                    <span class="badge-text">SAVE</span>
+                    <span class="badge-percent"><%= discount_percent %>%</span>
+                  </div>
+                <% end %>
+
+                <% if @product.name.include?('iPhone') %>
+                  <div class="product-badge trending-badge">
+                    <i class="bi bi-fire"></i>
+                    <span>TRENDING</span>
+                  </div>
+                <% end %>
+
+                <!-- Quick Actions -->
+                <div class="image-actions">
+                  <button class="action-btn zoom-btn" title="Zoom">
+                    <i class="bi bi-zoom-in"></i>
+                  </button>
+                  <button class="action-btn fullscreen-btn" title="Fullscreen">
+                    <i class="bi bi-fullscreen"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Thumbnail Gallery -->
+            <div class="thumbnail-gallery">
+              <% if @product.images.attached? && @product.images.any? %>
+                <% @product.images.limit(6).each_with_index do |image, index| %>
+                  <div class="thumbnail-item <%= 'active' if index == 0 %>"
+                       data-image-url="<%= url_for(image) %>"
+                       onclick="changeMainImage('<%= url_for(image) %>')">
+                    <%= image_tag image,
+                        class: "thumbnail-image",
+                        style: "width: 100%; height: 100%; object-fit: cover;" %>
+                  </div>
+                <% end %>
+
+                <!-- Fill empty slots if less than 4 images -->
+                <% (4 - [@product.images.count, 4].min).times do %>
+                  <div class="thumbnail-item empty-thumbnail">
+                    <div class="thumbnail-placeholder">
+                      <i class="bi bi-plus-circle text-muted"></i>
+                    </div>
+                  </div>
+                <% end %>
+              <% else %>
+                <!-- Default placeholders when no images -->
+                <% 4.times do |i| %>
+                  <div class="thumbnail-item <%= 'active' if i == 0 %>">
+                    <div class="thumbnail-placeholder">
+                      <% if @product.name.downcase.include?('iphone') %>
+                        <i class="bi bi-phone"></i>
+                      <% else %>
+                        <i class="bi bi-box-seam"></i>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+              <% end %>
+            </div>
+
+            <!-- 360° View Button -->
+            <div class="view-360-container">
+              <button class="view-360-btn">
+                <i class="bi bi-arrow-repeat"></i>
+                <span>360° View</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Product Information Section -->
+        <div class="col-lg-4">
+          <div class="product-info-section">
+            <!-- Product Header -->
+            <div class="product-header">
+              <div class="brand-category">
+                <span class="brand-name">Apple</span>
+                <span class="category-badge">
+                  <%= @product.category&.name || 'Electronics' %>
+                </span>
+              </div>
+              <h1 class="product-title"><%= @product.name %></h1>
+            </div>
+
+            <!-- Rating & Reviews -->
+            <div class="rating-section">
+              <div class="rating-display">
+                <div class="stars">
+                  <% 5.times do |i| %>
+                    <i class="star-icon bi-star-fill filled"></i>
+                  <% end %>
+                </div>
+                <span class="rating-value">4.8</span>
+                <span class="rating-text">(4 reviews)</span>
+              </div>
+              <div class="rating-breakdown">
+                <button class="reviews-link" onclick="scrollToReviews()">
+                  <i class="bi bi-chat-square-text"></i>
+                  See all reviews
+                </button>
+                <div class="verified-purchases">
+                  <i class="bi bi-patch-check-fill"></i>
+                  3 verified purchases
+                </div>
+              </div>
+            </div>
+
+            <!-- Key Features -->
+            <div class="key-features-section">
+              <% if @product.name.include?('iPhone') %>
+                <div class="feature-highlight">A17 Pro Chip</div>
+                <div class="feature-highlight">5G Ready</div>
+                <div class="feature-highlight">ProMotion Display</div>
+                <div class="feature-highlight">48MP Camera</div>
+              <% else %>
+                <div class="feature-highlight">Premium Quality</div>
+                <div class="feature-highlight">Latest Technology</div>
+                <div class="feature-highlight">1 Year Warranty</div>
+              <% end %>
+            </div>
+
+            <!-- Pricing Section -->
+            <div class="pricing-section">
+              <div class="price-row">
+                <div class="current-price">
+                  ₹<%= number_with_delimiter(@product.respond_to?(:discount_price) && @product.discount_price.present? ? @product.discount_price : @product.price) %>
+                </div>
+                <% if @product.respond_to?(:discount_price) && @product.discount_price.present? && @product.discount_price != @product.price %>
+                  <div class="original-price">
+                    ₹<%= number_with_delimiter(@product.price) %>
+                  </div>
+                  <div class="savings-badge">
+                    Save ₹<%= number_with_delimiter(@product.price - @product.discount_price) %>
+                  </div>
+                <% end %>
+              </div>
+
+              <div class="price-benefits">
+                <div class="benefit-item">
+                  <i class="bi bi-credit-card"></i>
+                  <span>EMI starting from ₹5,412/month</span>
+                </div>
+                <div class="benefit-item">
+                  <i class="bi bi-percent"></i>
+                  <span>No Cost EMI available</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Delivery & Services -->
+            <div class="delivery-section">
+              <h4 class="section-title">
+                <i class="bi bi-truck"></i>
+                Delivery & Services
+              </h4>
+              <div class="delivery-info">
+                <div class="delivery-item">
+                  <i class="bi bi-geo-alt-fill"></i>
+                  <div class="delivery-text">
+                    <span class="delivery-title">Free Delivery</span>
+                    <span class="delivery-subtitle">Tomorrow, 8 AM - 9 PM</span>
+                  </div>
+                  <button class="change-location-btn">Change</button>
+                </div>
+                <div class="delivery-item">
+                  <i class="bi bi-arrow-clockwise"></i>
+                  <div class="delivery-text">
+                    <span class="delivery-title">7 Days Return & Exchange</span>
+                    <span class="delivery-subtitle">No questions asked</span>
+                  </div>
+                </div>
+                <div class="delivery-item">
+                  <i class="bi bi-shield-check"></i>
+                  <div class="delivery-text">
+                    <span class="delivery-title">2 Year Warranty</span>
+                    <span class="delivery-subtitle">Manufacturer warranty included</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stock & Availability -->
+            <div class="stock-section">
+              <% if @product.stock > 0 %>
+                <% if @product.stock <= 5 %>
+                  <div class="stock-warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <span>Hurry! Only <%= @product.stock %> left in stock</span>
+                  </div>
+                <% else %>
+                  <div class="stock-available">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>In Stock (<%= @product.stock %> available)</span>
+                  </div>
+                <% end %>
+              <% else %>
+                <div class="stock-out">
+                  <i class="bi bi-x-circle-fill"></i>
+                  <span>Currently Out of Stock</span>
+                </div>
+              <% end %>
+            </div>
+
+            <!-- Purchase Actions -->
+            <div class="purchase-section">
+              <div class="quantity-selection">
+                <label class="quantity-label">Quantity:</label>
+                <div class="quantity-control">
+                  <button class="qty-btn minus" onclick="decreaseQuantity()" <%= 'disabled' if @product.stock <= 0 %>>
+                    <i class="bi bi-dash-lg"></i>
+                  </button>
+                  <input type="number" id="productQuantity" value="1" min="1" max="<%= @product.stock %>" class="qty-input" <%= 'disabled' if @product.stock <= 0 %>>
+                  <button class="qty-btn plus" onclick="increaseQuantity()" <%= 'disabled' if @product.stock <= 0 %>>
+                    <i class="bi bi-plus-lg"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="action-buttons">
+                <% if @product.stock > 0 %>
+                  <button class="btn-add-to-cart" onclick="addToCart()">
+                    <i class="bi bi-cart-plus-fill"></i>
+                    <span>Add to Cart</span>
+                  </button>
+                  <button class="btn-buy-now" onclick="buyNow()">
+                    <i class="bi bi-lightning-fill"></i>
+                    <span>Buy Now</span>
+                  </button>
+                <% else %>
+                  <button class="btn-notify-me" onclick="notifyMe()">
+                    <i class="bi bi-bell-fill"></i>
+                    <span>Notify When Available</span>
+                  </button>
+                <% end %>
+              </div>
+
+              <!-- Trust Indicators -->
+              <div class="trust-indicators">
+                <div class="trust-item">
+                  <i class="bi bi-patch-check-fill"></i>
+                  <span>100% Genuine Product</span>
+                </div>
+                <div class="trust-item">
+                  <i class="bi bi-shield-fill-check"></i>
+                  <span>Secure Payments</span>
+                </div>
+                <div class="trust-item">
+                  <i class="bi bi-truck"></i>
+                  <span>Free Delivery</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Details Tabs -->
+  <div class="product-details-tabs">
+    <div class="container">
+      <div class="tabs-navigation">
+        <ul class="nav nav-tabs" id="productTabs">
+          <li class="nav-item">
+            <button class="nav-link active" id="description-tab" data-bs-toggle="tab" data-bs-target="#description">
+              Description
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" id="specifications-tab" data-bs-toggle="tab" data-bs-target="#specifications">
+              Specifications
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews">
+              Reviews (4)
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" id="shipping-tab" data-bs-toggle="tab" data-bs-target="#shipping">
+              Shipping & Returns
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <div class="tab-content" id="productTabsContent">
+        <!-- Description Tab -->
+        <div class="tab-pane fade show active" id="description">
+          <div class="description-content">
+            <h3>Product Description</h3>
+            <div class="description-text">
+              <% if @product.name.include?('iPhone') %>
+                <p>The iPhone 15 Pro Max represents the pinnacle of smartphone technology, featuring the revolutionary A17 Pro chip built on an advanced 3-nanometer process. This powerhouse device delivers unprecedented performance for professional workflows, immersive gaming, and computational photography.</p>
+
+                <h4>Key Features:</h4>
+                <ul>
+                  <li><strong>A17 Pro Chip:</strong> The most advanced mobile processor ever, delivering up to 20% faster CPU and 10% faster GPU performance</li>
+                  <li><strong>ProMotion Display:</strong> 6.7-inch Super Retina XDR display with adaptive refresh rates up to 120Hz</li>
+                  <li><strong>Professional Camera System:</strong> 48MP Main camera with 2x Telephoto option, plus 12MP Ultra Wide and 12MP Telephoto cameras</li>
+                  <li><strong>Action Button:</strong> Customizable button that can trigger your most-used features instantly</li>
+                  <li><strong>Titanium Design:</strong> Aerospace-grade titanium construction for durability and premium feel</li>
+                </ul>
+
+                <p>Experience the future of mobile technology with features like ProRAW photography, Cinematic mode for video, and all-day battery life that keeps up with your demanding lifestyle.</p>
+              <% else %>
+                <p><%= @product.description || "Premium quality product designed to meet your highest expectations. Crafted with attention to detail and using the finest materials available." %></p>
+
+                <h4>Product Highlights:</h4>
+                <ul>
+                  <li>Premium build quality and materials</li>
+                  <li>Latest technology integration</li>
+                  <li>Comprehensive warranty coverage</li>
+                  <li>Professional-grade performance</li>
+                  <li>User-friendly design and interface</li>
+                </ul>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Specifications Tab -->
+        <div class="tab-pane fade" id="specifications">
+          <div class="specifications-content">
+            <h3>Technical Specifications</h3>
+            <div class="specs-grid">
+              <% @specifications.each do |key, value| %>
+                <div class="spec-row">
+                  <div class="spec-label"><%= key %></div>
+                  <div class="spec-value"><%= value %></div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reviews Tab -->
+        <div class="tab-pane fade" id="reviews">
+          <div class="reviews-content">
+            <div class="reviews-header">
+              <div class="reviews-summary">
+                <div class="average-rating">
+                  <span class="rating-number">4.8</span>
+                  <div class="rating-stars">
+                    <% 5.times do |i| %>
+                      <i class="star-icon bi-star-fill filled"></i>
+                    <% end %>
+                  </div>
+                  <span class="total-reviews">4 reviews</span>
+                </div>
+
+                <div class="rating-breakdown">
+                  <% [5,4,3,2,1].each do |star| %>
+                    <% percentage = star == 5 ? 75 : (star == 4 ? 25 : 0) %>
+                    <div class="rating-bar">
+                      <span class="star-label"><%= star %> ★</span>
+                      <div class="progress">
+                        <div class="progress-bar" style="width: <%= percentage %>%"></div>
+                      </div>
+                      <span class="rating-count"><%= percentage > 0 ? (4 * percentage / 100).round : 0 %></span>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+
+            <div class="reviews-list">
+              <% [
+                { name: 'Rajesh Kumar', rating: 5, comment: 'Excellent product! The iPhone 15 Pro Max exceeds all expectations. The camera quality is phenomenal and the A17 Pro chip makes everything lightning fast.', date: '2 days ago', verified: true },
+                { name: 'Priya Singh', rating: 4, comment: 'Great phone overall! Love the new titanium design and the battery life is impressive. Only minor complaint is the price, but the quality justifies it.', date: '1 week ago', verified: true },
+                { name: 'Amit Patel', rating: 5, comment: 'Outstanding performance! Coming from iPhone 12, the upgrade is totally worth it. The ProMotion display is buttery smooth and 5G speeds are incredible.', date: '2 weeks ago', verified: false },
+                { name: 'Sneha Gupta', rating: 4, comment: 'Beautiful design and amazing camera features. The Action Button is quite useful. Delivery was prompt and packaging was excellent.', date: '3 weeks ago', verified: true }
+              ].each do |review| %>
+                <div class="review-item">
+                  <div class="review-header">
+                    <div class="reviewer-info">
+                      <div class="reviewer-avatar">
+                        <%= review[:name].first %>
+                      </div>
+                      <div class="reviewer-details">
+                        <span class="reviewer-name"><%= review[:name] %></span>
+                        <% if review[:verified] %>
+                          <span class="verified-badge">
+                            <i class="bi bi-patch-check-fill"></i>
+                            Verified Purchase
+                          </span>
+                        <% end %>
+                      </div>
+                    </div>
+                    <div class="review-meta">
+                      <div class="review-rating">
+                        <% review[:rating].times do %>
+                          <i class="star-icon bi-star-fill filled"></i>
+                        <% end %>
+                        <% (5 - review[:rating]).times do %>
+                          <i class="star-icon bi-star-fill empty"></i>
+                        <% end %>
+                      </div>
+                      <span class="review-date"><%= review[:date] %></span>
+                    </div>
+                  </div>
+                  <div class="review-content">
+                    <p><%= review[:comment] %></p>
+                  </div>
+                  <div class="review-actions">
+                    <button class="review-action helpful">
+                      <i class="bi bi-hand-thumbs-up"></i>
+                      Helpful (12)
+                    </button>
+                    <button class="review-action report">
+                      <i class="bi bi-flag"></i>
+                      Report
+                    </button>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+
+            <div class="write-review-section">
+              <button class="btn-write-review">
+                <i class="bi bi-pencil-square"></i>
+                Write a Review
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shipping & Returns Tab -->
+        <div class="tab-pane fade" id="shipping">
+          <div class="shipping-content">
+            <div class="shipping-section">
+              <h3>Shipping Information</h3>
+              <div class="shipping-details">
+                <div class="shipping-item">
+                  <i class="bi bi-truck"></i>
+                  <div>
+                    <strong>Free Standard Delivery</strong>
+                    <p>Delivered in 1-2 business days. No minimum order required.</p>
+                  </div>
+                </div>
+                <div class="shipping-item">
+                  <i class="bi bi-lightning"></i>
+                  <div>
+                    <strong>Express Delivery</strong>
+                    <p>Same-day or next-day delivery available for ₹199 extra.</p>
+                  </div>
+                </div>
+                <div class="shipping-item">
+                  <i class="bi bi-clock"></i>
+                  <div>
+                    <strong>Estimated Delivery Time</strong>
+                    <p>Metro cities: 1-2 days | Other cities: 2-4 days</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="returns-section">
+              <h3>Returns & Exchange</h3>
+              <div class="returns-details">
+                <div class="return-item">
+                  <i class="bi bi-arrow-clockwise"></i>
+                  <div>
+                    <strong>7-Day Return Policy</strong>
+                    <p>Easy returns within 7 days of delivery. Product should be in original condition.</p>
+                  </div>
+                </div>
+                <div class="return-item">
+                  <i class="bi bi-repeat"></i>
+                  <div>
+                    <strong>Exchange Available</strong>
+                    <p>Exchange for size, color, or different product within 7 days.</p>
+                  </div>
+                </div>
+                <div class="return-item">
+                  <i class="bi bi-cash"></i>
+                  <div>
+                    <strong>Refund Process</strong>
+                    <p>Full refund processed within 2-4 business days after pickup.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Price Chart Sidebar -->
+        <div class="col-lg-3">
+          <div class="price-chart-sidebar">
+            <!-- Current Product Focus -->
+            <div class="current-product-section">
+              <div class="product-focus-header">
+                <div class="focus-indicator">
+                  <i class="bi bi-eye-fill"></i>
+                </div>
+                <div class="focus-content">
+                  <h6 class="focus-title">Currently Viewing</h6>
+                  <p class="focus-product-name"><%= @product.name.truncate(25) %></p>
+                </div>
+              </div>
+
+              <div class="focus-price-display">
+                <div class="focus-current-price">
+                  ₹<%= number_with_delimiter(@product.today_price || @product.price) %>
+                </div>
+                <% if @product.yesterday_price.present? %>
+                  <div class="focus-price-change">
+                    <span class="change-amount <%= @product.price_trend == 'up' ? 'positive' : (@product.price_trend == 'down' ? 'negative' : 'stable') %>">
+                      <%= @product.formatted_price_change %>
+                    </span>
+                    <span class="change-percentage">
+                      (<%= @product.price_change_percentage_formatted %>)
+                    </span>
+                    <span class="trend-badge <%= @product.price_trend %>">
+                      <% if @product.price_trend == 'up' %>
+                        <i class="bi bi-arrow-up"></i>
+                      <% elsif @product.price_trend == 'down' %>
+                        <i class="bi bi-arrow-down"></i>
+                      <% else %>
+                        <i class="bi bi-dash"></i>
+                      <% end %>
+                    </span>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+
+            <!-- Market Overview Statistics -->
+            <% if @market_stats.present? %>
+            <div class="market-overview-section">
+              <h6 class="section-title">
+                <i class="bi bi-bar-chart me-2"></i>
+                Market Overview
+              </h6>
+
+              <div class="market-stats-grid">
+                <div class="stat-card">
+                  <div class="stat-icon up">
+                    <i class="bi bi-arrow-up"></i>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-number"><%= @market_stats[:price_increases] %></div>
+                    <div class="stat-label">Price ↗</div>
+                  </div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon down">
+                    <i class="bi bi-arrow-down"></i>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-number"><%= @market_stats[:price_decreases] %></div>
+                    <div class="stat-label">Price ↘</div>
+                  </div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon stable">
+                    <i class="bi bi-dash"></i>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-number"><%= @market_stats[:price_stable] %></div>
+                    <div class="stat-label">Stable</div>
+                  </div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon avg">
+                    <i class="bi bi-percent"></i>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-number"><%= @market_stats[:avg_change] %>%</div>
+                    <div class="stat-label">Avg Change</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <% end %>
+
+            <!-- Multi-Product Price Chart -->
+            <% if @all_products_with_prices.present? %>
+            <div class="multi-product-chart-section">
+              <h6 class="section-title">
+                <i class="bi bi-graph-up me-2"></i>
+                Multi-Product Price Chart
+              </h6>
+
+              <div class="chart-container">
+                <canvas id="multi-product-chart" width="400" height="300"></canvas>
+              </div>
+
+              <div class="chart-legend">
+                <% @all_products_with_prices.each_with_index do |product, index| %>
+                  <div class="legend-item" data-product-id="<%= product.id %>">
+                    <div class="legend-color" style="background-color: hsl(<%= (index * 360 / @all_products_with_prices.count) %>, 70%, 60%);"></div>
+                    <span class="legend-label"><%= product.name.truncate(15) %></span>
+                    <span class="legend-price">₹<%= product.today_price || product.price %></span>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+            <% end %>
+
+            <!-- Live Price Feed -->
+            <% if @all_products_with_prices.present? %>
+            <div class="live-price-feed-section">
+              <h6 class="section-title">
+                <i class="bi bi-broadcast me-2"></i>
+                Live Price Feed
+              </h6>
+
+              <div class="price-list-container">
+                <% @all_products_with_prices.each do |product| %>
+                  <div class="price-list-item <%= 'current-product' if product.id == @product.id %>">
+                    <div class="product-info">
+                      <div class="product-name">
+                        <%= link_to product.name, detail_store_admin_product_path(product), class: "product-link" %>
+                      </div>
+                      <div class="product-price">
+                        <span class="current-price">₹<%= product.today_price || product.price %></span>
+                        <% if product.yesterday_price.present? %>
+                          <span class="price-change <%= product.price_change_percentage > 0 ? 'positive' : (product.price_change_percentage < 0 ? 'negative' : 'stable') %>">
+                            <%= product.price_change_percentage > 0 ? '+' : '' %><%= product.price_change_percentage %>%
+                          </span>
+                        <% end %>
+                      </div>
+                    </div>
+                    <div class="trend-indicator <%= product.price_trend %>">
+                      <% if product.price_trend == 'up' %>
+                        <i class="bi bi-caret-up-fill"></i>
+                      <% elsif product.price_trend == 'down' %>
+                        <i class="bi bi-caret-down-fill"></i>
+                      <% else %>
+                        <i class="bi bi-dash"></i>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+            <% end %>
+
+            <!-- Top Movers -->
+            <% if @market_stats.present? && (@market_stats[:biggest_gainer] || @market_stats[:biggest_loser]) %>
+            <div class="top-movers-section">
+              <h6 class="section-title">
+                <i class="bi bi-trophy me-2"></i>
+                Top Movers
+              </h6>
+
+              <div class="movers-container">
+                <% if @market_stats[:biggest_gainer] %>
+                  <div class="mover-item gainer">
+                    <div class="mover-icon">
+                      <i class="bi bi-arrow-up-circle"></i>
+                    </div>
+                    <div class="mover-content">
+                      <div class="mover-name"><%= @market_stats[:biggest_gainer].name.truncate(25) %></div>
+                      <div class="mover-change">+<%= @market_stats[:biggest_gainer].price_change_percentage %>%</div>
+                    </div>
+                  </div>
+                <% end %>
+                <% if @market_stats[:biggest_loser] %>
+                  <div class="mover-item loser">
+                    <div class="mover-icon">
+                      <i class="bi bi-arrow-down-circle"></i>
+                    </div>
+                    <div class="mover-content">
+                      <div class="mover-name"><%= @market_stats[:biggest_loser].name.truncate(25) %></div>
+                      <div class="mover-change"><%= @market_stats[:biggest_loser].price_change_percentage %>%</div>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+            <% end %>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <div class="price-chart-overlay" id="priceChartOverlay"></div>
+    <div class="price-chart-panel">
+      <div class="price-chart-modal-header">
+        <div class="modal-title">
+          <i class="bi bi-graph-up-arrow me-2"></i>
+          Market Price Dashboard
+        </div>
+        <button class="modal-close-btn" id="closeModal">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="price-chart-modal-body">
+        <!-- Current Product Focus -->
+        <div class="current-product-section">
+          <div class="product-focus-header">
+            <div class="focus-indicator">
+              <i class="bi bi-eye-fill"></i>
+            </div>
+            <div class="focus-content">
+              <h6 class="mb-0"><%= @product.name %></h6>
+              <small class="text-muted">Currently Viewing</small>
+            </div>
+          </div>
+
+          <div class="current-price-display">
+            <div class="price-main">
+              <span class="currency-symbol">₹</span>
+              <span class="price-value"><%= @product.today_price || @product.price %></span>
+            </div>
+            <% if @product.yesterday_price.present? %>
+              <div class="price-change">
+                <span class="change-badge <%= @product.price_trend == 'up' ? 'badge-up' : (@product.price_trend == 'down' ? 'badge-down' : 'badge-stable') %>">
+                  <i class="bi <%= @product.price_trend_icon %> me-1"></i>
+                  <%= @product.price_change_percentage_formatted %>
+                </span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Market Overview -->
+        <% if @market_stats.present? && @market_stats[:total_products] > 0 %>
+          <div class="market-overview-section">
+            <h6 class="section-title">
+              <i class="bi bi-bar-chart-line me-2"></i>
+              Market Overview
+            </h6>
+
+            <div class="market-stats-grid">
+              <div class="stat-card">
+                <div class="stat-icon up">
+                  <i class="bi bi-arrow-up"></i>
+                </div>
+                <div class="stat-content">
+                  <div class="stat-number"><%= @market_stats[:price_increases] %></div>
+                  <div class="stat-label">Price ↗</div>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon down">
+                  <i class="bi bi-arrow-down"></i>
+                </div>
+                <div class="stat-content">
+                  <div class="stat-number"><%= @market_stats[:price_decreases] %></div>
+                  <div class="stat-label">Price ↘</div>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon stable">
+                  <i class="bi bi-dash"></i>
+                </div>
+                <div class="stat-content">
+                  <div class="stat-number"><%= @market_stats[:price_stable] %></div>
+                  <div class="stat-label">Stable</div>
+                </div>
+              </div>
+
+              <div class="stat-card market-trend">
+                <div class="stat-icon <%= @market_stats[:market_trend] %>">
+                  <i class="bi bi-<%= @market_stats[:market_trend] == 'bullish' ? 'trending-up' : (@market_stats[:market_trend] == 'bearish' ? 'trending-down' : 'dash') %>"></i>
+                </div>
+                <div class="stat-content">
+                  <div class="stat-number"><%= @market_stats[:avg_change] %>%</div>
+                  <div class="stat-label">Avg Change</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- All Products Price Chart -->
+        <% if @all_products_with_prices.present? %>
+          <div class="all-products-chart-section">
+            <h6 class="section-title">
+              <i class="bi bi-graph-up me-2"></i>
+              All Products Trend (Last 7 Days)
+            </h6>
+
+            <div class="modal-chart-container">
+              <canvas id="modal-multi-product-chart" width="800" height="400"></canvas>
+            </div>
+
+            <div class="chart-legend-modal">
+              <div class="legend-scroll">
+                <% @all_products_with_prices.each_with_index do |product, index| %>
+                  <div class="legend-item" data-product-id="<%= product.id %>">
+                    <div class="legend-color" style="background-color: hsl(<%= (index * 360 / @all_products_with_prices.count) %>, 70%, 60%);"></div>
+                    <span class="legend-text">
+                      <%= product.name %>
+                      <small class="legend-price">₹<%= product.today_price || product.price %></small>
+                    </span>
+                    <span class="legend-change <%= product.price_trend_class %>">
+                      <%= product.price_change_percentage_formatted %>
+                    </span>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Live Price Feed and Top Movers in Row -->
+        <div class="row mt-4">
+          <!-- Price List -->
+          <div class="col-md-8">
+            <div class="products-price-list-section">
+              <h6 class="section-title">
+                <i class="bi bi-list-ul me-2"></i>
+                Live Price Feed
+              </h6>
+
+              <div class="price-list-container-modal">
+                <% if @all_products_with_prices.present? %>
+                  <% @all_products_with_prices.each do |product| %>
+                    <div class="price-list-item <%= 'current-product' if product.id == @product.id %>">
+                      <div class="product-info">
+                        <div class="product-name">
+                          <%= link_to product.name, detail_store_admin_product_path(product), class: "product-link" %>
+                        </div>
+                        <div class="product-price">
+                          <span class="current-price">₹<%= product.today_price || product.price %></span>
+                          <% if product.yesterday_price.present? %>
+                            <small class="price-change <%= product.price_trend_class %>">
+                              <i class="bi <%= product.price_trend_icon %>"></i>
+                              <%= product.price_change_percentage_formatted %>
+                            </small>
+                          <% end %>
+                        </div>
+                      </div>
+                      <div class="trend-indicator <%= product.price_trend %>">
+                        <i class="bi <%= product.price_trend_icon %>"></i>
+                      </div>
+                    </div>
+                  <% end %>
+                <% else %>
+                  <div class="no-data-message">
+                    <div class="no-data-icon">
+                      <i class="bi bi-graph-up text-muted"></i>
+                    </div>
+                    <p class="text-muted mb-0">
+                      No price tracking data available.<br>
+                      <small>Run price tracking initialization.</small>
+                    </p>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top Movers -->
+          <div class="col-md-4">
+            <% if @market_stats.present? && @market_stats[:biggest_gainer] && @market_stats[:biggest_loser] %>
+              <div class="top-movers-section">
+                <h6 class="section-title">
+                  <i class="bi bi-trophy me-2"></i>
+                  Top Movers
+                </h6>
+
+                <div class="movers-container">
+                  <% if @market_stats[:biggest_gainer] %>
+                    <div class="mover-item gainer">
+                      <div class="mover-icon">
+                        <i class="bi bi-arrow-up-circle"></i>
+                      </div>
+                      <div class="mover-content">
+                        <div class="mover-name"><%= @market_stats[:biggest_gainer].name.truncate(25) %></div>
+                        <div class="mover-change text-success">
+                          +<%= @market_stats[:biggest_gainer].price_change_percentage_formatted %>
+                        </div>
+                      </div>
+                    </div>
+                  <% end %>
+
+                  <% if @market_stats[:biggest_loser] %>
+                    <div class="mover-item loser">
+                      <div class="mover-icon">
+                        <i class="bi bi-arrow-down-circle"></i>
+                      </div>
+                      <div class="mover-content">
+                        <div class="mover-name"><%= @market_stats[:biggest_loser].name.truncate(25) %></div>
+                        <div class="mover-change text-danger">
+                          <%= @market_stats[:biggest_loser].price_change_percentage_formatted %>
+                        </div>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <div class="price-chart-modal-footer">
+        <div class="footer-stats">
+          <small class="text-muted">
+            <i class="bi bi-clock me-1"></i>
+            Last updated: <%= @product.last_price_update ? time_ago_in_words(@product.last_price_update) + ' ago' : 'Never' %>
+            <span class="ms-4">
+              <i class="bi bi-graph-up me-1"></i>
+              <%= @all_products_with_prices&.count || 0 %> Products Tracked
+            </span>
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Price Chart Sidebar -->
+  <% if @all_products_with_prices.present? %>
+  <div class="price-chart-section">
+    <div class="container">
+      <div class="price-chart-sidebar-container">
+
+        <!-- Section Header -->
+        <div class="price-chart-header">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <h3 class="sidebar-title">
+                <i class="bi bi-graph-up me-2"></i>
+                Price Chart
+              </h3>
+              <p class="sidebar-subtitle">Product price tracking with yesterday's values and percentage changes</p>
+            </div>
+            <div class="col-md-4 text-end">
+              <span class="badge badge-info">
+                <i class="bi bi-clock me-1"></i>
+                Live Tracking
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Current Product Focus -->
+        <div class="current-product-focus">
+          <div class="focus-card">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <div class="product-focus-info">
+                  <h5 class="product-name"><%= @product.name %></h5>
+                  <p class="product-category"><%= @product.category&.name || 'Product' %></p>
+                </div>
+              </div>
+              <div class="col-md-4 text-end">
+                <div class="price-display">
+                  <div class="current-price">₹<%= number_with_delimiter(@product.today_price || @product.price) %></div>
+                  <% if @product.yesterday_price.present? %>
+                    <div class="price-change-display">
+                      <% change_amount = (@product.today_price || @product.price) - @product.yesterday_price %>
+                      <% change_percent = @product.price_change_percentage || 0 %>
+                      <span class="change-amount <%= change_percent > 0 ? 'positive' : (change_percent < 0 ? 'negative' : 'stable') %>">
+                        <% if change_percent > 0 %>
+                          <i class="bi bi-arrow-up"></i> +₹<%= number_with_delimiter(change_amount.abs.round(2)) %>
+                        <% elsif change_percent < 0 %>
+                          <i class="bi bi-arrow-down"></i> -₹<%= number_with_delimiter(change_amount.abs.round(2)) %>
+                        <% else %>
+                          <i class="bi bi-dash"></i> ₹0
+                        <% end %>
+                      </span>
+                      <span class="change-percent">
+                        (<%= change_percent > 0 ? '+' : '' %><%= change_percent %>%)
+                      </span>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Price Chart Table -->
+        <div class="price-chart-table-section">
+          <div class="table-header">
+            <h5>
+              <i class="bi bi-table me-2"></i>
+              Product Price Tracking
+            </h5>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table price-tracking-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Unit Price</th>
+                  <th>Yesterday</th>
+                  <th>Change</th>
+                  <th>%</th>
+                  <th>Trend</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @all_products_with_prices.limit(10).each do |product| %>
+                  <tr class="<%= 'current-product-row' if product.id == @product.id %>">
+                    <td>
+                      <div class="product-info">
+                        <%= link_to product.name.truncate(25), detail_store_admin_product_path(product), class: "product-link" %>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="unit-price">
+                        ₹<%= number_with_delimiter(product.today_price || product.price) %>
+                      </div>
+                    </td>
+                    <td>
+                      <% if product.yesterday_price.present? %>
+                        <div class="yesterday-price">
+                          ₹<%= number_with_delimiter(product.yesterday_price) %>
+                        </div>
+                      <% else %>
+                        <span class="text-muted">N/A</span>
+                      <% end %>
+                    </td>
+                    <td>
+                      <% if product.yesterday_price.present? %>
+                        <% change_amount = (product.today_price || product.price) - product.yesterday_price %>
+                        <span class="price-change-amount <%= change_amount > 0 ? 'positive' : (change_amount < 0 ? 'negative' : 'stable') %>">
+                          <% if change_amount > 0 %>
+                            +₹<%= number_with_delimiter(change_amount.abs.round(2)) %>
+                          <% elsif change_amount < 0 %>
+                            -₹<%= number_with_delimiter(change_amount.abs.round(2)) %>
+                          <% else %>
+                            ₹0
+                          <% end %>
+                        </span>
+                      <% else %>
+                        <span class="text-muted">N/A</span>
+                      <% end %>
+                    </td>
+                    <td>
+                      <% if product.price_change_percentage.present? %>
+                        <span class="percentage-change <%= product.price_change_percentage > 0 ? 'positive' : (product.price_change_percentage < 0 ? 'negative' : 'stable') %>">
+                          <%= product.price_change_percentage > 0 ? '+' : '' %><%= product.price_change_percentage %>%
+                        </span>
+                      <% else %>
+                        <span class="text-muted">0%</span>
+                      <% end %>
+                    </td>
+                    <td>
+                      <% trend = product.price_change_percentage.present? ? (product.price_change_percentage > 0 ? 'up' : (product.price_change_percentage < 0 ? 'down' : 'stable')) : 'stable' %>
+                      <div class="trend-indicator-small <%= trend %>">
+                        <% if trend == 'up' %>
+                          <i class="bi bi-caret-up-fill"></i>
+                        <% elsif trend == 'down' %>
+                          <i class="bi bi-caret-down-fill"></i>
+                        <% else %>
+                          <i class="bi bi-dash"></i>
+                        <% end %>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- CSS for Price Chart Sidebar -->
+  <style>
+    .price-chart-section {
+      background: #f8f9fa;
+      padding: 3rem 0;
+      margin-top: 3rem;
+    }
+
+    .price-chart-sidebar-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    .price-chart-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+    }
+
+    .sidebar-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .sidebar-subtitle {
+      opacity: 0.9;
+      margin-bottom: 0;
+    }
+
+    .badge-info {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.875rem;
+    }
+
+    /* Current Product Focus */
+    .current-product-focus {
+      padding: 2rem;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .focus-card {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .product-focus-info h5 {
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 0.25rem;
+    }
+
+    .product-category {
+      color: #64748b;
+      font-size: 0.875rem;
+      margin-bottom: 0;
+    }
+
+    .price-display .current-price {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #059669;
+      margin-bottom: 0.5rem;
+    }
+
+    .price-change-display {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .change-amount.positive {
+      color: #059669;
+    }
+
+    .change-amount.negative {
+      color: #dc2626;
+    }
+
+    .change-amount.stable {
+      color: #6b7280;
+    }
+
+    .change-percent {
+      color: #6b7280;
+    }
+
+    /* Price Chart Table */
+    .price-chart-table-section {
+      padding: 2rem;
+    }
+
+    .table-header h5 {
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 1.5rem;
+    }
+
+    .price-tracking-table {
+      margin-bottom: 0;
+    }
+
+    .price-tracking-table th {
+      background: #f8f9fa;
+      border: none;
+      padding: 1rem 0.75rem;
+      font-weight: 600;
+      color: #374151;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+    }
+
+    .price-tracking-table td {
+      padding: 1rem 0.75rem;
+      border: none;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: middle;
+    }
+
+    .price-tracking-table tbody tr {
+      transition: all 0.2s ease;
+    }
+
+    .price-tracking-table tbody tr:hover {
+      background: #f9fafb;
+    }
+
+    .current-product-row {
+      background: #eff6ff !important;
+      border-left: 4px solid #667eea;
+    }
+
+    .product-link {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .product-link:hover {
+      color: #764ba2;
+      text-decoration: underline;
+    }
+
+    .unit-price {
+      font-weight: 600;
+      color: #059669;
+      font-size: 1rem;
+    }
+
+    .yesterday-price {
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+
+    .price-change-amount.positive {
+      color: #059669;
+      font-weight: 600;
+    }
+
+    .price-change-amount.negative {
+      color: #dc2626;
+      font-weight: 600;
+    }
+
+    .price-change-amount.stable {
+      color: #6b7280;
+      font-weight: 600;
+    }
+
+    .percentage-change {
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .percentage-change.positive {
+      color: #059669;
+    }
+
+    .percentage-change.negative {
+      color: #dc2626;
+    }
+
+    .percentage-change.stable {
+      color: #6b7280;
+    }
+
+    .trend-indicator-small {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+
+    .trend-indicator-small.up {
+      background: #dcfce7;
+      color: #059669;
+    }
+
+    .trend-indicator-small.down {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .trend-indicator-small.stable {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .price-chart-header {
+        padding: 1.5rem;
+      }
+
+      .current-product-focus,
+      .price-chart-table-section {
+        padding: 1.5rem;
+      }
+
+      .price-display .current-price {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+
+  <% end %>
+
+  <!-- Related Products -->
+  <% if @related_products.any? %>
+    <div class="related-products-section">
+      <div class="container">
+        <div class="section-header">
+          <h2>You May Also Like</h2>
+          <p>Similar products that customers frequently purchase</p>
+        </div>
+
+        <div class="related-products-grid">
+          <% @related_products.each do |product| %>
+            <div class="related-product-card">
+              <div class="related-product-image">
+                <div class="product-placeholder">
+                  <% if product.name.downcase.include?('iphone') %>
+                    <i class="bi bi-phone"></i>
+                  <% else %>
+                    <i class="bi bi-box-seam"></i>
+                  <% end %>
+                </div>
+              </div>
+              <div class="related-product-info">
+                <h4 class="related-product-title"><%= product.name %></h4>
+                <div class="related-product-price">
+                  ₹<%= number_with_delimiter(product.respond_to?(:discount_price) && product.discount_price.present? ? product.discount_price : product.price) %>
+                </div>
+                <button class="btn-view-product" onclick="viewProduct(<%= product.id %>)">
+                  View Details
+                </button>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Floating Cart Summary -->
+  <div class="floating-cart-summary" id="floatingCart" style="display: none;">
+    <div class="cart-content">
+      <div class="cart-header">
+        <h4>Shopping Cart</h4>
+        <button class="close-cart" onclick="toggleCart()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="cart-items" id="cartItems">
+        <!-- Cart items will be populated here -->
+      </div>
+      <div class="cart-footer">
+        <div class="cart-total">
+          Total: ₹<span id="cartTotal">0</span>
+        </div>
+        <button class="btn-checkout" onclick="proceedToCheckout()">
+          <i class="bi bi-arrow-right"></i>
+          Proceed to Checkout
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Custom JavaScript -->
+  <script>
+    // Product data
+    const product = {
+      id: <%= @product.id %>,
+      name: '<%= j(@product.name) %>',
+      price: <%= @product.respond_to?(:discount_price) && @product.discount_price.present? ? @product.discount_price : @product.price %>,
+      stock: <%= @product.stock %>
+    };
+
+    // Cart management
+    let cart = JSON.parse(localStorage.getItem('productCart')) || {};
+
+    // Quantity controls
+    function increaseQuantity() {
+      const input = document.getElementById('productQuantity');
+      const max = parseInt(input.max);
+      const current = parseInt(input.value) || 1;
+      if (current < max) {
+        input.value = current + 1;
+      }
+    }
+
+    function decreaseQuantity() {
+      const input = document.getElementById('productQuantity');
+      const current = parseInt(input.value) || 1;
+      if (current > 1) {
+        input.value = current - 1;
+      }
+    }
+
+    // Add to cart functionality
+    function addToCart() {
+      const quantity = parseInt(document.getElementById('productQuantity').value) || 1;
+
+      if (quantity > product.stock) {
+        showNotification(`Only ${product.stock} items available!`, 'warning');
+        return;
+      }
+
+      if (cart[product.id]) {
+        if (cart[product.id].quantity + quantity > product.stock) {
+          showNotification(`Cannot add more items. Maximum stock: ${product.stock}`, 'warning');
+          return;
+        }
+        cart[product.id].quantity += quantity;
+      } else {
+        cart[product.id] = {
+          name: product.name,
+          price: product.price,
+          quantity: quantity,
+          stock: product.stock
+        };
+      }
+
+      localStorage.setItem('productCart', JSON.stringify(cart));
+      updateCartDisplay();
+    }
+
+    // Buy now functionality
+    function buyNow() {
+      addToCart();
+      setTimeout(() => {
+        window.location.href = '<%= new_store_admin_booking_path %>#checkout';
+      }, 1000);
+    }
+
+    // Notify me functionality
+    function notifyMe() {
+      showNotification('You will be notified when this product is back in stock!', 'info');
+    }
+
+    // Update cart display
+    function updateCartDisplay() {
+      const cartCount = Object.keys(cart).length;
+      document.getElementById('cartCount').textContent = cartCount;
+
+      if (cartCount > 0) {
+        document.getElementById('floatingCart').style.display = 'block';
+        updateFloatingCart();
+      }
+    }
+
+    // Update floating cart
+    function updateFloatingCart() {
+      const cartItems = document.getElementById('cartItems');
+      const cartTotal = document.getElementById('cartTotal');
+
+      let itemsHtml = '';
+      let total = 0;
+
+      for (const [productId, item] of Object.entries(cart)) {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+
+        itemsHtml += `
+          <div class="cart-item">
+            <div class="cart-item-info">
+              <h5>${item.name}</h5>
+              <p>₹${item.price} × ${item.quantity} = ₹${itemTotal}</p>
+            </div>
+            <button class="remove-item" onclick="removeFromCart(${productId})">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        `;
+      }
+
+      cartItems.innerHTML = itemsHtml;
+      cartTotal.textContent = total.toFixed(2);
+    }
+
+    // Remove from cart
+    function removeFromCart(productId) {
+      delete cart[productId];
+      localStorage.setItem('productCart', JSON.stringify(cart));
+      updateCartDisplay();
+
+      if (Object.keys(cart).length === 0) {
+        document.getElementById('floatingCart').style.display = 'none';
+      }
+    }
+
+    // Toggle cart
+    function toggleCart() {
+      const floatingCart = document.getElementById('floatingCart');
+      floatingCart.style.display = floatingCart.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Proceed to checkout
+    function proceedToCheckout() {
+      window.location.href = '<%= new_store_admin_booking_path %>#checkout';
+    }
+
+    // View product
+    function viewProduct(productId) {
+      window.location.href = `/store_admin/products/${productId}/detail`;
+    }
+
+    // Scroll to reviews
+    function scrollToReviews() {
+      document.getElementById('reviews-tab').click();
+      document.getElementById('reviews').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Change main image when thumbnail is clicked
+    function changeMainImage(imageUrl) {
+      const mainImage = document.getElementById('currentMainImage');
+      if (mainImage) {
+        mainImage.src = imageUrl;
+
+        // Update active thumbnail
+        document.querySelectorAll('.thumbnail-item').forEach(item => {
+          item.classList.remove('active');
+          if (item.dataset.imageUrl === imageUrl) {
+            item.classList.add('active');
+          }
+        });
+      }
+    }
+
+    // Notification system
+    function showNotification(message, type = 'success') {
+      const colors = {
+        success: '#28a745',
+        warning: '#ffc107',
+        danger: '#dc3545',
+        info: '#17a2b8'
+      };
+
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${colors[type]};
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        z-index: 9999;
+        font-weight: 600;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+      `;
+      notification.textContent = message;
+
+      document.body.appendChild(notification);
+      setTimeout(() => notification.style.transform = 'translateX(0)', 100);
+      setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+
+    // Price Chart Modal Functionality
+    function initializePriceChartModal() {
+      const trigger = document.getElementById('priceChartTrigger');
+      const modal = document.getElementById('priceChartModal');
+      const overlay = document.getElementById('priceChartOverlay');
+      const closeBtn = document.getElementById('closeModal');
+
+      if (trigger && modal) {
+        // Open modal
+        trigger.addEventListener('click', function() {
+          modal.classList.add('show');
+          document.body.style.overflow = 'hidden';
+        });
+
+        // Close modal on overlay click
+        if (overlay) {
+          overlay.addEventListener('click', function() {
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+          });
+        }
+
+        // Close modal on close button click
+        if (closeBtn) {
+          closeBtn.addEventListener('click', function() {
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+          });
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape' && modal.classList.contains('show')) {
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+          }
+        });
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      updateCartDisplay();
+      initializePriceChartModal();
+    });
+  </script>
+
+  <!-- Chart.js for Multi-Product Price Chart -->
+  <% if @all_products_with_prices.present? %>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const ctx = document.getElementById('multi-product-chart');
+      if (ctx && window.Chart) {
+        const products = <%= @all_products_with_prices.map { |p|
+          {
+            id: p.id,
+            name: p.name.truncate(15),
+            history: p.get_price_history_array,
+            current_price: p.today_price || p.price,
+            change: p.price_change_percentage || 0
+          }
+        }.to_json.html_safe %>;
+
+        // Prepare datasets for multiple products
+        const datasets = [];
+        const colors = [
+          '#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a',
+          '#ffecd2', '#a8edea', '#d299c2', '#89f7fe', '#96e6a1'
+        ];
+
+        // Find the maximum history length for labels
+        let maxHistoryLength = 0;
+        let commonDates = [];
+
+        products.forEach(product => {
+          if (product.history && product.history.length > maxHistoryLength) {
+            maxHistoryLength = product.history.length;
+            commonDates = product.history.map(item => item.date);
+          }
+        });
+
+        // Create labels from the longest history (last 7 days)
+        const labels = commonDates.slice(-7).map(date => {
+          const d = new Date(date);
+          return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        });
+
+        // Create datasets for each product
+        products.forEach((product, index) => {
+          if (product.history && product.history.length > 1) {
+            const last7Days = product.history.slice(-7);
+            const data = last7Days.map(item => item.price);
+
+            datasets.push({
+              label: product.name,
+              data: data,
+              borderColor: colors[index % colors.length],
+              backgroundColor: colors[index % colors.length] + '20',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.3,
+              pointBackgroundColor: colors[index % colors.length],
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 1,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              pointHoverBackgroundColor: colors[index % colors.length],
+              pointHoverBorderColor: '#ffffff'
+            });
+          }
+        });
+
+        if (datasets.length > 0) {
+          const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: datasets
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: {
+                intersect: false,
+                mode: 'index'
+              },
+              plugins: {
+                legend: {
+                  display: false // We use custom legend
+                },
+                tooltip: {
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  titleColor: '#ffffff',
+                  bodyColor: '#ffffff',
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                  borderWidth: 1,
+                  cornerRadius: 8,
+                  callbacks: {
+                    label: function(context) {
+                      const productName = context.dataset.label;
+                      const price = '₹' + context.parsed.y.toLocaleString();
+                      return productName + ': ' + price;
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid: {
+                    display: false
+                  },
+                  ticks: {
+                    font: {
+                      size: 9
+                    },
+                    color: '#6b7280'
+                  }
+                },
+                y: {
+                  grid: {
+                    color: 'rgba(107, 114, 128, 0.1)',
+                    lineWidth: 1
+                  },
+                  ticks: {
+                    font: {
+                      size: 9
+                    },
+                    color: '#6b7280',
+                    callback: function(value) {
+                      return '₹' + value.toLocaleString();
+                    }
+                  }
+                }
+              },
+              animation: {
+                duration: 1000,
+                easing: 'easeOutQuart'
+              }
+            }
+          });
+
+          // Legend interaction
+          document.querySelectorAll('.legend-item').forEach((item, index) => {
+            if (index < datasets.length) {
+              item.addEventListener('click', function() {
+                const datasetIndex = index;
+                const isVisible = chart.isDatasetVisible(datasetIndex);
+
+                if (isVisible) {
+                  chart.hide(datasetIndex);
+                  this.style.opacity = '0.5';
+                } else {
+                  chart.show(datasetIndex);
+                  this.style.opacity = '1';
+                }
+              });
+
+              // Set initial color
+              const legendColor = item.querySelector('.legend-color');
+              if (legendColor) {
+                legendColor.style.backgroundColor = colors[index % colors.length];
+              }
+            }
+          });
+        }
+      }
+    });
+    </script>
+  <% end %>
+</body>
+</html>

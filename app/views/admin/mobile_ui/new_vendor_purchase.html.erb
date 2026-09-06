@@ -100,7 +100,7 @@
 </div>
 
 <script>
-window.mobProductData = <%= raw @products.map { |p| { id: p.id, name: p.name, unit_type: p.unit_type || 'units', default_selling_price: p.default_selling_price || 0 } }.to_json %>;
+window.mobProductData = <%= raw VendorPurchase.product_option_list(@products).to_json %>;
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
@@ -114,9 +114,21 @@ document.addEventListener('DOMContentLoaded', function() {
   function productOptionsHtml() {
     let html = '<option value="">Select product</option>';
     window.mobProductData.forEach(p => {
-      html += `<option value="${p.id}" data-unit-type="${p.unit_type}" data-default-price="${p.default_selling_price}">${p.name}</option>`;
+      html += `<option value="${p.value}" data-unit-type="${p.unit_type}" data-default-price="${p.default_selling_price}">${p.name}</option>`;
     });
     return html;
+  }
+
+  // Split the product <select> composite value ("12" or "12-v34") into the
+  // hidden product_id / product_variant_id fields the form submits.
+  function syncMobProductSelection(row) {
+    const select = row.querySelector('.mob-product-select');
+    const idField = row.querySelector('.mob-product-id');
+    const variantField = row.querySelector('.mob-product-variant-id');
+    if (!select || !idField || !variantField) return;
+    const parts = String(select.value || '').split('-v');
+    idField.value = parts[0] || '';
+    variantField.value = parts[1] || '';
   }
 
   function itemHtml(index) {
@@ -124,7 +136,9 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="item-card">
         <button type="button" class="remove-item-btn mob-remove-item"><i class="bi bi-trash"></i></button>
         <div class="field-label">Product *</div>
-        <select name="vendor_purchase[vendor_purchase_items_attributes][${index}][product_id]" class="mob-select mob-product-select" required>
+        <input type="hidden" name="vendor_purchase[vendor_purchase_items_attributes][${index}][product_id]" class="mob-product-id">
+        <input type="hidden" name="vendor_purchase[vendor_purchase_items_attributes][${index}][product_variant_id]" class="mob-product-variant-id">
+        <select class="mob-select mob-product-select" required>
           ${productOptionsHtml()}
         </select>
         <div class="item-row">
@@ -155,12 +169,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const removeBtn = row.querySelector('.mob-remove-item');
 
     $(select).select2({ theme: 'bootstrap-5', placeholder: 'Search product…', allowClear: true, width: '100%' });
+    select.addEventListener('change', function() { syncMobProductSelection(row); });
     $(select).on('select2:select', function() {
+      syncMobProductSelection(row);
       const opt = this.options[this.selectedIndex];
       const defaultPrice = opt.dataset.defaultPrice;
-      if (defaultPrice && sellingPrice && !sellingPrice.value) sellingPrice.value = defaultPrice;
+      if (defaultPrice && parseFloat(defaultPrice) > 0 && sellingPrice && !sellingPrice.value) sellingPrice.value = defaultPrice;
       recalc();
     });
+    // Pre-rendered rows already carry a selection — reflect it into the hidden fields.
+    syncMobProductSelection(row);
 
     [qty, purchasePrice, sellingPrice].forEach(el => el.addEventListener('input', recalc));
 
