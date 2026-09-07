@@ -619,15 +619,31 @@ class Admin::BookingsController < Admin::ApplicationController
     # out_of_stock?/low_stock? read the preloaded value instead of each firing
     # its own stock_batches query per product — was ~5-7 queries per result.
     store = Store.active.find_by(id: params[:store_id]) if params[:store_id].present?
-    store_condition = store ? "stock_batches.store_id = #{store.id.to_i}" : "stock_batches.store_id IS NULL"
 
-    @products = Product.active
-                       .where("name ILIKE ? OR sku ILIKE ?", "%#{params[:q]}%", "%#{params[:q]}%")
-                       .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND #{store_condition}")
-                       .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock")
-                       .group("products.id")
-                       .includes(image_attachment: :blob)
-                       .limit(10)
+    base = Product.active
+                  .where("name ILIKE ? OR sku ILIKE ?", "%#{params[:q]}%", "%#{params[:q]}%")
+                  .includes(image_attachment: :blob)
+                  .limit(10)
+
+    @products =
+      if store
+        # cached_stock follows Store#available_stock_for: store_inventories row
+        # wins when present, store batch total is the fallback.
+        sid = store.id.to_i
+        batch_sum = "(SELECT COALESCE(SUM(sb.quantity_remaining), 0) FROM stock_batches sb " \
+                    "WHERE sb.product_id = products.id AND sb.status = 'active' " \
+                    "AND sb.quantity_remaining > 0 AND sb.store_id = #{sid})"
+        inv_sum   = "(SELECT SUM(si.quantity) FROM store_inventories si " \
+                    "WHERE si.product_id = products.id AND si.store_id = #{sid})"
+        base.select("products.*, COALESCE(#{inv_sum}, #{batch_sum}) AS cached_stock")
+      else
+        # cached_stock (COALESCE SUM) lets total_batch_stock/stock_status_enhanced/
+        # out_of_stock?/low_stock? read the preloaded value instead of each firing
+        # its own stock_batches query per product.
+        base.joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND stock_batches.store_id IS NULL")
+            .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock")
+            .group("products.id")
+      end
 
     render json: @products.map { |p|
       {
@@ -931,11 +947,30 @@ class Admin::BookingsController < Admin::ApplicationController
   # given store's active batches when a store is selected (the sale deducts from
   # that store), otherwise to central inventory (store_id IS NULL).
   def products_for_picker(store_id = nil)
-    store_condition = store_id.present? ? "stock_batches.store_id = #{store_id.to_i}" : "stock_batches.store_id IS NULL"
+    if store_id.present?
+      # Store-scoped picker: `cached_stock` must match Store#available_stock_for
+      # (and the store-inventory / Product Summary screens) — a store_inventories
+      # row is the source of truth for that store's on-hand when one exists, with
+      # the store's active batch total only as the fallback. A raw batch sum
+      # over-counts once store_inventories has been reconciled to a different
+      # figure.
+      sid = store_id.to_i
+      batch_sum = "(SELECT COALESCE(SUM(sb.quantity_remaining), 0) FROM stock_batches sb " \
+                  "WHERE sb.product_id = products.id AND sb.status = 'active' " \
+                  "AND sb.quantity_remaining > 0 AND sb.store_id = #{sid})"
+      inv_sum   = "(SELECT SUM(si.quantity) FROM store_inventories si " \
+                  "WHERE si.product_id = products.id AND si.store_id = #{sid})"
+      effective = "COALESCE(#{inv_sum}, #{batch_sum})"
+
+      return Product.active
+                    .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
+                    .select("products.*, #{effective} AS cached_stock")
+                    .order(Arel.sql("CASE WHEN #{effective} > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
+    end
 
     Product.active
            .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
-           .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND #{store_condition}")
+           .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND stock_batches.store_id IS NULL")
            .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock")
            .group("products.id")
            .order(Arel.sql("CASE WHEN COALESCE(SUM(stock_batches.quantity_remaining), 0) > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
@@ -964,6 +999,10 @@ class Admin::BookingsController < Admin::ApplicationController
       if product.has_multiple_quantities? && item.product_variant_id.present?
         variant = variants_by_id[item.product_variant_id]
         available_stock = variant ? variant.available_stock.to_f : 0.0
+      elsif scope_store_id.present? && (store = Store.find_by(id: scope_store_id))
+        # Store-tagged sale: honour the store_inventories overlay, same as the
+        # picker grid and Store#available_stock_for.
+        available_stock = store.available_stock_for(product.id).to_f
       else
         available_stock = StockBatch.available_for_product(product.id, store_id: scope_store_id).sum(:quantity_remaining).to_f
       end

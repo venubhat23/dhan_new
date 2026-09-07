@@ -426,12 +426,25 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
   end
 
   def products_for_picker
+    sid = @current_store.id.to_i
+
+    # `cached_stock` must match Store#available_stock_for — the same figure the
+    # store-inventory screen and Product Summary show: a store_inventories row
+    # (when the store has one for the product) is the source of truth for that
+    # store's on-hand; only when there is no row do we fall back to the store's
+    # active batch total. The old raw batch sum over-counted whenever
+    # store_inventories had been reconciled to a different number.
+    batch_sum = "(SELECT COALESCE(SUM(sb.quantity_remaining), 0) FROM stock_batches sb " \
+                "WHERE sb.product_id = products.id AND sb.status = 'active' " \
+                "AND sb.quantity_remaining > 0 AND sb.store_id = #{sid})"
+    inv_sum   = "(SELECT SUM(si.quantity) FROM store_inventories si " \
+                "WHERE si.product_id = products.id AND si.store_id = #{sid})"
+    effective = "COALESCE(#{inv_sum}, #{batch_sum})"
+
     Product.active
            .includes(:category, :product_variants, image_attachment: :blob)
-           .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND stock_batches.store_id = #{@current_store.id.to_i}")
-           .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock")
-           .group('products.id')
-           .order(Arel.sql('CASE WHEN COALESCE(SUM(stock_batches.quantity_remaining), 0) > 0 THEN 0 ELSE 1 END ASC, products.name ASC'))
+           .select("products.*, #{effective} AS cached_stock")
+           .order(Arel.sql("CASE WHEN #{effective} > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
   end
 
   def sync_booking_invoice_totals(booking)
@@ -460,7 +473,14 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
       if product.has_multiple_quantities? && item.product_variant_id.present?
         available = variants_by_id[item.product_variant_id]&.available_stock.to_f
       else
-        available = StockBatch.available_for_product(product.id, store_id: scope_store_id).sum(:quantity_remaining).to_f
+        # Same overlay as products_for_picker / Store#available_stock_for:
+        # store_inventories row wins, batch sum is only the fallback.
+        store = Store.find_by(id: scope_store_id)
+        available = if store
+                      store.available_stock_for(product.id).to_f
+                    else
+                      StockBatch.available_for_product(product.id, store_id: scope_store_id).sum(:quantity_remaining).to_f
+                    end
       end
       available += (item.quantity_was || 0) if is_update && item.persisted? && item.quantity_changed?
       stock_errors << { product: product, requested: item.quantity, available: available, item: item } if item.quantity > available
