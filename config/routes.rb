@@ -275,6 +275,7 @@ Rails.application.routes.draw do
         get :search_products
         get :search_customers
         get :realtime_data
+        get :store_booking
         # Status filters
         get :pending
         get :confirmed

@@ -1,0 +1,170 @@
+<% content_for :title, 'New Store Booking' %>
+
+<style>
+  .store-pick-hero {
+    background: linear-gradient(135deg, #fff7e6 0%, #ffe8cc 100%);
+    border: 1px solid rgba(255, 153, 0, 0.25);
+    border-radius: 1rem;
+  }
+  .store-pick-card {
+    border: 1px solid #eef0f2;
+    border-radius: 1rem;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    cursor: pointer;
+    height: 100%;
+  }
+  .store-pick-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.10);
+    border-color: rgba(255, 153, 0, 0.55);
+  }
+  .store-pick-card .store-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    background: rgba(255, 153, 0, 0.14);
+    color: #b5730a;
+    flex-shrink: 0;
+  }
+  .store-pick-card .stat-pill {
+    background: #f6f8fa;
+    border-radius: 10px;
+    padding: .5rem .75rem;
+    font-size: .8rem;
+  }
+  .store-pick-card .stat-pill .val {
+    font-weight: 700;
+    font-size: 1rem;
+    display: block;
+    line-height: 1.1;
+  }
+  .store-hidden { display: none !important; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-1"><i class="bi bi-shop-window me-2 text-warning"></i>New Store Booking</h2>
+    <p class="text-muted mb-0">Pick a store to bill against. The product list and stock deduction run against that store's inventory only.</p>
+  </div>
+  <%= link_to admin_bookings_path, class: "btn btn-outline-secondary" do %>
+    <i class="bi bi-arrow-left me-1"></i>Back to Bookings
+  <% end %>
+</div>
+
+<div class="store-pick-hero p-3 p-md-4 mb-4">
+  <div class="row g-3 align-items-center">
+    <div class="col-md-7">
+      <label class="form-label fw-semibold mb-1"><i class="bi bi-search me-1"></i>Find a store</label>
+      <input type="text" id="storeFilter" class="form-control form-control-lg"
+             placeholder="Search by store name or city…" autocomplete="off" autofocus>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label fw-semibold mb-1"><i class="bi bi-list-ul me-1"></i>Or jump straight to</label>
+      <select id="storeJump" class="form-select form-select-lg">
+        <option value="">Select a store…</option>
+        <% @stores.each do |store| %>
+          <option value="<%= new_admin_booking_path(store_id: store.id, from_store: 1) %>">
+            <%= store.display_name %>
+          </option>
+        <% end %>
+      </select>
+    </div>
+  </div>
+</div>
+
+<% if @stores.any? %>
+  <div class="row g-3" id="storeGrid">
+    <% @stores.each do |store| %>
+      <% stock = @store_stock[store.id] || { products: 0, units: 0.0 } %>
+      <div class="col-sm-6 col-lg-4 store-grid-item"
+           data-name="<%= store.name.to_s.downcase %>"
+           data-city="<%= store.city.to_s.downcase %>">
+        <%= link_to new_admin_booking_path(store_id: store.id, from_store: 1), class: "text-decoration-none text-reset" do %>
+          <div class="store-pick-card p-3">
+            <div class="d-flex align-items-start gap-3 mb-3">
+              <div class="store-avatar"><i class="bi bi-shop"></i></div>
+              <div class="flex-grow-1 min-w-0">
+                <h5 class="mb-1 text-truncate"><%= store.name %></h5>
+                <div class="text-muted small">
+                  <i class="bi bi-geo-alt me-1"></i><%= [store.city, store.state].compact_blank.join(', ') %>
+                </div>
+                <% if store.contact_person.present? %>
+                  <div class="text-muted small">
+                    <i class="bi bi-person me-1"></i><%= store.contact_person %>
+                    <% if store.contact_mobile.present? %>&middot; <%= store.contact_mobile %><% end %>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <div class="stat-pill text-center">
+                  <span class="val"><%= stock[:products] %></span>
+                  products in stock
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="stat-pill text-center">
+                  <span class="val"><%= stock[:units].to_i %></span>
+                  units on hand
+                </div>
+              </div>
+            </div>
+
+            <span class="btn btn-warning text-dark w-100 fw-semibold">
+              <i class="bi bi-cart-plus me-1"></i>Start Booking
+            </span>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div id="storeEmpty" class="text-center text-muted py-5 store-hidden">
+    <i class="bi bi-search fs-1 d-block mb-2"></i>
+    No store matches your search.
+  </div>
+<% else %>
+  <div class="card border-0 shadow-sm">
+    <div class="card-body text-center py-5">
+      <i class="bi bi-shop fs-1 text-muted d-block mb-3"></i>
+      <h5 class="text-muted">No active stores</h5>
+      <p class="text-muted mb-3">Add a store before creating store bookings.</p>
+      <%= link_to "Add Store", new_admin_store_path, class: "btn btn-primary" %>
+    </div>
+  </div>
+<% end %>
+
+<script>
+  (function () {
+    var jump = document.getElementById('storeJump');
+    if (jump) {
+      jump.addEventListener('change', function () {
+        if (this.value) window.location.href = this.value;
+      });
+    }
+
+    var filter = document.getElementById('storeFilter');
+    var grid = document.getElementById('storeGrid');
+    var empty = document.getElementById('storeEmpty');
+    if (filter && grid) {
+      filter.addEventListener('input', function () {
+        var q = this.value.trim().toLowerCase();
+        var visible = 0;
+        grid.querySelectorAll('.store-grid-item').forEach(function (item) {
+          var hit = !q ||
+            item.dataset.name.indexOf(q) !== -1 ||
+            item.dataset.city.indexOf(q) !== -1;
+          item.classList.toggle('store-hidden', !hit);
+          if (hit) visible++;
+        });
+        if (empty) empty.classList.toggle('store-hidden', visible !== 0);
+      });
+    }
+  })();
+</script>

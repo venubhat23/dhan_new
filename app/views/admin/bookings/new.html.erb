@@ -24,6 +24,23 @@
   </div>
 </div>
 
+<% if @from_store %>
+  <div class="alert d-flex align-items-center gap-3 border-0 shadow-sm mb-3"
+       style="background: linear-gradient(135deg,#fff7e6,#ffe8cc); border-radius:.9rem;">
+    <i class="bi bi-shop-window fs-3 text-warning"></i>
+    <div class="flex-grow-1">
+      <div class="fw-bold">
+        Store Booking<% if @selected_store %> &mdash; <%= @selected_store.display_name %><% end %>
+      </div>
+      <div class="small text-muted">
+        Products below and the stock deduction are limited to this store's inventory.
+        Enter the customer details, build the cart, and complete the booking as usual.
+        <%= link_to "Change store", store_booking_admin_bookings_path, class: "fw-semibold text-decoration-none ms-1" %>
+      </div>
+    </div>
+  </div>
+<% end %>
+
 <%# Barcode scan toast — fixed top-center, shown on every successful scan %>
 <div id="barcodeToast" style="
   display:none;

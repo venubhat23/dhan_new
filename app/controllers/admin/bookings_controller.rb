@@ -95,9 +95,26 @@ class Admin::BookingsController < Admin::ApplicationController
     end
   end
 
+  # Landing screen for the "New Store Booking" flow: pick a store, then drop into
+  # #new pre-scoped to that store (product picker + stock deduction both run
+  # against that store's inventory only).
+  def store_booking
+    @stores = Store.active.by_display_order
+
+    # One grouped query for each store's on-hand summary from active batches.
+    rows = StockBatch.active
+                     .where(store_id: @stores.map(&:id))
+                     .group(:store_id)
+                     .pluck(Arel.sql('store_id, COUNT(DISTINCT product_id), COALESCE(SUM(quantity_remaining), 0)'))
+    @store_stock = rows.each_with_object({}) do |(sid, products, units), h|
+      h[sid] = { products: products.to_i, units: units.to_f }
+    end
+  end
+
   def new
     @booking = Booking.new
     @booking.booking_items.build
+    @from_store = params[:from_store].present? || params[:store_id].present?
 
     # Pre-select customer if redirected from quick customer creation
     @preselected_customer = Customer.find_by(id: params[:customer_id]) if params[:customer_id].present?
@@ -175,6 +192,7 @@ class Admin::BookingsController < Admin::ApplicationController
     # Validate stock availability before saving
     unless validate_stock_availability(@booking)
       @selected_store = Store.active.find_by(id: @booking.store_id) if @booking.store_id.present?
+      @from_store = @booking.store_id.present?
       @products = products_for_picker(@booking.store_id)
       @customers = Customer.all.order(:full_name)
       @stores = Store.where(status: true)
@@ -226,6 +244,7 @@ class Admin::BookingsController < Admin::ApplicationController
       Rails.logger.error "Booking items errors: #{@booking.booking_items.map(&:errors).map(&:full_messages).flatten.join(', ')}"
 
       @selected_store = Store.active.find_by(id: @booking.store_id) if @booking.store_id.present?
+      @from_store = @booking.store_id.present?
       @products = products_for_picker(@booking.store_id)
       @customers = Customer.all.order(:full_name)
       @stores = Store.where(status: true)
