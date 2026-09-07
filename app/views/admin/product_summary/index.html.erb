@@ -87,6 +87,22 @@
   </div>
 </div>
 
+<div class="row g-2 mb-3">
+  <div class="col-12 col-md-6 col-lg-4">
+    <select id="pse-search" class="form-select" data-placeholder="Search a product…">
+      <option value=""></option>
+      <% @products.each do |product| %>
+        <option value="<%= product.id %>"><%= product.name %><%= " — #{product.sku}" if product.sku.present? %></option>
+      <% end %>
+    </select>
+  </div>
+  <div class="col-auto">
+    <button type="button" class="btn btn-outline-secondary" id="pse-search-clear">
+      <i class="bi bi-x-circle me-1"></i>Show all
+    </button>
+  </div>
+</div>
+
 <div class="alert alert-info py-2 px-3 small pse-edit-hint">
   <i class="bi bi-info-circle me-1"></i>
   The table is read-only. Click the <i class="bi bi-pencil"></i> pencil on a cell to edit that one value, or hit
@@ -136,7 +152,7 @@
                 main_stock = @main_stock[product.id].to_f
                 main_thr   = product.low_stock_threshold
               %>
-              <tr>
+              <tr data-pse-row="<%= product.id %>">
                 <td class="ps-3 fw-semibold"><%= product.name %></td>
                 <td><%= product.sku %></td>
                 <td><%= product.category&.name %></td>
@@ -171,7 +187,7 @@
                   v_stock = variant.available_stock.to_f
                   v_thr   = variant.low_stock_threshold
                 %>
-                <tr class="table-light">
+                <tr class="table-light" data-pse-row="<%= product.id %>">
                   <td class="ps-4 text-muted">
                     <i class="bi bi-arrow-return-right me-1"></i><%= variant.label %>
                   </td>
@@ -346,6 +362,45 @@
       });
       startProgress(dirty.length);
     });
+
+    // ---- product search (Select2) -----------------------------------------
+    // Filters the table down to one product's rows (parent + variants). Clearing
+    // the box, or "Show all", brings every row back.
+    (function () {
+      if (typeof window.jQuery === 'undefined' || !jQuery.fn.select2) return;
+      var $search = jQuery('#pse-search');
+      var allRows = Array.prototype.slice.call(table.querySelectorAll('tbody tr[data-pse-row]'));
+
+      function showAll() {
+        allRows.forEach(function (tr) { tr.hidden = false; });
+      }
+
+      function filterTo(pid) {
+        if (!pid) { showAll(); return; }
+        var first = null;
+        allRows.forEach(function (tr) {
+          var match = tr.getAttribute('data-pse-row') === String(pid);
+          tr.hidden = !match;
+          if (match && !first) first = tr;
+        });
+        if (first) first.scrollIntoView({ block: 'center' });
+      }
+
+      $search.select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        allowClear: true,
+        placeholder: $search.data('placeholder')
+      });
+      $search.on('change', function () { filterTo($search.val()); });
+
+      var clearBtn = document.getElementById('pse-search-clear');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', function () {
+          $search.val('').trigger('change');
+        });
+      }
+    })();
 
     // Restore a usable page if the browser navigates back to it from bfcache.
     window.addEventListener('pageshow', function () {
