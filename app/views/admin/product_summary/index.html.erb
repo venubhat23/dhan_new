@@ -41,6 +41,33 @@
   #pse-table td:hover .pse-edit-cell { visibility: visible; }
   .pse-input.pse-editing + .pse-edit-cell,
   .pse-input.pse-dirty + .pse-edit-cell { visibility: visible; color: #0d6efd; }
+
+  /* Saving overlay */
+  #pse-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15, 23, 42, .45); backdrop-filter: blur(3px);
+  }
+  #pse-overlay.pse-show { display: flex; }
+  .pse-overlay-card {
+    background: #fff; border-radius: 16px; padding: 30px 34px;
+    width: min(380px, 90vw); text-align: center;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .35);
+  }
+  .pse-overlay-card .pse-pct {
+    font-size: 2.6rem; font-weight: 700; color: #198754; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .pse-overlay-card .pse-label { color: #6c757d; font-size: .9rem; margin-top: 6px; }
+  .pse-track {
+    height: 9px; background: #e9ecef; border-radius: 999px;
+    overflow: hidden; margin: 16px 0 4px;
+  }
+  .pse-fill {
+    height: 100%; width: 0;
+    background: linear-gradient(90deg, #20c997, #198754);
+    border-radius: 999px; transition: width .35s ease;
+  }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
@@ -184,6 +211,14 @@
   </div>
 <% end %>
 
+<div id="pse-overlay">
+  <div class="pse-overlay-card">
+    <div class="pse-pct" id="pse-pct">0%</div>
+    <div class="pse-track"><div class="pse-fill" id="pse-bar"></div></div>
+    <div class="pse-label" id="pse-overlay-label">Saving changes…</div>
+  </div>
+</div>
+
 <script>
   (function () {
     var form      = document.getElementById('pse-form');
@@ -192,10 +227,18 @@
     var cancelBtn = document.getElementById('pse-cancel-btn');
     var counter   = document.querySelector('.pse-dirty-count');
     var bulkBtn   = document.getElementById('pse-bulk-btn');
+    var overlay   = document.getElementById('pse-overlay');
+    var bar       = document.getElementById('pse-bar');
+    var pct       = document.getElementById('pse-pct');
+    var ovLabel   = document.getElementById('pse-overlay-label');
     var bulkMode  = false;
 
+    function dirtyInputs() {
+      return Array.prototype.slice.call(form.querySelectorAll('.pse-input.pse-dirty'));
+    }
+
     function refresh() {
-      var n = form.querySelectorAll('.pse-input.pse-dirty').length;
+      var n = dirtyInputs().length;
       if (counter) counter.textContent = n;
       actions.classList.toggle('d-none', n === 0 && !bulkMode);
     }
@@ -267,5 +310,49 @@
         refresh();
       });
     }
+
+    // ---- submit: only post the cells that actually changed -----------------
+    // The table has thousands of inputs (every product x store x stock/threshold).
+    // Posting all of them blows past Rack's parameter limit -> the whole request
+    // is rejected and nothing saves. Disabling the untouched inputs keeps the
+    // payload to just the edits, which is also what makes the save fast.
+    function startProgress(count) {
+      overlay.classList.add('pse-show');
+      ovLabel.textContent = 'Saving ' + count + (count === 1 ? ' change…' : ' changes…');
+      var estMs = 500 + count * 200;
+      var start = Date.now();
+      var timer = setInterval(function () {
+        var t = (Date.now() - start) / estMs;
+        var p = t < 1 ? (1 - Math.pow(1 - t, 3)) * 90 : Math.min(98, 90 + (t - 1) * 5);
+        bar.style.width = p.toFixed(1) + '%';
+        pct.textContent = Math.round(p) + '%';
+      }, 60);
+      window.addEventListener('pagehide', function () {
+        clearInterval(timer);
+        bar.style.width = '100%';
+        pct.textContent = '100%';
+      });
+    }
+
+    form.addEventListener('submit', function (e) {
+      var dirty = dirtyInputs();
+      if (dirty.length === 0) {
+        e.preventDefault();
+        alert('No changes to save — edit a cell first.');
+        return;
+      }
+      form.querySelectorAll('.pse-input').forEach(function (input) {
+        if (!input.classList.contains('pse-dirty')) input.disabled = true;
+      });
+      startProgress(dirty.length);
+    });
+
+    // Restore a usable page if the browser navigates back to it from bfcache.
+    window.addEventListener('pageshow', function () {
+      overlay.classList.remove('pse-show');
+      bar.style.width = '0';
+      pct.textContent = '0%';
+      form.querySelectorAll('.pse-input').forEach(function (input) { input.disabled = false; });
+    });
   })();
 </script>
