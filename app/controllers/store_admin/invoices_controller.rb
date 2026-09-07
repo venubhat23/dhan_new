@@ -37,7 +37,7 @@ class StoreAdmin::InvoicesController < StoreAdmin::ApplicationController
 
   def customers_by_delivery_person
     dp_id = params[:delivery_person_id]
-    ids = dp_id.present? ? @current_store.bookings.where(delivery_person_id: dp_id).distinct.pluck(:customer_id).compact : []
+    ids = dp_id.present? ? store_bookings.where(delivery_person_id: dp_id).distinct.pluck(:customer_id).compact : []
     render json: store_customers.where(id: ids).order(:full_name).map { |c|
       { id: c.id, display_name: c.display_name, email: c.email, mobile: c.mobile }
     }
@@ -244,7 +244,7 @@ class StoreAdmin::InvoicesController < StoreAdmin::ApplicationController
 
   def related_booking
     return nil if @invoice.invoice_number.blank?
-    @current_store.bookings.find_by(invoice_number: @invoice.invoice_number)
+    store_bookings.find_by(invoice_number: @invoice.invoice_number)
   end
 
   def build_regular_invoices_query
@@ -322,7 +322,7 @@ class StoreAdmin::InvoicesController < StoreAdmin::ApplicationController
   end
 
   def update_related_booking_stock(original_quantities)
-    booking = @current_store.bookings.find_by(invoice_number: @invoice.invoice_number)
+    booking = store_bookings.find_by(invoice_number: @invoice.invoice_number)
     return unless booking
 
     processed = Set.new
@@ -357,7 +357,7 @@ class StoreAdmin::InvoicesController < StoreAdmin::ApplicationController
     return existing if existing
 
     items = []
-    unpaid_bookings = @current_store.bookings.where(customer_id: customer.id)
+    unpaid_bookings = store_bookings.where(customer_id: customer.id)
                                    .where(booking_date: start_date..end_date)
                                    .where(status: ['completed', 'delivered'])
                                    .where(payment_status: [nil, '', 'unpaid'])

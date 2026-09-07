@@ -5,6 +5,8 @@
 # Stock still lands centrally (StockBatch with store_id nil) exactly like the admin
 # flow — the store transfers it in afterwards via Stock Transfers.
 class StoreAdmin::VendorPurchasesController < Admin::VendorPurchasesController
+  include StoreAdmin::SidebarPermissions
+
   skip_before_action :ensure_admin
   before_action :ensure_store_admin_access
   before_action :ensure_can_manage_inventory!

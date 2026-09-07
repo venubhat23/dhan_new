@@ -12,6 +12,15 @@ class Booking < ApplicationRecord
 
   accepts_nested_attributes_for :booking_items, allow_destroy: true
 
+  # A booking tagged to a store draws its stock down from that store's inventory
+  # only (see BookingItem#stock_batches_scope) and is labelled a "Store Booking"
+  # in the admin lists, regardless of who keyed it in.
+  scope :store_bookings, -> { where.not(store_id: nil) }
+
+  def store_booking?
+    store_id.present?
+  end
+
 
   # Enums - Comprehensive status for complete workflow
   enum :status, {

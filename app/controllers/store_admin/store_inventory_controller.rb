@@ -58,7 +58,7 @@ class StoreAdmin::StoreInventoryController < StoreAdmin::ApplicationController
   def store_products
     product_ids = @current_store.stock_batches.where(status: 'active').pluck(:product_id)
     product_ids |= @current_store.store_inventories.pluck(:product_id)
-    product_ids |= BookingItem.where(booking_id: @current_store.bookings.select(:id)).pluck(:product_id)
+    product_ids |= BookingItem.where(booking_id: store_bookings.select(:id)).pluck(:product_id)
     Product.where(id: product_ids.compact.uniq)
   end
 

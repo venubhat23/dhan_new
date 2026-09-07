@@ -2,6 +2,8 @@
 # actions and the app/views/admin/vendors templates verbatim; only the access gate,
 # layout and redirect namespace differ (see #resource_area).
 class StoreAdmin::VendorsController < Admin::VendorsController
+  include StoreAdmin::SidebarPermissions
+
   skip_before_action :ensure_admin
   before_action :ensure_store_admin_access
   before_action :ensure_can_manage_inventory!

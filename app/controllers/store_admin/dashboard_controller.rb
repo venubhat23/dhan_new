@@ -6,9 +6,9 @@ class StoreAdmin::DashboardController < StoreAdmin::ApplicationController
       low_stock_count: 0,
       pending_incoming_transfers: 0,
       pending_outgoing_transfers: 0,
-      recent_bookings_count: @current_store.bookings.where(created_at: 1.week.ago..Time.current).count
+      recent_bookings_count: store_bookings.where(created_at: 1.week.ago..Time.current).count
     }
-    @recent_bookings = @current_store.bookings.order(created_at: :desc).limit(5).includes(:customer, booking_items: :product)
+    @recent_bookings = store_bookings.order(created_at: :desc).limit(5).includes(:customer, booking_items: :product)
     @daily_sales = calculate_daily_sales_trend
   end
 
@@ -20,11 +20,11 @@ class StoreAdmin::DashboardController < StoreAdmin::ApplicationController
     (start_date..end_date).map do |date|
       {
         date: date.strftime('%m/%d'),
-        sales: @current_store.bookings
+        sales: store_bookings
                              .where(created_at: date.beginning_of_day..date.end_of_day)
                              .where.not(status: ['cancelled', 'returned'])
                              .sum(:total_amount),
-        bookings_count: @current_store.bookings
+        bookings_count: store_bookings
                                       .where(created_at: date.beginning_of_day..date.end_of_day)
                                       .where.not(status: ['cancelled', 'returned'])
                                       .count

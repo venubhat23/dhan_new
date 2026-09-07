@@ -237,6 +237,14 @@
               </span>
             </div>
           <% end %>
+          <% if @booking.store_booking? %>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">Booking Type</strong>
+              <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                <i class="bi bi-shop-window me-1"></i>Store Booking &mdash; stock deducted from <%= @booking.store&.display_name %>
+              </span>
+            </div>
+          <% end %>
         </div>
       </div>
     </div>

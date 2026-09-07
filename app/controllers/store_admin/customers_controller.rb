@@ -23,7 +23,7 @@ class StoreAdmin::CustomersController < StoreAdmin::ApplicationController
   end
 
   def show
-    @store_bookings = @current_store.bookings.where(customer_id: @customer.id)
+    @store_bookings = store_bookings.where(customer_id: @customer.id)
                                     .order(created_at: :desc).includes(booking_items: :product)
     @store_spend = @store_bookings.where.not(status: ['cancelled', 'returned']).sum(:total_amount)
   end
@@ -221,7 +221,7 @@ class StoreAdmin::CustomersController < StoreAdmin::ApplicationController
   # here) or one they just created that has no bookings anywhere yet.
   def set_customer
     @customer = Customer.find(params[:id])
-    return if @current_store.bookings.exists?(customer_id: @customer.id)
+    return if store_bookings.exists?(customer_id: @customer.id)
     return if @customer.bookings.none?
 
     redirect_to store_admin_customers_path, alert: 'Customer not found for this store.'

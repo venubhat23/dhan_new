@@ -44,7 +44,7 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
                                          .where.not(product_variant_id: nil)
                                          .group(:product_variant_id).sum(:quantity)
     @delivery_rules = @product.delivery_rules.includes(:product)
-    @recent_bookings = @current_store.bookings.joins(:booking_items)
+    @recent_bookings = store_bookings.joins(:booking_items)
                                      .where(booking_items: { product_id: @product.id })
                                      .distinct.order(created_at: :desc).limit(10)
   end

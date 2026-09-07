@@ -123,6 +123,11 @@
   color: #495057;
   border: 1px solid rgba(108,117,125,0.3);
 }
+.source-store-booking {
+  background-color: rgba(25,135,84,0.12);
+  color: #146c43;
+  border: 1px solid rgba(25,135,84,0.35);
+}
 </style>
 
 
@@ -395,30 +400,36 @@
                       <% end %>
                       <%# Booking source label %>
                       <div class="mt-1">
-                        <% case booking.booked_by
-                           when 'mobile_api' %>
-                          <span class="badge source-badge source-mobile">
-                            <i class="bi bi-phone me-1"></i>Mobile App
-                          </span>
-                        <% when 'customer' %>
-                          <span class="badge source-badge source-customer">
-                            <i class="bi bi-globe me-1"></i>Customer Website
-                          </span>
-                        <% when 'franchise' %>
-                          <span class="badge source-badge source-franchise">
-                            <i class="bi bi-shop me-1"></i>Franchise
+                        <% if booking.store_booking? %>
+                          <span class="badge source-badge source-store-booking">
+                            <i class="bi bi-shop-window me-1"></i>Store Booking
                           </span>
                         <% else %>
-                          <span class="badge source-badge source-store">
-                            <i class="bi bi-person-gear me-1"></i>Store
-                          </span>
+                          <% case booking.booked_by
+                             when 'mobile_api' %>
+                            <span class="badge source-badge source-mobile">
+                              <i class="bi bi-phone me-1"></i>Mobile App
+                            </span>
+                          <% when 'customer' %>
+                            <span class="badge source-badge source-customer">
+                              <i class="bi bi-globe me-1"></i>Customer Website
+                            </span>
+                          <% when 'franchise' %>
+                            <span class="badge source-badge source-franchise">
+                              <i class="bi bi-shop me-1"></i>Franchise
+                            </span>
+                          <% else %>
+                            <span class="badge source-badge source-store">
+                              <i class="bi bi-person-gear me-1"></i>Admin
+                            </span>
+                          <% end %>
                         <% end %>
                       </div>
-                      <%# Store badge — shown when booking was created from a store login %>
+                      <%# Which store's inventory this sale drew down %>
                       <% if booking.store.present? %>
                         <div class="mt-1">
                           <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:0.7rem;">
-                            <i class="bi bi-shop-window me-1"></i><%= booking.store.name %>
+                            <i class="bi bi-box-seam me-1"></i><%= booking.store.name %>
                           </span>
                         </div>
                       <% end %>

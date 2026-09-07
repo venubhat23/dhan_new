@@ -131,6 +131,10 @@ class Admin::BookingsController < Admin::ApplicationController
     if current_user.franchise?
       @booking.franchise_id = current_user.franchise&.id
       @booking.booked_by = 'franchise'
+    elsif @booking.store_id.present?
+      # Store selected on the form: the sale deducts from that store's inventory
+      # only, so tag it as a store booking.
+      @booking.booked_by = 'store'
     else
       @booking.booked_by = 'admin'
     end
