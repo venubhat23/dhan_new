@@ -34,13 +34,10 @@ class StoreAdmin::ApplicationController < ApplicationController
 
   # ---- store-scoped finders shared across the store_admin controllers --------
 
-  # Bookings explicitly tied to this store, plus unassigned ones (store_id is
-  # nil for anything created without picking a store — e.g. admin-created
-  # bookings, or checkout when "collect from store" wasn't used). Without the
-  # nil branch, store_admin would show nothing for stores that never receive
-  # explicitly-assigned bookings.
+  # All bookings — kept identical to Admin::BookingsController's unscoped
+  # Booking.all so /store_admin/bookings matches /admin/bookings exactly.
   def store_bookings
-    Booking.where(store_id: [nil, @current_store.id])
+    Booking.all
   end
 
   # All customers — kept identical to Admin::CustomersController's unscoped
@@ -60,13 +57,10 @@ class StoreAdmin::ApplicationController < ApplicationController
     end
   end
 
-  # Invoices generated from bookings placed at this store (linked by invoice_number).
-  def store_invoice_numbers
-    store_bookings.where.not(invoice_number: [nil, '']).select(:invoice_number)
-  end
-
+  # All invoices — kept identical to Admin::InvoicesController's unscoped
+  # Invoice.all so /store_admin/invoices matches /admin/invoices exactly.
   def store_invoices
-    Invoice.where(invoice_number: store_invoice_numbers)
+    Invoice.all
   end
 
 end
