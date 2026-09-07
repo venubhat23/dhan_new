@@ -1,7 +1,7 @@
 class StoreAdmin::CustomersController < StoreAdmin::ApplicationController
   before_action :set_customer, only: [:show, :edit, :update, :destroy, :toggle_status, :generate_password]
 
-  # Customers with at least one booking at the current store.
+  # All customers, matching Admin::CustomersController#index.
   def index
     scope = store_customers
 
@@ -217,14 +217,10 @@ class StoreAdmin::CustomersController < StoreAdmin::ApplicationController
 
   private
 
-  # Store admins may open a customer that belongs to this store (has a booking
-  # here) or one they just created that has no bookings anywhere yet.
   def set_customer
     @customer = Customer.find(params[:id])
-    return if store_bookings.exists?(customer_id: @customer.id)
-    return if @customer.bookings.none?
-
-    redirect_to store_admin_customers_path, alert: 'Customer not found for this store.'
+  rescue ActiveRecord::RecordNotFound
+    redirect_to store_admin_customers_path, alert: 'Customer not found.'
   end
 
   # Hard-delete a customer and every row that references it (raw SQL, bypassing

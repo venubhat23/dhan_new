@@ -43,10 +43,10 @@ class StoreAdmin::ApplicationController < ApplicationController
     Booking.where(store_id: [nil, @current_store.id])
   end
 
-  # Customers who have a booking at this store. `set_customer` in the customers
-  # controller additionally tolerates just-created customers with no bookings yet.
+  # All customers — kept identical to Admin::CustomersController's unscoped
+  # Customer.all so /store_admin/customers matches /admin/customers exactly.
   def store_customers
-    Customer.where(id: store_bookings.select(:customer_id))
+    Customer.all
   end
 
   # Products this store stocks or has sold: an active stock batch here, a
