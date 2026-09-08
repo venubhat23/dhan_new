@@ -10,8 +10,22 @@ class Admin::ProductSummaryController < Admin::ApplicationController
   end
 
   def update
-    load_summary
+    # Save only needs the rows the form actually touched — loading the whole
+    # catalog (every product, variant and store-inventory row) plus rebuilding
+    # the per-store roll-ups was ~6 queries and a full-catalog Ruby loop wasted
+    # on every save. load_for_update fetches just the referenced records.
+    load_for_update
     @errors = []
+    @new_batches = []   # StockBatch rows for stock increases — one bulk insert
+    @movements   = []   # StockMovement audit rows — one bulk insert
+    # Column writes are collected as {id => value} and flushed as a single
+    # CASE-per-column UPDATE, so a 100-row bulk edit is ~4 UPDATEs, not 100+.
+    @col_updates = {
+      Product        => { stock: {}, low_stock_threshold: {} },
+      ProductVariant => { available_stock: {}, low_stock_threshold: {} }
+    }
+    @inv_updates = {}  # store_inventories.id => {quantity:, low_stock_threshold:}
+    @inv_inserts = []  # new store_inventories rows
     changed = 0
 
     # Per-row failures (e.g. adding stock with no cost price) are collected in
@@ -21,6 +35,7 @@ class Admin::ProductSummaryController < Admin::ApplicationController
       changed += apply_main_product_changes
       changed += apply_main_variant_changes
       changed += apply_store_changes
+      flush_pending_writes
     end
 
     if @errors.any? && changed.zero?
@@ -84,16 +99,91 @@ class Admin::ProductSummaryController < Admin::ApplicationController
     end
   end
 
+  # Lean loader for the save path: only the products / variants / stores named
+  # in the submitted params, plus the current central-stock total and existing
+  # store-inventory rows for exactly those keys. Everything is keyed by id so
+  # the apply_* methods do hash lookups instead of scanning @products.
+  def load_for_update
+    mp = params[:main_products]  || {}
+    mv = params[:main_variants]  || {}
+    sp = params[:store_products] || {}
+    sv = params[:store_variants] || {}
+
+    store_ids      = (sp.keys + sv.keys).map(&:to_i).uniq
+    sp_product_ids = sp.values.flat_map { |rows| rows.keys }.map(&:to_i)
+    sv_variant_ids = sv.values.flat_map { |rows| rows.keys }.map(&:to_i)
+
+    variant_ids = (mv.keys.map(&:to_i) + sv_variant_ids).uniq
+    @variants_by_id = ProductVariant.where(id: variant_ids).includes(:product).index_by(&:id)
+
+    product_ids = (mp.keys.map(&:to_i) + sp_product_ids +
+                   @variants_by_id.values.map(&:product_id)).uniq
+    @products_by_id = Product.where(id: product_ids).includes(:product_variants).index_by(&:id)
+    @stores_by_id   = Store.where(id: store_ids).index_by(&:id)
+
+    simple_ids = @products_by_id.values.reject(&:has_multiple_quantities?).map(&:id)
+    @central_stock = Hash.new(0.0).merge(
+      StockBatch.where(product_id: simple_ids, store_id: nil, status: 'active')
+                .where('quantity_remaining > 0')
+                .group(:product_id).sum(:quantity_remaining)
+    )
+
+    # Existing store_inventories rows for the referenced (store, product/variant)
+    # keys — one query instead of a find_or_initialize_by per edited cell.
+    @store_inv = {}
+    if store_ids.any?
+      inv_product_ids = (sp_product_ids + @variants_by_id.values.map(&:product_id)).uniq
+      StoreInventory.where(store_id: store_ids, product_id: inv_product_ids).each do |row|
+        @store_inv[[row.store_id, row.product_id, row.product_variant_id]] = row
+      end
+    end
+  end
+
+  def queue_col(model, id, column, value)
+    @col_updates[model][column][id.to_i] = value
+  end
+
+  # Flush the batched inserts + column updates collected during the apply_* pass.
+  def flush_pending_writes
+    now = Time.current
+    if @new_batches.any?
+      StockBatch.insert_all(@new_batches.map { |h| h.merge(created_at: now, updated_at: now) })
+    end
+    if @movements.any?
+      StockMovement.insert_all(@movements.map { |h| h.merge(created_at: now, updated_at: now) })
+    end
+
+    @col_updates.each do |model, columns|
+      columns.each do |column, map|
+        next if map.empty?
+        int = model.columns_hash[column.to_s].type == :integer
+        whens = map.map { |id, v| "WHEN #{id.to_i} THEN #{int ? v.to_i : v.to_f}" }.join(' ')
+        model.where(id: map.keys)
+             .update_all(Arel.sql("#{column} = CASE id #{whens} ELSE #{column} END, updated_at = '#{now.utc.iso8601}'"))
+      end
+    end
+
+    if @inv_inserts.any?
+      StoreInventory.insert_all(@inv_inserts.map { |h| h.merge(created_at: now, updated_at: now) })
+    end
+    if @inv_updates.any?
+      q = @inv_updates.map { |id, v| "WHEN #{id.to_i} THEN #{v[:quantity].to_f}" }.join(' ')
+      t = @inv_updates.map { |id, v| "WHEN #{id.to_i} THEN #{v[:low_stock_threshold].to_i}" }.join(' ')
+      StoreInventory.where(id: @inv_updates.keys).update_all(Arel.sql(
+        "quantity = CASE id #{q} END, low_stock_threshold = CASE id #{t} END, updated_at = '#{now.utc.iso8601}'"))
+    end
+  end
+
   # ---- writing ------------------------------------------------------------
 
   def apply_main_product_changes
     count = 0
     (params[:main_products] || {}).each do |pid, attrs|
-      product = @products.find { |p| p.id.to_s == pid.to_s }
+      product = @products_by_id[pid.to_i]
       next unless product
 
       if attrs[:threshold].present? && attrs[:threshold].to_i != product.low_stock_threshold.to_i
-        product.update_column(:low_stock_threshold, attrs[:threshold].to_i)
+        queue_col(Product, product.id, :low_stock_threshold, attrs[:threshold].to_i)
         count += 1
       end
 
@@ -105,7 +195,7 @@ class Admin::ProductSummaryController < Admin::ApplicationController
         next
       end
 
-      old_stock = @main_stock[product.id].to_f
+      old_stock = @central_stock[product.id].to_f
       next if new_stock == old_stock
 
       err = reconcile_stock(product, nil, old_stock, new_stock,
@@ -143,7 +233,7 @@ class Admin::ProductSummaryController < Admin::ApplicationController
       @errors << err
       0
     else
-      target.update_column(:available_stock, target_new.to_i)
+      queue_col(ProductVariant, target.id, :available_stock, target_new.to_i)
       1
     end
   end
@@ -151,11 +241,11 @@ class Admin::ProductSummaryController < Admin::ApplicationController
   def apply_main_variant_changes
     count = 0
     (params[:main_variants] || {}).each do |vid, attrs|
-      variant = @products.flat_map(&:product_variants).find { |v| v.id.to_s == vid.to_s }
+      variant = @variants_by_id[vid.to_i]
       next unless variant
 
       if attrs[:threshold].present? && attrs[:threshold].to_i != variant.low_stock_threshold.to_i
-        variant.update_column(:low_stock_threshold, attrs[:threshold].to_i)
+        queue_col(ProductVariant, variant.id, :low_stock_threshold, attrs[:threshold].to_i)
         count += 1
       end
 
@@ -171,7 +261,7 @@ class Admin::ProductSummaryController < Admin::ApplicationController
       if err
         @errors << err
       else
-        variant.update_column(:available_stock, new_stock.to_i)
+        queue_col(ProductVariant, variant.id, :available_stock, new_stock.to_i)
         count += 1
       end
     end
@@ -190,16 +280,16 @@ class Admin::ProductSummaryController < Admin::ApplicationController
   def apply_store_scope(scope, variant_scoped:)
     count = 0
     (scope || {}).each do |sid, rows|
-      store = @stores.find { |s| s.id.to_s == sid.to_s }
+      store = @stores_by_id[sid.to_i]
       next unless store
 
       rows.each do |rid, attrs|
         if variant_scoped
-          variant = @products.flat_map(&:product_variants).find { |v| v.id.to_s == rid.to_s }
+          variant = @variants_by_id[rid.to_i]
           next unless variant
           product_id, variant_id = variant.product_id, variant.id
         else
-          product = @products.find { |p| p.id.to_s == rid.to_s }
+          product = @products_by_id[rid.to_i]
           next unless product
           product_id, variant_id = product.id, nil
         end
@@ -208,32 +298,32 @@ class Admin::ProductSummaryController < Admin::ApplicationController
         thr_in = attrs[:threshold]
         next if qty_in.blank? && thr_in.blank?
 
-        inv = StoreInventory.find_or_initialize_by(
-          store_id: store.id, product_id: product_id, product_variant_id: variant_id
-        )
-        old_qty = inv.quantity.to_f
-        touched = false
+        inv     = @store_inv[[store.id, product_id, variant_id]]
+        old_qty = inv&.quantity.to_f
+        old_thr = inv&.low_stock_threshold.to_i
+        new_qty = qty_in.present? ? qty_in.to_f : old_qty
+        new_thr = thr_in.present? ? thr_in.to_i : old_thr
+        next if new_qty == old_qty && new_thr == old_thr
 
-        if qty_in.present? && qty_in.to_f != old_qty
-          inv.quantity = qty_in.to_f
-          touched = true
+        label = @products_by_id[product_id]&.name || variant&.label || "product #{product_id}"
+        if new_qty.negative? || new_thr.negative?
+          @errors << "#{store.name} / #{label}: quantity and threshold can't be negative"
+          next
         end
-        if thr_in.present? && thr_in.to_i != inv.low_stock_threshold.to_i
-          inv.low_stock_threshold = thr_in.to_i
-          touched = true
-        end
-        next unless touched
 
-        if inv.save
-          if inv.quantity.to_f != old_qty
-            prod = @products.find { |p| p.id == product_id }
-            log_movement(prod, inv.quantity.to_f - old_qty, inv.quantity.to_f,
-                         "#{store.name}: stock #{fmt(old_qty)} → #{fmt(inv.quantity)}") if prod
-          end
-          count += 1
+        if inv
+          @inv_updates[inv.id] = { quantity: new_qty, low_stock_threshold: new_thr }
         else
-          @errors << "#{store.name} / #{inv.label rescue product_id}: #{inv.errors.full_messages.join(', ')}"
+          @inv_inserts << { store_id: store.id, product_id: product_id, product_variant_id: variant_id,
+                            quantity: new_qty, low_stock_threshold: new_thr }
         end
+
+        if new_qty != old_qty
+          prod = @products_by_id[product_id] || variant&.product
+          log_movement(prod, new_qty - old_qty, new_qty,
+                       "#{store.name}: stock #{fmt(old_qty)} → #{fmt(new_qty)}") if prod
+        end
+        count += 1
       end
     end
     count
@@ -241,18 +331,27 @@ class Admin::ProductSummaryController < Admin::ApplicationController
 
   # Reconciles central (main-store) stock for a product/variant to new_stock.
   # Returns an error string on failure, nil on success.
+  #
+  # An increase is queued as a StockBatch row (inserted in one batch by
+  # flush_pending_writes); a decrease draws down existing batches FIFO right
+  # away. The legacy products.stock column is then resynced arithmetically from
+  # the known central total + the amount actually moved, so there is no extra
+  # SELECT per edited row.
   def reconcile_stock(product, variant, old_stock, new_stock, cost:, sell:, label:)
     delta = new_stock - old_stock
     return nil if delta.zero?
 
+    applied = delta
     if delta.positive?
       cost_f = cost.to_f
       sell_f = sell.to_f
       sell_f = cost_f if sell_f <= 0
       return "#{label}: set a cost/buying price before adding stock" if cost_f <= 0
 
-      product.stock_batches.create!(
-        vendor: default_stock_vendor,
+      @new_batches << {
+        product_id: product.id,
+        vendor_id: default_stock_vendor.id,
+        store_id: nil,
         product_variant_id: variant&.id,
         quantity_purchased: delta,
         quantity_remaining: delta,
@@ -260,26 +359,29 @@ class Admin::ProductSummaryController < Admin::ApplicationController
         selling_price: sell_f,
         batch_date: Date.current,
         status: 'active'
-      )
+      }
     else
-      reduce_central_batches(product, variant, delta.abs)
+      # reduce_central_batches caps at what actually exists; applied is the real
+      # signed change so the resync below lands on the true new on-hand.
+      applied = -reduce_central_batches(product, variant, delta.abs)
     end
 
-    # Keep the legacy products.stock column honest by resyncing it to the actual
-    # central batch total after the adjustment (matches Admin::ProductsController
-    # #apply_stock_change and BookingItem). A decrease is capped at the central
-    # stock that actually exists, so the resynced total is the real new on-hand.
     unless product.has_multiple_quantities?
-      synced = product.stock_batches.central.active.sum(:quantity_remaining)
-      product.update_column(:stock, synced)
+      new_total = old_stock + applied
+      queue_col(Product, product.id, :stock, new_total)
+      @central_stock[product.id] = new_total
     end
 
-    log_movement(product, delta, new_stock, label)
+    log_movement(product, applied, old_stock + applied, label)
     nil
   rescue ActiveRecord::RecordInvalid => e
+    # A validation failure sends no SQL, so the surrounding transaction stays
+    # usable: report this row and let the rest of the save commit.
     "#{label}: #{e.message}"
   end
 
+  # Draws `amount` down from the product's central active batches, FIFO.
+  # Returns the amount actually removed (may be less than `amount`).
   def reduce_central_batches(product, variant, amount)
     scope = product.stock_batches.central.active.by_fifo
     scope = scope.where(product_variant_id: variant.id) if variant
@@ -290,10 +392,12 @@ class Admin::ProductSummaryController < Admin::ApplicationController
       batch.reduce_stock!(take)
       remaining -= take
     end
+    amount - remaining
   end
 
   def log_movement(product, delta, new_total, note)
-    product.stock_movements.create!(
+    @movements << {
+      product_id: product.id,
       reference_type: 'adjustment',
       reference_id: nil,
       movement_type: delta.positive? ? 'added' : 'adjusted',
@@ -301,9 +405,7 @@ class Admin::ProductSummaryController < Admin::ApplicationController
       stock_before: new_total - delta,
       stock_after: new_total,
       notes: "Product Summary edit: #{note}"
-    )
-  rescue => e
-    Rails.logger.error "Product Summary movement log failed (Product ##{product.id}): #{e.message}"
+    }
   end
 
   def default_stock_vendor

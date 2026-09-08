@@ -18,8 +18,10 @@ class Admin::MobileUiController < ActionController::Base
   end
 
   def do_login
-    if params[:username].to_s.strip == MOBILE_USERNAME &&
-       params[:password].to_s == MOBILE_PASSWORD
+    # Username is case-insensitive (mobile keyboards auto-capitalize); password
+    # is exact but trimmed of stray leading/trailing whitespace from autofill.
+    if params[:username].to_s.strip.casecmp?(MOBILE_USERNAME) &&
+       params[:password].to_s.strip == MOBILE_PASSWORD
       session[:mobile_ui_auth] = true
       redirect_to admin_mobile_ui_bookings_path
     else

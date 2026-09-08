@@ -11,13 +11,18 @@ class StoreAdmin::ProductSummaryController < StoreAdmin::ApplicationController
   end
 
   def update
-    load_summary
+    # Save only touches the submitted rows — no need to load the whole catalog.
+    load_for_update
     @errors = []
+    @movements   = []   # one bulk insert
+    @inv_updates = {}    # store_inventories.id => {quantity:, low_stock_threshold:}
+    @inv_inserts = []    # new store_inventories rows
     changed = 0
 
     ActiveRecord::Base.transaction do
       changed += apply_store_scope(params[:store_products], variant_scoped: false)
       changed += apply_store_scope(params[:store_variants], variant_scoped: true)
+      flush_pending_writes
     end
 
     if @errors.any? && changed.zero?
@@ -67,6 +72,38 @@ class StoreAdmin::ProductSummaryController < StoreAdmin::ApplicationController
     end
   end
 
+  # Lean loader for the save path: only the products / variants named in the
+  # submitted params, plus this store's existing inventory rows for those keys.
+  def load_for_update
+    sp = params[:store_products] || {}
+    sv = params[:store_variants] || {}
+
+    @variants_by_id = ProductVariant.where(id: sv.keys.map(&:to_i)).includes(:product).index_by(&:id)
+    product_ids = (sp.keys.map(&:to_i) + @variants_by_id.values.map(&:product_id)).uniq
+    @products_by_id = Product.where(id: product_ids).index_by(&:id)
+
+    @store_inv = {}
+    StoreInventory.where(store_id: @current_store.id, product_id: product_ids).each do |row|
+      @store_inv[[row.product_id, row.product_variant_id]] = row
+    end
+  end
+
+  def flush_pending_writes
+    now = Time.current
+    if @inv_inserts.any?
+      StoreInventory.insert_all(@inv_inserts.map { |h| h.merge(created_at: now, updated_at: now) })
+    end
+    if @inv_updates.any?
+      q = @inv_updates.map { |id, v| "WHEN #{id.to_i} THEN #{v[:quantity].to_f}" }.join(' ')
+      t = @inv_updates.map { |id, v| "WHEN #{id.to_i} THEN #{v[:low_stock_threshold].to_i}" }.join(' ')
+      StoreInventory.where(id: @inv_updates.keys).update_all(Arel.sql(
+        "quantity = CASE id #{q} END, low_stock_threshold = CASE id #{t} END, updated_at = '#{now.utc.iso8601}'"))
+    end
+    if @movements.any?
+      StockMovement.insert_all(@movements.map { |h| h.merge(created_at: now, updated_at: now) })
+    end
+  end
+
   # ---- writing ------------------------------------------------------------
 
   # store_products: { product_id => { qty:, threshold: } }
@@ -75,11 +112,11 @@ class StoreAdmin::ProductSummaryController < StoreAdmin::ApplicationController
     count = 0
     (scope || {}).each do |rid, attrs|
       if variant_scoped
-        variant = @products.flat_map(&:product_variants).find { |v| v.id.to_s == rid.to_s }
+        variant = @variants_by_id[rid.to_i]
         next unless variant
         product_id, variant_id = variant.product_id, variant.id
       else
-        product = @products.find { |p| p.id.to_s == rid.to_s }
+        product = @products_by_id[rid.to_i]
         next unless product
         product_id, variant_id = product.id, nil
       end
@@ -88,38 +125,39 @@ class StoreAdmin::ProductSummaryController < StoreAdmin::ApplicationController
       thr_in = attrs[:threshold]
       next if qty_in.blank? && thr_in.blank?
 
-      inv = StoreInventory.find_or_initialize_by(
-        store_id: @current_store.id, product_id: product_id, product_variant_id: variant_id
-      )
-      old_qty = inv.quantity.to_f
-      touched = false
+      inv     = @store_inv[[product_id, variant_id]]
+      old_qty = inv&.quantity.to_f
+      old_thr = inv&.low_stock_threshold.to_i
+      new_qty = qty_in.present? ? qty_in.to_f : old_qty
+      new_thr = thr_in.present? ? thr_in.to_i : old_thr
+      next if new_qty == old_qty && new_thr == old_thr
 
-      if qty_in.present? && qty_in.to_f != old_qty
-        inv.quantity = qty_in.to_f
-        touched = true
+      label = @products_by_id[product_id]&.name || variant&.label || "product #{product_id}"
+      if new_qty.negative? || new_thr.negative?
+        @errors << "#{@current_store.name} / #{label}: quantity and threshold can't be negative"
+        next
       end
-      if thr_in.present? && thr_in.to_i != inv.low_stock_threshold.to_i
-        inv.low_stock_threshold = thr_in.to_i
-        touched = true
-      end
-      next unless touched
 
-      if inv.save
-        if inv.quantity.to_f != old_qty
-          prod = @products.find { |p| p.id == product_id }
-          log_movement(prod, inv.quantity.to_f - old_qty, inv.quantity.to_f,
-                       "#{@current_store.name}: stock #{fmt(old_qty)} → #{fmt(inv.quantity)}") if prod
-        end
-        count += 1
+      if inv
+        @inv_updates[inv.id] = { quantity: new_qty, low_stock_threshold: new_thr }
       else
-        @errors << "#{@current_store.name} / #{(inv.label rescue product_id)}: #{inv.errors.full_messages.join(', ')}"
+        @inv_inserts << { store_id: @current_store.id, product_id: product_id, product_variant_id: variant_id,
+                          quantity: new_qty, low_stock_threshold: new_thr }
       end
+
+      if new_qty != old_qty
+        prod = @products_by_id[product_id] || variant&.product
+        log_movement(prod, new_qty - old_qty, new_qty,
+                     "#{@current_store.name}: stock #{fmt(old_qty)} → #{fmt(new_qty)}") if prod
+      end
+      count += 1
     end
     count
   end
 
   def log_movement(product, delta, new_total, note)
-    product.stock_movements.create!(
+    @movements << {
+      product_id: product.id,
       reference_type: 'adjustment',
       reference_id: nil,
       movement_type: delta.positive? ? 'added' : 'adjusted',
@@ -127,9 +165,7 @@ class StoreAdmin::ProductSummaryController < StoreAdmin::ApplicationController
       stock_before: new_total - delta,
       stock_after: new_total,
       notes: "Store Product Summary edit: #{note}"
-    )
-  rescue => e
-    Rails.logger.error "Store Product Summary movement log failed (Product ##{product.id}): #{e.message}"
+    }
   end
 
   def fmt(n)

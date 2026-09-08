@@ -272,7 +272,8 @@
     function startProgress(count) {
       overlay.classList.add('pse-show');
       ovLabel.textContent = 'Saving ' + count + (count === 1 ? ' change…' : ' changes…');
-      var estMs = 500 + count * 200;
+      // Save batches its writes now — time is roughly flat regardless of count.
+      var estMs = 800 + count * 25;
       var start = Date.now();
       var timer = setInterval(function () {
         var t = (Date.now() - start) / estMs;

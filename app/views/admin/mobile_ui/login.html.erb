@@ -72,7 +72,8 @@
           <div class="input-group">
             <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
             <%= f.text_field :username, class: 'form-control', placeholder: 'Enter username',
-                autocomplete: 'username', autofocus: true, value: params[:username] %>
+                autocomplete: 'username', autofocus: true, value: params[:username],
+                autocapitalize: 'none', autocorrect: 'off', spellcheck: false %>
           </div>
         </div>
         <div class="mb-4">

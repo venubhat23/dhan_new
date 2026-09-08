@@ -31,6 +31,28 @@ module Admin::InvoicesHelper
     safe_join(options)
   end
 
+  # Formats a number for a line-item <input value="">. Trims a trailing ".0" so a
+  # whole value like 7 renders as "7" not "7.0" — the extra characters get clipped
+  # in the narrow line-item columns and make the field look empty. nil -> "".
+  def invoice_input_number(value)
+    return "" if value.nil?
+    n = value.to_f
+    (n % 1).zero? ? n.to_i.to_s : n.to_s
+  end
+
+  # Quantity to show in a line-item row, falling back to 1 for legacy rows that
+  # never had a quantity persisted (otherwise the field renders blank).
+  def invoice_line_item_quantity(item)
+    item.quantity.present? && item.quantity.to_f.positive? ? item.quantity : 1
+  end
+
+  # Line total to show, recomputed from qty x net unit price when the stored
+  # total is missing so the column is never blank.
+  def invoice_line_item_total(item)
+    return item.total_amount if item.total_amount.present? && item.total_amount.to_f.positive?
+    invoice_line_item_quantity(item).to_f * item.unit_price.to_f
+  end
+
   # GST rate (%) that applies to a product's line total, matching the tax
   # calculation used on the invoice show page.
   def invoice_gst_rate_for(product)

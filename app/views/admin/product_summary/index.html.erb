@@ -335,7 +335,9 @@
     function startProgress(count) {
       overlay.classList.add('pse-show');
       ovLabel.textContent = 'Saving ' + count + (count === 1 ? ' change…' : ' changes…');
-      var estMs = 500 + count * 200;
+      // The save now batches its writes, so time is roughly flat regardless of
+      // how many cells changed — a small per-change nudge just keeps the bar moving.
+      var estMs = 800 + count * 25;
       var start = Date.now();
       var timer = setInterval(function () {
         var t = (Date.now() - start) / estMs;
