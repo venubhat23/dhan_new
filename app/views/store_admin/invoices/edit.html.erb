@@ -89,7 +89,7 @@
                       <%= invoice_product_options(selected_product_id: item.product_id, selected_unit_price: item.unit_price) %>
                     </select>
                   </div>
-                  <div class="col-4 col-md-2">
+                  <div class="col-3 col-md-1">
                     <label class="form-label">Qty</label>
                     <input type="number"
                            name="invoice[invoice_items_attributes][<%= index %>][quantity]"
@@ -114,10 +114,10 @@
                              oninput="applyLineDiscount(this)">
                     </div>
                   </div>
-                  <div class="col-4 col-md-2">
+                  <div class="col-5 col-md-3">
                     <label class="form-label">Discount</label>
                     <div class="input-group">
-                      <select name="invoice[invoice_items_attributes][<%= index %>][discount_type]" class="form-select discount-type-input flex-grow-0 w-auto" onchange="applyLineDiscount(this)">
+                      <select name="invoice[invoice_items_attributes][<%= index %>][discount_type]" class="form-select discount-type-input flex-grow-0" onchange="applyLineDiscount(this)">
                         <option value="" <%= 'selected' if item.discount_type.blank? %>>None</option>
                         <option value="percentage" <%= 'selected' if item.discount_type == 'percentage' %>>%</option>
                         <option value="fixed" <%= 'selected' if item.discount_type == 'fixed' %>>₹</option>
@@ -178,7 +178,7 @@
                       <%= invoice_product_options %>
                     </select>
                   </div>
-                  <div class="col-4 col-md-2">
+                  <div class="col-3 col-md-1">
                     <label class="form-label">Qty</label>
                     <input type="number"
                            name=""
@@ -203,10 +203,10 @@
                              oninput="applyLineDiscount(this)">
                     </div>
                   </div>
-                  <div class="col-4 col-md-2">
+                  <div class="col-5 col-md-3">
                     <label class="form-label">Discount</label>
                     <div class="input-group">
-                      <select name="" class="form-select discount-type-input flex-grow-0 w-auto" onchange="applyLineDiscount(this)">
+                      <select name="" class="form-select discount-type-input flex-grow-0" onchange="applyLineDiscount(this)">
                         <option value="">None</option>
                         <option value="percentage">%</option>
                         <option value="fixed">₹</option>
@@ -647,9 +647,16 @@ document.addEventListener('DOMContentLoaded', function() {
   padding-right: 0.4rem;
 }
 .line-item-row .discount-type-input {
-  padding-left: 0.4rem;
-  padding-right: 1.4rem;
-  background-position: right 0.3rem center;
+  flex: 0 0 4.25rem;
+  width: 4.25rem;
+  min-width: 0;
+  padding-left: 0.35rem;
+  padding-right: 1.15rem;
+  background-position: right 0.2rem center;
+  background-size: 10px 8px;
+}
+.line-item-row .discount-value-input {
+  min-width: 0;
 }
 .line-item-row input[type="number"]::-webkit-outer-spin-button,
 .line-item-row input[type="number"]::-webkit-inner-spin-button {
