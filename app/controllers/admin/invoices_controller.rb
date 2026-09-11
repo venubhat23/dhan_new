@@ -271,22 +271,27 @@ class Admin::InvoicesController < Admin::ApplicationController
     @invoice.total_amount = new_total + @invoice.delivery_charge.to_f
 
     if @invoice.save
-      # Update stock for products after successful save
-      @invoice.invoice_items.each do |item|
-        if item.product && item.product.respond_to?(:track_stock?) && item.product.track_stock?
+      # When this invoice was generated from a booking, Invoice#sync_booking_items_from_invoice
+      # (an after_save hook) has already reconciled that booking's line items to match this
+      # invoice, and the BookingItem stock callbacks fired as part of that reconciliation.
+      # Running our own quantity/stock diffing here on top of it double-counts: the booking
+      # ends up at (old qty + new qty), which then syncs back and inflates the invoice too.
+      # So only touch stock manually for standalone invoices that have no originating booking.
+      related_booking = Booking.find_by(invoice_number: @invoice.invoice_number)
+
+      unless related_booking
+        @invoice.invoice_items.each do |item|
+          next unless item.product && item.product.respond_to?(:track_stock?) && item.product.track_stock?
+
           # For new items, original_quantities won't have this item.id, so original_qty = 0
           original_qty = original_quantities[item.id] || 0
           qty_difference = item.quantity - original_qty
 
-          # Only update stock if there's a quantity change and product supports stock updates
           if qty_difference != 0 && item.product.respond_to?(:update_stock_for_invoice)
             item.product.update_stock_for_invoice(qty_difference)
           end
         end
       end
-
-      # Update related booking stock if invoice is connected to a booking
-      update_related_booking_stock(original_quantities)
 
       if params[:mobile_ui].present?
         redirect_to admin_mobile_ui_show_invoice_path(@invoice), notice: 'Invoice was successfully updated.'
@@ -841,63 +846,6 @@ class Admin::InvoicesController < Admin::ApplicationController
   def invoice_params
     params.require(:invoice).permit(:invoice_date, :due_date, :status, :payment_status, :total_amount, :delivery_charge,
                                    invoice_items_attributes: [:id, :product_id, :description, :quantity, :unit_price, :total_amount, :discount_type, :discount_value, :original_unit_price, :_destroy])
-  end
-
-  def update_related_booking_stock(original_quantities)
-    # Find booking related to this invoice
-    related_booking = Booking.find_by(invoice_number: @invoice.invoice_number)
-    return unless related_booking
-
-    # Track which invoice items have been processed to avoid conflicts
-    processed_products = Set.new
-
-    @invoice.invoice_items.each do |invoice_item|
-      next unless invoice_item.product
-      next if processed_products.include?(invoice_item.product_id)
-
-      # Find corresponding booking item
-      booking_item = related_booking.booking_items.find_by(product_id: invoice_item.product_id)
-      next unless booking_item
-
-      # Calculate quantity difference for this invoice item
-      original_qty = original_quantities[invoice_item.id] || 0
-      invoice_qty_difference = invoice_item.quantity - original_qty
-
-      if invoice_qty_difference != 0
-        # Update the booking item quantity to match invoice item
-        new_booking_qty = booking_item.quantity + invoice_qty_difference
-
-        if new_booking_qty > 0
-          # Update booking item quantity (this will trigger its stock update callbacks)
-          booking_item.update!(quantity: new_booking_qty)
-        else
-          # If quantity becomes 0 or negative, remove the booking item
-          booking_item.destroy!
-        end
-
-        processed_products.add(invoice_item.product_id)
-      end
-    end
-
-    # Handle removed invoice items (items that were deleted from invoice)
-    invoice_items_attributes = invoice_params[:invoice_items_attributes]
-    if invoice_items_attributes
-      invoice_items_attributes.each do |_, item_attrs|
-        if item_attrs['_destroy'] == '1' && item_attrs['id'].present? && item_attrs['product_id'].present?
-          # This invoice item was deleted, find corresponding booking item
-          booking_item = related_booking.booking_items.find_by(product_id: item_attrs['product_id'])
-          if booking_item
-            # Remove the booking item as well to keep them in sync
-            booking_item.destroy!
-          end
-        end
-      end
-    end
-
-    # Recalculate booking totals
-    related_booking.reload
-    new_booking_total = related_booking.booking_items.sum { |item| item.quantity * item.price }
-    related_booking.update!(total_amount: new_booking_total)
   end
 
   def generate_customer_invoice(customer, month, year)

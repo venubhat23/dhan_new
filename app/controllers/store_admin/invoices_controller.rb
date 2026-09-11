@@ -86,9 +86,6 @@ class StoreAdmin::InvoicesController < StoreAdmin::ApplicationController
   end
 
   def update
-    original_quantities = {}
-    @invoice.invoice_items.each { |item| original_quantities[item.id] = item.quantity if item.product }
-
     @invoice.assign_attributes(invoice_params)
     new_total = 0
     (invoice_params[:invoice_items_attributes] || {}).each do |_, attrs|
@@ -98,7 +95,9 @@ class StoreAdmin::InvoicesController < StoreAdmin::ApplicationController
     @invoice.total_amount = new_total + @invoice.delivery_charge.to_f
 
     if @invoice.save
-      update_related_booking_stock(original_quantities)
+      # A booking-linked invoice is reconciled (line items, quantities and the
+      # resulting stock movements) by Invoice#sync_booking_items_from_invoice on
+      # save. Diffing quantities onto the booking here as well double-counts.
       redirect_to store_admin_invoice_path(@invoice), notice: 'Invoice was successfully updated.'
     else
       @invoice_items = @invoice.invoice_items.includes(product: :product_variants)
@@ -319,32 +318,6 @@ class StoreAdmin::InvoicesController < StoreAdmin::ApplicationController
     base_query = base_query.where('invoices.invoice_date >= ?', Date.parse(params[:date_from])) if params[:date_from].present?
     base_query = base_query.where('invoices.invoice_date <= ?', Date.parse(params[:date_to])) if params[:date_to].present?
     base_query
-  end
-
-  def update_related_booking_stock(original_quantities)
-    booking = store_bookings.find_by(invoice_number: @invoice.invoice_number)
-    return unless booking
-
-    processed = Set.new
-    @invoice.invoice_items.each do |invoice_item|
-      next unless invoice_item.product
-      next if processed.include?(invoice_item.product_id)
-      booking_item = booking.booking_items.find_by(product_id: invoice_item.product_id)
-      next unless booking_item
-      diff = invoice_item.quantity - (original_quantities[invoice_item.id] || 0)
-      next if diff.zero?
-      new_qty = booking_item.quantity + diff
-      new_qty > 0 ? booking_item.update!(quantity: new_qty) : booking_item.destroy!
-      processed.add(invoice_item.product_id)
-    end
-
-    (invoice_params[:invoice_items_attributes] || {}).each do |_, attrs|
-      next unless attrs['_destroy'] == '1' && attrs['id'].present? && attrs['product_id'].present?
-      booking.booking_items.find_by(product_id: attrs['product_id'])&.destroy!
-    end
-
-    booking.reload
-    booking.update!(total_amount: booking.booking_items.sum { |i| i.quantity * i.price })
   end
 
   # Store-scoped port of Admin::InvoicesController#generate_customer_invoice —

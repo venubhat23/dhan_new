@@ -69,194 +69,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Invoice Line Items -->
-      <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 text-dark">Invoice Line Items</h6>
-          <button type="button" class="btn btn-primary btn-sm" onclick="addNewLineItem()">
-            <i class="bi bi-plus-lg me-1"></i>Add Product
-          </button>
-        </div>
-        <div class="card-body">
-          <div id="line-items-container">
-            <% @invoice_items.each_with_index do |item, index| %>
-              <div class="line-item-row" data-index="<%= index %>">
-                <div class="row g-2 align-items-end">
-                  <div class="col-12 col-md-3">
-                    <label class="form-label">Product</label>
-                    <select name="invoice[invoice_items_attributes][<%= index %>][product_id]" class="form-select product-select" data-current-product="<%= item.product_id %>" onchange="updateProductPrice(this)">
-                      <%= invoice_product_options(selected_product_id: item.product_id, selected_unit_price: item.unit_price) %>
-                    </select>
-                  </div>
-                  <div class="col-3 col-md-1">
-                    <label class="form-label">Qty</label>
-                    <input type="number"
-                           name="invoice[invoice_items_attributes][<%= index %>][quantity]"
-                           value="<%= invoice_input_number(invoice_line_item_quantity(item)) %>"
-                           min="1"
-                           step="1"
-                           class="form-control quantity-input"
-                           onchange="calculateLineTotal(this)"
-                           oninput="calculateLineTotal(this)"
-                           required>
-                  </div>
-                  <div class="col-4 col-md-2">
-                    <label class="form-label">List Price</label>
-                    <div class="input-group">
-                      <span class="input-group-text">₹</span>
-                      <input type="number"
-                             name="invoice[invoice_items_attributes][<%= index %>][original_unit_price]"
-                             value="<%= invoice_input_number(item.original_unit_price.presence || item.unit_price) %>"
-                             step="0.01"
-                             min="0"
-                             class="form-control list-price-input"
-                             oninput="applyLineDiscount(this)">
-                    </div>
-                  </div>
-                  <div class="col-5 col-md-3">
-                    <label class="form-label">Discount</label>
-                    <div class="input-group">
-                      <select name="invoice[invoice_items_attributes][<%= index %>][discount_type]" class="form-select discount-type-input flex-grow-0" onchange="applyLineDiscount(this)">
-                        <option value="" <%= 'selected' if item.discount_type.blank? %>>None</option>
-                        <option value="percentage" <%= 'selected' if item.discount_type == 'percentage' %>>%</option>
-                        <option value="fixed" <%= 'selected' if item.discount_type == 'fixed' %>>₹</option>
-                      </select>
-                      <input type="number"
-                             name="invoice[invoice_items_attributes][<%= index %>][discount_value]"
-                             value="<%= invoice_input_number(item.discount_value) %>"
-                             step="0.01" min="0" placeholder="0"
-                             class="form-control discount-value-input"
-                             oninput="applyLineDiscount(this)">
-                    </div>
-                    <small class="text-muted">Net: ₹<span class="net-price-display"><%= sprintf('%.2f', item.unit_price.to_f) %></span></small>
-                  </div>
-                  <div class="col-6 col-md-2">
-                    <label class="form-label">Total</label>
-                    <div class="input-group">
-                      <span class="input-group-text">₹</span>
-                      <input type="number"
-                             name="invoice[invoice_items_attributes][<%= index %>][total_amount]"
-                             value="<%= invoice_input_number(invoice_line_item_total(item)) %>"
-                             step="0.01"
-                             class="form-control line-total"
-                             readonly>
-                    </div>
-                  </div>
-                  <div class="col-6 col-md-1">
-                    <label class="form-label d-none d-md-block">&nbsp;</label>
-                    <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeLineItem(this)" title="Remove Item">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </div>
-                </div>
-                <input type="hidden" name="invoice[invoice_items_attributes][<%= index %>][unit_price]" value="<%= item.unit_price %>" class="unit-price-input">
-                <div class="row mt-2">
-                  <div class="col-12">
-                    <input type="text"
-                           name="invoice[invoice_items_attributes][<%= index %>][description]"
-                           value="<%= item.description %>"
-                           class="form-control"
-                           placeholder="Item description (optional)">
-                  </div>
-                </div>
-                <input type="hidden" name="invoice[invoice_items_attributes][<%= index %>][id]" value="<%= item.id %>">
-                <input type="hidden" class="gst-rate-field" value="<%= invoice_gst_rate_for(item.product) %>">
-              </div>
-              <% unless index == @invoice_items.length - 1 %>
-                <hr class="my-3">
-              <% end %>
-            <% end %>
-
-            <!-- Template for new items (hidden) -->
-            <div id="line-item-template" style="display: none;">
-              <div class="line-item-row" data-index="">
-                <div class="row g-2 align-items-end">
-                  <div class="col-12 col-md-3">
-                    <label class="form-label">Product</label>
-                    <select name="" class="form-select product-select" onchange="updateProductPrice(this)">
-                      <%= invoice_product_options %>
-                    </select>
-                  </div>
-                  <div class="col-3 col-md-1">
-                    <label class="form-label">Qty</label>
-                    <input type="number"
-                           name=""
-                           value="1"
-                           min="1"
-                           step="1"
-                           class="form-control quantity-input"
-                           onchange="calculateLineTotal(this)"
-                           oninput="calculateLineTotal(this)"
-                           required>
-                  </div>
-                  <div class="col-4 col-md-2">
-                    <label class="form-label">List Price</label>
-                    <div class="input-group">
-                      <span class="input-group-text">₹</span>
-                      <input type="number"
-                             name=""
-                             value="0"
-                             step="0.01"
-                             min="0"
-                             class="form-control list-price-input"
-                             oninput="applyLineDiscount(this)">
-                    </div>
-                  </div>
-                  <div class="col-5 col-md-3">
-                    <label class="form-label">Discount</label>
-                    <div class="input-group">
-                      <select name="" class="form-select discount-type-input flex-grow-0" onchange="applyLineDiscount(this)">
-                        <option value="">None</option>
-                        <option value="percentage">%</option>
-                        <option value="fixed">₹</option>
-                      </select>
-                      <input type="number" name="" value="" step="0.01" min="0" placeholder="0"
-                             class="form-control discount-value-input" oninput="applyLineDiscount(this)">
-                    </div>
-                    <small class="text-muted">Net: ₹<span class="net-price-display">0.00</span></small>
-                  </div>
-                  <div class="col-6 col-md-2">
-                    <label class="form-label">Total</label>
-                    <div class="input-group">
-                      <span class="input-group-text">₹</span>
-                      <input type="number"
-                             name=""
-                             value="0"
-                             step="0.01"
-                             class="form-control line-total"
-                             readonly>
-                    </div>
-                  </div>
-                  <div class="col-6 col-md-1">
-                    <label class="form-label d-none d-md-block">&nbsp;</label>
-                    <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeLineItem(this)" title="Remove Item">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </div>
-                </div>
-                <input type="hidden" name="" value="0" class="unit-price-input">
-                <div class="row mt-2">
-                  <div class="col-12">
-                    <input type="text"
-                           name=""
-                           class="form-control"
-                           placeholder="Item description (optional)">
-                  </div>
-                </div>
-                <input type="hidden" class="gst-rate-field" value="0">
-              </div>
-            </div>
-          </div>
-
-          <% if @invoice_items.empty? %>
-            <div id="no-items-message" class="text-center py-4 text-muted">
-              <i class="bi bi-plus-circle display-4 d-block mb-2"></i>
-              <p>No line items yet. Click "Add Product" to get started.</p>
-            </div>
-          <% end %>
-        </div>
-      </div>
     </div>
 
     <!-- Invoice Summary -->
@@ -352,6 +164,192 @@
         <div class="d-grid gap-2">
           <%= f.submit "Update Invoice", class: "btn btn-primary btn-lg" %>
           <%= link_to "Cancel", (local_assigns[:mobile_ui] ? admin_mobile_ui_show_invoice_path(@invoice) : admin_invoice_path(@invoice)), class: "btn btn-outline-secondary" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invoice Line Items (full width) -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 text-dark">Invoice Line Items</h6>
+          <button type="button" class="btn btn-primary btn-sm" onclick="addNewLineItem()">
+            <i class="bi bi-plus-lg me-1"></i>Add Product
+          </button>
+        </div>
+        <div class="card-body">
+          <div id="line-items-container">
+            <% @invoice_items.each_with_index do |item, index| %>
+              <div class="line-item-row" data-index="<%= index %>">
+                <button type="button" class="btn btn-sm btn-outline-danger line-item-remove" onclick="removeLineItem(this)" title="Remove Item">
+                  <i class="bi bi-trash"></i>
+                </button>
+                <div class="row g-3 align-items-end">
+                  <div class="col-12 col-md-3">
+                    <label class="form-label">Product</label>
+                    <select name="invoice[invoice_items_attributes][<%= index %>][product_id]" class="form-select product-select" data-current-product="<%= item.product_id %>" onchange="updateProductPrice(this)">
+                      <%= invoice_product_options(selected_product_id: item.product_id, selected_unit_price: item.unit_price) %>
+                    </select>
+                  </div>
+                  <div class="col-6 col-md-2">
+                    <label class="form-label">Qty</label>
+                    <input type="number"
+                           name="invoice[invoice_items_attributes][<%= index %>][quantity]"
+                           value="<%= invoice_input_number(invoice_line_item_quantity(item)) %>"
+                           min="0"
+                           step="0.01"
+                           class="form-control form-control-lg quantity-input"
+                           onchange="calculateLineTotal(this)"
+                           oninput="calculateLineTotal(this)"
+                           required>
+                  </div>
+                  <div class="col-6 col-md-2">
+                    <label class="form-label">List Price</label>
+                    <div class="input-group">
+                      <span class="input-group-text">₹</span>
+                      <input type="number"
+                             name="invoice[invoice_items_attributes][<%= index %>][original_unit_price]"
+                             value="<%= invoice_input_number(item.original_unit_price.presence || item.unit_price) %>"
+                             step="0.01"
+                             min="0"
+                             class="form-control list-price-input"
+                             oninput="applyLineDiscount(this)">
+                    </div>
+                  </div>
+                  <div class="col-7 col-md-3">
+                    <label class="form-label">Discount</label>
+                    <div class="input-group">
+                      <select name="invoice[invoice_items_attributes][<%= index %>][discount_type]" class="form-select discount-type-input flex-grow-0" onchange="applyLineDiscount(this)">
+                        <option value="" <%= 'selected' if item.discount_type.blank? %>>None</option>
+                        <option value="percentage" <%= 'selected' if item.discount_type == 'percentage' %>>%</option>
+                        <option value="fixed" <%= 'selected' if item.discount_type == 'fixed' %>>₹</option>
+                      </select>
+                      <input type="number"
+                             name="invoice[invoice_items_attributes][<%= index %>][discount_value]"
+                             value="<%= invoice_input_number(item.discount_value) %>"
+                             step="0.01" min="0" placeholder="0"
+                             class="form-control discount-value-input"
+                             oninput="applyLineDiscount(this)">
+                    </div>
+                    <small class="text-muted">Net: ₹<span class="net-price-display"><%= sprintf('%.2f', item.unit_price.to_f) %></span></small>
+                  </div>
+                  <div class="col-5 col-md-2">
+                    <label class="form-label">Total</label>
+                    <div class="input-group">
+                      <span class="input-group-text">₹</span>
+                      <input type="number"
+                             name="invoice[invoice_items_attributes][<%= index %>][total_amount]"
+                             value="<%= invoice_input_number(invoice_line_item_total(item)) %>"
+                             step="0.01"
+                             class="form-control line-total"
+                             readonly>
+                    </div>
+                  </div>
+                </div>
+                <input type="hidden" name="invoice[invoice_items_attributes][<%= index %>][unit_price]" value="<%= item.unit_price %>" class="unit-price-input">
+                <div class="row mt-3">
+                  <div class="col-12">
+                    <input type="text"
+                           name="invoice[invoice_items_attributes][<%= index %>][description]"
+                           value="<%= item.description %>"
+                           class="form-control"
+                           placeholder="Item description (optional)">
+                  </div>
+                </div>
+                <input type="hidden" name="invoice[invoice_items_attributes][<%= index %>][id]" value="<%= item.id %>">
+                <input type="hidden" class="gst-rate-field" value="<%= invoice_gst_rate_for(item.product) %>">
+              </div>
+              <% unless index == @invoice_items.length - 1 %>
+                <hr class="my-3">
+              <% end %>
+            <% end %>
+
+            <!-- Template for new items (hidden) -->
+            <div id="line-item-template" style="display: none;">
+              <div class="line-item-row" data-index="">
+                <button type="button" class="btn btn-sm btn-outline-danger line-item-remove" onclick="removeLineItem(this)" title="Remove Item">
+                  <i class="bi bi-trash"></i>
+                </button>
+                <div class="row g-3 align-items-end">
+                  <div class="col-12 col-md-3">
+                    <label class="form-label">Product</label>
+                    <select name="" class="form-select product-select" onchange="updateProductPrice(this)">
+                      <%= invoice_product_options %>
+                    </select>
+                  </div>
+                  <div class="col-6 col-md-2">
+                    <label class="form-label">Qty</label>
+                    <input type="number"
+                           name=""
+                           value="1"
+                           min="0"
+                           step="0.01"
+                           class="form-control form-control-lg quantity-input"
+                           onchange="calculateLineTotal(this)"
+                           oninput="calculateLineTotal(this)"
+                           required>
+                  </div>
+                  <div class="col-6 col-md-2">
+                    <label class="form-label">List Price</label>
+                    <div class="input-group">
+                      <span class="input-group-text">₹</span>
+                      <input type="number"
+                             name=""
+                             value="0"
+                             step="0.01"
+                             min="0"
+                             class="form-control list-price-input"
+                             oninput="applyLineDiscount(this)">
+                    </div>
+                  </div>
+                  <div class="col-7 col-md-3">
+                    <label class="form-label">Discount</label>
+                    <div class="input-group">
+                      <select name="" class="form-select discount-type-input flex-grow-0" onchange="applyLineDiscount(this)">
+                        <option value="">None</option>
+                        <option value="percentage">%</option>
+                        <option value="fixed">₹</option>
+                      </select>
+                      <input type="number" name="" value="" step="0.01" min="0" placeholder="0"
+                             class="form-control discount-value-input" oninput="applyLineDiscount(this)">
+                    </div>
+                    <small class="text-muted">Net: ₹<span class="net-price-display">0.00</span></small>
+                  </div>
+                  <div class="col-5 col-md-2">
+                    <label class="form-label">Total</label>
+                    <div class="input-group">
+                      <span class="input-group-text">₹</span>
+                      <input type="number"
+                             name=""
+                             value="0"
+                             step="0.01"
+                             class="form-control line-total"
+                             readonly>
+                    </div>
+                  </div>
+                </div>
+                <input type="hidden" name="" value="0" class="unit-price-input">
+                <div class="row mt-3">
+                  <div class="col-12">
+                    <input type="text"
+                           name=""
+                           class="form-control"
+                           placeholder="Item description (optional)">
+                  </div>
+                </div>
+                <input type="hidden" class="gst-rate-field" value="0">
+              </div>
+            </div>
+          </div>
+
+          <% if @invoice_items.empty? %>
+            <div id="no-items-message" class="text-center py-4 text-muted">
+              <i class="bi bi-plus-circle display-4 d-block mb-2"></i>
+              <p>No line items yet. Click "Add Product" to get started.</p>
+            </div>
+          <% end %>
         </div>
       </div>
     </div>
@@ -619,11 +617,11 @@ document.addEventListener('DOMContentLoaded', function() {
 <style>
 .line-item-row {
   position: relative;
-  padding: 1rem;
+  padding: 1.5rem;
   border: 1px solid #e9ecef;
   border-radius: 0.5rem;
   background-color: #f8f9fa;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
   transition: all 0.2s ease;
 }
 
@@ -632,27 +630,43 @@ document.addEventListener('DOMContentLoaded', function() {
   box-shadow: 0 0 0 0.125rem rgba(13, 110, 253, 0.1);
 }
 
-/* Line-item fields live in narrow grid columns. Trim the padding, drop the
-   number spinners and tighten the group add-ons so the value is never clipped
-   (previously Qty/Total rendered their value off-screen and looked blank). */
-.line-item-row .row {
-  --bs-gutter-x: 0.5rem;
+/* Labels sit above tight inputs — give them a bit of breathing room and a
+   consistent, muted, uppercase treatment so each field reads clearly. */
+.line-item-row .form-label {
+  margin-bottom: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #6c757d;
 }
-.line-item-row .form-control {
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
+
+/* Qty is the field admins touch most — make it larger and centered. */
+.line-item-row .quantity-input {
+  font-size: 1.15rem;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.01em;
 }
-.line-item-row .input-group-text {
-  padding-left: 0.4rem;
-  padding-right: 0.4rem;
+
+/* Remove button floats in the row's top-right corner so it never steals a grid
+   column from the actual fields. */
+.line-item-row .line-item-remove {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
 }
+
 .line-item-row .discount-type-input {
   flex: 0 0 4.25rem;
   width: 4.25rem;
   min-width: 0;
-  padding-left: 0.35rem;
+  padding-left: 0.4rem;
   padding-right: 1.15rem;
-  background-position: right 0.2rem center;
+  background-position: right 0.25rem center;
   background-size: 10px 8px;
 }
 .line-item-row .discount-value-input {

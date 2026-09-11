@@ -637,12 +637,11 @@ class Admin::BookingsController < Admin::ApplicationController
                     "WHERE si.product_id = products.id AND si.store_id = #{sid})"
         base.select("products.*, COALESCE(#{inv_sum}, #{batch_sum}) AS cached_stock")
       else
-        # cached_stock (COALESCE SUM) lets total_batch_stock/stock_status_enhanced/
-        # out_of_stock?/low_stock? read the preloaded value instead of each firing
-        # its own stock_batches query per product.
-        base.joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND stock_batches.store_id IS NULL")
-            .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock")
-            .group("products.id")
+        # Central on-hand via the canonical rule (Product::REAL_STOCK_SQL): sum
+        # of variant available_stock for variant products, central active batch
+        # sum otherwise — so the picker agrees with the dashboard / product list
+        # / Product Summary instead of a drifting raw batch sum.
+        base.select("products.*, (#{Product::REAL_STOCK_SQL}) AS cached_stock")
       end
 
     render json: @products.map { |p|
@@ -968,12 +967,17 @@ class Admin::BookingsController < Admin::ApplicationController
                     .order(Arel.sql("CASE WHEN #{effective} > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
     end
 
+    # Central (no-store) on-hand must match the app's canonical rule
+    # (Product::REAL_STOCK_SQL, also used by the dashboard, the product list and
+    # the Product Summary screen): a variant product's stock is the sum of its
+    # variants' available_stock, NOT a raw central batch sum — the two drift, and
+    # a raw sum made variant products show a different figure (and a wrong
+    # out-of-stock badge) here than everywhere else.
+    real_stock = Product::REAL_STOCK_SQL
     Product.active
            .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
-           .joins("LEFT JOIN stock_batches ON stock_batches.product_id = products.id AND stock_batches.status = 'active' AND stock_batches.quantity_remaining > 0 AND stock_batches.store_id IS NULL")
-           .select("products.*, COALESCE(SUM(stock_batches.quantity_remaining), 0) as cached_stock")
-           .group("products.id")
-           .order(Arel.sql("CASE WHEN COALESCE(SUM(stock_batches.quantity_remaining), 0) > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
+           .select("products.*, (#{real_stock}) AS cached_stock")
+           .order(Arel.sql("CASE WHEN (#{real_stock}) > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
   end
 
   def validate_stock_availability(booking, is_update: false)

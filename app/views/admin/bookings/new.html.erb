@@ -188,6 +188,14 @@
                     <%
                       if product.has_multiple_quantities? && product.product_variants.any?
                         default_v = product.default_variant || product.product_variants.ordered.first
+                        # If the default variant is out of stock but another
+                        # variant still has stock, pre-select that one so the card
+                        # doesn't render as a dead "Out of Stock" tile (the qty +
+                        # add-to-cart controls initialise from this variant, and
+                        # the dropdown can still reach the rest).
+                        if default_v && default_v.available_stock.to_f <= 0
+                          default_v = product.sorted_variants.find { |v| v.available_stock.to_f > 0 } || default_v
+                        end
                         variant_price = default_v.effective_price
                         selling_price = variant_price
                       else
