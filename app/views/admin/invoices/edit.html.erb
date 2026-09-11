@@ -173,8 +173,11 @@
   <div class="row">
     <div class="col-12">
       <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 text-dark">Invoice Line Items</h6>
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center line-items-header">
+          <h6 class="mb-0 text-dark">
+            <i class="bi bi-list-check me-2 text-primary"></i>Invoice Line Items
+            <span class="badge rounded-pill line-items-count-badge ms-2" id="line-items-count"><%= @invoice_items.length %> item<%= 's' unless @invoice_items.length == 1 %></span>
+          </h6>
           <button type="button" class="btn btn-primary btn-sm" onclick="addNewLineItem()">
             <i class="bi bi-plus-lg me-1"></i>Add Product
           </button>
@@ -183,6 +186,7 @@
           <div id="line-items-container">
             <% @invoice_items.each_with_index do |item, index| %>
               <div class="line-item-row" data-index="<%= index %>">
+                <span class="line-item-index"><%= index + 1 %></span>
                 <button type="button" class="btn btn-sm btn-outline-danger line-item-remove" onclick="removeLineItem(this)" title="Remove Item">
                   <i class="bi bi-trash"></i>
                 </button>
@@ -192,6 +196,11 @@
                     <select name="invoice[invoice_items_attributes][<%= index %>][product_id]" class="form-select product-select" data-current-product="<%= item.product_id %>" onchange="updateProductPrice(this)">
                       <%= invoice_product_options(selected_product_id: item.product_id, selected_unit_price: item.unit_price) %>
                     </select>
+                    <input type="text"
+                           name="invoice[invoice_items_attributes][<%= index %>][description]"
+                           value="<%= item.description %>"
+                           class="form-control form-control-sm description-input mt-2"
+                           placeholder="Add a note (optional)">
                   </div>
                   <div class="col-6 col-md-2">
                     <label class="form-label">Qty</label>
@@ -249,15 +258,6 @@
                   </div>
                 </div>
                 <input type="hidden" name="invoice[invoice_items_attributes][<%= index %>][unit_price]" value="<%= item.unit_price %>" class="unit-price-input">
-                <div class="row mt-3">
-                  <div class="col-12">
-                    <input type="text"
-                           name="invoice[invoice_items_attributes][<%= index %>][description]"
-                           value="<%= item.description %>"
-                           class="form-control"
-                           placeholder="Item description (optional)">
-                  </div>
-                </div>
                 <input type="hidden" name="invoice[invoice_items_attributes][<%= index %>][id]" value="<%= item.id %>">
                 <input type="hidden" class="gst-rate-field" value="<%= invoice_gst_rate_for(item.product) %>">
               </div>
@@ -269,6 +269,7 @@
             <!-- Template for new items (hidden) -->
             <div id="line-item-template" style="display: none;">
               <div class="line-item-row" data-index="">
+                <span class="line-item-index">1</span>
                 <button type="button" class="btn btn-sm btn-outline-danger line-item-remove" onclick="removeLineItem(this)" title="Remove Item">
                   <i class="bi bi-trash"></i>
                 </button>
@@ -278,6 +279,7 @@
                     <select name="" class="form-select product-select" onchange="updateProductPrice(this)">
                       <%= invoice_product_options %>
                     </select>
+                    <input type="text" name="" value="" class="form-control form-control-sm description-input mt-2" placeholder="Add a note (optional)">
                   </div>
                   <div class="col-6 col-md-2">
                     <label class="form-label">Qty</label>
@@ -331,14 +333,6 @@
                   </div>
                 </div>
                 <input type="hidden" name="" value="0" class="unit-price-input">
-                <div class="row mt-3">
-                  <div class="col-12">
-                    <input type="text"
-                           name=""
-                           class="form-control"
-                           placeholder="Item description (optional)">
-                  </div>
-                </div>
                 <input type="hidden" class="gst-rate-field" value="0">
               </div>
             </div>
@@ -388,6 +382,13 @@ function addNewLineItem() {
 
   container.appendChild(newItem);
 
+  // Number the badge from this item's position, not its form index (a removed
+  // item leaves a gap in indexes but rows still read 1, 2, 3, ...).
+  const indexBadge = newItem.querySelector('.line-item-index');
+  if (indexBadge) {
+    indexBadge.textContent = document.querySelectorAll('#line-items-container > .line-item-row:not([style*="display: none"])').length;
+  }
+
   // Hide no items message
   const noItemsMsg = document.getElementById('no-items-message');
   if (noItemsMsg) {
@@ -395,9 +396,22 @@ function addNewLineItem() {
   }
 
   lineItemIndex++;
+  updateItemCountBadge();
 
   // Scroll to new item
   newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Keep the "N item(s)" header badge and the per-row numbered badges in sync.
+function updateItemCountBadge() {
+  const rows = document.querySelectorAll('#line-items-container > .line-item-row:not([style*="display: none"])');
+  rows.forEach((row, i) => {
+    const badge = row.querySelector('.line-item-index');
+    if (badge) badge.textContent = i + 1;
+  });
+
+  const countBadge = document.getElementById('line-items-count');
+  if (countBadge) countBadge.textContent = `${rows.length} item${rows.length === 1 ? '' : 's'}`;
 }
 
 // Get field name from input
@@ -411,7 +425,7 @@ function getFieldName(input) {
   if (classList.includes('discount-value-input')) return '[discount_value]';
   if (classList.includes('unit-price-input')) return '[unit_price]';
   if (classList.includes('line-total')) return '[total_amount]';
-  if (input.placeholder && input.placeholder.includes('description')) return '[description]';
+  if (classList.includes('description-input')) return '[description]';
 
   return '';
 }
@@ -453,6 +467,7 @@ function removeLineItem(button) {
     }
   }
 
+  updateItemCountBadge();
   updateInvoiceTotal();
 }
 
@@ -461,7 +476,7 @@ function updateProductPrice(selectElement) {
   const selectedOption = selectElement.options[selectElement.selectedIndex];
   const lineItem = selectElement.closest('.line-item-row');
   const unitPriceInput = lineItem.querySelector('.unit-price-input');
-  const descriptionInput = lineItem.querySelector('input[placeholder*="description"]');
+  const descriptionInput = lineItem.querySelector('.description-input');
   const gstRateInput = lineItem.querySelector('.gst-rate-field');
 
   const listPriceInput = lineItem.querySelector('.list-price-input');
@@ -615,19 +630,70 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
+.line-items-header .badge.line-items-count-badge {
+  background: var(--gradient-primary, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.7rem;
+  vertical-align: middle;
+  padding: 0.35em 0.7em;
+}
+
 .line-item-row {
   position: relative;
-  padding: 1.5rem;
+  padding: 1.5rem 1.5rem 1.5rem 2.75rem;
   border: 1px solid #e9ecef;
+  border-left: 4px solid #a5b4fc;
   border-radius: 0.5rem;
   background-color: #f8f9fa;
   margin-bottom: 1.25rem;
   transition: all 0.2s ease;
+  animation: lineItemIn 0.25s ease;
 }
 
 .line-item-row:hover {
   border-color: #0d6efd;
+  border-left-color: #0d6efd;
   box-shadow: 0 0 0 0.125rem rgba(13, 110, 253, 0.1);
+}
+
+@keyframes lineItemIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Numbered badge marking each item's position, mirrors the "Add Product"
+   accent so a long invoice still reads as an ordered list at a glance. */
+.line-item-row .line-item-index {
+  position: absolute;
+  top: 1.35rem;
+  left: -0.1rem;
+  width: 1.65rem;
+  height: 1.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-primary, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+}
+
+/* The optional note lives right under the product it describes — one
+   compact line per item instead of a separate full-width row. */
+.line-item-row .description-input {
+  border-style: dashed;
+  background-color: transparent;
+  color: #6c757d;
+  font-size: 0.8rem;
+}
+
+.line-item-row .description-input:focus {
+  border-style: solid;
+  color: var(--text-primary, #1a202c);
+  background-color: #fff;
 }
 
 /* Labels sit above tight inputs — give them a bit of breathing room and a
@@ -689,6 +755,19 @@ document.addEventListener('DOMContentLoaded', function() {
 .line-item-row .btn-outline-danger:hover {
   background-color: #dc3545;
   color: white;
+}
+
+/* The line total is the number an admin scans for — give it more visual
+   weight than the inputs feeding it. */
+.line-item-row .line-total {
+  font-weight: 700;
+  color: #1a202c;
+  background-color: #fff;
+}
+
+.line-item-row .col-5.col-md-2 .input-group-text {
+  background-color: #fff;
+  border-color: #ced4da;
 }
 
 .sticky-top {
