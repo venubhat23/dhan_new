@@ -78,6 +78,7 @@ Rails.application.routes.draw do
       end
     end
     get 'store_inventory', to: 'store_inventory#index', as: 'store_inventory'
+    get 'store_inventory/low_stock_csv', to: 'store_inventory#low_stock_csv', as: 'low_stock_csv_store_inventory'
     get 'qr_codes',        to: 'qr_codes#index',  as: :qr_codes
     get 'qr_codes/lookup', to: 'qr_codes#lookup', as: :qr_codes_lookup
     resources :invoices do
@@ -241,6 +242,7 @@ Rails.application.routes.draw do
     get  'low-stock-product',          to: 'low_stock_alert#index',     as: 'low_stock_product'
     get   'product-summary',           to: 'product_summary#index',     as: 'product_summary'
     patch 'product-summary',           to: 'product_summary#update'
+    get   'product-summary/low-stock', to: 'product_summary#low_stock', as: 'low_stock_product_summary'
     get  'mobile-ui/booking/:id',      to: 'mobile_ui#show_booking',    as: 'mobile_ui_show_booking'
     get  'mobile-ui/booking/:id/edit', to: 'mobile_ui#edit_booking',    as: 'mobile_ui_edit_booking'
     patch 'mobile-ui/booking/:id',     to: 'mobile_ui#update_booking',  as: 'mobile_ui_update_booking'
@@ -274,6 +276,7 @@ Rails.application.routes.draw do
       collection do
         get :search_products
         get :search_customers
+        get :product_picker
         get :realtime_data
         get :store_booking
         # Status filters

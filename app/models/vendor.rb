@@ -12,12 +12,23 @@ class Vendor < ApplicationRecord
   scope :active, -> { where(status: true) }
   scope :inactive, -> { where(status: false) }
 
+  # `sum(:column)` always hits the DB even when vendor_purchases is preloaded
+  # (unlike a block sum, which uses the already-loaded records) — the vendors
+  # index/show pages preload this association specifically to avoid that.
   def total_purchases
-    vendor_purchases.sum(:total_amount)
+    if vendor_purchases.loaded?
+      vendor_purchases.sum { |vp| vp.total_amount.to_f }
+    else
+      vendor_purchases.sum(:total_amount)
+    end
   end
 
   def total_paid
-    vendor_purchases.sum(:paid_amount)
+    if vendor_purchases.loaded?
+      vendor_purchases.sum { |vp| vp.paid_amount.to_f }
+    else
+      vendor_purchases.sum(:paid_amount)
+    end
   end
 
   def outstanding_balance

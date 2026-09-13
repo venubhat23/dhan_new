@@ -122,6 +122,24 @@
             </div>
           <% end %>
 
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="text-muted">Discount</span>
+              <div class="d-flex align-items-center gap-2">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Discount type">
+                  <button type="button" class="btn btn-outline-secondary" id="discountTypeAmountBtn" onclick="setDiscountType('amount')">₹</button>
+                  <button type="button" class="btn btn-outline-secondary active" id="discountTypePercentBtn" onclick="setDiscountType('percent')">%</button>
+                </div>
+                <input type="number" id="discountInput"
+                       value="<%= summary_subtotal > 0 ? (@invoice.discount_amount.to_f / summary_subtotal * 100).round(2) : 0 %>"
+                       min="0" max="100" step="0.01" class="form-control form-control-sm text-end" style="width: 90px;"
+                       oninput="updateInvoiceTotal()">
+              </div>
+            </div>
+            <small class="text-muted d-none d-block text-end" id="discountAmountPreview">= ₹0.00 off</small>
+            <%= f.hidden_field :discount_amount, id: 'discount_amount_field' %>
+          </div>
+
           <div class="d-flex justify-content-between align-items-center mb-3">
             <span class="text-muted">Delivery Charge</span>
             <div class="input-group input-group-sm" style="max-width: 130px;">
@@ -352,6 +370,21 @@
 
 <script>
 let lineItemIndex = <%= @invoice_items.length %>;
+let discountType = 'percent'; // 'amount' or 'percent' — percent is the default entry mode
+
+// Toggle the order-level discount entry between a flat rupee amount and a percentage
+function setDiscountType(type) {
+  discountType = type;
+  document.getElementById('discountTypeAmountBtn').classList.toggle('active', type === 'amount');
+  document.getElementById('discountTypePercentBtn').classList.toggle('active', type === 'percent');
+
+  const discountInput = document.getElementById('discountInput');
+  if (discountInput) {
+    discountInput.max = type === 'percent' ? 100 : 999999;
+  }
+
+  updateInvoiceTotal();
+}
 
 // Add new line item
 function addNewLineItem() {
@@ -578,7 +611,33 @@ function updateInvoiceTotal() {
 
   const deliveryChargeInput = document.getElementById('delivery_charge_field');
   const deliveryCharge = deliveryChargeInput ? (parseFloat(deliveryChargeInput.value) || 0) : 0;
-  const total = subtotal + tax + deliveryCharge;
+
+  const discountInputEl = document.getElementById('discountInput');
+  let discountInputValue = parseFloat(discountInputEl?.value) || 0;
+  if (discountInputValue < 0) discountInputValue = 0;
+
+  let discountAmount = 0;
+  const discountPreview = document.getElementById('discountAmountPreview');
+
+  if (discountType === 'percent') {
+    if (discountInputValue > 100) {
+      discountInputValue = 100;
+      discountInputEl.value = discountInputValue;
+    }
+    discountAmount = subtotal * discountInputValue / 100;
+    if (discountPreview) {
+      discountPreview.textContent = `= ₹${discountAmount.toFixed(2)} off`;
+      discountPreview.classList.remove('d-none');
+    }
+  } else {
+    discountAmount = discountInputValue > subtotal ? subtotal : discountInputValue;
+    if (discountPreview) discountPreview.classList.add('d-none');
+  }
+
+  const discountField = document.getElementById('discount_amount_field');
+  if (discountField) discountField.value = discountAmount.toFixed(2);
+
+  const total = subtotal + tax + deliveryCharge - discountAmount;
 
   // Update display
   const subtotalDisplay = document.getElementById('subtotal-display');

@@ -4,23 +4,27 @@ class Admin::StoreAnalyticsController < Admin::ApplicationController
   def comparison
     @stores = Store.all.order(:name)
     @month = params[:month].present? ? Date.parse(params[:month]) : Date.current.beginning_of_month
+    period = @month.beginning_of_month..@month.end_of_month
+    store_ids = @stores.map(&:id)
+
+    # One grouped query per aggregate instead of 4 queries per store.
+    revenue_by_store = Booking.where(store_id: store_ids, created_at: period).group(:store_id).sum(:total_amount)
+    count_by_store   = Booking.where(store_id: store_ids, created_at: period).group(:store_id).count
+    expenses_by_store = Expense.where(store_id: store_ids).by_date_range(period.begin, period.end)
+                               .group(:store_id).sum(:amount)
+    stock_value_by_store = StockBatch.where(store_id: store_ids, status: 'active').where('quantity_remaining > 0')
+                                     .group(:store_id).sum('quantity_remaining * purchase_price')
 
     @store_data = @stores.map do |store|
-      period = @month.beginning_of_month..@month.end_of_month
-      bookings = store.bookings.where(created_at: period)
-      expenses = store.expenses.by_date_range(@month.beginning_of_month, @month.end_of_month)
-      stock_value = store.stock_batches.where(status: 'active').where('quantity_remaining > 0')
-                         .sum('quantity_remaining * purchase_price')
-
-      revenue      = bookings.sum(:total_amount).to_f
-      expense_sum  = expenses.sum(:amount).to_f
+      revenue     = revenue_by_store[store.id].to_f
+      expense_sum = expenses_by_store[store.id].to_f
 
       {
         store: store,
         revenue: revenue,
-        bookings_count: bookings.count,
+        bookings_count: count_by_store[store.id].to_i,
         expenses_total: expense_sum,
-        stock_value: stock_value.to_f,
+        stock_value: stock_value_by_store[store.id].to_f,
         net: revenue - expense_sum
       }
     end

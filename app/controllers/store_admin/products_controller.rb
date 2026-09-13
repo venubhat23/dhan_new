@@ -147,12 +147,22 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
     @bulk_batches_created = 0
     errors = []
 
+    # Batch the per-row lookups this loop used to run one at a time:
+    # Product.find_by(id:) → 1 query total, and Store#available_stock_for
+    # (2 queries/product: store_inventories exists?+sum, then a batch-stock
+    # fallback sum) → 2 grouped queries total covering every row.
+    products_by_id = Product.where(id: product_updates.keys).index_by(&:id)
+    inv_qty_by_product = @current_store.store_inventories.where(product_id: product_updates.keys)
+                                       .group(:product_id).sum(:quantity)
+    batch_qty_by_product = @current_store.stock_batches.where(product_id: product_updates.keys, status: 'active')
+                                         .group(:product_id).sum(:quantity_remaining)
+
     product_updates.each do |id, attrs|
-      product = Product.find_by(id: id)
+      product = products_by_id[id.to_i]
       next unless product
       permitted = attrs.permit(:name, :price, :buying_price, :purchase_price, :stock, :unit_type, :status, :category_id)
       track_stock = permitted.key?(:stock) && !product.has_multiple_quantities?
-      old_stock = @current_store.available_stock_for(product.id).to_f
+      old_stock = (inv_qty_by_product.key?(product.id) ? inv_qty_by_product[product.id] : batch_qty_by_product[product.id]).to_f
       new_stock = permitted[:stock].to_f if track_stock
 
       unless product.update(permitted.except(:stock))
@@ -170,11 +180,15 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
       updated += 1
     end
 
+    variants_by_id = ProductVariant.where(id: variant_updates.keys).includes(:product).index_by(&:id)
+    inv_row_by_variant = @current_store.store_inventories.where(product_variant_id: variant_updates.keys)
+                                       .index_by(&:product_variant_id)
+
     variant_updates.each do |vid, attrs|
-      variant = ProductVariant.find_by(id: vid)
+      variant = variants_by_id[vid.to_i]
       next unless variant
       permitted = attrs.permit(:selling_price, :buying_price, :purchase_price, :available_stock, :unit)
-      row = @current_store.store_inventories.find_by(product_variant_id: variant.id)
+      row = inv_row_by_variant[variant.id]
       old_stock = (row&.quantity || variant.available_stock).to_f
       new_stock = permitted[:available_stock].to_f if permitted.key?(:available_stock)
 

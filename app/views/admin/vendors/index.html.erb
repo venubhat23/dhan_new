@@ -171,7 +171,7 @@
                   <div>
                     <div class="fw-medium text-success">₹<%= number_with_delimiter(vendor.total_purchases.to_i) %></div>
                     <small class="text-muted">
-                      <%= pluralize(vendor.vendor_purchases.count, 'purchase') %>
+                      <%= pluralize(vendor.vendor_purchases.size, 'purchase') %>
                     </small>
                   </div>
                 </td>

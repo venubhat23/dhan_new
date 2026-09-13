@@ -11,6 +11,7 @@ class Invoice < ApplicationRecord
   validates :invoice_number, presence: true, uniqueness: true
   validates :total_amount, presence: true, numericality: { greater_than: 0 }
   validates :invoice_date, presence: true
+  validates :discount_amount, numericality: { greater_than_or_equal_to: 0 }
 
   before_validation :generate_invoice_number, on: :create
   before_validation :calculate_total_from_items
@@ -50,12 +51,19 @@ class Invoice < ApplicationRecord
     booking.update(shipping_charges: delivery_charge)
   end
 
+  # Walk-in invoices have no `customer` association — the Booking they were
+  # generated from carries the display name/address/phone instead. Memoized
+  # since customer_display_name/address/mobile are all called per invoice view.
+  def related_booking
+    return @related_booking if defined?(@related_booking)
+    @related_booking = invoice_number.present? ? Booking.find_by(invoice_number: invoice_number) : nil
+  end
+
   # Get customer display name (customer or walk-in from booking)
   def customer_display_name
     return customer.display_name if customer.present?
 
     # For walk-in customers, get name from related booking
-    related_booking = Booking.find_by(invoice_number: invoice_number)
     return related_booking.customer_name if related_booking&.customer_name.present?
 
     'Walk-in Customer'
@@ -66,7 +74,6 @@ class Invoice < ApplicationRecord
     return customer.address if customer&.address.present?
 
     # For walk-in customers, get address from related booking
-    related_booking = Booking.find_by(invoice_number: invoice_number)
     return related_booking.delivery_address if related_booking&.delivery_address.present?
 
     'Walk-in Address'
@@ -77,15 +84,23 @@ class Invoice < ApplicationRecord
     return customer.mobile if customer&.mobile.present?
 
     # For walk-in customers, get mobile from related booking
-    related_booking = Booking.find_by(invoice_number: invoice_number)
     return related_booking.customer_phone if related_booking&.customer_phone.present?
 
     nil
   end
 
+  # update_column (not save!) — this is called in a batch backfill loop over
+  # every tokenless invoice on the public invoices index, and only the token
+  # itself needs persisting, not a full validate+callback cycle per row.
   def generate_share_token!
     self.share_token = SecureRandom.urlsafe_base64(32)
-    save!
+    begin
+      update_column(:share_token, share_token)
+    rescue ActiveRecord::RecordNotUnique
+      self.share_token = nil
+      retry
+    end
+    share_token
   end
 
   def formatted_number
@@ -257,7 +272,7 @@ class Invoice < ApplicationRecord
         end
       end
 
-      self.total_amount = new_total + delivery_charge.to_f if new_total > 0
+      self.total_amount = [new_total + delivery_charge.to_f - discount_amount.to_f, 0].max if new_total > 0
     end
   end
 

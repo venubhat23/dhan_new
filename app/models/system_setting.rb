@@ -9,6 +9,7 @@ class SystemSetting < ApplicationRecord
   def bust_setting_caches
     self.class.bust_settings_cache!
     Rails.cache.delete('system_setting:pagination_per_page')
+    Rails.cache.delete("system_setting:#{key}") if key.present?
   end
 
   # Business details validations
@@ -17,8 +18,7 @@ class SystemSetting < ApplicationRecord
 
   # Class method to get a setting value by key
   def self.get_value(key)
-    setting = find_by(key: key)
-    setting&.value
+    cached_row(key)&.value
   end
 
   # Class method to set a setting value by key
@@ -70,26 +70,22 @@ class SystemSetting < ApplicationRecord
 
   # Get default main agent commission as float
   def self.default_main_agent_commission
-    setting = find_by(key: 'system_config')
-    setting&.default_main_agent_commission || 0.0
+    cached_row('system_config')&.default_main_agent_commission || 0.0
   end
 
   # Get default affiliate commission as float
   def self.default_affiliate_commission
-    setting = find_by(key: 'system_config')
-    setting&.default_affiliate_commission || 0.0
+    cached_row('system_config')&.default_affiliate_commission || 0.0
   end
 
   # Get default ambassador commission as float
   def self.default_ambassador_commission
-    setting = find_by(key: 'system_config')
-    setting&.default_ambassador_commission || 0.0
+    cached_row('system_config')&.default_ambassador_commission || 0.0
   end
 
   # Get default company expenses as float
   def self.default_company_expenses
-    setting = find_by(key: 'system_config')
-    setting&.default_company_expenses || 0.0
+    cached_row('system_config')&.default_company_expenses || 0.0
   end
 
   # Update commission values
@@ -174,8 +170,7 @@ class SystemSetting < ApplicationRecord
 
   # Check if collect from store feature is enabled
   def self.collect_from_store_enabled?
-    setting = find_by(key: 'system_config')
-    setting&.collect_from_store_enabled || false
+    cached_row('system_config')&.collect_from_store_enabled || false
   end
 
   # Enable or disable collect from store feature
@@ -206,8 +201,7 @@ class SystemSetting < ApplicationRecord
 
   # Check if delivery only at shop feature is enabled
   def self.delivery_only_at_shop_enabled?
-    setting = find_by(key: 'system_config')
-    setting&.delivery_only_at_shop || false
+    cached_row('system_config')&.delivery_only_at_shop || false
   end
 
   # Enable or disable delivery only at shop feature
@@ -224,7 +218,7 @@ class SystemSetting < ApplicationRecord
 
   # Get shop addresses as array
   def self.get_shop_addresses
-    setting = find_by(key: 'system_config')
+    setting = cached_row('system_config')
     addresses = setting&.shop_addresses
     return [] if addresses.blank?
 

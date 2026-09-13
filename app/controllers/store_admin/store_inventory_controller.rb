@@ -13,40 +13,73 @@ class StoreAdmin::StoreInventoryController < StoreAdmin::ApplicationController
       end
     end
 
-    # Store-inventory rows for this store, keyed by [product_id, variant_id].
-    @inv_by_key = @current_store.store_inventories.each_with_object({}) do |row, h|
+    @rows = build_rows(@products)
+    @low_stock_count = @rows.count { |r| r[:low_stock] }
+  end
+
+  # CSV of the current store's low-stock rows (quantity <= threshold).
+  def low_stock_csv
+    products = store_products.includes(:category, :product_variants).order(:name)
+    rows = build_rows(products).select { |r| r[:low_stock] }
+
+    require 'csv'
+    csv = CSV.generate do |csv|
+      csv << ['Product', 'SKU', 'Category', 'Variant', 'Current Stock', 'Unit', 'Low Stock Threshold']
+      rows.each do |row|
+        product = row[:product]
+        variant = row[:variant]
+        csv << [
+          product.name,
+          product.sku,
+          product.category&.name,
+          variant&.label,
+          row[:quantity].round(2),
+          variant&.unit || product.unit_type,
+          row[:threshold].round(2)
+        ]
+      end
+    end
+
+    send_data csv,
+              filename: "low-stock-#{@current_store.name.parameterize}-#{Date.current}.csv",
+              type: 'text/csv'
+  end
+
+  private
+
+  # Builds low-stock-flagged rows (one per product, or per variant for
+  # products with variants) for the given product scope in the current store.
+  def build_rows(products)
+    inv_by_key = @current_store.store_inventories.each_with_object({}) do |row, h|
       h[[row.product_id, row.product_variant_id]] = row
     end
 
     # Active batch stock per product (store + unassigned batches) — fallback
     # for products with no store_inventories row.
-    @batch_stock = @current_store.stock_batches
-                                 .where(status: 'active')
-                                 .group(:product_id).sum(:quantity_remaining)
+    batch_stock = @current_store.stock_batches
+                                .where(status: 'active')
+                                .group(:product_id).sum(:quantity_remaining)
 
-    @default_threshold = @current_store.auto_transfer_threshold || 10
+    default_threshold = @current_store.auto_transfer_threshold || 10
 
-    @rows = []
-    @products.each do |product|
+    rows = []
+    products.each do |product|
       if product.product_variants.any?
         product.sorted_variants.each do |variant|
-          row = @inv_by_key[[product.id, variant.id]]
+          row = inv_by_key[[product.id, variant.id]]
           qty = row ? row.quantity.to_f : variant.available_stock.to_f
-          threshold = row&.low_stock_threshold || product.low_stock_threshold || @default_threshold
-          @rows << build_row(product, variant, qty, threshold)
+          threshold = row&.low_stock_threshold || product.low_stock_threshold || default_threshold
+          rows << build_row(product, variant, qty, threshold)
         end
       else
-        row = @inv_by_key[[product.id, nil]]
-        qty = row ? row.quantity.to_f : @batch_stock[product.id].to_f
-        threshold = row&.low_stock_threshold || product.low_stock_threshold || @default_threshold
-        @rows << build_row(product, nil, qty, threshold)
+        row = inv_by_key[[product.id, nil]]
+        qty = row ? row.quantity.to_f : batch_stock[product.id].to_f
+        threshold = row&.low_stock_threshold || product.low_stock_threshold || default_threshold
+        rows << build_row(product, nil, qty, threshold)
       end
     end
-
-    @low_stock_count = @rows.count { |r| r[:low_stock] }
+    rows
   end
-
-  private
 
   def build_row(product, variant, qty, threshold)
     { product: product, variant: variant, quantity: qty,

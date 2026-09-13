@@ -35,7 +35,26 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     @bookings_for_stats = @bookings
 
     @per_page = (SystemSetting.respond_to?(:default_pagination_per_page) ? SystemSetting.default_pagination_per_page : 20)
-    @bookings = @bookings.includes(:customer, :store, :booking_invoices).page(params[:page]).per(@per_page)
+    @bookings = @bookings.includes(:customer, { user: :franchise }, :store, :booking_invoices).page(params[:page]).per(@per_page)
+
+    # Batch-preload associated_invoice for bookings with no BookingInvoice,
+    # replacing up to N individual LIKE queries (Booking#has_invoice?/#associated_invoice)
+    # with a single batched query — mirrors Admin::BookingsController#index.
+    bookings_without_bi = @bookings.select { |b| b.booking_invoices.empty? }
+    if bookings_without_bi.any?
+      numbers = bookings_without_bi.map(&:booking_number)
+      like_clauses = numbers.map { "invoice_items.description LIKE ?" }.join(" OR ")
+      matched = InvoiceItem.joins(:invoice)
+                           .eager_load(:invoice)
+                           .where(like_clauses, *numbers.map { |n| "%#{n}%" })
+      inv_by_number = {}
+      matched.each do |item|
+        numbers.each { |bn| inv_by_number[bn] ||= item.invoice if item.description.include?(bn) }
+      end
+      bookings_without_bi.each do |b|
+        b.instance_variable_set(:@associated_invoice, inv_by_number[b.booking_number])
+      end
+    end
 
     @summary = calculate_bookings_summary
     @customers = Customer.select(:id, :full_name, :email, :mobile).order(:full_name).limit(500)

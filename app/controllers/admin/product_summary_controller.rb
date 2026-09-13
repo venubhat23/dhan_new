@@ -9,6 +9,34 @@ class Admin::ProductSummaryController < Admin::ApplicationController
     load_summary
   end
 
+  # Main Store low-stock report: any product (or variant) whose Main Store
+  # stock is at or below its own Low Threshold — same "danger" rule the
+  # index table highlights rows with. Per-store figures are not considered.
+  def low_stock
+    require 'csv'
+    load_summary
+    csv = CSV.generate do |rows|
+      rows << ['Product', 'Variant', 'SKU', 'Category', 'Main Store Stock', 'Low Threshold']
+      @products.each do |product|
+        main_stock = @main_stock[product.id].to_f
+        main_thr   = product.low_stock_threshold
+        if main_thr && main_stock <= main_thr.to_f
+          rows << [product.name, '', product.sku, product.category&.name, fmt(main_stock), main_thr]
+        end
+
+        product.sorted_variants.each do |variant|
+          v_stock = variant.available_stock.to_f
+          v_thr   = variant.low_stock_threshold
+          next unless v_thr && v_stock <= v_thr.to_f
+
+          rows << [product.name, variant.label, product.sku, product.category&.name, fmt(v_stock), v_thr]
+        end
+      end
+    end
+
+    send_data csv, filename: "low-stock-#{Date.current.iso8601}.csv", type: 'text/csv'
+  end
+
   def update
     # Save only needs the rows the form actually touched — loading the whole
     # catalog (every product, variant and store-inventory row) plus rebuilding

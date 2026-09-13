@@ -347,13 +347,13 @@
         <div class="row g-3">
           <div class="col-md-4">
             <div class="text-center">
-              <h4 class="text-primary mb-1"><%= @customer.bookings.count %></h4>
+              <h4 class="text-primary mb-1"><%= @customer_bookings_count %></h4>
               <small class="text-muted">Total Bookings</small>
             </div>
           </div>
           <div class="col-md-4">
             <div class="text-center">
-              <h4 class="text-success mb-1"><%= @customer.orders.count %></h4>
+              <h4 class="text-success mb-1"><%= @customer_orders_count %></h4>
               <small class="text-muted">Total Orders</small>
             </div>
           </div>
@@ -428,11 +428,11 @@
           <hr>
           <div class="col-6">
             <small class="text-muted d-block">Total Bookings</small>
-            <h5 class="text-primary mb-0"><%= @customer.bookings.count %></h5>
+            <h5 class="text-primary mb-0"><%= @customer_bookings_count %></h5>
           </div>
           <div class="col-6">
             <small class="text-muted d-block">Total Orders</small>
-            <h5 class="text-success mb-0"><%= @customer.orders.count %></h5>
+            <h5 class="text-success mb-0"><%= @customer_orders_count %></h5>
           </div>
         </div>
       </div>

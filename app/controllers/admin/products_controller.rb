@@ -232,8 +232,11 @@ class Admin::ProductsController < Admin::ApplicationController
     @bulk_batches_created = 0
     errors  = []
 
+    products_by_id = Product.where(id: product_updates.keys).index_by(&:id)
+    variants_by_id  = ProductVariant.where(id: variant_updates.keys).includes(:product).index_by(&:id)
+
     product_updates.each do |id, attrs|
-      product = Product.find_by(id: id)
+      product = products_by_id[id.to_i]
       next unless product
 
       permitted = attrs.permit(:name, :price, :buying_price, :purchase_price, :stock, :unit_type, :status, :category_id)
@@ -261,7 +264,7 @@ class Admin::ProductsController < Admin::ApplicationController
     end
 
     variant_updates.each do |vid, attrs|
-      variant = ProductVariant.find_by(id: vid)
+      variant = variants_by_id[vid.to_i]
       next unless variant
 
       permitted   = attrs.permit(:selling_price, :buying_price, :purchase_price, :available_stock, :unit)

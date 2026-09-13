@@ -1,0 +1,197 @@
+<% if products&.any? %>
+  <div class="row g-2">
+    <% products.each do |product| %>
+      <% current_stock = product.cached_total_batch_stock %>
+      <div class="col-6 col-md-4 col-lg-3 product-grid-item" data-product-id="<%= product.id %>" data-category="<%= product.category_id %>" data-stock="<%= current_stock %>">
+        <div class="card h-100 border-0 shadow-sm hover-lift">
+          <%# Product Image %>
+          <div class="position-relative">
+            <% if product.images_attached? && product.images.any? %>
+              <%= image_tag product.images.first, class: "card-img-top", loading: "lazy", style: "height: 130px; object-fit: cover;" %>
+            <% else %>
+              <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 130px;">
+                <i class="bi bi-box-seam fs-3 text-muted"></i>
+              </div>
+            <% end %>
+
+            <%# Enhanced Stock Badge %>
+            <% if product.out_of_stock? %>
+              <span class="position-absolute top-0 end-0 badge bg-danger m-2">
+                <i class="bi bi-x-circle me-1"></i>Out of Stock
+              </span>
+            <% elsif product.low_stock? %>
+              <span class="position-absolute top-0 end-0 badge bg-warning text-dark m-2">
+                <i class="bi bi-exclamation-triangle me-1"></i>Low Stock (<%= current_stock.to_i %> left)
+              </span>
+            <% else %>
+              <span class="position-absolute top-0 end-0 badge bg-success m-2">
+                <i class="bi bi-check-circle me-1"></i><%= current_stock.to_i %> in stock
+              </span>
+            <% end %>
+
+            <%# Discount Badge %>
+            <% if product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price %>
+              <% discount_percent = ((product.price - product.discount_price) * 100 / product.price).round %>
+              <span class="position-absolute top-0 start-0 badge bg-success m-2"><%= discount_percent %>% OFF</span>
+            <% end %>
+          </div>
+
+          <%# Product Details %>
+          <div class="card-body d-flex flex-column p-2">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <small class="text-muted" style="font-size:0.7rem;"><%= product.category&.name || 'No Category' %></small>
+              <%= link_to edit_admin_product_path(product),
+                  class: "btn btn-sm btn-outline-secondary p-0 px-1",
+                  style: "font-size:0.7rem;",
+                  title: "Edit",
+                  target: "_blank" do %>
+                <i class="bi bi-pencil-square"></i>
+              <% end %>
+            </div>
+
+            <h6 class="card-title mb-1" style="min-height: 36px; font-size: 0.85rem; line-height: 1.3;"><%= product.name %></h6>
+
+            <%# Price %>
+            <div class="mb-2">
+              <%
+                if product.has_multiple_quantities? && product.product_variants.any?
+                  default_v = product.default_variant || product.product_variants.ordered.first
+                  # If the default variant is out of stock but another
+                  # variant still has stock, pre-select that one so the card
+                  # doesn't render as a dead "Out of Stock" tile (the qty +
+                  # add-to-cart controls initialise from this variant, and
+                  # the dropdown can still reach the rest).
+                  if default_v && default_v.available_stock.to_f <= 0
+                    default_v = product.sorted_variants.find { |v| v.available_stock.to_f > 0 } || default_v
+                  end
+                  variant_price = default_v.effective_price
+                  selling_price = variant_price
+                else
+                  selling_price = product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price ? product.discount_price : product.price
+                end
+
+                if product.gst_enabled && product.gst_percentage.present? && product.gst_percentage > 0
+                  gst_rate = product.gst_percentage
+                  base_price = selling_price / (1 + (gst_rate / 100.0))
+                  final_price = selling_price
+                else
+                  base_price = selling_price
+                  gst_rate = 0
+                  final_price = selling_price
+                end
+
+                rounded_final = final_price.round
+                gst_val = rounded_final * gst_rate / 100.0
+                rounded_gst = gst_val % 1 == 0 ? gst_val.to_i : gst_val.round(2)
+                base_val = rounded_final - gst_val
+                rounded_base = base_val % 1 == 0 ? base_val.to_i : base_val.round(2)
+              %>
+
+              <% if product.has_multiple_quantities? && product.product_variants.any? %>
+                <!-- Variant selector -->
+                <select class="form-select form-select-sm mb-2"
+                        id="variant-select-<%= product.id %>"
+                        onchange="bookingUpdateVariant(this, <%= product.id %>)">
+                  <% product.sorted_variants.each do |v| %>
+                    <option value="<%= v.id %>"
+                            data-price="<%= v.effective_price %>"
+                            data-stock="<%= v.available_stock %>"
+                            data-label="<%= v.label %>"
+                            <%= 'selected' if v.id == default_v.id %>>
+                      <%= v.label %> — ₹<%= number_with_delimiter(v.effective_price) %>
+                    </option>
+                  <% end %>
+                </select>
+                <span class="h6 text-primary mb-0" id="booking-variant-price-<%= product.id %>">
+                  ₹<%= number_with_delimiter(rounded_final) %>
+                </span>
+                <input type="hidden" id="booking-selected-variant-<%= product.id %>" value="<%= default_v.id %>">
+              <% elsif product.respond_to?(:discount_price) && product.discount_price.present? && product.discount_price != product.price %>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="h6 text-success mb-0">₹<%= number_with_delimiter(final_price.round(2)) %></span>
+                  <small class="text-muted text-decoration-line-through">₹<%= number_with_delimiter(product.price) %></small>
+                </div>
+              <% else %>
+                <span class="h6 text-primary mb-0">₹<%= number_with_delimiter(final_price.round(2)) %></span>
+              <% end %>
+
+              <% if product.gst_enabled && gst_rate > 0 %>
+                <small class="text-muted d-block">
+                  Base: ₹<%= number_with_delimiter(rounded_base) %> + GST: ₹<%= number_with_delimiter(rounded_gst) %> (<%= gst_rate %>%) = ₹<%= number_with_delimiter(rounded_final) %>
+                </small>
+              <% end %>
+            </div>
+
+
+            <%# Quantity and Add to Cart %>
+            <%
+              effective_stock = if product.has_multiple_quantities? && product.product_variants.any?
+                (default_v&.available_stock || 0)
+              else
+                current_stock
+              end
+            %>
+            <div class="mt-auto" id="booking-stock-section-<%= product.id %>">
+              <% if effective_stock > 0 %>
+                <!-- Quantity Selector -->
+                <div class="mb-2">
+                  <div class="d-flex align-items-center justify-content-between mb-1">
+                    <label class="form-label fw-semibold small mb-0">Qty</label>
+                    <span class="badge bg-info-subtle text-info" style="font-size:0.7rem;" id="booking-max-stock-<%= product.id %>">Max: <%= effective_stock.to_i %></span>
+                  </div>
+                  <div class="input-group input-group-sm">
+                    <button class="btn btn-outline-primary btn-sm px-2" type="button" onclick="decreaseQuantity(<%= product.id %>)">
+                      <i class="bi bi-dash"></i>
+                    </button>
+                    <input type="number" id="qty-<%= product.id %>" value="1" min="0.1" step="0.1" max="<%= effective_stock %>" class="form-control form-control-sm text-center fw-bold" onchange="validateQuantity(<%= product.id %>, <%= effective_stock %>)">
+                    <button class="btn btn-outline-primary btn-sm px-2" type="button" onclick="increaseQuantity(<%= product.id %>)">
+                      <i class="bi bi-plus"></i>
+                    </button>
+                  </div>
+
+                  <% if product.low_stock? && !product.has_multiple_quantities? %>
+                    <small class="text-warning d-block mt-1">
+                      <i class="bi bi-exclamation-triangle-fill"></i>
+                      <strong>Low Stock!</strong> Only <%= current_stock.to_i %> left
+                    </small>
+                  <% end %>
+                </div>
+
+                <!-- Add to Cart Button -->
+                <%
+                  cart_final_price = rounded_final
+                  cart_base_price = rounded_base
+                  cart_gst_rate = gst_rate
+                %>
+                <button class="btn btn-primary btn-sm w-100 booking-add-to-cart-btn"
+                        id="booking-add-btn-<%= product.id %>"
+                        data-product-id="<%= product.id %>"
+                        data-product-name="<%= product.name %>"
+                        data-base-price="<%= cart_base_price %>"
+                        data-gst-rate="<%= cart_gst_rate %>"
+                        data-final-price="<%= cart_final_price %>"
+                        data-stock="<%= effective_stock %>"
+                        data-has-variants="<%= product.has_multiple_quantities? ? 'true' : 'false' %>"
+                        <%= 'disabled' if effective_stock <= 0 %>>
+                  <i class="bi bi-cart-plus me-1"></i>Add to Cart
+                </button>
+              <% else %>
+                <div class="text-center">
+                  <button class="btn btn-danger btn-sm w-100" disabled>
+                    <i class="bi bi-x-circle me-1"></i>Out of Stock
+                  </button>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <div class="text-center py-5">
+    <i class="bi bi-box-seam fs-1 text-muted mb-3"></i>
+    <h5 class="text-muted">No Products Found</h5>
+    <p class="text-muted">Try a different search or category.</p>
+  </div>
+<% end %>

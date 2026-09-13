@@ -168,8 +168,15 @@ class User < ApplicationRecord
     end
   end
 
-  # Get permissions in CRUD format (for compatibility)
+  # Get permissions in CRUD format (for compatibility). Memoized — Ability#initialize
+  # and the sidebar partial each call has_sidebar_permission? (and thus this) dozens
+  # of times per request, and it otherwise re-parses the same JSON every call.
   def sidebar_permissions_hash
+    return @sidebar_permissions_hash if defined?(@sidebar_permissions_hash)
+    @sidebar_permissions_hash = compute_sidebar_permissions_hash
+  end
+
+  def compute_sidebar_permissions_hash
     return {} if sidebar_permissions.blank?
     begin
       parsed = if sidebar_permissions.is_a?(String)
@@ -210,6 +217,7 @@ class User < ApplicationRecord
   end
 
   def update_sidebar_permissions(permissions)
+    remove_instance_variable(:@sidebar_permissions_hash) if defined?(@sidebar_permissions_hash)
     self.update(sidebar_permissions: permissions.to_json)
   end
 

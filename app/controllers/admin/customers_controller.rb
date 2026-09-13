@@ -155,6 +155,10 @@ class Admin::CustomersController < Admin::ApplicationController
     @policies = []
     @family_members = []
     @uploaded_documents = []
+    # Computed once — the view renders these counts in two places (activity
+    # card + sidebar stats), which used to run each COUNT query twice.
+    @customer_bookings_count = @customer.bookings.count
+    @customer_orders_count = @customer.orders.count
   end
 
   # GET /admin/customers/:id/policy_chart

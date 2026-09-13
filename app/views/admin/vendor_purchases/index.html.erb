@@ -141,9 +141,9 @@
                     <div class="small text-muted"><%= time_ago_in_words(purchase.purchase_date) %> ago</div>
                   </td>
                   <td>
-                    <div class="fw-bold"><%= purchase.vendor_purchase_items.count %> items</div>
+                    <div class="fw-bold"><%= purchase.vendor_purchase_items.size %> items</div>
                     <div class="small text-muted">
-                      <%= purchase.vendor_purchase_items.sum(:quantity) %> units
+                      <%= purchase.vendor_purchase_items.sum(&:quantity) %> units
                     </div>
                   </td>
                   <td>

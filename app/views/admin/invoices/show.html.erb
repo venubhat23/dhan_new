@@ -654,7 +654,8 @@
 
       total_tax = total_cgst + total_sgst + total_igst
       delivery_charge = @invoice.delivery_charge.to_f
-      final_total = subtotal_amount + delivery_charge
+      order_discount = @invoice.discount_amount.to_f
+      final_total = subtotal_amount + delivery_charge - order_discount
     %>
 
     <%
@@ -854,6 +855,20 @@
             </table>
           </td>
         </tr>
+        <% if order_discount > 0 %>
+          <tr class="section-border">
+            <td>DISCOUNT</td>
+            <td>-</td>
+            <td style="width: 40%;">
+              <table class="subtotal-values-table">
+                <tr>
+                  <td></td>
+                  <td style="color:#1a7f37;">− ₹ <%= number_with_delimiter(order_discount.round(2), delimiter: ',') %></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        <% end %>
         <% if delivery_charge > 0 %>
           <tr class="section-border">
             <td>DELIVERY CHARGE</td>

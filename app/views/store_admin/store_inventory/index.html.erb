@@ -5,6 +5,9 @@
     <h4 class="mb-1">Store Inventory</h4>
     <small class="text-muted">Per-product and per-variant stock at <%= @current_store.name %></small>
   </div>
+  <%= link_to store_admin_low_stock_csv_store_inventory_path, class: "btn btn-outline-danger" do %>
+    <i class="bi bi-file-earmark-arrow-down me-1"></i>Import Low Stock
+  <% end %>
 </div>
 
 <div class="row mb-4">

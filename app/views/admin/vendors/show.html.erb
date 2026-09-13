@@ -220,7 +220,7 @@
                       <td><%= purchase.purchase_date.strftime('%b %d, %Y') %></td>
                       <td>
                         <small class="text-muted">
-                          <%= pluralize(purchase.vendor_purchase_items.count, 'item') %>
+                          <%= pluralize(purchase.vendor_purchase_items.size, 'item') %>
                         </small>
                       </td>
                       <td>

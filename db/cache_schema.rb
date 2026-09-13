@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_06_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -228,12 +228,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_06_000001) do
     t.string "share_token"
     t.integer "booking_items_count", default: 0, null: false
     t.index ["booked_by"], name: "index_bookings_on_booked_by"
+    t.index ["booking_number"], name: "index_bookings_on_booking_number", unique: true
+    t.index ["booking_number"], name: "index_bookings_on_booking_number_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["booking_schedule_id"], name: "index_bookings_on_booking_schedule_id"
     t.index ["cashfree_order_id"], name: "index_bookings_on_cashfree_order_id"
     t.index ["cashfree_payment_id"], name: "index_bookings_on_cashfree_payment_id"
     t.index ["courier_service"], name: "index_bookings_on_courier_service"
     t.index ["created_at"], name: "index_bookings_on_created_at"
+    t.index ["customer_email"], name: "index_bookings_on_customer_email_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["customer_id"], name: "index_bookings_on_customer_id"
+    t.index ["customer_name"], name: "index_bookings_on_customer_name_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["customer_phone"], name: "index_bookings_on_customer_phone_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["delivery_person_id"], name: "index_bookings_on_delivery_person_id"
     t.index ["delivery_time"], name: "index_bookings_on_delivery_time"
     t.index ["expected_delivery_date"], name: "index_bookings_on_expected_delivery_date"
@@ -245,6 +250,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_06_000001) do
     t.index ["stage_updated_at"], name: "index_bookings_on_stage_updated_at"
     t.index ["stage_updated_by"], name: "index_bookings_on_stage_updated_by"
     t.index ["status"], name: "index_bookings_on_status"
+    t.index ["store_id", "created_at"], name: "index_bookings_on_store_id_and_created_at"
+    t.index ["store_id", "status"], name: "index_bookings_on_store_id_and_status"
     t.index ["store_id"], name: "index_bookings_on_store_id"
     t.index ["tracking_number"], name: "index_bookings_on_tracking_number"
     t.index ["user_id"], name: "index_bookings_on_user_id"
@@ -391,7 +398,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_06_000001) do
     t.string "landmark"
     t.text "shipping_address"
     t.string "full_name"
+    t.index "(((to_tsvector('simple'::regconfig, COALESCE((full_name)::text, ''::text)) || to_tsvector('simple'::regconfig, COALESCE((email)::text, ''::text))) || to_tsvector('simple'::regconfig, COALESCE((mobile)::text, ''::text))))", name: "index_customers_on_pg_search_tsvector", using: :gin
+    t.index ["email"], name: "index_customers_on_email", unique: true
+    t.index ["full_name"], name: "index_customers_on_full_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["latitude", "longitude"], name: "index_customers_on_location"
+    t.index ["mobile"], name: "index_customers_on_mobile"
     t.index ["whatsapp_number"], name: "index_customers_on_whatsapp_number"
   end
 
@@ -563,10 +574,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_06_000001) do
     t.boolean "quick_invoice", default: false
     t.decimal "paid_amount", precision: 10, scale: 2, default: "0.0"
     t.decimal "delivery_charge", precision: 10, scale: 2, default: "0.0"
+    t.decimal "discount_amount", precision: 10, scale: 2, default: "0.0", null: false
     t.index ["created_at"], name: "index_invoices_on_created_at"
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["invoice_date"], name: "index_invoices_on_invoice_date"
     t.index ["invoice_number"], name: "index_invoices_on_invoice_number", unique: true
+    t.index ["invoice_number"], name: "index_invoices_on_invoice_number_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["payment_status"], name: "index_invoices_on_payment_status"
     t.index ["share_token"], name: "index_invoices_on_share_token", unique: true
   end
@@ -914,8 +927,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_06_000001) do
     t.index ["is_subscription_enabled"], name: "index_products_on_is_subscription_enabled"
     t.index ["last_price_update"], name: "index_products_on_last_price_update"
     t.index ["name"], name: "index_products_on_name"
+    t.index ["name"], name: "index_products_on_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["product_type"], name: "index_products_on_product_type"
     t.index ["sku"], name: "index_products_on_sku", unique: true
+    t.index ["sku"], name: "index_products_on_sku_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["status"], name: "index_products_on_status"
   end
 
@@ -1164,6 +1179,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_06_000001) do
     t.index ["product_id", "store_id"], name: "index_stock_batches_on_product_id_and_store_id"
     t.index ["product_id"], name: "index_stock_batches_on_product_id"
     t.index ["product_variant_id"], name: "index_stock_batches_on_product_variant_id"
+    t.index ["store_id", "status"], name: "index_stock_batches_on_store_id_and_status"
     t.index ["store_id"], name: "index_stock_batches_on_store_id"
     t.index ["vendor_id"], name: "index_stock_batches_on_vendor_id"
     t.index ["vendor_purchase_id"], name: "index_stock_batches_on_vendor_purchase_id"
@@ -1205,10 +1221,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_06_000001) do
     t.bigint "product_variant_id"
     t.string "transfer_group_id"
     t.index ["approved_by_id"], name: "index_stock_transfers_on_approved_by_id"
+    t.index ["from_store_id", "status"], name: "index_stock_transfers_on_from_store_id_and_status"
     t.index ["from_store_id"], name: "index_stock_transfers_on_from_store_id"
     t.index ["product_id"], name: "index_stock_transfers_on_product_id"
     t.index ["requested_by_id"], name: "index_stock_transfers_on_requested_by_id"
     t.index ["status"], name: "index_stock_transfers_on_status"
+    t.index ["to_store_id", "status"], name: "index_stock_transfers_on_to_store_id_and_status"
     t.index ["to_store_id"], name: "index_stock_transfers_on_to_store_id"
     t.index ["transfer_group_id"], name: "index_stock_transfers_on_transfer_group_id"
   end
@@ -1480,7 +1498,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_06_000001) do
     t.decimal "line_total"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "product_variant_id"
     t.index ["product_id"], name: "index_vendor_purchase_items_on_product_id"
+    t.index ["product_variant_id"], name: "index_vendor_purchase_items_on_product_variant_id"
     t.index ["vendor_purchase_id"], name: "index_vendor_purchase_items_on_vendor_purchase_id"
   end
 
@@ -1615,6 +1635,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_06_000001) do
   add_foreign_key "vendor_invoices", "vendor_purchases"
   add_foreign_key "vendor_payments", "vendor_purchases"
   add_foreign_key "vendor_payments", "vendors"
+  add_foreign_key "vendor_purchase_items", "product_variants"
   add_foreign_key "vendor_purchase_items", "products"
   add_foreign_key "vendor_purchase_items", "vendor_purchases"
   add_foreign_key "vendor_purchases", "vendors"

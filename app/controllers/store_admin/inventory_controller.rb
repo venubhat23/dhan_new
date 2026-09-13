@@ -89,10 +89,18 @@ class StoreAdmin::InventoryController < StoreAdmin::ApplicationController
 
   def search_products
     q = params[:q].to_s.strip
-    products = Product.active.where('name ILIKE ?', "%#{q}%").limit(15)
+    products = Product.active.includes(:product_variants).where('name ILIKE ?', "%#{q}%").limit(15)
+    product_ids = products.map(&:id)
+
+    # Batch both stock sources in 2 queries total instead of calling
+    # Store#available_stock_for (2 queries each) per product below.
+    inv_by_product = @current_store.store_inventories.where(product_id: product_ids)
+                                   .group(:product_id).sum(:quantity)
+    batch_by_product = @current_store.stock_batches.where(product_id: product_ids, status: 'active')
+                                     .group(:product_id).sum(:quantity_remaining)
 
     render json: products.map { |p|
-      store_stock = @current_store.available_stock_for(p.id)
+      store_stock = inv_by_product.key?(p.id) ? inv_by_product[p.id] : batch_by_product[p.id].to_f
       {
         id: p.id,
         name: p.name,
@@ -101,7 +109,7 @@ class StoreAdmin::InventoryController < StoreAdmin::ApplicationController
         store_stock: store_stock.to_f,
         unit_type: p.unit_type,
         has_variants: p.has_multiple_quantities?,
-        variants: p.has_multiple_quantities? ? p.product_variants.order(:display_order, :weight).map { |v|
+        variants: p.has_multiple_quantities? ? p.product_variants.sort_by { |v| [v.display_order.to_i, v.weight.to_f] }.map { |v|
           { id: v.id, label: "#{v.weight} #{v.unit}", price: v.selling_price.to_f, stock: v.available_stock.to_f }
         } : []
       }

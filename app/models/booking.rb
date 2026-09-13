@@ -250,18 +250,26 @@ class Booking < ApplicationRecord
     self.booking_number ||= "BK#{Date.current.strftime('%Y%m%d')}#{SecureRandom.hex(3).upcase}"
   end
 
+  # 16 random bytes (128 bits of entropy) makes a collision practically
+  # impossible, so this skips the extra Booking.exists? round-trip per call —
+  # ensure_share_token! runs per booking row on every index page view for any
+  # booking still missing a token. The DB's unique index on share_token is the
+  # real backstop; #ensure_share_token! retries in the astronomically rare
+  # case it fires.
   def generate_share_token
     return if share_token.present?
-    loop do
-      token = SecureRandom.urlsafe_base64(16)
-      break self.share_token = token unless Booking.exists?(share_token: token)
-    end
+    self.share_token = SecureRandom.urlsafe_base64(16)
   end
 
   def ensure_share_token!
     return share_token if share_token.present?
     generate_share_token
-    update_column(:share_token, share_token)
+    begin
+      update_column(:share_token, share_token)
+    rescue ActiveRecord::RecordNotUnique
+      self.share_token = nil
+      retry
+    end
     share_token
   end
 

@@ -4,7 +4,7 @@ class BookingInvoicesController < ActionController::Base
   protect_from_forgery with: :exception
 
   def public_view
-    @invoice = BookingInvoice.find_by!(share_token: params[:token])
+    @invoice = BookingInvoice.includes(:booking, :customer).find_by!(share_token: params[:token])
     @booking = @invoice.booking
     @customer = @invoice.customer || @booking&.customer
     @invoice_items = @invoice.parsed_invoice_items
@@ -22,7 +22,7 @@ class BookingInvoicesController < ActionController::Base
   end
 
   def public_download_pdf
-    @invoice = BookingInvoice.find_by!(share_token: params[:token])
+    @invoice = BookingInvoice.includes(:booking, :customer).find_by!(share_token: params[:token])
     @booking = @invoice.booking
     @customer = @invoice.customer || @booking&.customer
     @invoice_items = @invoice.parsed_invoice_items

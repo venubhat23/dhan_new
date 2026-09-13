@@ -335,9 +335,10 @@ class StoreAdmin::InvoicesController < StoreAdmin::ApplicationController
                                    .where(status: ['completed', 'delivered'])
                                    .where(payment_status: [nil, '', 'unpaid'])
                                    .where(invoice_generated: [false, nil])
+                                   .includes(booking_items: :product)
 
     unpaid_bookings.each do |booking|
-      booking.booking_items.includes(:product).each do |item|
+      booking.booking_items.each do |item|
         product = item.product
         next unless product
         unit_price = if product.gst_enabled? && product.gst_percentage.present?

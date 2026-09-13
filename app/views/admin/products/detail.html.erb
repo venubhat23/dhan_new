@@ -2543,7 +2543,7 @@
               <div class="chart-legend">
                 <% @all_products_with_prices.each_with_index do |product, index| %>
                   <div class="legend-item" data-product-id="<%= product.id %>">
-                    <div class="legend-color" style="background-color: hsl(<%= (index * 360 / @all_products_with_prices.count) %>, 70%, 60%);"></div>
+                    <div class="legend-color" style="background-color: hsl(<%= (index * 360 / @all_products_with_prices.size) %>, 70%, 60%);"></div>
                     <span class="legend-label"><%= product.name.truncate(15) %></span>
                     <span class="legend-price">₹<%= product.today_price || product.price %></span>
                   </div>
@@ -2741,7 +2741,7 @@
               <div class="legend-scroll">
                 <% @all_products_with_prices.each_with_index do |product, index| %>
                   <div class="legend-item" data-product-id="<%= product.id %>">
-                    <div class="legend-color" style="background-color: hsl(<%= (index * 360 / @all_products_with_prices.count) %>, 70%, 60%);"></div>
+                    <div class="legend-color" style="background-color: hsl(<%= (index * 360 / @all_products_with_prices.size) %>, 70%, 60%);"></div>
                     <span class="legend-text">
                       <%= product.name %>
                       <small class="legend-price">₹<%= product.today_price || product.price %></small>
@@ -2855,7 +2855,7 @@
             Last updated: <%= @product.last_price_update ? time_ago_in_words(@product.last_price_update) + ' ago' : 'Never' %>
             <span class="ms-4">
               <i class="bi bi-graph-up me-1"></i>
-              <%= @all_products_with_prices&.count || 0 %> Products Tracked
+              <%= @all_products_with_prices&.size || 0 %> Products Tracked
             </span>
           </small>
         </div>

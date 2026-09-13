@@ -61,7 +61,7 @@ class DashboardController < ApplicationController
     end
 
     # Get top products
-    top_products = Product.joins(:booking_items)
+    top_products_raw = Product.joins(:booking_items)
                          .joins('JOIN bookings ON booking_items.booking_id = bookings.id')
                          .where('bookings.status IN (?)', ['delivered', 'completed'])
                          .group('products.id, products.name')
@@ -70,8 +70,10 @@ class DashboardController < ApplicationController
                                  SUM(booking_items.quantity) as sold')
                          .order('revenue DESC')
                          .limit(5)
-                         .map do |product|
-      category_name = product.category&.name || 'General'
+                         .to_a
+    categories_by_id = Category.where(id: top_products_raw.map(&:category_id).compact.uniq).index_by(&:id)
+    top_products = top_products_raw.map do |product|
+      category_name = categories_by_id[product.category_id]&.name || 'General'
       {
         id: product.id,
         name: product.name,
@@ -81,12 +83,13 @@ class DashboardController < ApplicationController
       }
     end
 
-    # Get order status distribution
+    # Get order status distribution — one GROUP BY instead of 4 separate COUNTs
+    status_counts = Booking.group(:status).count
     order_status_data = {
-      'Completed' => Booking.where(status: ['delivered', 'completed']).count,
-      'Processing' => Booking.where(status: ['confirmed', 'processing', 'packed']).count,
-      'Shipped' => Booking.where(status: ['shipped', 'out_for_delivery']).count,
-      'Cancelled' => Booking.where(status: 'cancelled').count
+      'Completed' => status_counts.values_at('delivered', 'completed').compact.sum,
+      'Processing' => status_counts.values_at('confirmed', 'processing', 'packed').compact.sum,
+      'Shipped' => status_counts.values_at('shipped', 'out_for_delivery').compact.sum,
+      'Cancelled' => status_counts['cancelled'].to_i
     }
 
     # Generate sample activities

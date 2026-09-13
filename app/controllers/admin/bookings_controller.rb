@@ -3,6 +3,7 @@ class Admin::BookingsController < Admin::ApplicationController
   before_action :set_booking, only: [:show, :edit, :update, :destroy, :generate_invoice, :invoice, :convert_to_order, :update_status, :cancel_order, :mark_delivered, :mark_completed, :mark_paid, :manage_stage, :update_stage, :update_delivery_charge]
 
   LIST_STATE_PARAMS = %i[page search status date_from date_to customer_id b2b booked_by payment_status delivery_pending].freeze
+  INITIAL_PICKER_LIMIT = 40
 
   def index
     # Base scope for filters — no includes here (stats use SQL aggregates, not loaded records)
@@ -134,7 +135,11 @@ class Admin::BookingsController < Admin::ApplicationController
     @selected_store = Store.active.find_by(id: params[:store_id]) if params[:store_id].present?
     @booking.store_id = @selected_store.id if @selected_store
 
-    @products = products_for_picker(@selected_store&.id)
+    # Only render an initial batch of cards (was: all 200+ active products on
+    # every page load — the actual cause of this page being slow, not a query
+    # problem). Search/category/in-stock filtering fetches more via AJAX
+    # (#product_picker) instead of filtering an already-rendered DOM.
+    @products = products_for_picker(@selected_store&.id, limit: INITIAL_PICKER_LIMIT)
 
     @categories = Category.where(status: true).order(:name)
     @customers = Customer.select(:id, :full_name, :email, :mobile)
@@ -663,6 +668,23 @@ class Admin::BookingsController < Admin::ApplicationController
     }
   end
 
+  # AJAX-driven product grid for the New Booking picker (app/views/admin/bookings/new.html.erb).
+  # Renders the same server-side card partial used on initial page load, filtered
+  # by search text / category / in-stock, so the browser never has to hold and
+  # DOM-filter every active product at once.
+  def product_picker
+    store_id = params[:store_id].presence
+    @products = products_for_picker(
+      store_id,
+      q: params[:q],
+      category_id: params[:category_id],
+      in_stock_only: params[:in_stock] == '1',
+      limit: 60
+    )
+
+    render partial: 'admin/bookings/product_grid', locals: { products: @products }, layout: false
+  end
+
   def search_customers
     @customers = Customer.where(
       "full_name ILIKE ? OR email ILIKE ? OR mobile ILIKE ?",
@@ -947,7 +969,10 @@ class Admin::BookingsController < Admin::ApplicationController
   # Product grid for the new-booking picker. `cached_stock` is scoped to the
   # given store's active batches when a store is selected (the sale deducts from
   # that store), otherwise to central inventory (store_id IS NULL).
-  def products_for_picker(store_id = nil)
+  # `q`/`category_id`/`in_stock_only` back the AJAX product_picker endpoint so
+  # the new-booking picker doesn't have to render every active product (200+)
+  # into the page up front — see #product_picker.
+  def products_for_picker(store_id = nil, q: nil, category_id: nil, in_stock_only: false, limit: nil)
     if store_id.present?
       # Store-scoped picker: `cached_stock` must match Store#available_stock_for
       # (and the store-inventory / Product Summary screens) — a store_inventories
@@ -963,10 +988,13 @@ class Admin::BookingsController < Admin::ApplicationController
                   "WHERE si.product_id = products.id AND si.store_id = #{sid})"
       effective = "COALESCE(#{inv_sum}, #{batch_sum})"
 
-      return Product.active
-                    .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
-                    .select("products.*, #{effective} AS cached_stock")
-                    .order(Arel.sql("CASE WHEN #{effective} > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
+      scope = Product.active
+                     .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
+                     .select("products.*, #{effective} AS cached_stock")
+      scope = scope.where("#{effective} > 0") if in_stock_only
+      scope = apply_picker_filters(scope, q: q, category_id: category_id)
+      scope = scope.order(Arel.sql("CASE WHEN #{effective} > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
+      return limit ? scope.limit(limit) : scope
     end
 
     # Central (no-store) on-hand must match the app's canonical rule
@@ -976,10 +1004,21 @@ class Admin::BookingsController < Admin::ApplicationController
     # a raw sum made variant products show a different figure (and a wrong
     # out-of-stock badge) here than everywhere else.
     real_stock = Product::REAL_STOCK_SQL
-    Product.active
-           .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
-           .select("products.*, (#{real_stock}) AS cached_stock")
-           .order(Arel.sql("CASE WHEN (#{real_stock}) > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
+    scope = Product.active
+                   .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
+                   .select("products.*, (#{real_stock}) AS cached_stock")
+    scope = scope.where("(#{real_stock}) > 0") if in_stock_only
+    scope = apply_picker_filters(scope, q: q, category_id: category_id)
+    scope = scope.order(Arel.sql("CASE WHEN (#{real_stock}) > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
+    limit ? scope.limit(limit) : scope
+  end
+
+  def apply_picker_filters(scope, q:, category_id:)
+    if q.present?
+      scope = scope.where("products.name ILIKE ? OR products.sku ILIKE ?", "%#{q}%", "%#{q}%")
+    end
+    scope = scope.where(category_id: category_id) if category_id.present?
+    scope
   end
 
   def validate_stock_availability(booking, is_update: false)

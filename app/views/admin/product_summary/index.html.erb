@@ -81,6 +81,9 @@
     <button type="button" class="btn btn-primary" id="pse-bulk-btn">
       <i class="bi bi-pencil-square me-1"></i>Bulk Edit
     </button>
+    <%= link_to admin_low_stock_product_summary_path, class: "btn btn-outline-danger" do %>
+      <i class="bi bi-exclamation-triangle me-1"></i>Low Stock
+    <% end %>
     <%= link_to admin_products_path, class: "btn btn-outline-secondary" do %>
       <i class="bi bi-box-seam me-1"></i>All Products
     <% end %>

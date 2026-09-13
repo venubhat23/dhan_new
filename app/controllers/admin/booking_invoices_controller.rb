@@ -72,7 +72,7 @@ class Admin::BookingInvoicesController < Admin::ApplicationController
   private
 
   def set_booking_invoice
-    @booking_invoice = BookingInvoice.find(params[:id])
+    @booking_invoice = BookingInvoice.includes(:booking, :customer).find(params[:id])
   end
 
   def booking_invoice_params

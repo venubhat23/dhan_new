@@ -844,7 +844,7 @@ class Admin::InvoicesController < Admin::ApplicationController
   end
 
   def invoice_params
-    params.require(:invoice).permit(:invoice_date, :due_date, :status, :payment_status, :total_amount, :delivery_charge,
+    params.require(:invoice).permit(:invoice_date, :due_date, :status, :payment_status, :total_amount, :delivery_charge, :discount_amount,
                                    invoice_items_attributes: [:id, :product_id, :description, :quantity, :unit_price, :total_amount, :discount_type, :discount_value, :original_unit_price, :_destroy])
   end
 
@@ -869,10 +869,11 @@ class Admin::InvoicesController < Admin::ApplicationController
                              .where(payment_status: [nil, '', 'unpaid'])
                              .where(invoice_generated: [false, nil])
                              .where.not(id: BookingInvoice.select(:booking_id).where.not(booking_id: nil))
+                             .includes(booking_items: :product)
 
     # Process unpaid bookings - add individual line items for each booking item
     unpaid_bookings.each do |booking|
-      booking.booking_items.includes(:product).each do |item|
+      booking.booking_items.each do |item|
         product = item.product
         next unless product
 
@@ -918,7 +919,7 @@ class Admin::InvoicesController < Admin::ApplicationController
 
     # 3. Check MilkDeliveryTask if we have any pending for month check
     if defined?(MilkDeliveryTask)
-      pending_delivery_tasks = MilkDeliveryTask.joins(:product)
+      pending_delivery_tasks = MilkDeliveryTask.includes(:product)
                                               .where(customer: customer,
                                                      delivery_date: start_date..end_date)
                                               .where(status: ['pending', 'scheduled', 'completed'])

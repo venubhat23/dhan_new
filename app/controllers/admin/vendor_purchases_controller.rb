@@ -213,7 +213,7 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
 
   def batch_inventory
     # Get all stock batches with filters
-    stock_batches_query = StockBatch.includes(:product, :vendor, :vendor_purchase)
+    stock_batches_query = StockBatch.includes(:vendor, :vendor_purchase, product: :category)
                                    .order(:batch_date, :created_at)
 
     stock_batches_query = stock_batches_query.joins(:product).where('products.name ILIKE ?', "%#{params[:search]}%") if params[:search].present?
@@ -271,7 +271,7 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
   def vendor_purchase_path_for(purchase) = polymorphic_path([resource_area, purchase])
 
   def set_vendor_purchase
-    @vendor_purchase = VendorPurchase.find(params[:id])
+    @vendor_purchase = VendorPurchase.includes(:vendor, vendor_purchase_items: [:product, :product_variant]).find(params[:id])
   end
 
   def set_vendors_and_products
