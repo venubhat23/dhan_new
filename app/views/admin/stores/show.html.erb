@@ -180,7 +180,7 @@
         </div>
         <div>
           <div class="text-muted small fw-medium">This Week</div>
-          <div class="fw-bold fs-4 text-success"><%= @store.bookings.where(created_at: 1.week.ago..Time.current).count %></div>
+          <div class="fw-bold fs-4 text-success"><%= @bookings_this_week %></div>
         </div>
       </div>
     </div>
@@ -193,7 +193,7 @@
         </div>
         <div>
           <div class="text-muted small fw-medium">Pending</div>
-          <div class="fw-bold fs-4 text-warning"><%= @store.bookings.where(status: 'pending').count %></div>
+          <div class="fw-bold fs-4 text-warning"><%= @bookings_pending %></div>
         </div>
       </div>
     </div>
@@ -775,7 +775,7 @@
           <% end %>
         </div>
 
-        <% if @store.can_be_deleted? %>
+        <% if @can_be_deleted %>
           <div class="d-grid mt-2">
             <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius:8px;"
                     data-bs-toggle="modal" data-bs-target="#deleteStoreModal">

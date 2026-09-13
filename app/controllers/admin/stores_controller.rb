@@ -9,13 +9,27 @@ class Admin::StoresController < Admin::ApplicationController
     @collect_from_store_enabled = SystemSetting.collect_from_store_enabled?
 
     respond_to do |format|
-      format.html
+      format.html do
+        @stores = @stores.to_a
+        @total_stores_count = @stores.size
+        @active_stores_count = @stores.count(&:status)
+        @inactive_stores_count = @total_stores_count - @active_stores_count
+        @bookings_counts_by_store = Booking.where(store_id: @stores.map(&:id))
+                                            .group(:store_id).count
+      end
       format.json { render json: @stores }
     end
   end
 
   def show
-    @bookings_count = @store.bookings.count
+    week_start = 1.week.ago
+    quoted_week_start = Booking.connection.quote(week_start)
+    @bookings_count, @bookings_this_week, @bookings_pending = @store.bookings.pick(
+      Arel.sql('COUNT(*)'),
+      Arel.sql("COUNT(*) FILTER (WHERE created_at >= #{quoted_week_start})"),
+      Arel.sql("COUNT(*) FILTER (WHERE status = 'pending')")
+    )
+    @can_be_deleted = @bookings_count.zero?
     @inventory_summary = @store.store_inventory_summary
 
     @expenses_this_month = @store.expenses.by_date_range(Date.current.beginning_of_month, Date.current.end_of_month)

@@ -12,19 +12,7 @@ class Admin::CustomersController < Admin::ApplicationController
 
   # GET /admin/customers
   def index
-    # Check if policies_count column exists for optimized queries
-    has_counter_cache = Customer.column_names.include?('policies_count')
-
-    # Check if search is active first
-    search_active = params[:search].present? && params[:search].strip.length >= 4
-
-    if search_active
-      # When search is active, use simpler query without select optimization to avoid pg_search conflicts
-      @customers = Customer.all
-    else
-      # Use standard query and rely on counter cache for policy counts
-      @customers = Customer.all
-    end
+    @customers = Customer.all
 
     # Search functionality - only search if 4+ characters or empty
     if params[:search].present?
@@ -42,10 +30,10 @@ class Admin::CustomersController < Admin::ApplicationController
     # Filter by status - removed (status column doesn't exist in customers table)
     # All customers are considered active since there's no status field
 
-    # Get total count before pagination for display purposes
-    @total_filtered_count = @customers.count
-
-    # Order and paginate using configurable pagination
+    # Order and paginate using configurable pagination. paginate_records already
+    # counts the filtered scope once to decide pagination -- a separate
+    # @total_filtered_count = @customers.count here duplicated that same query
+    # for a value the view never actually rendered.
     @customers = paginate_records(@customers.order(created_at: :desc))
 
     # Calculate statistics
@@ -66,6 +54,10 @@ class Admin::CustomersController < Admin::ApplicationController
     if params[:customer_id].present?
       @customers = @customers.where(id: params[:customer_id])
       stats_scope = stats_scope.where(id: params[:customer_id])
+      # Only the selected customer needs loading here -- the filter dropdown
+      # itself now searches on demand via AJAX instead of rendering every
+      # customer into the page.
+      @selected_customer_filter = Customer.find_by(id: params[:customer_id])
     end
 
     # Status filtering
@@ -138,19 +130,16 @@ class Admin::CustomersController < Admin::ApplicationController
        COUNT(CASE WHEN status = true THEN 1 END) AS active_count,
        COUNT(CASE WHEN created_at BETWEEN '#{month_start}' AND '#{month_end}' THEN 1 END) AS new_count"
     )).take
-    customers_with_orders = begin stats_scope.joins(:orders).distinct.count rescue 0 end
 
     @stats = {
-      total_customers:       stats_row.total_count.to_i,
-      active_customers:      stats_row.active_count.to_i,
-      new_this_month:        stats_row.new_count.to_i,
-      customers_with_orders: customers_with_orders
+      total_customers:  stats_row.total_count.to_i,
+      active_customers: stats_row.active_count.to_i,
+      new_this_month:   stats_row.new_count.to_i
     }
 
-    @total_customers       = @stats[:total_customers]
-    @active_customers      = @stats[:active_customers]
-    @new_this_month        = @stats[:new_this_month]
-    @customers_with_orders = @stats[:customers_with_orders]
+    @total_customers  = @stats[:total_customers]
+    @active_customers = @stats[:active_customers]
+    @new_this_month   = @stats[:new_this_month]
 
     # Handle AJAX requests
     respond_to do |format|

@@ -64,10 +64,12 @@ class Admin::BookingsController < Admin::ApplicationController
       end
     end
 
-    # Only load customers needed for the filter dropdown
-    @customers = Customer.select(:id, :full_name, :email, :mobile)
-                         .order(:full_name)
-                         .limit(500)
+    # The customer filter dropdown searches on demand via the search_customers
+    # AJAX endpoint now, instead of preloading up to 500 customers (a full extra
+    # query plus a large rendered <select>) on every single bookings list view.
+    # Only the currently-selected customer, if any, needs to be loaded here so
+    # its name shows in the closed dropdown.
+    @selected_customer_for_filter = Customer.find_by(id: params[:customer_id]) if params[:customer_id].present?
   end
 
   # Status-filtered index views. The routes (collection GETs in config/routes.rb)

@@ -75,23 +75,29 @@ class Store < ApplicationRecord
   end
 
   def store_inventory_summary
+    transfer_counts = pending_transfer_counts
+
     if store_inventories.exists?
-      products_with_stock = store_inventories.where('quantity > 0').select(:product_id).distinct.count
-      total_value = store_inventories.joins(:product).sum('store_inventories.quantity * products.price')
+      products_with_stock, total_value = store_inventories.joins(:product).pick(
+        Arel.sql('COUNT(DISTINCT store_inventories.product_id) FILTER (WHERE store_inventories.quantity > 0)'),
+        Arel.sql('COALESCE(SUM(store_inventories.quantity * products.price), 0)')
+      )
       low_stock = store_inventories.low_stock.count
       return {
         total_products: products_with_stock,
         total_stock_value: total_value.to_f.round(2),
         low_stock_count: low_stock,
-        pending_incoming_transfers: stock_transfers_received.where(status: 'pending').count,
-        pending_outgoing_transfers: stock_transfers_sent.where(status: 'pending').count,
+        pending_incoming_transfers: transfer_counts[:incoming],
+        pending_outgoing_transfers: transfer_counts[:outgoing],
         recent_bookings_count: bookings.where(created_at: 1.week.ago..Time.current).count
       }
     end
 
     batches = stock_batches.where(status: 'active').where('quantity_remaining > 0')
-    products_with_stock = batches.select(:product_id).distinct.count
-    total_value = batches.sum('quantity_remaining * selling_price')
+    products_with_stock, total_value = batches.pick(
+      Arel.sql('COUNT(DISTINCT product_id)'),
+      Arel.sql('COALESCE(SUM(quantity_remaining * selling_price), 0)')
+    )
     threshold = auto_transfer_threshold || 10
     low_stock = batches.group(:product_id)
                        .having('SUM(quantity_remaining) <= ?', threshold)
@@ -100,8 +106,8 @@ class Store < ApplicationRecord
       total_products: products_with_stock,
       total_stock_value: total_value.to_f.round(2),
       low_stock_count: low_stock,
-      pending_incoming_transfers: stock_transfers_received.where(status: 'pending').count,
-      pending_outgoing_transfers: stock_transfers_sent.where(status: 'pending').count,
+      pending_incoming_transfers: transfer_counts[:incoming],
+      pending_outgoing_transfers: transfer_counts[:outgoing],
       recent_bookings_count: bookings.where(created_at: 1.week.ago..Time.current).count
     }
   end
@@ -185,6 +191,16 @@ class Store < ApplicationRecord
   end
 
   private
+
+  def pending_transfer_counts
+    rows = StockTransfer.where(status: 'pending')
+                         .where('from_store_id = :id OR to_store_id = :id', id: id)
+                         .pluck(:from_store_id, :to_store_id)
+    {
+      incoming: rows.count { |_from, to| to == id },
+      outgoing: rows.count { |from, _to| from == id }
+    }
+  end
 
   def normalize_contact_mobile
     return if contact_mobile.blank?

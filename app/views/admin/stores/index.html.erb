@@ -174,7 +174,7 @@
           </div>
           <div>
             <div class="text-muted small fw-medium">Total Stores</div>
-            <div class="fw-bold fs-4"><%= @stores.count %></div>
+            <div class="fw-bold fs-4"><%= @total_stores_count %></div>
           </div>
         </div>
       </div>
@@ -187,7 +187,7 @@
           </div>
           <div>
             <div class="text-muted small fw-medium">Active</div>
-            <div class="fw-bold fs-4 text-success"><%= @stores.where(status: true).count %></div>
+            <div class="fw-bold fs-4 text-success"><%= @active_stores_count %></div>
           </div>
         </div>
       </div>
@@ -200,7 +200,7 @@
           </div>
           <div>
             <div class="text-muted small fw-medium">Inactive</div>
-            <div class="fw-bold fs-4 text-danger"><%= @stores.where(status: false).count %></div>
+            <div class="fw-bold fs-4 text-danger"><%= @inactive_stores_count %></div>
           </div>
         </div>
       </div>
@@ -225,7 +225,7 @@
     <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center px-4 py-3">
       <h5 class="mb-0 fw-semibold">
         <i class="bi bi-building me-2 text-muted"></i>All Stores
-        <span class="badge bg-secondary-subtle text-secondary ms-2" style="font-size:0.75rem;"><%= @stores.count %></span>
+        <span class="badge bg-secondary-subtle text-secondary ms-2" style="font-size:0.75rem;"><%= @total_stores_count %></span>
       </h5>
       <div class="d-flex gap-2 align-items-center">
         <div class="position-relative">
@@ -299,7 +299,7 @@
                   <!-- Bookings count -->
                   <div class="d-flex align-items-center gap-1 mt-2 pt-2 border-top">
                     <i class="bi bi-bag-check text-muted" style="font-size:0.85rem;"></i>
-                    <small class="text-muted"><%= store.bookings.count %> bookings</small>
+                    <small class="text-muted"><%= @bookings_counts_by_store[store.id] || 0 %> bookings</small>
                     <% if store.is_main_inventory %>
                       <span class="badge bg-warning-subtle text-warning ms-auto" style="font-size:0.7rem;">Main Inventory</span>
                     <% end %>

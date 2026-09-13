@@ -269,7 +269,7 @@
               <i class="bi bi-person me-1"></i>Customer
             </label>
             <%= form.select :customer_id,
-                options_from_collection_for_select(@customers, :id, :display_name, params[:customer_id]),
+                (@selected_customer_for_filter ? options_for_select([[@selected_customer_for_filter.display_name, @selected_customer_for_filter.id]], params[:customer_id]) : ""),
                 { prompt: 'All Customers' },
                 {
                   class: "form-select form-select-sm customer-select shadow-sm",
@@ -824,12 +824,22 @@ function confirmDelete(bookingId, bookingNumber, customerName, listStateQuery) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize Select2 for customer dropdown
+  // Initialize Select2 for customer dropdown — searches on demand via AJAX
+  // instead of preloading up to 500 customers into the page on every visit.
   $('.customer-select').select2({
     theme: 'bootstrap-5',
     placeholder: 'Select Customer...',
     allowClear: true,
-    width: '100%'
+    width: '100%',
+    minimumInputLength: 2,
+    ajax: {
+      url: '<%= search_customers_admin_bookings_path %>',
+      dataType: 'json',
+      delay: 250,
+      cache: true,
+      data: function (params) { return { q: params.term }; },
+      processResults: function (data) { return { results: data }; }
+    }
   });
 
   // Auto-submit form when customer selection changes

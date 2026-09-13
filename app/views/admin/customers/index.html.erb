@@ -75,13 +75,12 @@
         </label>
         <select id="customerFilter" class="form-select customer-select2">
           <option value="">All Customers</option>
-          <% Customer.order(:full_name).each do |customer| %>
-            <option value="<%= customer.id %>"
-                    <%= 'selected' if params[:customer_id] == customer.id.to_s %>
-                    data-name="<%= customer.display_name %>"
-                    data-email="<%= customer.email %>"
-                    data-mobile="<%= customer.mobile %>">
-              <%= customer.display_name %> - <%= customer.mobile %>
+          <% if @selected_customer_filter %>
+            <option value="<%= @selected_customer_filter.id %>" selected
+                    data-name="<%= @selected_customer_filter.display_name %>"
+                    data-email="<%= @selected_customer_filter.email %>"
+                    data-mobile="<%= @selected_customer_filter.mobile %>">
+              <%= @selected_customer_filter.display_name %> - <%= @selected_customer_filter.mobile %>
             </option>
           <% end %>
         </select>
@@ -353,12 +352,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Initialize Select2 dropdowns
 function initializeSelect2Dropdowns() {
-  // Customer Select2
+  // Customer Select2 — searches on demand via AJAX instead of loading every
+  // customer into the DOM on every page load (was a full-table query + a
+  // multi-thousand-option <select> rendered on every visit to this page).
   $('.customer-select2').select2({
     theme: 'bootstrap-5',
-    placeholder: 'Search and select customer...',
+    placeholder: 'Search customer by name...',
     allowClear: true,
     width: '100%',
+    minimumInputLength: 2,
+    ajax: {
+      url: '<%= search_by_name_admin_customers_path %>',
+      dataType: 'json',
+      delay: 250,
+      cache: true,
+      data: function (params) { return { name: params.term }; },
+      processResults: function (data) {
+        return {
+          results: (data.customers || []).map(function (c) {
+            return { id: c.id, name: c.name, email: c.email, mobile: c.mobile };
+          })
+        };
+      }
+    },
     templateResult: formatCustomerOption,
     templateSelection: formatCustomerSelection,
     escapeMarkup: function(markup) { return markup; }
@@ -376,16 +392,18 @@ function initializeSelect2Dropdowns() {
   });
 }
 
-// Format customer option display
+// Format customer option display. `option` is either an AJAX search result
+// (plain object with name/email/mobile) or the server-rendered <option> for
+// the currently-selected filter value (data-* attributes on option.element).
 function formatCustomerOption(option) {
   if (!option.id) {
     return option.text;
   }
 
-  const $option = $(option.element);
-  const name = $option.data('name') || '';
-  const email = $option.data('email') || '';
-  const mobile = $option.data('mobile') || '';
+  const $option = option.element ? $(option.element) : null;
+  const name = option.name || ($option && $option.data('name')) || '';
+  const email = option.email || ($option && $option.data('email')) || '';
+  const mobile = option.mobile || ($option && $option.data('mobile')) || '';
 
   return $(`
     <div class="select2-option-content">
@@ -404,11 +422,11 @@ function formatCustomerSelection(option) {
     return option.text;
   }
 
-  const $option = $(option.element);
-  const name = $option.data('name') || '';
-  const mobile = $option.data('mobile') || '';
+  const $option = option.element ? $(option.element) : null;
+  const name = option.name || ($option && $option.data('name')) || option.text || '';
+  const mobile = option.mobile || ($option && $option.data('mobile')) || '';
 
-  return `${name} - ${mobile}`;
+  return mobile ? `${name} - ${mobile}` : name;
 }
 
 // Format delivery person option display
