@@ -130,9 +130,12 @@
                   <button type="button" class="btn btn-outline-secondary" id="discountTypeAmountBtn" onclick="setDiscountType('amount')">₹</button>
                   <button type="button" class="btn btn-outline-secondary active" id="discountTypePercentBtn" onclick="setDiscountType('percent')">%</button>
                 </div>
+                <%
+                  discount_percent = summary_subtotal > 0 ? (@invoice.discount_amount.to_f / summary_subtotal * 100).round(2) : 0
+                %>
                 <input type="number" id="discountInput"
-                       value="<%= summary_subtotal > 0 ? (@invoice.discount_amount.to_f / summary_subtotal * 100).round(2) : 0 %>"
-                       min="0" max="100" step="0.01" class="form-control form-control-sm text-end" style="width: 90px;"
+                       value="<%= discount_percent.zero? ? nil : discount_percent %>" placeholder="0"
+                       min="0" max="100" step="1" class="form-control form-control-sm text-end" style="width: 90px;"
                        oninput="updateInvoiceTotal()">
               </div>
             </div>
@@ -144,7 +147,7 @@
             <span class="text-muted">Delivery Charge</span>
             <div class="input-group input-group-sm" style="max-width: 130px;">
               <span class="input-group-text">₹</span>
-              <%= f.number_field :delivery_charge, step: 0.01, min: 0, class: "form-control text-end", id: "delivery_charge_field", oninput: "updateInvoiceTotal()" %>
+              <%= f.number_field :delivery_charge, step: 1, min: 0, value: (@invoice.delivery_charge.to_f.zero? ? nil : @invoice.delivery_charge), placeholder: "0", class: "form-control text-end", id: "delivery_charge_field", oninput: "updateInvoiceTotal()" %>
             </div>
           </div>
 
@@ -362,6 +365,12 @@
               <p>No line items yet. Click "Add Product" to get started.</p>
             </div>
           <% end %>
+
+          <div class="text-center mt-3 pt-3 border-top">
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addNewLineItem()">
+              <i class="bi bi-plus-lg me-1"></i>Add Product
+            </button>
+          </div>
         </div>
       </div>
     </div>

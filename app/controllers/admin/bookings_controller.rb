@@ -221,6 +221,7 @@ class Admin::BookingsController < Admin::ApplicationController
       @selected_store = Store.active.find_by(id: @booking.store_id) if @booking.store_id.present?
       @from_store = @booking.store_id.present?
       @products = products_for_picker(@booking.store_id)
+      @categories = Category.where(status: true).order(:name)
       @customers = Customer.all.order(:full_name)
       @stores = Store.where(status: true)
       render :new, status: :unprocessable_entity
@@ -273,6 +274,7 @@ class Admin::BookingsController < Admin::ApplicationController
       @selected_store = Store.active.find_by(id: @booking.store_id) if @booking.store_id.present?
       @from_store = @booking.store_id.present?
       @products = products_for_picker(@booking.store_id)
+      @categories = Category.where(status: true).order(:name)
       @customers = Customer.all.order(:full_name)
       @stores = Store.where(status: true)
       flash.now[:alert] = @booking.errors.full_messages.join(', ')
