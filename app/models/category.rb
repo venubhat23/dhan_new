@@ -28,8 +28,11 @@ class Category < ApplicationRecord
     !status?
   end
 
+  # `products.count` always hits the DB even when `products` is preloaded —
+  # the categories index/show controllers preload it specifically so this
+  # doesn't run a fresh COUNT per category row.
   def products_count
-    products.count
+    products.loaded? ? products.size : products.count
   end
 
   def self.for_select

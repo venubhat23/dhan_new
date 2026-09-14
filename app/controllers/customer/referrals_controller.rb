@@ -10,11 +10,12 @@ class Customer::ReferralsController < Customer::BaseController
                                 .page(params[:page])
                                 .per(10)
 
-    # Calculate statistics
-    @total_referrals = @referrals.count
-    @pending_referrals = current_customer.referrals.pending.count
-    @registered_referrals = current_customer.referrals.registered.count
-    @converted_referrals = current_customer.referrals.converted.count
+    # Calculate statistics — one GROUP BY instead of 4 separate COUNTs
+    status_counts = current_customer.referrals.reorder('').group(:status).count
+    @total_referrals = status_counts.values.sum
+    @pending_referrals = status_counts['pending'].to_i
+    @registered_referrals = status_counts['registered'].to_i
+    @converted_referrals = status_counts['converted'].to_i
     @conversion_rate = calculate_conversion_rate
   end
 

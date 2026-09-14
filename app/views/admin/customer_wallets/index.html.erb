@@ -130,7 +130,7 @@
                   </span>
                 </td>
                 <td>
-                  <% last_transaction = wallet.wallet_transactions.recent.first %>
+                  <% last_transaction = wallet.last_transaction %>
                   <% if last_transaction %>
                     <small class="text-muted">
                       <%= last_transaction.transaction_type.humanize %> of

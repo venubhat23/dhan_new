@@ -74,7 +74,10 @@ class Admin::MobileUiController < ActionController::Base
 
   def create_booking
     @booking = Booking.new(mobile_booking_params)
-    @booking.booked_by = 'admin'
+    # Tagged separately from 'admin' so these show up with their own "Admin
+    # Mobile UI" label in the /admin/bookings list instead of blending into
+    # regular desktop-admin bookings.
+    @booking.booked_by = 'mobile_ui'
     @booking.booking_date = Time.current unless @booking.booking_date.present?
     @booking.status ||= 'completed'
 
@@ -90,15 +93,19 @@ class Admin::MobileUiController < ActionController::Base
       @booking.payment_status = payment_status_param == 'paid' ? :paid : :unpaid
       @booking.save!
 
-      # Generate invoice if paid
+      # Generate the invoice immediately regardless of payment status — mirrors
+      # Admin::BookingsController#create. The invoice's own payment_status
+      # mirrors the booking's (paid vs unpaid), so an unpaid booking still gets
+      # an unpaid invoice rather than no invoice at all.
       invoice_notice = ""
-      if @booking.payment_status_paid?
+      begin
         invoice = @booking.generate_quick_invoice!
         if invoice
-          invoice_notice = " Invoice ##{invoice.invoice_number} generated."
-        else
-          Rails.logger.warn "Mobile UI: Invoice generation returned nil for booking #{@booking.id}"
+          invoice_notice = " Invoice ##{invoice.invoice_number} generated (#{@booking.payment_status_paid? ? 'paid' : 'unpaid'})."
         end
+      rescue => e
+        Rails.logger.error "Mobile UI: Failed to generate invoice for booking ##{@booking.id}: #{e.message}"
+        invoice_notice = " Note: Invoice generation failed."
       end
 
       redirect_to admin_mobile_ui_bookings_path,

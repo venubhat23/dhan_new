@@ -33,6 +33,17 @@ class Customer::OrdersController < Customer::BaseController
 
     # Use all_bookings for statistics cards to show customer's complete picture
     @bookings_for_stats = @all_bookings
+
+    # One GROUP BY instead of 7 separate COUNT queries in the view.
+    status_counts = @all_bookings.reorder('').group(:status).count
+    @order_stats = {
+      total:      status_counts.values.sum,
+      pending:    status_counts['ordered_and_delivery_pending'].to_i,
+      processing: status_counts.slice('confirmed', 'processing', 'packed').values.sum,
+      shipped:    status_counts.slice('shipped', 'out_for_delivery').values.sum,
+      completed:  status_counts['completed'].to_i,
+      issues:     status_counts.slice('cancelled', 'returned').values.sum
+    }
   end
 
   def show

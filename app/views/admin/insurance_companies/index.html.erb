@@ -20,7 +20,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Total Companies</h6>
-            <h4 class="mb-0"><%= @insurance_companies.count %></h4>
+            <h4 class="mb-0"><%= @total_companies_count %></h4>
           </div>
           <div class="text-primary">
             <i class="bi bi-building fs-2"></i>
@@ -35,7 +35,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Active Companies</h6>
-            <h4 class="mb-0"><%= @insurance_companies.where(status: true).count %></h4>
+            <h4 class="mb-0"><%= @active_companies_count %></h4>
           </div>
           <div class="text-success">
             <i class="bi bi-check-circle fs-2"></i>
@@ -65,7 +65,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Partnerships</h6>
-            <h4 class="mb-0"><%= @insurance_companies.where(status: true).count %></h4>
+            <h4 class="mb-0"><%= @active_companies_count %></h4>
           </div>
           <div class="text-warning">
             <i class="bi bi-handshake fs-2"></i>

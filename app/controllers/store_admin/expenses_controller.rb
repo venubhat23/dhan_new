@@ -2,7 +2,7 @@ class StoreAdmin::ExpensesController < StoreAdmin::ApplicationController
   before_action :set_expense, only: [:show, :edit, :update, :destroy]
 
   def index
-    @expenses = @current_store.expenses.order(expense_date: :desc, created_at: :desc)
+    @expenses = @current_store.expenses.includes(:created_by).order(expense_date: :desc, created_at: :desc)
 
     if params[:start_date].present? && params[:end_date].present?
       @expenses = @expenses.where(expense_date: params[:start_date]..params[:end_date])

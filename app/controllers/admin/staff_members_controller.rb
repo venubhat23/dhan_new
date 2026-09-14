@@ -2,7 +2,7 @@ class Admin::StaffMembersController < Admin::ApplicationController
   before_action :set_staff_member, only: [:show, :edit, :update, :toggle_status]
 
   def index
-    scope = StaffMember.includes(:store).order(:name)
+    scope = StaffMember.includes(:store, :staff_payments).order(:name)
     scope = scope.where(store_id: params[:store_id]) if params[:store_id].present?
     @staff_members = scope
 

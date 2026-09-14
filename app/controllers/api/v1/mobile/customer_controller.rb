@@ -103,8 +103,10 @@ class Api::V1::Mobile::CustomerController < Api::V1::Mobile::BaseController
     # Sort by start date (newest first)
     portfolio = portfolio.sort_by { |p| p[:start_date] || Date.current }.reverse
 
-    # Calculate portfolio summary with real-time counts
-    portfolio_summary = get_customer_portfolio_summary(current_customer)
+    # Calculate portfolio summary with real-time counts — reuse the
+    # health/life/motor policies already loaded above instead of the summary
+    # helpers re-querying each of them 2-3 more times.
+    portfolio_summary = get_customer_portfolio_summary(current_customer, health_policies, life_policies, motor_policies)
 
     render json: {
       success: true,
@@ -884,20 +886,27 @@ class Api::V1::Mobile::CustomerController < Api::V1::Mobile::BaseController
 
   private
 
-  def get_customer_portfolio_summary(customer)
-    # Calculate total policies count
-    health_count = HealthInsurance.where(customer_id: customer.id).count
-    life_count = LifeInsurance.where(customer_id: customer.id).count
-    motor_count = 0
-    other_count = 0
-
-    begin
-      if defined?(MotorInsurance)
-        motor_count = MotorInsurance.where(customer_id: customer.id).count
+  # health_policies/life_policies/motor_policies are the already-loaded
+  # collections from #portfolio — reusing them here avoids re-querying each
+  # insurance type 2 more times (once for this count, once inside each of
+  # the two count_upcoming_* helpers below).
+  def get_customer_portfolio_summary(customer, health_policies = nil, life_policies = nil, motor_policies = nil)
+    health_policies ||= HealthInsurance.where(customer_id: customer.id)
+    life_policies ||= LifeInsurance.where(customer_id: customer.id)
+    if motor_policies.nil?
+      motor_policies = []
+      begin
+        motor_policies = MotorInsurance.where(customer_id: customer.id) if defined?(MotorInsurance)
+      rescue => e
+        Rails.logger.warn "Motor insurance count issue: #{e.message}"
       end
-    rescue => e
-      Rails.logger.warn "Motor insurance count issue: #{e.message}"
     end
+
+    # Calculate total policies count
+    health_count = health_policies.size
+    life_count = life_policies.size
+    motor_count = motor_policies.size
+    other_count = 0
 
     begin
       if defined?(OtherInsurance)
@@ -911,10 +920,10 @@ class Api::V1::Mobile::CustomerController < Api::V1::Mobile::BaseController
     total_policies = health_count + life_count + motor_count + other_count
 
     # Calculate upcoming installments count (within next 2 months)
-    upcoming_installments = count_upcoming_installments_for_customer(customer)
+    upcoming_installments = count_upcoming_installments_for_customer(customer, health_policies, life_policies, motor_policies)
 
     # Calculate renewal policies count (within next 2 months)
-    renewal_policies = count_upcoming_renewals_for_customer(customer)
+    renewal_policies = count_upcoming_renewals_for_customer(customer, health_policies, life_policies, motor_policies)
 
     {
       total_policies: total_policies,
@@ -923,11 +932,11 @@ class Api::V1::Mobile::CustomerController < Api::V1::Mobile::BaseController
     }
   end
 
-  def count_upcoming_installments_for_customer(customer)
+  def count_upcoming_installments_for_customer(customer, health_policies = nil, life_policies = nil, motor_policies = nil)
     count = 0
 
     # Health insurance installments within 2 months
-    health_policies = HealthInsurance.where(customer_id: customer.id)
+    health_policies ||= HealthInsurance.where(customer_id: customer.id)
     health_policies.each do |policy|
       next unless policy.policy_end_date.present? && policy.policy_start_date.present?
       next unless policy.total_premium.present? && policy.total_premium > 0
@@ -954,7 +963,7 @@ class Api::V1::Mobile::CustomerController < Api::V1::Mobile::BaseController
     end
 
     # Life insurance installments within 2 months
-    life_policies = LifeInsurance.where(customer_id: customer.id)
+    life_policies ||= LifeInsurance.where(customer_id: customer.id)
     life_policies.each do |policy|
       next unless policy.policy_end_date.present? && policy.policy_start_date.present?
       next unless policy.total_premium.present? && policy.total_premium > 0
@@ -983,7 +992,7 @@ class Api::V1::Mobile::CustomerController < Api::V1::Mobile::BaseController
     # Motor insurance installments within 2 months
     begin
       if defined?(MotorInsurance)
-        motor_policies = MotorInsurance.where(customer_id: customer.id)
+        motor_policies ||= MotorInsurance.where(customer_id: customer.id)
         motor_policies.each do |policy|
           next unless policy.policy_end_date.present? && policy.policy_start_date.present?
           next unless policy.total_premium.present? && policy.total_premium > 0
@@ -1017,28 +1026,30 @@ class Api::V1::Mobile::CustomerController < Api::V1::Mobile::BaseController
     count
   end
 
-  def count_upcoming_renewals_for_customer(customer)
+  def count_upcoming_renewals_for_customer(customer, health_policies = nil, life_policies = nil, motor_policies = nil)
     count = 0
+    renewal_start = Date.current
+    renewal_end = 2.months.from_now.to_date
+    in_renewal_window = ->(policy) {
+      policy.policy_end_date.present? &&
+        policy.policy_end_date >= renewal_start &&
+        policy.policy_end_date <= renewal_end
+    }
 
-    # Health insurance renewals within 2 months
-    health_policies = HealthInsurance.where(customer_id: customer.id)
-                                    .where('policy_end_date BETWEEN ? AND ?', Date.current, 2.months.from_now)
-                                    .where.not(policy_end_date: nil)
-    count += health_policies.count
+    # Health insurance renewals within 2 months — filtered in Ruby against
+    # the collection #portfolio already loaded, instead of a fresh query.
+    health_policies ||= HealthInsurance.where(customer_id: customer.id)
+    count += health_policies.count { |policy| in_renewal_window.call(policy) }
 
     # Life insurance renewals within 2 months
-    life_policies = LifeInsurance.where(customer_id: customer.id)
-                                .where('policy_end_date BETWEEN ? AND ?', Date.current, 2.months.from_now)
-                                .where.not(policy_end_date: nil)
-    count += life_policies.count
+    life_policies ||= LifeInsurance.where(customer_id: customer.id)
+    count += life_policies.count { |policy| in_renewal_window.call(policy) }
 
     # Motor insurance renewals within 2 months
     begin
       if defined?(MotorInsurance)
-        motor_policies = MotorInsurance.where(customer_id: customer.id)
-                                     .where('policy_end_date BETWEEN ? AND ?', Date.current, 2.months.from_now)
-                                     .where.not(policy_end_date: nil)
-        count += motor_policies.count
+        motor_policies ||= MotorInsurance.where(customer_id: customer.id)
+        count += motor_policies.count { |policy| in_renewal_window.call(policy) }
       end
     rescue => e
       Rails.logger.warn "Motor insurance renewal count issue: #{e.message}"

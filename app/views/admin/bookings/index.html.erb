@@ -108,6 +108,11 @@
   color: #6f42c1;
   border: 1px solid rgba(111,66,193,0.3);
 }
+.source-mobile-ui {
+  background-color: rgba(214,51,132,0.1);
+  color: #d63384;
+  border: 1px solid rgba(214,51,132,0.3);
+}
 .source-customer {
   background-color: rgba(13,110,253,0.1);
   color: #0d6efd;
@@ -413,6 +418,10 @@
                              when 'mobile_api' %>
                             <span class="badge source-badge source-mobile">
                               <i class="bi bi-phone me-1"></i>Mobile App
+                            </span>
+                          <% when 'mobile_ui' %>
+                            <span class="badge source-badge source-mobile-ui">
+                              <i class="bi bi-phone-fill me-1"></i>Admin Mobile UI
                             </span>
                           <% when 'customer' %>
                             <span class="badge source-badge source-customer">

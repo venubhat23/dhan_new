@@ -2,7 +2,7 @@ class StoreAdmin::StaffMembersController < StoreAdmin::ApplicationController
   before_action :set_staff_member, only: [:show, :edit, :update, :toggle_status]
 
   def index
-    @staff_members  = @current_store.staff_members.order(:name)
+    @staff_members  = @current_store.staff_members.includes(:staff_payments).order(:name)
     @total_count    = @staff_members.count
     @active_count   = @staff_members.active.count
     @inactive_count = @staff_members.inactive.count

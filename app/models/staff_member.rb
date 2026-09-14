@@ -17,8 +17,15 @@ class StaffMember < ApplicationRecord
     status == 'active'
   end
 
+  # Filters the preloaded association in Ruby when it's loaded (index pages
+  # call this per row after `.includes(:staff_payments)`) instead of issuing
+  # a fresh scoped query every call.
   def paid_for(month, year)
-    staff_payments.where(month: month, year: year).sum(:amount)
+    if staff_payments.loaded?
+      staff_payments.select { |p| p.month == month && p.year == year }.sum { |p| p.amount.to_f }
+    else
+      staff_payments.where(month: month, year: year).sum(:amount)
+    end
   end
 
   def pending_for(month, year)

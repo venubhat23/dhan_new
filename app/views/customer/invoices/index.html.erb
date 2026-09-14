@@ -12,7 +12,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Total Invoices</h6>
-            <h5 class="mb-0"><%= @invoices_for_stats.count %></h5>
+            <h5 class="mb-0"><%= @invoice_stats[:total] %></h5>
           </div>
           <div class="text-primary">
             <i class="bi bi-receipt fs-3"></i>
@@ -31,7 +31,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Paid</h6>
-            <h4 class="mb-0"><%= @invoices_for_stats.where(payment_status: :paid).count %></h4>
+            <h4 class="mb-0"><%= @invoice_stats[:paid] %></h4>
           </div>
           <div class="text-success">
             <i class="bi bi-check-circle fs-2"></i>
@@ -46,7 +46,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Unpaid</h6>
-            <h4 class="mb-0"><%= @invoices_for_stats.where(payment_status: [:unpaid, nil]).count %></h4>
+            <h4 class="mb-0"><%= @invoice_stats[:unpaid] %></h4>
           </div>
           <div class="text-warning">
             <i class="bi bi-exclamation-triangle fs-2"></i>
@@ -61,7 +61,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Overdue</h6>
-            <h4 class="mb-0"><%= @invoices_for_stats.where(payment_status: :overdue).count %></h4>
+            <h4 class="mb-0"><%= @invoice_stats[:overdue] %></h4>
           </div>
           <div class="text-danger">
             <i class="bi bi-x-circle fs-2"></i>
@@ -76,7 +76,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Total Amount</h6>
-            <h4 class="mb-0">₹<%= @invoices_for_stats.sum(:total_amount).to_f %></h4>
+            <h4 class="mb-0">₹<%= @invoice_stats[:total_amount] %></h4>
           </div>
           <div class="text-info">
             <i class="bi bi-currency-rupee fs-2"></i>

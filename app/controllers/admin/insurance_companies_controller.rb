@@ -3,6 +3,8 @@ class Admin::InsuranceCompaniesController < Admin::ApplicationController
 
   def index
     @insurance_companies = InsuranceCompany.all.order(:name)
+    @total_companies_count = @insurance_companies.count
+    @active_companies_count = @insurance_companies.where(status: true).count
     @insurance_companies = @insurance_companies.page(params[:page])
   rescue NameError
     # Handle case where InsuranceCompany model doesn't exist yet

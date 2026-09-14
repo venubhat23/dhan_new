@@ -73,19 +73,21 @@ class ImportMasterSubscriptionJob < ApplicationJob
     tasks_created = 0
     task_dates = calculate_task_dates(customer_format, start_date, end_date)
 
+    # One query for all already-existing dates instead of a find_by per date
+    # (this used to run ~30 queries per customer format for a month import).
+    existing_dates = MilkDeliveryTask.where(
+      subscription: subscription,
+      customer: customer_format.customer,
+      product: customer_format.product,
+      delivery_date: task_dates
+    ).pluck(:delivery_date).to_set
+
     # Batch insert for performance
     tasks_to_insert = []
 
     task_dates.each do |task_date|
       # Check if task already exists to prevent duplicates
-      existing_task = MilkDeliveryTask.find_by(
-        subscription: subscription,
-        customer: customer_format.customer,
-        product: customer_format.product,
-        delivery_date: task_date
-      )
-
-      next if existing_task
+      next if existing_dates.include?(task_date)
 
       tasks_to_insert << {
         subscription_id: subscription.id,

@@ -46,22 +46,22 @@ class Admin::ClientRequestsController < Admin::ApplicationController
   end
 
   def pending
-    @client_requests = ClientRequest.pending.recent.page(params[:page]).per(20)
+    @client_requests = ClientRequest.includes(:resolved_by).pending.recent.page(params[:page]).per(20)
     render :index
   end
 
   def in_progress
-    @client_requests = ClientRequest.in_progress.recent.page(params[:page]).per(20)
+    @client_requests = ClientRequest.includes(:resolved_by).in_progress.recent.page(params[:page]).per(20)
     render :index
   end
 
   def resolved
-    @client_requests = ClientRequest.resolved.recent.page(params[:page]).per(20)
+    @client_requests = ClientRequest.includes(:resolved_by).resolved.recent.page(params[:page]).per(20)
     render :index
   end
 
   def search
-    @client_requests = ClientRequest.search_requests(params[:q]).recent.page(params[:page]).per(20)
+    @client_requests = ClientRequest.includes(:resolved_by).search_requests(params[:q]).recent.page(params[:page]).per(20)
     render :index
   end
 

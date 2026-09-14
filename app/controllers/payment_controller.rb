@@ -40,10 +40,12 @@ class PaymentController < Customer::BaseController
           status: 'draft'
         )
 
-        # Create booking items
+        # Create booking items — batch the product lookup instead of a find
+        # per cart line.
+        products_by_id = Product.where(id: cart_items.map { |i| i[:product_id] }).index_by(&:id)
         total_amount = 0
         cart_items.each do |item_data|
-          product = Product.find(item_data[:product_id])
+          product = products_by_id[item_data[:product_id].to_i] || Product.find(item_data[:product_id])
           quantity = item_data[:quantity].to_f
           price = item_data[:price].to_f
 

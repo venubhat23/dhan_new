@@ -91,9 +91,12 @@ class Customer::CartsController < Customer::BaseController
     # Clear existing session cart
     @cart[:items] = []
 
-    # Add items from localStorage
+    # Add items from localStorage — one query for every product instead of
+    # a find_by per cart line.
+    products_by_id = Product.where(id: cart_items.map { |i| i[:product_id] }).index_by(&:id)
+
     cart_items.each do |item_data|
-      product = Product.find_by(id: item_data[:product_id])
+      product = products_by_id[item_data[:product_id].to_i]
       next unless product && product.status == 'active'
 
       # Validate quantity
@@ -136,9 +139,10 @@ class Customer::CartsController < Customer::BaseController
     cart_items = params[:cart_items] || []
     out_of_stock = []
     insufficient_stock = []
+    products_by_id = Product.active.where(id: cart_items.map { |i| i[:id] }).index_by(&:id)
 
     cart_items.each do |item_data|
-      product = Product.active.find_by(id: item_data[:id])
+      product = products_by_id[item_data[:id].to_i]
 
       if product.nil?
         out_of_stock << { id: item_data[:id], name: item_data[:name].to_s }

@@ -40,6 +40,16 @@ class Customer::InvoicesController < Customer::BaseController
 
     # Use all_invoices for statistics
     @invoices_for_stats = @all_invoices
+
+    # 2 queries (grouped count + one sum) instead of 5 separate COUNT/SUM calls.
+    payment_status_counts = @all_invoices.reorder('').group(:payment_status).count
+    @invoice_stats = {
+      total:        payment_status_counts.values.sum,
+      paid:         payment_status_counts['paid'].to_i,
+      unpaid:       payment_status_counts.values_at('unpaid', nil).compact.sum,
+      overdue:      payment_status_counts['overdue'].to_i,
+      total_amount: @all_invoices.sum(:total_amount).to_f
+    }
   end
 
   def show

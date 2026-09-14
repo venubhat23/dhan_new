@@ -38,14 +38,29 @@ class Admin::BookingsController < Admin::ApplicationController
     }
     # Keep @bookings_for_stats as the filtered scope (without includes) so view COUNT calls still work
     @bookings_for_stats = @bookings
+    filtered_total = stats_counts.values.sum
 
     # Paginate with eager-loading only on the page being displayed
     @per_page = SystemSetting.default_pagination_per_page
     # booking_items dropped from includes: the view only calls booking.booking_items.size
     # (item count), which now reads the booking_items_count counter cache instead of
     # preloading every item row for every booking on the page.
-    @bookings = @bookings.includes(:customer, { user: :franchise }, :store, :booking_invoices)
+    #
+    # eager_load (LEFT OUTER JOIN) instead of includes: Rails runs it as one
+    # "distinct ids, then full row fetch by those ids" pair of queries covering
+    # all five associations at once (it correctly dedupes the has_many
+    # booking_invoices rows when building the AR objects), replacing what used
+    # to be five separate round trips (bookings + customers + users +
+    # franchises + stores + booking_invoices) with two.
+    @bookings = @bookings.eager_load(:customer, { user: :franchise }, :store, :booking_invoices)
                          .page(params[:page]).per(@per_page)
+
+    # Kaminari's #total_count issues its own COUNT(*) with the same WHERE we
+    # already summed above via the GROUP BY (and only skips it itself when this
+    # page comes back short of @per_page). Seed it so a full page doesn't pay
+    # for that query a second time; harmless if a future Kaminari drops the ivar
+    # (worst case is that one extra query comes back).
+    @bookings.instance_variable_set(:@total_count, filtered_total) if @bookings.respond_to?(:total_count)
 
     # Batch-preload associated_invoice for bookings with no BookingInvoice,
     # replacing up to N individual LIKE queries with a single batched query.
@@ -139,7 +154,12 @@ class Admin::BookingsController < Admin::ApplicationController
     # every page load — the actual cause of this page being slow, not a query
     # problem). Search/category/in-stock filtering fetches more via AJAX
     # (#product_picker) instead of filtering an already-rendered DOM.
-    @products = products_for_picker(@selected_store&.id, limit: INITIAL_PICKER_LIMIT)
+    #
+    # `.to_a` here: the partial calls `products&.any?` before iterating it, and
+    # `.any?` on an unloaded relation runs its own `SELECT 1 ... LIMIT 1` query
+    # separate from the one that loads the records — materializing the array up
+    # front makes `.any?` free and drops that extra round trip.
+    @products = products_for_picker(@selected_store&.id, limit: INITIAL_PICKER_LIMIT).to_a
 
     @categories = Category.where(status: true).order(:name)
     @customers = Customer.select(:id, :full_name, :email, :mobile)
@@ -680,7 +700,7 @@ class Admin::BookingsController < Admin::ApplicationController
       category_id: params[:category_id],
       in_stock_only: params[:in_stock] == '1',
       limit: 60
-    )
+    ).to_a
 
     render partial: 'admin/bookings/product_grid', locals: { products: @products }, layout: false
   end
@@ -988,8 +1008,12 @@ class Admin::BookingsController < Admin::ApplicationController
                   "WHERE si.product_id = products.id AND si.store_id = #{sid})"
       effective = "COALESCE(#{inv_sum}, #{batch_sum})"
 
+      # eager_load (one LEFT OUTER JOIN query, or two when a `limit` is present —
+      # Rails resolves the ids first, then fetches full rows for those ids so a
+      # has_many join can't truncate the page) instead of includes, which would
+      # fire a separate round trip per association (was up to 6 queries here).
       scope = Product.active
-                     .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
+                     .eager_load(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
                      .select("products.*, #{effective} AS cached_stock")
       scope = scope.where("#{effective} > 0") if in_stock_only
       scope = apply_picker_filters(scope, q: q, category_id: category_id)
@@ -1004,8 +1028,9 @@ class Admin::BookingsController < Admin::ApplicationController
     # a raw sum made variant products show a different figure (and a wrong
     # out-of-stock badge) here than everywhere else.
     real_stock = Product::REAL_STOCK_SQL
+    # See the store-scoped branch above for why this is eager_load, not includes.
     scope = Product.active
-                   .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
+                   .eager_load(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
                    .select("products.*, (#{real_stock}) AS cached_stock")
     scope = scope.where("(#{real_stock}) > 0") if in_stock_only
     scope = apply_picker_filters(scope, q: q, category_id: category_id)

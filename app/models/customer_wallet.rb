@@ -44,6 +44,16 @@ class CustomerWallet < ApplicationRecord
     "₹#{balance.to_f.round(2)}"
   end
 
+  # Batch-preloaded by Admin::CustomerWalletsController#index (see
+  # last_transaction=) to avoid a `wallet_transactions.recent.first` query
+  # per wallet row; falls back to a direct query when not preloaded.
+  def last_transaction
+    return @last_transaction if defined?(@last_transaction)
+    @last_transaction = wallet_transactions.recent.first
+  end
+
+  attr_writer :last_transaction
+
   private
 
   def set_defaults

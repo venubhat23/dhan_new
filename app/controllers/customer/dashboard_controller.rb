@@ -87,19 +87,19 @@ class Customer::DashboardController < Customer::BaseController
   end
 
   def build_order_activity_data
-    # Get order counts for last 7 days
-    order_data = []
-    labels = []
+    # Get order counts for last 7 days — one grouped query instead of 8
+    # separate per-day COUNTs.
+    dates = 7.downto(0).map { |days_ago| Date.current - days_ago.days }
+    labels = dates.map { |date| date.strftime('%a') }
 
-    7.downto(0) do |days_ago|
-      date = Date.current - days_ago.days
-      labels << date.strftime('%a')
-
-      orders_count = current_customer&.bookings
-                                   &.where(booking_date: date.beginning_of_day..date.end_of_day)
-                                   &.count || 0
-      order_data << orders_count
+    counts_by_date = {}
+    if current_customer
+      counts_by_date = current_customer.bookings
+                                       .where(booking_date: dates.first.beginning_of_day..dates.last.end_of_day)
+                                       .group("DATE(booking_date)").count
+                                       .transform_keys { |k| k.is_a?(String) ? Date.parse(k) : k }
     end
+    order_data = dates.map { |date| counts_by_date[date].to_i }
 
     # If no data exists, provide sample data with message
     if order_data.sum == 0
@@ -120,25 +120,20 @@ class Customer::DashboardController < Customer::BaseController
   end
 
   def build_monthly_spending_data
-    # Get spending data for current year by month
-    spending_data = []
-    labels = []
+    # Get spending data for current year by month — one grouped query
+    # instead of 12 separate per-month SUMs.
     current_year = Date.current.year
+    labels = (1..12).map { |month| Date::MONTHNAMES[month][0, 3] }
 
-    (1..12).each do |month|
-      labels << Date::MONTHNAMES[month][0, 3] # Jan, Feb, etc.
-
-      month_start = Date.new(current_year, month, 1)
-      month_end = month_start.end_of_month
-
-      # Calculate total spending for this month
-      monthly_total = current_customer&.bookings
-                                    &.where(booking_date: month_start..month_end)
-                                    &.where.not(total_amount: nil)
-                                    &.sum(:total_amount) || 0
-
-      spending_data << monthly_total.to_f
+    sums_by_month = {}
+    if current_customer
+      sums_by_month = current_customer.bookings
+                                      .where(booking_date: Date.new(current_year, 1, 1).beginning_of_day..Date.new(current_year, 12, 31).end_of_day)
+                                      .where.not(total_amount: nil)
+                                      .group("EXTRACT(MONTH FROM booking_date)").sum(:total_amount)
+                                      .transform_keys(&:to_i)
     end
+    spending_data = (1..12).map { |month| sums_by_month[month].to_f }
 
     # If no data exists, provide sample data with message
     if spending_data.sum == 0

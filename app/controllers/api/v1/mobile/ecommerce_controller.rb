@@ -223,17 +223,22 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     unavailable_products = []
     available_products = []
 
+    # Batch both lookups instead of a find/find_by per booking item.
+    item_list = booking_params[:booking_items_attributes]&.to_a || []
+    products_by_id = Product.active.where(id: item_list.map { |i| i[:product_id] }).index_by(&:id)
+    variants_by_id = ProductVariant.where(id: item_list.map { |i| i[:product_variant_id] }.compact).index_by(&:id)
+
     booking_params[:booking_items_attributes]&.each do |item_params|
       product_id = item_params[:product_id]
       variant_id = item_params[:product_variant_id]
       quantity = item_params[:quantity].to_f
 
       begin
-        product = Product.active.find(product_id)
+        product = products_by_id[product_id.to_i] || Product.active.find(product_id)
 
         # Check stock availability — use variant stock for multi-quantity products
         if product.has_multiple_quantities? && variant_id.present?
-          variant = ProductVariant.find_by(id: variant_id)
+          variant = variants_by_id[variant_id.to_i]
           avail = variant ? variant.available_stock.to_f : 0.0
         else
           avail = product.available_quantity
@@ -1130,10 +1135,11 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       products_results = []
       all_deliverable = true
       unavailable_products = []
+      products_by_id = Product.where(id: product_ids).index_by(&:id)
 
       product_ids.each do |product_id|
         begin
-          product = Product.find(product_id)
+          product = products_by_id[product_id.to_i] || Product.find(product_id)
 
           # Check product availability and delivery rules
           delivery_info = product.delivery_info_for(pincode)
@@ -1375,17 +1381,23 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     cart_items = booking_params[:booking_items_attributes]
     return json_response({ success: false, message: 'Cart is empty' }, :bad_request) if cart_items.blank?
 
+    # Batch both lookups once — reused by the stock-validation loop below and
+    # the booking-item build loop further down, instead of a find per item
+    # in each of the two loops.
+    products_by_id = Product.where(id: cart_items.map { |i| i[:product_id] || i['product_id'] }).index_by(&:id)
+    variants_by_id = ProductVariant.where(id: cart_items.map { |i| i[:product_variant_id] || i['product_variant_id'] }.compact).index_by(&:id)
+
     # Validate stock before creating booking
     stock_errors = []
     cart_items.each do |item|
       product_id  = item[:product_id] || item['product_id']
       variant_id  = item[:product_variant_id] || item['product_variant_id']
       quantity    = (item[:quantity] || item['quantity']).to_f
-      product     = Product.find_by(id: product_id)
+      product     = products_by_id[product_id.to_i]
       next unless product
 
       if product.has_multiple_quantities? && variant_id.present?
-        variant = ProductVariant.find_by(id: variant_id)
+        variant = variants_by_id[variant_id.to_i]
         avail = variant ? variant.available_stock.to_f : 0.0
       else
         avail = product.available_quantity
@@ -1426,7 +1438,8 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
 
       total_amount = 0
       cart_items.each do |item|
-        product    = Product.find(item[:product_id] || item['product_id'])
+        item_product_id = item[:product_id] || item['product_id']
+        product    = products_by_id[item_product_id.to_i] || Product.find(item_product_id)
         variant_id = item[:product_variant_id] || item['product_variant_id']
         quantity   = (item[:quantity] || item['quantity']).to_f
         price      = (item[:price] || item['price']).to_f

@@ -12,7 +12,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Total Orders</h6>
-            <h5 class="mb-0"><%= @bookings_for_stats.count %></h5>
+            <h5 class="mb-0"><%= @order_stats[:total] %></h5>
           </div>
           <div class="text-primary">
             <i class="bi bi-bag fs-3"></i>
@@ -31,7 +31,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Pending</h6>
-            <h4 class="mb-0"><%= @bookings_for_stats.ordered_and_delivery_pending.count %></h4>
+            <h4 class="mb-0"><%= @order_stats[:pending] %></h4>
           </div>
           <div class="text-warning">
             <i class="bi bi-clock fs-2"></i>
@@ -46,7 +46,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Processing</h6>
-            <h4 class="mb-0"><%= @bookings_for_stats.where(status: [:confirmed, :processing, :packed]).count %></h4>
+            <h4 class="mb-0"><%= @order_stats[:processing] %></h4>
           </div>
           <div class="text-info">
             <i class="bi bi-arrow-clockwise fs-2"></i>
@@ -61,7 +61,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Shipped</h6>
-            <h4 class="mb-0"><%= @bookings_for_stats.where(status: [:shipped, :out_for_delivery]).count %></h4>
+            <h4 class="mb-0"><%= @order_stats[:shipped] %></h4>
           </div>
           <div class="text-primary">
             <i class="bi bi-truck fs-2"></i>
@@ -76,7 +76,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Completed</h6>
-            <h4 class="mb-0"><%= @bookings_for_stats.where(status: :completed).count %></h4>
+            <h4 class="mb-0"><%= @order_stats[:completed] %></h4>
           </div>
           <div class="text-success">
             <i class="bi bi-check-circle fs-2"></i>
@@ -91,7 +91,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Issues</h6>
-            <h4 class="mb-0"><%= @bookings_for_stats.where(status: [:cancelled, :returned]).count %></h4>
+            <h4 class="mb-0"><%= @order_stats[:issues] %></h4>
           </div>
           <div class="text-danger">
             <i class="bi bi-x-circle fs-2"></i>
@@ -106,7 +106,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Total</h6>
-            <h4 class="mb-0"><%= @bookings_for_stats.count %></h4>
+            <h4 class="mb-0"><%= @order_stats[:total] %></h4>
           </div>
           <div class="text-secondary">
             <i class="bi bi-list-ul fs-2"></i>

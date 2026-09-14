@@ -155,10 +155,14 @@ class Customer::CheckoutController < Customer::BaseController
         # Calculate totals before saving (like admin controller)
         total_amount = 0
 
-        # Build booking items from cart data
+        # Build booking items from cart data — one query for all products
+        # instead of a find per line (falls back to Product.find, which
+        # raises, for any id the batch didn't cover).
+        products_by_id = Product.where(id: cart_items.map { |i| i[:id] || i['id'] }).index_by(&:id)
+
         cart_items.each do |item|
           begin
-            product = Product.find(item[:id] || item['id'])
+            product = products_by_id[(item[:id] || item['id']).to_i] || Product.find(item[:id] || item['id'])
             quantity = (item[:quantity] || item['quantity']).to_f
             price = (item[:price] || item['price']).to_f
 
@@ -353,10 +357,13 @@ class Customer::CheckoutController < Customer::BaseController
 
     booking = Booking.new(booking_attributes)
 
-    # Build booking items (like admin controller)
+    # Build booking items (like admin controller) — batch the product lookup
+    # instead of a find per cart line.
+    products_by_id = Product.where(id: @cart[:items].map { |i| i['product_id'] }).index_by(&:id)
+
     @cart[:items].each do |item|
       begin
-        product = Product.find(item['product_id'])
+        product = products_by_id[item['product_id'].to_i] || Product.find(item['product_id'])
         quantity = item['quantity'].to_f
         price = product.selling_price.to_f
 

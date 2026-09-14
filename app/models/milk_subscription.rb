@@ -57,16 +57,19 @@ class MilkSubscription < ApplicationRecord
     end
   end
 
+  # These four run 4 separate COUNT queries each by default (`.where(...).count`
+  # always hits the DB, ignoring any preload) — the subscriptions index page
+  # preloads `milk_delivery_tasks` specifically so this can tally in Ruby instead.
   def completed_deliveries_count
-    milk_delivery_tasks.where(status: 'completed').count
+    task_status_counts['completed'] || 0
   end
 
   def pending_deliveries_count
-    milk_delivery_tasks.where(status: 'pending').count
+    task_status_counts['pending'] || 0
   end
 
   def total_deliveries_count
-    milk_delivery_tasks.count
+    milk_delivery_tasks.loaded? ? milk_delivery_tasks.size : milk_delivery_tasks.count
   end
 
   def completion_percentage
@@ -75,7 +78,15 @@ class MilkSubscription < ApplicationRecord
   end
 
   def paused_deliveries_count
-    milk_delivery_tasks.where(status: 'paused').count
+    task_status_counts['paused'] || 0
+  end
+
+  def task_status_counts
+    @task_status_counts ||= if milk_delivery_tasks.loaded?
+      milk_delivery_tasks.group_by(&:status).transform_values(&:size)
+    else
+      milk_delivery_tasks.group(:status).count
+    end
   end
 
   def can_be_paused?
@@ -150,12 +161,22 @@ class MilkSubscription < ApplicationRecord
   # Current quantity methods for showing updated quantities
   def current_average_quantity
     return quantity unless milk_delivery_tasks.any?
-    milk_delivery_tasks.average(:quantity)&.round(2) || quantity
+    (current_total_quantity_raw / milk_delivery_tasks.size).round(2)
   end
 
   def current_total_quantity
     return total_quantity unless milk_delivery_tasks.any?
-    milk_delivery_tasks.sum(:quantity).round(2)
+    current_total_quantity_raw.round(2)
+  end
+
+  # `.sum(:quantity)`/`.average(:quantity)` (a column-arg sum) always hit the
+  # DB even when milk_delivery_tasks is preloaded — reuse the loaded records.
+  def current_total_quantity_raw
+    if milk_delivery_tasks.loaded?
+      milk_delivery_tasks.sum { |t| t.quantity.to_f }
+    else
+      milk_delivery_tasks.sum(:quantity).to_f
+    end
   end
 
   def has_quantity_changes?

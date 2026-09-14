@@ -8,6 +8,15 @@ class Admin::CustomerWalletsController < Admin::ApplicationController
                                                "%#{params[:search]}%", "%#{params[:search]}%") if params[:search].present?
     @customer_wallets = paginate_records(@customer_wallets.order('customers.full_name'))
 
+    # Batch the "last transaction" column instead of one .recent.first query
+    # per wallet row (see CustomerWallet#last_transaction).
+    wallet_ids = @customer_wallets.map(&:id)
+    latest_by_wallet = WalletTransaction.where(customer_wallet_id: wallet_ids)
+                                        .order(:customer_wallet_id, created_at: :desc)
+                                        .select('DISTINCT ON (customer_wallet_id) *')
+                                        .index_by(&:customer_wallet_id)
+    @customer_wallets.each { |w| w.last_transaction = latest_by_wallet[w.id] }
+
     @stats = {
       total_wallets: CustomerWallet.count,
       active_wallets: CustomerWallet.where(status: true).count,

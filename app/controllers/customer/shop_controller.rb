@@ -129,10 +129,13 @@ class Customer::ShopController < Customer::BaseController
         @booking.customer_phone = current_customer&.mobile
         @booking.payment_method = params[:payment_method] || 'cod'
 
-        # Create booking items from cart
+        # Create booking items from cart — one query for all products instead
+        # of a find per line (falls back to Product.find, which raises, for
+        # the rare id not covered by the batch).
+        products_by_id = Product.where(id: cart_data.map { |i| i[:product_id] }).index_by(&:id)
         total_amount = 0
         cart_data.each do |item_data|
-          product = Product.find(item_data[:product_id])
+          product = products_by_id[item_data[:product_id].to_i] || Product.find(item_data[:product_id])
           quantity = item_data[:quantity].to_f
           price = item_data[:price].to_f
 
@@ -194,12 +197,13 @@ class Customer::ShopController < Customer::BaseController
     begin
       # Process booking items from cart data
       if params[:booking_items].present?
+        products_by_id = Product.where(id: params[:booking_items].values.map { |i| i[:product_id] }).index_by(&:id)
         ActiveRecord::Base.transaction do
           params[:booking_items].each do |index, item_data|
             quantity = item_data[:quantity].to_f
             next if quantity <= 0
 
-            product = Product.find(item_data[:product_id])
+            product = products_by_id[item_data[:product_id].to_i] || Product.find(item_data[:product_id])
 
             # Check stock availability
             available_stock = product.stock_batches.where(status: 'active').sum(:quantity_remaining) || 0
