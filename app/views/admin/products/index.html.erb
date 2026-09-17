@@ -56,7 +56,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">In Stock</h6>
-            <h4 class="mb-0"><%= @products.respond_to?(:select) ? @products.select { |p| p.stock.to_i > 0 }.count : 0 %></h4>
+            <h4 class="mb-0"><%= @products.respond_to?(:select) ? @products.select { |p| (p.respond_to?(:current_stock) ? p.current_stock.to_i : p.stock.to_i) > 0 }.count : 0 %></h4>
           </div>
           <div class="text-info">
             <i class="bi bi-box fs-2"></i>
@@ -71,7 +71,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Low Stock</h6>
-            <h4 class="mb-0"><%= @products.respond_to?(:select) ? @products.select { |p| p.stock.to_i > 0 && p.stock.to_i <= (p.low_stock_threshold || 10) }.count : 0 %></h4>
+            <h4 class="mb-0"><%= @products.respond_to?(:select) ? @products.select { |p| s = (p.respond_to?(:current_stock) ? p.current_stock.to_i : p.stock.to_i); s > 0 && s <= (p.low_stock_threshold || 10) }.count : 0 %></h4>
           </div>
           <div class="text-warning">
             <i class="bi bi-exclamation-triangle fs-2"></i>
@@ -289,11 +289,21 @@ document.addEventListener('DOMContentLoaded', function() {
             </thead>
             <tbody>
               <% @products.each do |product| %>
+                <%
+                  # The canonical Main Store figure (Product::REAL_STOCK_SQL,
+                  # via with_real_stock_amount) — same as Product Summary and
+                  # the product's own edit page — not the legacy products.stock
+                  # column, which can drift from it. Used for both the display
+                  # below and the Bulk Edit modal's pre-filled value, so an
+                  # unrelated bulk-edit (e.g. just changing category) can't
+                  # accidentally submit a stale stock number as a "change".
+                  display_stock = product.respond_to?(:current_stock) ? product.current_stock.to_i : product.stock.to_i
+                %>
                 <tr data-product-id="<%= product.id %>"
                     data-product='<%= {
                       id: product.id, name: product.name, price: product.price.to_f,
                       buying_price: product.buying_price.to_f, purchase_price: product.purchase_price.to_f,
-                      stock: product.stock.to_i, unit_type: product.unit_type, status: product.status,
+                      stock: display_stock, unit_type: product.unit_type, status: product.status,
                       category_id: product.category_id,
                       has_variants: product.has_multiple_quantities?,
                       variants: product.product_variants.sort_by { |v| [v.display_order || 0, v.weight.to_f] }.map { |v|
@@ -406,11 +416,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     <% threshold = product.low_stock_threshold || 10 %>
                     <div class="d-flex flex-column gap-1">
                       <div>
-                        <% if product.stock.to_i > threshold %>
-                          <span class="text-success fw-medium"><%= product.stock %> <%= product.unit_type %></span>
+                        <% if display_stock > threshold %>
+                          <span class="text-success fw-medium"><%= display_stock %> <%= product.unit_type %></span>
                           <span class="small text-muted ms-1">In Stock</span>
-                        <% elsif product.stock.to_i > 0 %>
-                          <span class="text-warning fw-medium"><%= product.stock %> <%= product.unit_type %></span>
+                        <% elsif display_stock > 0 %>
+                          <span class="text-warning fw-medium"><%= display_stock %> <%= product.unit_type %></span>
                           <span class="small text-warning ms-1"><i class="bi bi-exclamation-triangle me-1"></i>Low Stock</span>
                         <% else %>
                           <span class="text-danger fw-medium">0 <%= product.unit_type %></span>

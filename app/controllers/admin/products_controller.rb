@@ -6,7 +6,14 @@ class Admin::ProductsController < Admin::ApplicationController
   before_action :authenticate_user!
 
   def index
+    # with_real_stock_amount selects `current_stock` via Product::REAL_STOCK_SQL
+    # — the same canonical figure Product Summary's "Main Store Stock" and the
+    # dashboard use — instead of the legacy products.stock column, which
+    # drifts from it (see Product#update_stock_batch). Without this, the list
+    # and its bulk-edit modal could show/pre-fill a stale number that
+    # disagreed with Product Summary and the product's own edit page.
     @products = Product.includes(:category, :product_variants, image_attachment: :blob)
+                        .with_real_stock_amount
 
     if params[:search].present?
       @products = @products.search(params[:search])
