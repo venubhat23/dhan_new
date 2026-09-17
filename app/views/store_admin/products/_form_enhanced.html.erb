@@ -922,8 +922,20 @@
 
                   <!-- Stock -->
                   <div class="col-6 col-md-3">
+                    <%
+                      # Same reasoning as the top-level "Available Stock" field
+                      # above: variant.available_stock is the CENTRAL column —
+                      # this store's actual on-hand for the variant is
+                      # Product Summary's per-store column, from
+                      # Store#available_stock_for(product_id, variant_id).
+                      v_stock_opts = { class: "form-control", min: 0, placeholder: "0" }
+                      v_stock_opts[:value] = @current_store.available_stock_for(@product.id, vf.object.id) if vf.object.persisted?
+                    %>
                     <%= vf.label :available_stock, "Available Stock", class: "form-label small fw-semibold mb-1" %>
-                    <%= vf.number_field :available_stock, class: "form-control", min: 0, placeholder: "0" %>
+                    <%= vf.number_field :available_stock, v_stock_opts %>
+                    <% if vf.object.persisted? %>
+                      <div class="form-text">At <%= @current_store.name %></div>
+                    <% end %>
                   </div>
 
                   <!-- Purchase Price -->

@@ -84,16 +84,26 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
     handle_image_removal if params[:remove_images].present?
     process_params_delivery_rule_data
 
-    # "Available Stock" on this form is THIS store's on-hand (see the edit
-    # form's comment), not the central products.stock column — so it's kept
-    # out of the mass-assignment update (which would otherwise overwrite the
-    # central column with a store-scoped number and run it through the
-    # central-only stock-batch reconciliation) and written straight to
-    # store_inventories instead, the same way Store Product Summary does it.
-    permitted   = product_params
+    # "Available Stock" on this form — both the top-level field and each
+    # existing variant's — is THIS store's on-hand (see the edit form's
+    # comments), not the central products.stock / variant.available_stock
+    # columns. Both are kept out of the mass-assignment update (which would
+    # otherwise overwrite the central figures with store-scoped numbers and
+    # run the top-level one through the central-only stock-batch
+    # reconciliation) and written straight to store_inventories instead, the
+    # same way Store Product Summary does it. A brand-new variant row (no id
+    # yet) is left alone — its initial stock legitimately becomes its central
+    # figure, then carry_product_at_store mirrors that into store_inventories,
+    # same as a whole new product's initial stock.
+    permitted   = product_params.to_h.with_indifferent_access
     track_stock = permitted.key?(:stock) && !@product.has_multiple_quantities?
-    new_stock   = permitted[:stock].to_f if track_stock
-    permitted   = permitted.except(:stock) if track_stock
+    new_stock   = permitted.delete(:stock).to_f if track_stock
+
+    variant_stock_changes = {}
+    permitted[:product_variants_attributes]&.each do |_k, attrs|
+      next unless attrs[:id].present? && attrs.key?(:available_stock)
+      variant_stock_changes[attrs[:id].to_i] = attrs.delete(:available_stock).to_f
+    end
 
     if @product.update(permitted)
       @product.product_variants.destroy_all unless @product.has_multiple_quantities?
@@ -101,9 +111,17 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
       handle_automatic_r2_uploads
       handle_main_image_setting if params[:main_image_id].present?
       carry_product_at_store(@product)
-      stock_err = update_store_stock(@product, new_stock) if track_stock
+
+      stock_errs = []
+      stock_errs << update_store_stock(@product, new_stock) if track_stock
+      variant_stock_changes.each do |variant_id, new_qty|
+        variant = @product.product_variants.find_by(id: variant_id)
+        stock_errs << update_store_variant_stock(variant, new_qty) if variant
+      end
+      stock_errs.compact!
+
       notice = 'Product was successfully updated.'
-      notice += " Note: #{stock_err}" if stock_err
+      notice += " Note: #{stock_errs.join(' | ')}" if stock_errs.any?
       redirect_to store_admin_product_path(@product), notice: notice
     else
       render :edit, status: :unprocessable_entity
@@ -397,6 +415,35 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
   rescue => e
     Rails.logger.error "update_store_stock failed for product #{product.id} at store #{@current_store.id}: #{e.message}"
     "stock change failed to save: #{e.message}"
+  end
+
+  # Same as update_store_stock, but for one variant of a variant product —
+  # keyed by (store, product, variant) instead of (store, product, nil).
+  def update_store_variant_stock(variant, new_stock)
+    product = variant.product
+    old_stock = @current_store.available_stock_for(product.id, variant.id).to_f
+    return nil if new_stock == old_stock
+    return "#{variant.label}: quantity can't be negative — stock left at #{old_stock.to_i}" if new_stock.negative?
+
+    row = @current_store.store_inventories.find_or_initialize_by(product_id: product.id, product_variant_id: variant.id)
+    row.low_stock_threshold = variant.low_stock_threshold || product.low_stock_threshold if row.new_record?
+    row.quantity = new_stock
+    row.save!
+
+    StockMovement.create!(
+      product_id: product.id,
+      reference_type: 'adjustment',
+      reference_id: nil,
+      movement_type: new_stock > old_stock ? 'added' : 'adjusted',
+      quantity: new_stock - old_stock,
+      stock_before: old_stock,
+      stock_after: new_stock,
+      notes: "#{@current_store.name}: #{variant.label} stock #{old_stock.to_i} → #{new_stock.to_i} (product edit)"
+    )
+    nil
+  rescue => e
+    Rails.logger.error "update_store_variant_stock failed for variant #{variant.id} at store #{@current_store.id}: #{e.message}"
+    "#{variant.label}: stock change failed to save: #{e.message}"
   end
 
   # Attach a product created/edited here to this store: claim the just-created
