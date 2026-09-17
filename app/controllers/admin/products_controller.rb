@@ -243,8 +243,11 @@ class Admin::ProductsController < Admin::ApplicationController
 
       # Handle stock separately so an increase creates a stock batch (using the
       # cost/sell price entered in the same row) instead of a bare column bump.
+      # old_stock is the real central (Main Store) batch total — same figure
+      # Product Summary shows/edits — not the products.stock column, which
+      # drifts from it (see Product#update_stock_batch).
       track_stock = permitted.key?(:stock) && !product.has_multiple_quantities?
-      old_stock   = product.stock.to_f
+      old_stock   = product.stock_batches.central.active.sum(:quantity_remaining)
       new_stock   = permitted[:stock].to_f if track_stock
 
       unless product.update(permitted.except(:stock))
@@ -580,6 +583,7 @@ class Admin::ProductsController < Admin::ApplicationController
 
       product.stock_batches.create!(
         vendor:             default_stock_vendor,
+        store_id:           nil,
         quantity_purchased: delta,
         quantity_remaining: delta,
         purchase_price:     cost_f,
@@ -589,10 +593,14 @@ class Admin::ProductsController < Admin::ApplicationController
       )
       @bulk_batches_created = @bulk_batches_created.to_i + 1
     else
+      # reduce_stock_from_batches (Product) is central-only — a top-level
+      # stock edit must not draw down stock already allocated to a store.
       product.send(:reduce_stock_from_batches, delta.abs)
     end
 
-    new_total = product.stock_batches.active.sum(:quantity_remaining)
+    # Central-only, matching old_stock's definition above and Product
+    # Summary's "Main Store Stock" — not a raw sum across every store.
+    new_total = product.stock_batches.central.active.sum(:quantity_remaining)
     product.update_column(:stock, new_total) unless product.has_multiple_quantities?
 
     begin

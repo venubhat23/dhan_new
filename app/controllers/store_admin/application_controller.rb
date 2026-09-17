@@ -52,7 +52,14 @@ class StoreAdmin::ApplicationController < ApplicationController
     @store_products ||= begin
       product_ids  = @current_store.stock_batches.where(status: 'active').pluck(:product_id)
       product_ids |= @current_store.store_inventories.pluck(:product_id)
-      product_ids |= BookingItem.where(booking_id: store_bookings.select(:id)).pluck(:product_id)
+      # store_bookings is unconditionally Booking.all, so filtering booking_items
+      # by "booking_id IN (SELECT id FROM bookings)" was a no-op join across the
+      # whole bookings table on every call — same result as this direct pluck,
+      # minus the join. Site-wide (not store-scoped) and identical for every
+      # store, so it's cached instead of re-scanned on every request.
+      product_ids |= Rails.cache.fetch('store_admin_all_booking_item_product_ids', expires_in: 10.minutes) do
+        BookingItem.where.not(booking_id: nil).distinct.pluck(:product_id)
+      end
       Product.where(id: product_ids.compact.uniq)
     end
   end

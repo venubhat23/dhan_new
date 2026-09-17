@@ -81,8 +81,17 @@ class Admin::ProductSummaryController < Admin::ApplicationController
   # ---- loading -------------------------------------------------------------
 
   def load_summary
-    @stores = Store.order(:name).to_a
-    @products = Product.includes(:product_variants, :category).order(:name).to_a
+    # Stores change rarely (an admin action, not a stock edit), so this list is
+    # cached process-locally for a few minutes — see FastCache. Every DB round
+    # trip on this host costs ~250-300ms, so skipping it is a real saving.
+    @stores = FastCache.fetch('admin:product_summary:stores', expires_in: 5.minutes) { Store.order(:name).to_a }
+
+    # eager_load (one LEFT OUTER JOIN query) instead of includes (which would
+    # run three separate round trips for products/variants/categories here,
+    # since nothing in the WHERE clause references either association).
+    # Stock and threshold figures are NOT cached below — they're exactly what
+    # this screen edits, so they're always read live.
+    @products = Product.eager_load(:product_variants, :category).order('products.name').to_a
     product_ids = @products.map(&:id)
 
     # Per-store inventory rows (store_inventories).

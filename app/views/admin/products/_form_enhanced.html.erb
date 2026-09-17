@@ -1220,12 +1220,25 @@
       <!-- Inventory Section -->
       <div class="form-grid form-grid-2 mt-4">
         <div class="form-group">
+          <%
+            # products.stock is a legacy column that can drift from the real
+            # on-hand total (bookings, store transfers, and Product Summary
+            # edits don't all keep it in sync — see Product#update_stock_batch
+            # and Product::REAL_STOCK_SQL). Show the true central (Main Store)
+            # batch total instead — the same figure Product Summary's
+            # "Main Store Stock" column shows — so this form never displays a
+            # number the rest of the app disagrees with.
+            central_stock_value = if product.persisted? && !product.has_multiple_quantities?
+              product.stock_batches.central.active.sum(:quantity_remaining)
+            end
+            stock_field_opts = { class: "form-control", min: 0, required: true, placeholder: "0", id: "product_stock" }
+            stock_field_opts[:value] = central_stock_value unless central_stock_value.nil?
+          %>
           <%= form.label :stock, class: "form-label" do %>
             Available Stock <span class="required-mark">*</span>
           <% end %>
-          <%= form.number_field :stock, class: "form-control",
-              min: 0, required: true, placeholder: "0", id: "product_stock" %>
-          <div class="help-text">Current available quantity</div>
+          <%= form.number_field :stock, stock_field_opts %>
+          <div class="help-text">Current available quantity (Main Store)</div>
         </div>
 
         <div class="form-group">

@@ -3,11 +3,14 @@
   # it never reflects a store's `store_inventories` overlay (unlike
   # `cached_total_batch_stock` above, which is already store-scoped via
   # `products_for_picker`). When a store is selected, look each variant's
-  # stock up through the store so the qty/add-to-cart controls (and the
-  # server-side validation they must agree with) see the store's real
-  # on-hand instead of central stock.
-  picker_store = local_assigns[:store_id].presence ? Store.find_by(id: local_assigns[:store_id]) : nil
-  variant_stock_for = ->(v) { picker_store ? picker_store.available_stock_for(v.product_id, v.id).to_f : v.available_stock.to_f }
+  # stock up through the store-scoped `variant_stock` map the controller
+  # batch-computed (see Admin::BookingsController#variant_store_stock_map)
+  # instead of querying per variant here — this partial can render 60+ cards
+  # with 2-3 variants each, and a per-variant DB call (which is what this
+  # used to do) turned into dozens of round trips on a store-scoped grid.
+  store_picked = local_assigns[:store_id].presence
+  picker_variant_stock = local_assigns[:variant_stock] || {}
+  variant_stock_for = ->(v) { store_picked ? picker_variant_stock[v.id].to_f : v.available_stock.to_f }
 %>
 <% if products&.any? %>
   <div class="row g-2">

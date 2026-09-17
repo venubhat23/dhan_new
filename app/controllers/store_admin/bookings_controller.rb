@@ -37,12 +37,16 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     @per_page = (SystemSetting.respond_to?(:default_pagination_per_page) ? SystemSetting.default_pagination_per_page : 20)
     @bookings = @bookings.includes(:customer, { user: :franchise }, :store, :booking_invoices).page(params[:page]).per(@per_page)
 
-    # Batch-preload associated_invoice for bookings with no BookingInvoice,
-    # replacing up to N individual LIKE queries (Booking#has_invoice?/#associated_invoice)
-    # with a single batched query — mirrors Admin::BookingsController#index.
-    bookings_without_bi = @bookings.select { |b| b.booking_invoices.empty? }
-    if bookings_without_bi.any?
-      numbers = bookings_without_bi.map(&:booking_number)
+    # Batch-preload associated_invoice for EVERY booking on the page (not just
+    # ones without a BookingInvoice): #invoice_link_path checks
+    # associated_invoice *before* booking_invoices, even when a BookingInvoice
+    # already exists, so any booking left un-memoized fired its own
+    # LIKE-joined query per row (the view calls invoice_link_path for every
+    # booking with an invoice). One batched query replaces up to N —
+    # mirrors Admin::BookingsController#index.
+    page_bookings = @bookings.to_a
+    if page_bookings.any?
+      numbers = page_bookings.map(&:booking_number)
       like_clauses = numbers.map { "invoice_items.description LIKE ?" }.join(" OR ")
       matched = InvoiceItem.joins(:invoice)
                            .eager_load(:invoice)
@@ -51,13 +55,18 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
       matched.each do |item|
         numbers.each { |bn| inv_by_number[bn] ||= item.invoice if item.description.include?(bn) }
       end
-      bookings_without_bi.each do |b|
+      page_bookings.each do |b|
         b.instance_variable_set(:@associated_invoice, inv_by_number[b.booking_number])
       end
     end
 
     @summary = calculate_bookings_summary
-    @customers = Customer.select(:id, :full_name, :email, :mobile).order(:full_name).limit(500)
+    # The filter dropdown's customer list is identical for every store_admin
+    # user on every request; cache it briefly instead of re-running a
+    # 500-row ORDER BY on every page load.
+    @customers = Rails.cache.fetch('store_admin_bookings_customer_picker', expires_in: 2.minutes) do
+      Customer.select(:id, :full_name, :email, :mobile).order(:full_name).limit(500).to_a
+    end
   end
 
   STATUS_FILTER_ACTIONS = {
@@ -431,16 +440,29 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     params[:list_state]&.permit(*LIST_STATE_PARAMS)&.to_h || {}
   end
 
+  # Was 7 separate count/sum queries over the whole bookings table on every
+  # index load; collapsed to 2 (one grouped count, one combined revenue sum)
+  # since each round trip to the dev DB costs ~280ms.
   def calculate_bookings_summary
     base = store_bookings
+    status_counts = base.group(:status).count
+
+    today_start = Date.current.beginning_of_day
+    month_start = Date.current.beginning_of_month
+    today_expr  = Arel.sql("SUM(CASE WHEN created_at >= #{Booking.connection.quote(today_start)} THEN total_amount ELSE 0 END)")
+    month_expr  = Arel.sql("SUM(total_amount)")
+    today_revenue, month_revenue = base.where(created_at: month_start..)
+                                        .where.not(status: ['cancelled', 'returned'])
+                                        .pick(today_expr, month_expr) || [0, 0]
+
     {
-      total_bookings: base.count,
-      pending_bookings: base.where(status: ['draft', 'ordered_and_delivery_pending', 'confirmed']).count,
-      processing_bookings: base.where(status: ['processing', 'packed', 'shipped', 'out_for_delivery']).count,
-      completed_bookings: base.where(status: ['delivered', 'completed']).count,
-      cancelled_bookings: base.where(status: ['cancelled', 'returned']).count,
-      today_revenue: base.where(created_at: Date.current.all_day).where.not(status: ['cancelled', 'returned']).sum(:total_amount),
-      month_revenue: base.where(created_at: Date.current.all_month).where.not(status: ['cancelled', 'returned']).sum(:total_amount)
+      total_bookings: status_counts.values.sum,
+      pending_bookings: status_counts.values_at('draft', 'ordered_and_delivery_pending', 'confirmed').compact.sum,
+      processing_bookings: status_counts.values_at('processing', 'packed', 'shipped', 'out_for_delivery').compact.sum,
+      completed_bookings: status_counts.values_at('delivered', 'completed').compact.sum,
+      cancelled_bookings: status_counts.values_at('cancelled', 'returned').compact.sum,
+      today_revenue: today_revenue.to_f,
+      month_revenue: month_revenue.to_f
     }
   end
 

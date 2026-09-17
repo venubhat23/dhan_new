@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_17_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -130,6 +130,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
     t.decimal "discount_value", precision: 10, scale: 2
     t.decimal "discount_amount", precision: 10, scale: 2, default: "0.0"
     t.index ["booking_id"], name: "index_booking_items_on_booking_id"
+    t.index ["product_id"], name: "index_booking_items_on_product_id"
     t.index ["product_variant_id"], name: "index_booking_items_on_product_variant_id"
   end
 
@@ -400,6 +401,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
     t.string "full_name"
     t.index "(((to_tsvector('simple'::regconfig, COALESCE((full_name)::text, ''::text)) || to_tsvector('simple'::regconfig, COALESCE((email)::text, ''::text))) || to_tsvector('simple'::regconfig, COALESCE((mobile)::text, ''::text))))", name: "index_customers_on_pg_search_tsvector", using: :gin
     t.index ["email"], name: "index_customers_on_email", unique: true
+    t.index ["full_name"], name: "index_customers_on_full_name"
     t.index ["full_name"], name: "index_customers_on_full_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["latitude", "longitude"], name: "index_customers_on_location"
     t.index ["mobile"], name: "index_customers_on_mobile"
@@ -922,6 +924,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
     t.decimal "b2b_percentage", precision: 5, scale: 2
     t.index ["barcode"], name: "index_products_on_barcode", unique: true
     t.index ["category_id"], name: "index_products_on_category_id"
+    t.index ["created_at"], name: "index_products_on_created_at"
     t.index ["is_occasional_product", "occasional_start_date", "occasional_end_date"], name: "index_products_on_occasional_dates"
     t.index ["is_occasional_product"], name: "index_products_on_is_occasional_product"
     t.index ["is_subscription_enabled"], name: "index_products_on_is_subscription_enabled"

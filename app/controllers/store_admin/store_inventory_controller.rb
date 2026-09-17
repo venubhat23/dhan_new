@@ -7,14 +7,19 @@ class StoreAdmin::StoreInventoryController < StoreAdmin::ApplicationController
     @products = store_products.includes(:category, :product_variants).order(:name)
 
     if params[:search].present?
-      term = params[:search].to_s.strip.downcase
-      @products = @products.select do |p|
-        p.name.to_s.downcase.include?(term) || p.sku.to_s.downcase.include?(term)
-      end
+      term = "%#{params[:search].to_s.strip}%"
+      # Pushed into SQL (was loading every store product into Ruby and
+      # filtering with String#include?) — uses the existing trigram indexes
+      # on products.name / products.sku.
+      @products = @products.where('products.name ILIKE :q OR products.sku ILIKE :q', q: term)
     end
 
-    @rows = build_rows(@products)
-    @low_stock_count = @rows.count { |r| r[:low_stock] }
+    all_rows = build_rows(@products)
+    @low_stock_count = all_rows.count { |r| r[:low_stock] }
+    # The table itself renders one page at a time — this store's full history
+    # of stocked/sold products could otherwise mean rendering thousands of
+    # rows on a single request.
+    @rows = Kaminari.paginate_array(all_rows).page(params[:page]).per(100)
   end
 
   # CSV of the current store's low-stock rows (quantity <= threshold).
@@ -84,15 +89,6 @@ class StoreAdmin::StoreInventoryController < StoreAdmin::ApplicationController
   def build_row(product, variant, qty, threshold)
     { product: product, variant: variant, quantity: qty,
       threshold: threshold.to_f, low_stock: qty <= threshold.to_f }
-  end
-
-  # Products with an active stock batch or store inventory row for this store,
-  # plus anything this store has actually sold. Mirrors StoreAdmin::ProductsController.
-  def store_products
-    product_ids = @current_store.stock_batches.where(status: 'active').pluck(:product_id)
-    product_ids |= @current_store.store_inventories.pluck(:product_id)
-    product_ids |= BookingItem.where(booking_id: store_bookings.select(:id)).pluck(:product_id)
-    Product.where(id: product_ids.compact.uniq)
   end
 
   def ensure_can_manage_inventory!

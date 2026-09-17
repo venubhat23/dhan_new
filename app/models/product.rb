@@ -1532,23 +1532,27 @@ class Product < ApplicationRecord
   def update_stock_batch
     return unless saved_change_to_stock?
 
-    # Get the old and new stock values from saved changes
-    stock_changes = saved_change_to_stock
-    old_stock = stock_changes[0]
-    new_stock = stock_changes[1]
-
-
-    # Store the stock difference
+    # The old value of `saved_change_to_stock` is whatever was last written to
+    # this legacy column — which drifts from the real on-hand total (bookings,
+    # store transfers, and Product Summary edits don't all keep it in sync;
+    # see Product::REAL_STOCK_SQL and the "Stock batch on edit" project note).
+    # Reconciling against that stale number produced the wrong batch delta, so
+    # the baseline here is the actual central (Main Store) batch total instead
+    # — the same figure Product Summary's "Main Store Stock" column reads —
+    # computed fresh now, before this method creates/reduces any batch.
+    old_stock = stock_batches.central.active.sum(:quantity_remaining)
+    new_stock = stock
     stock_difference = new_stock - old_stock
+    return if stock_difference.zero?
 
-    # Find the most recent batch
-    latest_batch = stock_batches.by_fifo.last
+    central_batches = stock_batches.central
+    latest_batch = central_batches.by_fifo.last
 
     ActiveRecord::Base.transaction do
-      if latest_batch && latest_batch.quantity_purchased == old_stock && stock_batches.count == 1
-        # Update the initial batch if it's the only batch and matches original stock
+      if latest_batch && latest_batch.quantity_purchased == old_stock && central_batches.count == 1
+        # Update the initial batch if it's the only central batch and matches
+        # the computed original stock.
         new_quantity = latest_batch.quantity_remaining + stock_difference
-
 
         if new_quantity > 0
           latest_batch.update!(
@@ -1564,9 +1568,10 @@ class Product < ApplicationRecord
         adjustment_vendor = get_or_create_default_vendor
 
         if stock_difference > 0
-          # Stock increase - create new batch
+          # Stock increase - create new central batch
           stock_batches.create!(
             vendor: adjustment_vendor,
+            store_id: nil,
             quantity_purchased: stock_difference,
             quantity_remaining: stock_difference,
             purchase_price: buying_price || price || 0,
@@ -1575,7 +1580,7 @@ class Product < ApplicationRecord
             status: 'active'
           )
         elsif stock_difference < 0
-          # Stock decrease - reduce from existing batches using FIFO
+          # Stock decrease - reduce from existing central batches using FIFO
           reduce_stock_from_batches(stock_difference.abs)
         end
       end
@@ -1594,9 +1599,11 @@ class Product < ApplicationRecord
     end
   end
 
+  # Central (Main Store) only — a top-level product stock edit must never draw
+  # down stock that's already been transferred/allocated to a specific store.
   def reduce_stock_from_batches(quantity_to_reduce)
     remaining_to_reduce = quantity_to_reduce
-    active_batches = stock_batches.active.by_fifo
+    active_batches = stock_batches.central.active.by_fifo
 
     active_batches.each do |batch|
       break if remaining_to_reduce <= 0

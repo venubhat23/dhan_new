@@ -116,17 +116,28 @@ class Admin::BookingsController < Admin::ApplicationController
   # Landing screen for the "New Store Booking" flow: pick a store, then drop into
   # #new pre-scoped to that store (product picker + stock deduction both run
   # against that store's inventory only).
+  # Pure landing/picker screen (no editing happens here), so both queries are
+  # cached process-locally for a couple of minutes — see FastCache. Each round
+  # trip to the DB costs ~250-300ms on this host, so caching drops a repeat
+  # view of this page from ~2 queries / ~500ms to 0 queries.
   def store_booking
-    @stores = Store.active.by_display_order
+    data = FastCache.fetch('admin:store_booking:overview', expires_in: 2.minutes) do
+      stores = Store.active.by_display_order.to_a
 
-    # One grouped query for each store's on-hand summary from active batches.
-    rows = StockBatch.active
-                     .where(store_id: @stores.map(&:id))
-                     .group(:store_id)
-                     .pluck(Arel.sql('store_id, COUNT(DISTINCT product_id), COALESCE(SUM(quantity_remaining), 0)'))
-    @store_stock = rows.each_with_object({}) do |(sid, products, units), h|
-      h[sid] = { products: products.to_i, units: units.to_f }
+      # One grouped query for each store's on-hand summary from active batches.
+      rows = StockBatch.active
+                       .where(store_id: stores.map(&:id))
+                       .group(:store_id)
+                       .pluck(Arel.sql('store_id, COUNT(DISTINCT product_id), COALESCE(SUM(quantity_remaining), 0)'))
+      store_stock = rows.each_with_object({}) do |(sid, products, units), h|
+        h[sid] = { products: products.to_i, units: units.to_f }
+      end
+
+      { stores: stores, store_stock: store_stock }
     end
+
+    @stores      = data[:stores]
+    @store_stock = data[:store_stock]
   end
 
   def new
@@ -160,11 +171,14 @@ class Admin::BookingsController < Admin::ApplicationController
     # separate from the one that loads the records — materializing the array up
     # front makes `.any?` free and drops that extra round trip.
     @products = products_for_picker(@selected_store&.id, limit: INITIAL_PICKER_LIMIT).to_a
+    @variant_stock = variant_store_stock_map(@products, @selected_store&.id)
 
     @categories = Category.where(status: true).order(:name)
-    @customers = Customer.select(:id, :full_name, :email, :mobile)
-                         .order(:full_name)
-                         .limit(500)
+    # The "Search & Select Customer" box searches live via #search_customers
+    # (AJAX) instead of a preloaded, capped list — that used to load only the
+    # first 500 customers and then show just the first 10 matches client-side,
+    # so a customer past #500 (or a match beyond the 10 shown) was simply
+    # unreachable no matter what was typed.
   end
 
   def create
@@ -220,9 +234,9 @@ class Admin::BookingsController < Admin::ApplicationController
     unless validate_stock_availability(@booking)
       @selected_store = Store.active.find_by(id: @booking.store_id) if @booking.store_id.present?
       @from_store = @booking.store_id.present?
-      @products = products_for_picker(@booking.store_id)
+      @products = products_for_picker(@booking.store_id).to_a
+      @variant_stock = variant_store_stock_map(@products, @booking.store_id)
       @categories = Category.where(status: true).order(:name)
-      @customers = Customer.all.order(:full_name)
       @stores = Store.where(status: true)
       render :new, status: :unprocessable_entity
       return
@@ -273,9 +287,9 @@ class Admin::BookingsController < Admin::ApplicationController
 
       @selected_store = Store.active.find_by(id: @booking.store_id) if @booking.store_id.present?
       @from_store = @booking.store_id.present?
-      @products = products_for_picker(@booking.store_id)
+      @products = products_for_picker(@booking.store_id).to_a
+      @variant_stock = variant_store_stock_map(@products, @booking.store_id)
       @categories = Category.where(status: true).order(:name)
-      @customers = Customer.all.order(:full_name)
       @stores = Store.where(status: true)
       flash.now[:alert] = @booking.errors.full_messages.join(', ')
       render :new, status: :unprocessable_entity
@@ -703,15 +717,26 @@ class Admin::BookingsController < Admin::ApplicationController
       in_stock_only: params[:in_stock] == '1',
       limit: 60
     ).to_a
+    variant_stock = variant_store_stock_map(@products, store_id)
 
-    render partial: 'admin/bookings/product_grid', locals: { products: @products, store_id: store_id }, layout: false
+    render partial: 'admin/bookings/product_grid',
+           locals: { products: @products, store_id: store_id, variant_stock: variant_stock }, layout: false
   end
 
   def search_customers
-    @customers = Customer.where(
-      "full_name ILIKE ? OR email ILIKE ? OR mobile ILIKE ?",
-      "%#{params[:q]}%", "%#{params[:q]}%", "%#{params[:q]}%"
-    ).limit(10)
+    q = params[:q].to_s.strip
+    # Blank q (dropdown opened with nothing typed yet) lists customers
+    # alphabetically instead of matching nothing, so "Show All Customers"
+    # has something to show without a separate endpoint/branch.
+    @customers =
+      if q.present?
+        Customer.where(
+          "full_name ILIKE ? OR email ILIKE ? OR mobile ILIKE ?",
+          "%#{q}%", "%#{q}%", "%#{q}%"
+        ).order(:full_name).limit(30)
+      else
+        Customer.order(:full_name).limit(30)
+      end
 
     render json: @customers.map { |c|
       {
@@ -1046,6 +1071,31 @@ class Admin::BookingsController < Admin::ApplicationController
     end
     scope = scope.where(category_id: category_id) if category_id.present?
     scope
+  end
+
+  # Per-variant store stock for every variant product on the picker grid, in
+  # 2 queries total. The grid partial used to call Store#available_stock_for
+  # per variant (2 queries each: an EXISTS check, then a SUM) for every
+  # variant-select option AND again for the default-variant fallback logic —
+  # on a store-scoped page with variant products that was 10-20+ round trips
+  # per render, each ~250-300ms on this host. Mirrors
+  # Store#available_stock_for's own rule: a store_inventories row wins
+  # (even a zero-quantity one) over the store's active batch total.
+  def variant_store_stock_map(products, store_id)
+    return {} unless store_id.present?
+
+    variant_ids = products.flat_map { |p| p.has_multiple_quantities? ? p.product_variants.map(&:id) : [] }
+    return {} if variant_ids.empty?
+
+    sid = store_id.to_i
+    inv_by_variant = StoreInventory.where(store_id: sid, product_variant_id: variant_ids)
+                                    .pluck(:product_variant_id, :quantity).to_h
+    batch_by_variant = StockBatch.where(store_id: sid, status: 'active', product_variant_id: variant_ids)
+                                  .group(:product_variant_id).sum(:quantity_remaining)
+
+    variant_ids.index_with do |vid|
+      inv_by_variant.key?(vid) ? inv_by_variant[vid].to_f : batch_by_variant[vid].to_f
+    end
   end
 
   def validate_stock_availability(booking, is_update: false)

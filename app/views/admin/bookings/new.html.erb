@@ -131,7 +131,7 @@
   <div class="card border-0 shadow-sm">
     <div class="card-body pt-3">
       <div id="productGrid" data-loading="0">
-        <%= render partial: 'product_grid', locals: { products: @products, store_id: @selected_store&.id } %>
+        <%= render partial: 'product_grid', locals: { products: @products, store_id: @selected_store&.id, variant_stock: @variant_stock || {} } %>
       </div>
     </div>
   </div>
@@ -1287,16 +1287,14 @@ function calculateChange() {
   document.getElementById('booking_change_amount').value = change.toFixed(2);
 }
 
-// Customer Search System
-let customers = <%= raw @customers.map { |c| {
-  id: c.id,
-  name: c.display_name,
-  mobile: c.mobile,
-  email: c.email,
-  address: c.respond_to?(:address) ? c.address : ''
-}}.to_json %>;
-
+// Customer Search System — searches the full customers table live via
+// #search_customers (AJAX) instead of a preloaded client-side snapshot.
+// The old version preloaded only the first 500 customers into the page and
+// then showed just the first 10 matches from that snapshot, so any customer
+// past #500 — or any match beyond the 10 shown — could never be found no
+// matter what was typed. This always searches (and can find) every customer.
 let searchTimeout;
+let searchAbortController = null;
 let currentSearchQuery = '';
 let selectedCustomerIndex = -1;
 
@@ -1307,16 +1305,11 @@ function initializeCustomerSearch() {
 
   if (!searchInput || !dropdown) return;
 
-  // Show dropdown on focus
+  // Show dropdown on focus — fetches the current query (or, if empty, the
+  // default alphabetical list) fresh every time.
   searchInput.addEventListener('focus', function() {
-    if (this.value.length >= 1 || customers.length <= 20) {
-      showCustomerDropdown();
-      if (this.value.length >= 1) {
-        performCustomerSearch(this.value);
-      } else {
-        showAllCustomers();
-      }
-    }
+    showCustomerDropdown();
+    performCustomerSearch(this.value.trim());
   });
 
   // Hide dropdown when clicking outside
@@ -1334,16 +1327,8 @@ function initializeCustomerSearch() {
 
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-      if (query.length >= 1) {
-        showCustomerDropdown();
-        performCustomerSearch(query);
-      } else if (query.length === 0) {
-        if (customers.length <= 20) {
-          showAllCustomers();
-        } else {
-          hideCustomerDropdown();
-        }
-      }
+      showCustomerDropdown();
+      performCustomerSearch(query);
     }, 300);
   });
 
@@ -1375,19 +1360,32 @@ function performCustomerSearch(query) {
   const results = document.getElementById('customerSearchResults');
   if (!results) return;
 
-  // Show loading
   results.innerHTML = '<div class="customer-search-loading"><div class="customer-search-spinner"></div>Searching customers...</div>';
 
-  // Simulate network delay for better UX
-  setTimeout(() => {
-    const filteredCustomers = customers.filter(customer =>
-      customer.name.toLowerCase().includes(query.toLowerCase()) ||
-      (customer.mobile && customer.mobile.includes(query)) ||
-      (customer.email && customer.email.toLowerCase().includes(query.toLowerCase()))
-    ).slice(0, 10); // Limit to 10 results
+  // Cancel any in-flight search so a fast typist can't have an older
+  // response overwrite a newer one.
+  if (searchAbortController) searchAbortController.abort();
+  searchAbortController = new AbortController();
 
-    displayCustomerResults(filteredCustomers, query);
-  }, 200);
+  fetch('<%= search_customers_admin_bookings_path %>?q=' + encodeURIComponent(query), {
+    signal: searchAbortController.signal,
+    headers: { 'Accept': 'application/json' }
+  })
+    .then(response => response.json())
+    .then(data => {
+      const mapped = data.map(c => ({
+        id: c.id,
+        name: c.name,
+        mobile: c.phone,
+        email: c.email,
+        address: c.address
+      }));
+      displayCustomerResults(mapped, query);
+    })
+    .catch(err => {
+      if (err.name === 'AbortError') return;
+      results.innerHTML = '<div class="customer-search-empty"><i class="bi bi-exclamation-triangle fs-4 mb-2 d-block text-muted"></i><div class="fw-medium">Search failed</div><small class="text-muted">Please try again</small></div>';
+    });
 }
 
 function displayCustomerResults(customerList, searchQuery = '') {
@@ -1485,7 +1483,11 @@ function clearSelectedCustomer() {
 }
 
 function showAllCustomers() {
-  displayCustomerResults(customers.slice(0, 10));
+  const searchInput = document.getElementById('customerSearchInput');
+  if (searchInput) searchInput.value = '';
+  currentSearchQuery = '';
+  showCustomerDropdown();
+  performCustomerSearch('');
 }
 
 function showCustomerDropdown() {
