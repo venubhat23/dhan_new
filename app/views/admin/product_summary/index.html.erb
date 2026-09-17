@@ -112,9 +112,9 @@
   <strong>Bulk Edit</strong> to open every cell at once, then <strong>Save Changes</strong>.
   Increasing a <strong>Main Store</strong> stock value adds a new stock batch for the difference;
   decreasing it draws the difference down from existing batches (FIFO). Store values are set directly.
-  For a product <strong>with variants</strong>, editing the parent row's Main Store stock applies the
-  change to its default variant, and editing a parent store value writes the product-level store row
-  (the parent figure shown is a roll-up, so it may not echo the exact number you typed).
+  For a product <strong>with variants</strong>, the parent row's stock/threshold figures are a roll-up
+  (sum) of its variants — editing any parent-row cell applies the change to its default variant, so it
+  may not echo the exact number you typed.
 </div>
 
 <%= form_with url: admin_product_summary_path, method: :patch, local: true, html: { id: "pse-form", class: "pse-form" } do %>
@@ -153,7 +153,7 @@
               <%
                 variants   = product.sorted_variants
                 main_stock = @main_stock[product.id].to_f
-                main_thr   = product.low_stock_threshold
+                main_thr   = @main_threshold[product.id]
               %>
               <tr data-pse-row="<%= product.id %>">
                 <td class="ps-3 fw-semibold"><%= product.name %></td>
@@ -172,7 +172,7 @@
 
                 <% @stores.each do |store| %>
                   <% s_qty = @store_prod_qty[[store.id, product.id]] %>
-                  <% s_thr = @store_threshold[[store.id, product.id, nil]] %>
+                  <% s_thr = @store_prod_thr[[store.id, product.id]] %>
                   <%= render "num_cell",
                         value: s_qty,
                         name: "store_products[#{store.id}][#{product.id}][qty]",

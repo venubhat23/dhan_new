@@ -19,7 +19,7 @@ class Admin::ProductSummaryController < Admin::ApplicationController
       rows << ['Product', 'Variant', 'SKU', 'Category', 'Main Store Stock', 'Low Threshold']
       @products.each do |product|
         main_stock = @main_stock[product.id].to_f
-        main_thr   = product.low_stock_threshold
+        main_thr   = @main_threshold[product.id]
         if main_thr && main_stock <= main_thr.to_f
           rows << [product.name, '', product.sku, product.category&.name, fmt(main_stock), main_thr]
         end
@@ -105,24 +105,36 @@ class Admin::ProductSummaryController < Admin::ApplicationController
                 .group(:product_id).sum(:quantity_remaining)
     )
 
-    # Main-store stock per product (canonical fulfilment fields the app keeps).
+    # Main-store stock/threshold per product (canonical fulfilment fields the
+    # app keeps). For a variant product this MUST be the sum of its variants
+    # (Product::REAL_STOCK_SQL's rule) — a product-level figure alongside the
+    # variants would double-count.
     @main_stock = {}
-    # Aggregated per-store quantity per product (variant rows + plain row);
-    # nil when the store has no inventory row for that product at all.
+    @main_threshold = {}
+    # Aggregated per-store quantity/threshold per product; nil when the store
+    # has no inventory row for that product at all.
     @store_prod_qty = {}
+    @store_prod_thr = {}
     @products.each do |product|
-      @main_stock[product.id] =
-        if product.has_multiple_quantities?
-          product.product_variants.sum { |v| v.available_stock.to_f }
-        else
-          @central_stock[product.id].to_f
-        end
+      if product.has_multiple_quantities?
+        @main_stock[product.id]     = product.product_variants.sum { |v| v.available_stock.to_f }
+        @main_threshold[product.id] = product.product_variants.sum { |v| v.low_stock_threshold.to_i }
+      else
+        @main_stock[product.id]     = @central_stock[product.id].to_f
+        @main_threshold[product.id] = product.low_stock_threshold.to_i
+      end
 
       @stores.each do |store|
-        keys = [[store.id, product.id, nil]] +
-               product.product_variants.map { |v| [store.id, product.id, v.id] }
+        # A variant product's per-store total is the sum of its variants'
+        # store rows ONLY — never additionally folded in with a
+        # `product_variant_id: NULL` row for the same store/product (that key
+        # is reserved for products with no variants; see apply_store_scope,
+        # which now writes a variant product's parent-row edit through to its
+        # default variant instead of creating that stray row).
+        keys = product.has_multiple_quantities? ? product.product_variants.map { |v| [store.id, product.id, v.id] } : [[store.id, product.id, nil]]
         next unless keys.any? { |k| @store_qty.key?(k) }
         @store_prod_qty[[store.id, product.id]] = keys.sum { |k| @store_qty[k].to_f }
+        @store_prod_thr[[store.id, product.id]] = keys.sum { |k| @store_threshold[k].to_i }
       end
     end
   end
@@ -210,9 +222,13 @@ class Admin::ProductSummaryController < Admin::ApplicationController
       product = @products_by_id[pid.to_i]
       next unless product
 
-      if attrs[:threshold].present? && attrs[:threshold].to_i != product.low_stock_threshold.to_i
-        queue_col(Product, product.id, :low_stock_threshold, attrs[:threshold].to_i)
-        count += 1
+      if attrs[:threshold].present?
+        if product.has_multiple_quantities?
+          count += apply_variant_product_main_threshold(product, attrs[:threshold].to_i)
+        elsif attrs[:threshold].to_i != product.low_stock_threshold.to_i
+          queue_col(Product, product.id, :low_stock_threshold, attrs[:threshold].to_i)
+          count += 1
+        end
       end
 
       next if attrs[:stock].blank?
@@ -264,6 +280,28 @@ class Admin::ProductSummaryController < Admin::ApplicationController
       queue_col(ProductVariant, target.id, :available_stock, target_new.to_i)
       1
     end
+  end
+
+  # Same idea as apply_variant_product_main_stock, but for the parent row's
+  # Main Store Low Threshold cell (also an aggregate — sum of variant
+  # thresholds — so an edit reconciles the delta against the default variant
+  # rather than the unused products.low_stock_threshold column).
+  def apply_variant_product_main_threshold(product, new_total)
+    target = product.sorted_variants.first
+    return 0 unless target
+
+    old_total = product.product_variants.sum { |v| v.low_stock_threshold.to_i }
+    delta = new_total - old_total
+    return 0 if delta.zero?
+
+    target_new = target.low_stock_threshold.to_i + delta
+    if target_new.negative?
+      @errors << "#{product.name}: can't lower Main Store low threshold below the other variants' total"
+      return 0
+    end
+
+    queue_col(ProductVariant, target.id, :low_stock_threshold, target_new)
+    1
   end
 
   def apply_main_variant_changes
@@ -319,7 +357,19 @@ class Admin::ProductSummaryController < Admin::ApplicationController
         else
           product = @products_by_id[rid.to_i]
           next unless product
-          product_id, variant_id = product.id, nil
+
+          if product.has_multiple_quantities?
+            # Parent row's store cell for a variant product is a display
+            # roll-up (see load_summary) — write through to the default
+            # variant's store row instead of a separate product-level row,
+            # which would double-count against the real per-variant rows.
+            variant = product.sorted_variants.first
+            next unless variant
+            product_id, variant_id = product.id, variant.id
+          else
+            variant = nil
+            product_id, variant_id = product.id, nil
+          end
         end
 
         qty_in = attrs[:qty]

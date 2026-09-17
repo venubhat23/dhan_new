@@ -131,7 +131,7 @@
   <div class="card border-0 shadow-sm">
     <div class="card-body pt-3">
       <div id="productGrid" data-loading="0">
-        <%= render partial: 'product_grid', locals: { products: @products } %>
+        <%= render partial: 'product_grid', locals: { products: @products, store_id: @selected_store&.id } %>
       </div>
     </div>
   </div>

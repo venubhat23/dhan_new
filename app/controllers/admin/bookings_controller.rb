@@ -704,7 +704,7 @@ class Admin::BookingsController < Admin::ApplicationController
       limit: 60
     ).to_a
 
-    render partial: 'admin/bookings/product_grid', locals: { products: @products }, layout: false
+    render partial: 'admin/bookings/product_grid', locals: { products: @products, store_id: store_id }, layout: false
   end
 
   def search_customers
@@ -1070,7 +1070,15 @@ class Admin::BookingsController < Admin::ApplicationController
 
       if product.has_multiple_quantities? && item.product_variant_id.present?
         variant = variants_by_id[item.product_variant_id]
-        available_stock = variant ? variant.available_stock.to_f : 0.0
+        if scope_store_id.present? && variant && (store = Store.find_by(id: scope_store_id))
+          # Store-tagged sale of a variant: honour the store_inventories
+          # overlay for that variant, same as the picker grid — a variant's
+          # `available_stock` column is central/global and must not be used
+          # once stock has been moved into a store.
+          available_stock = store.available_stock_for(product.id, variant.id).to_f
+        else
+          available_stock = variant ? variant.available_stock.to_f : 0.0
+        end
       elsif scope_store_id.present? && (store = Store.find_by(id: scope_store_id))
         # Store-tagged sale: honour the store_inventories overlay, same as the
         # picker grid and Store#available_stock_for.

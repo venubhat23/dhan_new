@@ -111,10 +111,7 @@
                 </th>
                 <th>Purchase #</th>
                 <th>Vendor</th>
-                <th>Purchase Date</th>
-                <th>Items</th>
-                <th>Total Amount</th>
-                <th>Paid Amount</th>
+                <th>Purchase Info</th>
                 <th>Outstanding</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -137,20 +134,11 @@
                     <div class="small text-muted"><%= purchase.vendor.phone if purchase.vendor.phone.present? %></div>
                   </td>
                   <td>
-                    <div><%= purchase.purchase_date.strftime('%b %d, %Y') %></div>
-                    <div class="small text-muted"><%= time_ago_in_words(purchase.purchase_date) %> ago</div>
-                  </td>
-                  <td>
-                    <div class="fw-bold"><%= purchase.vendor_purchase_items.size %> items</div>
+                    <div><%= purchase.purchase_date.strftime('%b %d, %Y') %> · <%= purchase.vendor_purchase_items.size %> items (<%= purchase.vendor_purchase_items.sum(&:quantity) %>u)</div>
                     <div class="small text-muted">
-                      <%= purchase.vendor_purchase_items.sum(&:quantity) %> units
+                      Total ₹<%= number_with_delimiter(purchase.total_amount.to_i) %> /
+                      Paid <span class="text-success">₹<%= number_with_delimiter(purchase.paid_amount.to_i) %></span>
                     </div>
-                  </td>
-                  <td>
-                    <div class="fw-bold">₹<%= number_with_delimiter(purchase.total_amount.to_i) %></div>
-                  </td>
-                  <td>
-                    <div class="fw-bold text-success">₹<%= number_with_delimiter(purchase.paid_amount.to_i) %></div>
                   </td>
                   <td>
                     <div class="fw-bold <%= purchase.outstanding_amount > 0 ? 'text-danger' : 'text-success' %>">

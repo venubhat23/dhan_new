@@ -132,12 +132,14 @@ class Store < ApplicationRecord
     Product.where(id: product_ids).active
   end
 
-  def available_stock_for(product_id)
+  def available_stock_for(product_id, product_variant_id = nil)
     inv = store_inventories.where(product_id: product_id)
+    inv = inv.where(product_variant_id: product_variant_id) if product_variant_id.present?
     return inv.sum(:quantity) if inv.exists?
 
-    stock_batches.where(product_id: product_id, status: 'active')
-                 .sum(:quantity_remaining)
+    batches = stock_batches.where(product_id: product_id, status: 'active')
+    batches = batches.where(product_variant_id: product_variant_id) if product_variant_id.present?
+    batches.sum(:quantity_remaining)
   end
 
   # Per-product / per-variant low-stock threshold for this store.
