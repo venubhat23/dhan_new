@@ -699,7 +699,10 @@ function bookingUpdateVariant(selectEl, productId) {
   const maxBadge = document.getElementById(`booking-max-stock-${productId}`);
   if (maxBadge) maxBadge.textContent = 'Max: ' + stock;
 
-  // Update add button
+  // Update add button — the click itself is handled by the delegated
+  // #productGrid listener (see below), which re-reads the live variant
+  // selection via bookingAddToCart, so only the disabled state and dataset
+  // (kept in sync for anything else that reads them) need updating here.
   const btn = document.getElementById(`booking-add-btn-${productId}`);
   if (btn) {
     const gstRateVal = parseFloat(btn.dataset.gstRate || 0);
@@ -707,9 +710,7 @@ function bookingUpdateVariant(selectEl, productId) {
     btn.disabled = stock <= 0;
     btn.dataset.finalPrice = price;
     btn.dataset.basePrice = deflatedBasePrice;
-    btn.onclick = function() {
-      bookingAddToCart(productId, btn.closest('.card')?.querySelector('.card-title')?.textContent?.trim() || '', price, stock, deflatedBasePrice, gstRateVal);
-    };
+    btn.dataset.stock = stock;
   }
 }
 
@@ -734,17 +735,22 @@ function bookingAddToCart(productId, productName, finalPrice, stock, basePrice, 
 
 // Wire up "Add to Cart" buttons via data attributes instead of inline onclick,
 // so product names with quotes/apostrophes can't break the attribute markup.
-document.querySelectorAll('.booking-add-to-cart-btn').forEach(btn => {
-  btn.onclick = function() {
-    bookingAddToCart(
-      parseInt(btn.dataset.productId),
-      btn.dataset.productName || '',
-      parseFloat(btn.dataset.finalPrice) || 0,
-      parseFloat(btn.dataset.stock) || 0,
-      parseFloat(btn.dataset.basePrice) || 0,
-      parseFloat(btn.dataset.gstRate) || 0
-    );
-  };
+// Delegated on the (stable) #productGrid container rather than bound per-button:
+// fetchProductGrid() replaces the grid's innerHTML on every search/category/
+// in-stock filter, which would otherwise silently orphan a per-button
+// onclick — clicking a re-rendered card's button would then do nothing.
+document.getElementById('productGrid')?.addEventListener('click', function(e) {
+  const btn = e.target.closest('.booking-add-to-cart-btn');
+  if (!btn || btn.disabled) return;
+
+  bookingAddToCart(
+    parseInt(btn.dataset.productId),
+    btn.dataset.productName || '',
+    parseFloat(btn.dataset.finalPrice) || 0,
+    parseFloat(btn.dataset.stock) || 0,
+    parseFloat(btn.dataset.basePrice) || 0,
+    parseFloat(btn.dataset.gstRate) || 0
+  );
 });
 
 // Update cart display
