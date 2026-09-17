@@ -59,11 +59,14 @@ class StoreAdmin::StoreInventoryController < StoreAdmin::ApplicationController
       h[[row.product_id, row.product_variant_id]] = row
     end
 
-    # Active batch stock per product (store + unassigned batches) — fallback
-    # for products with no store_inventories row.
+    # Active batch stock — fallback for products/variants with no
+    # store_inventories row. Grouped by (product_id, variant_id) so a
+    # variant's fallback is that variant's own batch total, not the product's
+    # combined one (was falling back to variant.available_stock — the
+    # CENTRAL column — for a variant with no inventory row).
     batch_stock = @current_store.stock_batches
                                 .where(status: 'active')
-                                .group(:product_id).sum(:quantity_remaining)
+                                .group(:product_id, :product_variant_id).sum(:quantity_remaining)
 
     default_threshold = @current_store.auto_transfer_threshold || 10
 
@@ -72,13 +75,13 @@ class StoreAdmin::StoreInventoryController < StoreAdmin::ApplicationController
       if product.product_variants.any?
         product.sorted_variants.each do |variant|
           row = inv_by_key[[product.id, variant.id]]
-          qty = row ? row.quantity.to_f : variant.available_stock.to_f
+          qty = row ? row.quantity.to_f : batch_stock[[product.id, variant.id]].to_f
           threshold = row&.low_stock_threshold || product.low_stock_threshold || default_threshold
           rows << build_row(product, variant, qty, threshold)
         end
       else
         row = inv_by_key[[product.id, nil]]
-        qty = row ? row.quantity.to_f : batch_stock[product.id].to_f
+        qty = row ? row.quantity.to_f : batch_stock[[product.id, nil]].to_f
         threshold = row&.low_stock_threshold || product.low_stock_threshold || default_threshold
         rows << build_row(product, nil, qty, threshold)
       end

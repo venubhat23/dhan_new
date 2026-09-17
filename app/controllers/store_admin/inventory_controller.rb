@@ -92,12 +92,18 @@ class StoreAdmin::InventoryController < StoreAdmin::ApplicationController
     products = Product.active.includes(:product_variants).where('name ILIKE ?', "%#{q}%").limit(15)
     product_ids = products.map(&:id)
 
-    # Batch both stock sources in 2 queries total instead of calling
-    # Store#available_stock_for (2 queries each) per product below.
+    # Batch both stock sources in a few queries total instead of calling
+    # Store#available_stock_for (2 queries each) per product/variant below.
     inv_by_product = @current_store.store_inventories.where(product_id: product_ids)
                                    .group(:product_id).sum(:quantity)
     batch_by_product = @current_store.stock_batches.where(product_id: product_ids, status: 'active')
                                      .group(:product_id).sum(:quantity_remaining)
+
+    variant_ids = products.flat_map { |p| p.has_multiple_quantities? ? p.product_variants.map(&:id) : [] }
+    inv_by_variant = @current_store.store_inventories.where(product_variant_id: variant_ids)
+                                   .pluck(:product_variant_id, :quantity).to_h
+    batch_by_variant = @current_store.stock_batches.where(product_variant_id: variant_ids, status: 'active')
+                                     .group(:product_variant_id).sum(:quantity_remaining)
 
     render json: products.map { |p|
       store_stock = inv_by_product.key?(p.id) ? inv_by_product[p.id] : batch_by_product[p.id].to_f
@@ -110,7 +116,11 @@ class StoreAdmin::InventoryController < StoreAdmin::ApplicationController
         unit_type: p.unit_type,
         has_variants: p.has_multiple_quantities?,
         variants: p.has_multiple_quantities? ? p.product_variants.sort_by { |v| [v.display_order.to_i, v.weight.to_f] }.map { |v|
-          { id: v.id, label: "#{v.weight} #{v.unit}", price: v.selling_price.to_f, stock: v.available_stock.to_f }
+          # Store#available_stock_for: store_inventories row wins, this
+          # store's active batch total is the fallback — was v.available_stock
+          # (the CENTRAL column) unconditionally.
+          v_stock = inv_by_variant.key?(v.id) ? inv_by_variant[v.id].to_f : batch_by_variant[v.id].to_f
+          { id: v.id, label: "#{v.weight} #{v.unit}", price: v.selling_price.to_f, stock: v_stock }
         } : []
       }
     }

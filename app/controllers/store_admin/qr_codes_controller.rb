@@ -21,8 +21,12 @@ class StoreAdmin::QrCodesController < StoreAdmin::ApplicationController
     if product.has_multiple_quantities? && product.product_variants.any?
       default_v = product.default_variant || product.product_variants.ordered.first
       response[:variants] = product.product_variants.default_first.map do |v|
+        # Store#available_stock_for: store_inventories row wins, this store's
+        # active batch total is the fallback — was falling back to
+        # v.available_stock (the CENTRAL column) instead when there was no
+        # inventory row, which could report far more than this store has.
         { id: v.id, label: v.label, price: v.effective_price.to_f,
-          stock: (@current_store.store_inventories.find_by(product_variant_id: v.id)&.quantity || v.available_stock).to_i,
+          stock: @current_store.available_stock_for(product.id, v.id).to_i,
           is_default: v.is_default }
       end
       response[:default_variant_id] = default_v.id

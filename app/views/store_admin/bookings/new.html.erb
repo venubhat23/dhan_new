@@ -113,6 +113,12 @@
 <div id="productsView">
   <div class="card border-0 shadow-sm">
     <div class="card-body pt-3">
+      <%
+        # variant.available_stock is the CENTRAL column — this store's actual
+        # on-hand for a variant is Product Summary's per-store column, from
+        # @variant_stock (see BookingsController#variant_store_stock_map).
+        variant_stock_for_store = ->(v) { (@variant_stock || {})[v.id].to_f }
+      %>
       <% if @products&.any? %>
         <div class="row g-2" id="productGrid">
           <% @products.each do |product| %>
@@ -171,6 +177,12 @@
                     <%
                       if product.has_multiple_quantities? && product.product_variants.any?
                         default_v = product.default_variant || product.product_variants.ordered.first
+                        # If the default variant has none of THIS store's
+                        # stock but another variant does, pre-select that one
+                        # instead of rendering a dead "Out of Stock" card.
+                        if default_v && variant_stock_for_store.call(default_v) <= 0
+                          default_v = product.sorted_variants.find { |v| variant_stock_for_store.call(v) > 0 } || default_v
+                        end
                         variant_price = default_v.effective_price
                         selling_price = variant_price
                       else
@@ -202,7 +214,7 @@
                         <% product.sorted_variants.each do |v| %>
                           <option value="<%= v.id %>"
                                   data-price="<%= v.effective_price %>"
-                                  data-stock="<%= v.available_stock %>"
+                                  data-stock="<%= variant_stock_for_store.call(v) %>"
                                   data-label="<%= v.label %>"
                                   <%= 'selected' if v.id == default_v.id %>>
                             <%= v.label %> — ₹<%= number_with_delimiter(v.effective_price) %>
@@ -233,7 +245,7 @@
                   <%# Quantity and Add to Cart %>
                   <%
                     effective_stock = if product.has_multiple_quantities? && product.product_variants.any?
-                      (default_v&.available_stock || 0)
+                      (default_v ? variant_stock_for_store.call(default_v) : 0)
                     else
                       current_stock
                     end

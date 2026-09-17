@@ -102,6 +102,7 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     end
     @selected_store = @current_store
     @products = products_for_picker
+    @variant_stock = variant_store_stock_map(@products)
     @categories = Category.where(status: true).order(:name)
     @customers = Customer.select(:id, :full_name, :email, :mobile).order(:full_name).limit(500)
     @store_products = @current_store.store_products_with_inventory.includes(:product_variants).by_stock_availability rescue @products
@@ -488,6 +489,29 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
            .order(Arel.sql("CASE WHEN #{effective} > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
   end
 
+  # Per-variant on-hand for THIS store, for every variant product on the
+  # picker grid, in 2 queries total — mirrors
+  # Admin::BookingsController#variant_store_stock_map. The view used to read
+  # variant.available_stock directly (the CENTRAL column) for the "Max"
+  # quantity and the variant dropdown, which could show far more than this
+  # store actually has (and let a store admin key in a quantity the store
+  # doesn't have — see validate_stock_availability below, which has the same
+  # fix for the actual booking-save check).
+  def variant_store_stock_map(products)
+    variant_ids = products.flat_map { |p| p.has_multiple_quantities? ? p.product_variants.map(&:id) : [] }
+    return {} if variant_ids.empty?
+
+    sid = @current_store.id
+    inv_by_variant = StoreInventory.where(store_id: sid, product_variant_id: variant_ids)
+                                    .pluck(:product_variant_id, :quantity).to_h
+    batch_by_variant = StockBatch.where(store_id: sid, status: 'active', product_variant_id: variant_ids)
+                                  .group(:product_variant_id).sum(:quantity_remaining)
+
+    variant_ids.index_with do |vid|
+      inv_by_variant.key?(vid) ? inv_by_variant[vid].to_f : batch_by_variant[vid].to_f
+    end
+  end
+
   def sync_booking_invoice_totals(booking)
     booking.booking_invoices.each do |bi|
       bi.update!(subtotal: booking.subtotal, tax_amount: booking.tax_amount,
@@ -508,15 +532,26 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     scope_store_id = booking.store_id || @current_store.id
     stock_errors = []
 
+    store = Store.find_by(id: scope_store_id)
+
     active_items.each do |item|
       product = products_by_id[item.product_id]
       next unless product
       if product.has_multiple_quantities? && item.product_variant_id.present?
-        available = variants_by_id[item.product_variant_id]&.available_stock.to_f
+        variant = variants_by_id[item.product_variant_id]
+        # Same overlay as products_for_picker / Store#available_stock_for:
+        # store_inventories row wins, batch sum is only the fallback. Was
+        # variant.available_stock (the CENTRAL column) unconditionally,
+        # which could pass this check for far more than the store actually
+        # has on hand for that variant.
+        available = if store && variant
+                      store.available_stock_for(product.id, variant.id).to_f
+                    else
+                      variant&.available_stock.to_f
+                    end
       else
         # Same overlay as products_for_picker / Store#available_stock_for:
         # store_inventories row wins, batch sum is only the fallback.
-        store = Store.find_by(id: scope_store_id)
         available = if store
                       store.available_stock_for(product.id).to_f
                     else
