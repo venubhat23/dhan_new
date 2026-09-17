@@ -257,3 +257,429 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_17_000001) do
     t.index ["tracking_number"], name: "index_bookings_on_tracking_number"
     t.index ["user_id"], name: "index_bookings_on_user_id"
   end
+
+  create_table "categories", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "description"
+    t.string "image"
+    t.boolean "status", default: true
+    t.integer "display_order", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "image_backup_url"
+    t.index ["display_order"], name: "index_categories_on_display_order"
+    t.index ["status"], name: "index_categories_on_status"
+  end
+
+  create_table "client_requests", force: :cascade do |t|
+    t.string "title"
+    t.text "description"
+    t.string "status", default: "pending"
+    t.string "priority", default: "medium"
+    t.bigint "customer_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "stage", default: "new"
+    t.datetime "stage_updated_at"
+    t.text "stage_history"
+    t.integer "assignee_id"
+    t.string "department"
+    t.datetime "estimated_resolution_time"
+    t.datetime "actual_resolution_time"
+    t.string "name"
+    t.string "email"
+    t.string "phone_number"
+    t.string "ticket_number"
+    t.text "admin_response"
+    t.integer "resolved_by_id"
+    t.datetime "submitted_at"
+    t.datetime "resolved_at"
+    t.index ["assignee_id"], name: "index_client_requests_on_assignee_id"
+    t.index ["customer_id"], name: "index_client_requests_on_customer_id"
+    t.index ["department"], name: "index_client_requests_on_department"
+    t.index ["estimated_resolution_time"], name: "index_client_requests_on_estimated_resolution_time"
+    t.index ["stage"], name: "index_client_requests_on_stage"
+    t.index ["ticket_number"], name: "index_client_requests_on_ticket_number", unique: true
+  end
+
+  create_table "coupons", force: :cascade do |t|
+    t.string "code"
+    t.text "description"
+    t.string "discount_type"
+    t.decimal "discount_value"
+    t.decimal "minimum_amount"
+    t.decimal "maximum_discount"
+    t.integer "usage_limit"
+    t.integer "used_count"
+    t.datetime "valid_from"
+    t.datetime "valid_until"
+    t.boolean "status"
+    t.text "applicable_products"
+    t.text "applicable_categories"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_coupons_on_code", unique: true
+  end
+
+  create_table "customer_addresses", force: :cascade do |t|
+    t.bigint "customer_id", null: false
+    t.string "name"
+    t.string "mobile"
+    t.string "address_type"
+    t.text "address"
+    t.string "landmark"
+    t.string "city"
+    t.string "state"
+    t.string "pincode"
+    t.decimal "latitude"
+    t.decimal "longitude"
+    t.boolean "is_default"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_customer_addresses_on_customer_id"
+  end
+
+  create_table "customer_formats", force: :cascade do |t|
+    t.bigint "customer_id", null: false
+    t.string "pattern"
+    t.decimal "quantity"
+    t.bigint "product_id", null: false
+    t.bigint "delivery_person_id", null: false
+    t.string "status"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "days"
+    t.index ["customer_id"], name: "index_customer_formats_on_customer_id"
+    t.index ["delivery_person_id"], name: "index_customer_formats_on_delivery_person_id"
+    t.index ["product_id"], name: "index_customer_formats_on_product_id"
+  end
+
+  create_table "customer_wallets", force: :cascade do |t|
+    t.bigint "customer_id", null: false
+    t.decimal "balance", precision: 10, scale: 2, default: "0.0"
+    t.boolean "status", default: true
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_customer_wallets_on_customer_id", unique: true
+  end
+
+  create_table "customers", force: :cascade do |t|
+    t.string "email"
+    t.string "mobile"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "longitude", precision: 10, scale: 8
+    t.decimal "latitude", precision: 10, scale: 8
+    t.string "whatsapp_number"
+    t.string "auto_generated_password"
+    t.datetime "location_obtained_at"
+    t.decimal "location_accuracy", precision: 8, scale: 2
+    t.string "password_digest"
+    t.text "address"
+    t.date "birth_date"
+    t.string "gender"
+    t.string "marital_status"
+    t.string "pan_no"
+    t.string "gst_no"
+    t.string "company_name"
+    t.string "occupation"
+    t.decimal "annual_income"
+    t.string "emergency_contact_name"
+    t.string "emergency_contact_number"
+    t.string "blood_group"
+    t.string "nationality"
+    t.string "preferred_language"
+    t.text "notes"
+    t.boolean "status", default: true, null: false
+    t.boolean "is_registered_by_mobile"
+    t.string "password_reset_token"
+    t.datetime "password_reset_sent_at"
+    t.string "location_link"
+    t.string "landmark"
+    t.text "shipping_address"
+    t.string "full_name"
+    t.index "(((to_tsvector('simple'::regconfig, COALESCE((full_name)::text, ''::text)) || to_tsvector('simple'::regconfig, COALESCE((email)::text, ''::text))) || to_tsvector('simple'::regconfig, COALESCE((mobile)::text, ''::text))))", name: "index_customers_on_pg_search_tsvector", using: :gin
+    t.index ["email"], name: "index_customers_on_email", unique: true
+    t.index ["full_name"], name: "index_customers_on_full_name"
+    t.index ["full_name"], name: "index_customers_on_full_name_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["latitude", "longitude"], name: "index_customers_on_location"
+    t.index ["mobile"], name: "index_customers_on_mobile"
+    t.index ["whatsapp_number"], name: "index_customers_on_whatsapp_number"
+  end
+
+  create_table "delivery_charges", force: :cascade do |t|
+    t.string "pincode", null: false
+    t.string "area"
+    t.decimal "charge_amount", precision: 10, scale: 2, default: "0.0"
+    t.boolean "is_active", default: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["is_active"], name: "index_delivery_charges_on_is_active"
+    t.index ["pincode"], name: "index_delivery_charges_on_pincode", unique: true
+  end
+
+  create_table "delivery_people", force: :cascade do |t|
+    t.string "first_name"
+    t.string "last_name"
+    t.string "email"
+    t.string "mobile"
+    t.string "vehicle_type"
+    t.string "vehicle_number"
+    t.string "license_number"
+    t.text "address"
+    t.string "city"
+    t.string "state"
+    t.string "pincode"
+    t.string "emergency_contact_name"
+    t.string "emergency_contact_mobile"
+    t.date "joining_date"
+    t.decimal "salary"
+    t.boolean "status"
+    t.string "profile_picture"
+    t.string "bank_name"
+    t.string "account_no"
+    t.string "ifsc_code"
+    t.string "account_holder_name"
+    t.text "delivery_areas"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "password_digest"
+    t.string "auto_generated_password"
+  end
+
+  create_table "delivery_rules", force: :cascade do |t|
+    t.bigint "product_id", null: false
+    t.string "rule_type", null: false
+    t.text "location_data"
+    t.boolean "is_excluded", default: false
+    t.integer "delivery_days"
+    t.decimal "delivery_charge", precision: 8, scale: 2, default: "0.0"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id"], name: "index_delivery_rules_on_product_id"
+    t.index ["rule_type"], name: "index_delivery_rules_on_rule_type"
+  end
+
+  create_table "device_tokens", force: :cascade do |t|
+    t.bigint "customer_id", null: false
+    t.bigint "delivery_person_id", null: false
+    t.string "token"
+    t.string "device_type"
+    t.boolean "active"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_device_tokens_on_customer_id"
+    t.index ["delivery_person_id"], name: "index_device_tokens_on_delivery_person_id"
+  end
+
+  create_table "documents", force: :cascade do |t|
+    t.string "title", null: false
+    t.text "description"
+    t.string "document_type", null: false
+    t.string "uploaded_by", null: false
+    t.string "documentable_type", null: false
+    t.bigint "documentable_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["documentable_type", "documentable_id"], name: "index_documents_on_documentable"
+  end
+
+  create_table "expenses", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.bigint "created_by_id", null: false
+    t.string "title", null: false
+    t.text "description"
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.string "category", null: false
+    t.date "expense_date", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category"], name: "index_expenses_on_category"
+    t.index ["created_by_id"], name: "index_expenses_on_created_by_id"
+    t.index ["store_id", "expense_date"], name: "index_expenses_on_store_id_and_expense_date"
+    t.index ["store_id"], name: "index_expenses_on_store_id"
+  end
+
+  create_table "franchises", force: :cascade do |t|
+    t.string "name"
+    t.string "email"
+    t.string "mobile"
+    t.string "contact_person_name"
+    t.string "business_type"
+    t.text "address"
+    t.string "city"
+    t.string "state"
+    t.string "pincode"
+    t.string "pan_no"
+    t.string "gst_no"
+    t.string "license_no"
+    t.date "establishment_date"
+    t.string "territory"
+    t.decimal "franchise_fee"
+    t.decimal "commission_percentage"
+    t.boolean "status"
+    t.text "notes"
+    t.string "password_digest"
+    t.string "auto_generated_password"
+    t.decimal "longitude"
+    t.decimal "latitude"
+    t.string "whatsapp_number"
+    t.string "profile_image"
+    t.text "business_documents"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.index ["email"], name: "index_franchises_on_email", unique: true
+    t.index ["mobile"], name: "index_franchises_on_mobile", unique: true
+    t.index ["pan_no"], name: "index_franchises_on_pan_no", unique: true
+    t.index ["user_id"], name: "index_franchises_on_user_id"
+  end
+
+  create_table "invoice_items", force: :cascade do |t|
+    t.bigint "invoice_id", null: false
+    t.bigint "milk_delivery_task_id"
+    t.text "description"
+    t.decimal "quantity"
+    t.decimal "unit_price"
+    t.decimal "total_amount"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "product_id"
+    t.bigint "product_variant_id"
+    t.string "discount_type"
+    t.decimal "discount_value", precision: 10, scale: 2
+    t.decimal "discount_amount", precision: 10, scale: 2, default: "0.0"
+    t.decimal "original_unit_price", precision: 10, scale: 2
+    t.index ["description"], name: "index_invoice_items_on_description_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["invoice_id"], name: "index_invoice_items_on_invoice_id"
+    t.index ["milk_delivery_task_id"], name: "index_invoice_items_on_milk_delivery_task_id"
+    t.index ["product_id"], name: "index_invoice_items_on_product_id"
+    t.index ["product_variant_id"], name: "index_invoice_items_on_product_variant_id"
+  end
+
+  create_table "invoices", force: :cascade do |t|
+    t.string "invoice_number"
+    t.string "payout_type"
+    t.integer "payout_id"
+    t.decimal "total_amount"
+    t.string "status"
+    t.date "invoice_date"
+    t.date "due_date"
+    t.datetime "paid_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "customer_id"
+    t.integer "payment_status"
+    t.string "share_token"
+    t.boolean "quick_invoice", default: false
+    t.decimal "paid_amount", precision: 10, scale: 2, default: "0.0"
+    t.decimal "delivery_charge", precision: 10, scale: 2, default: "0.0"
+    t.decimal "discount_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.index ["created_at"], name: "index_invoices_on_created_at"
+    t.index ["customer_id"], name: "index_invoices_on_customer_id"
+    t.index ["invoice_date"], name: "index_invoices_on_invoice_date"
+    t.index ["invoice_number"], name: "index_invoices_on_invoice_number", unique: true
+    t.index ["invoice_number"], name: "index_invoices_on_invoice_number_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["payment_status"], name: "index_invoices_on_payment_status"
+    t.index ["share_token"], name: "index_invoices_on_share_token", unique: true
+  end
+
+  create_table "leads", force: :cascade do |t|
+    t.string "name"
+    t.string "contact_number"
+    t.string "email"
+    t.string "current_stage"
+    t.string "lead_source"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "product_category"
+    t.string "product_subcategory"
+    t.string "customer_type"
+    t.integer "affiliate_id"
+    t.boolean "is_direct"
+    t.string "first_name"
+    t.string "last_name"
+    t.string "middle_name"
+    t.string "company_name"
+    t.string "gender"
+    t.string "marital_status"
+    t.string "pan_no"
+    t.string "gst_no"
+    t.decimal "height"
+    t.decimal "weight"
+    t.decimal "annual_income"
+    t.string "business_job"
+  end
+
+  create_table "milk_delivery_tasks", force: :cascade do |t|
+    t.bigint "subscription_id"
+    t.bigint "customer_id", null: false
+    t.bigint "product_id", null: false
+    t.decimal "quantity", precision: 10, scale: 2
+    t.string "unit"
+    t.date "delivery_date"
+    t.bigint "delivery_person_id"
+    t.string "status", default: "pending"
+    t.datetime "assigned_at"
+    t.datetime "completed_at"
+    t.text "delivery_notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "invoiced", default: false
+    t.datetime "invoiced_at"
+    t.index ["customer_id", "delivery_date"], name: "index_milk_delivery_tasks_on_customer_id_and_delivery_date"
+    t.index ["customer_id"], name: "index_milk_delivery_tasks_on_customer_id"
+    t.index ["delivery_date"], name: "index_milk_delivery_tasks_on_delivery_date"
+    t.index ["delivery_person_id", "delivery_date"], name: "idx_on_delivery_person_id_delivery_date_8b580f1b82"
+    t.index ["delivery_person_id"], name: "index_milk_delivery_tasks_on_delivery_person_id"
+    t.index ["product_id"], name: "index_milk_delivery_tasks_on_product_id"
+    t.index ["status"], name: "index_milk_delivery_tasks_on_status"
+    t.index ["subscription_id"], name: "index_milk_delivery_tasks_on_subscription_id"
+  end
+
+  create_table "milk_subscriptions", force: :cascade do |t|
+    t.bigint "customer_id", null: false
+    t.bigint "product_id", null: false
+    t.decimal "quantity", precision: 10, scale: 2
+    t.string "unit", default: "liter"
+    t.date "start_date"
+    t.date "end_date"
+    t.string "delivery_time", default: "morning"
+    t.string "delivery_pattern", default: "daily"
+    t.text "specific_dates"
+    t.decimal "total_amount", precision: 10, scale: 2
+    t.string "status", default: "active"
+    t.boolean "is_active", default: true
+    t.integer "created_by"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "delivery_person_id"
+    t.index ["customer_id"], name: "index_milk_subscriptions_on_customer_id"
+    t.index ["delivery_person_id"], name: "index_milk_subscriptions_on_delivery_person_id"
+    t.index ["product_id"], name: "index_milk_subscriptions_on_product_id"
+    t.index ["start_date", "end_date"], name: "idx_milk_subscriptions_dates"
+    t.index ["status"], name: "idx_milk_subscriptions_status"
+  end
+
+  create_table "notes", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "paid_to", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.string "payment_method", null: false
+    t.string "reference_number"
+    t.text "description"
+    t.string "status", default: "pending"
+    t.date "note_date", default: -> { "CURRENT_DATE" }, null: false
+    t.bigint "created_by_user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "paid_from"
+    t.string "paid_to_category"
+    t.index ["created_by_user_id"], name: "index_notes_on_created_by_user_id"
+    t.index ["note_date"], name: "index_notes_on_note_date"
+    t.index ["payment_method"], name: "index_notes_on_payment_method"
+    t.index ["status"], name: "index_notes_on_status"
+  end
+
