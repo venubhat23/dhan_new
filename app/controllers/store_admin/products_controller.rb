@@ -84,13 +84,27 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
     handle_image_removal if params[:remove_images].present?
     process_params_delivery_rule_data
 
-    if @product.update(product_params)
+    # "Available Stock" on this form is THIS store's on-hand (see the edit
+    # form's comment), not the central products.stock column — so it's kept
+    # out of the mass-assignment update (which would otherwise overwrite the
+    # central column with a store-scoped number and run it through the
+    # central-only stock-batch reconciliation) and written straight to
+    # store_inventories instead, the same way Store Product Summary does it.
+    permitted   = product_params
+    track_stock = permitted.key?(:stock) && !@product.has_multiple_quantities?
+    new_stock   = permitted[:stock].to_f if track_stock
+    permitted   = permitted.except(:stock) if track_stock
+
+    if @product.update(permitted)
       @product.product_variants.destroy_all unless @product.has_multiple_quantities?
       handle_cloudinary_uploads if params.dig(:product, :cloudinary_images).present?
       handle_automatic_r2_uploads
       handle_main_image_setting if params[:main_image_id].present?
       carry_product_at_store(@product)
-      redirect_to store_admin_product_path(@product), notice: 'Product was successfully updated.'
+      stock_err = update_store_stock(@product, new_stock) if track_stock
+      notice = 'Product was successfully updated.'
+      notice += " Note: #{stock_err}" if stock_err
+      redirect_to store_admin_product_path(@product), notice: notice
     else
       render :edit, status: :unprocessable_entity
     end
@@ -350,6 +364,39 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
 
   def load_categories
     @categories = Category.active.ordered
+  end
+
+  # Reconciles THIS store's on-hand for a non-variant product to new_stock —
+  # a direct store_inventories write, no central FIFO batch involved, exactly
+  # like StoreAdmin::ProductSummaryController#apply_store_scope. Runs after
+  # carry_product_at_store, so it's the authoritative value the edit saves —
+  # carry_product_at_store's own store_inventories write (from that store's
+  # raw batch total, which can differ from the deliberately-set inventory
+  # figure) is superseded by this one. Returns an error string on failure.
+  def update_store_stock(product, new_stock)
+    old_stock = @current_store.available_stock_for(product.id).to_f
+    return nil if new_stock == old_stock
+    return "quantity can't be negative — stock left at #{old_stock.to_i}" if new_stock.negative?
+
+    row = @current_store.store_inventories.find_or_initialize_by(product_id: product.id, product_variant_id: nil)
+    row.low_stock_threshold = product.low_stock_threshold if row.new_record?
+    row.quantity = new_stock
+    row.save!
+
+    StockMovement.create!(
+      product_id: product.id,
+      reference_type: 'adjustment',
+      reference_id: nil,
+      movement_type: new_stock > old_stock ? 'added' : 'adjusted',
+      quantity: new_stock - old_stock,
+      stock_before: old_stock,
+      stock_after: new_stock,
+      notes: "#{@current_store.name}: stock #{old_stock.to_i} → #{new_stock.to_i} (product edit)"
+    )
+    nil
+  rescue => e
+    Rails.logger.error "update_store_stock failed for product #{product.id} at store #{@current_store.id}: #{e.message}"
+    "stock change failed to save: #{e.message}"
   end
 
   # Attach a product created/edited here to this store: claim the just-created

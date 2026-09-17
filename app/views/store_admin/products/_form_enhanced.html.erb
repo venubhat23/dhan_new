@@ -1220,12 +1220,25 @@
       <!-- Inventory Section -->
       <div class="form-grid form-grid-2 mt-4">
         <div class="form-group">
+          <%
+            # products.stock is the CENTRAL column — meaningless here and can
+            # drift from reality besides. "Available Stock" on this store-login
+            # form means THIS store's on-hand, i.e. Product Summary's per-store
+            # column: @current_store.available_stock_for (store_inventories row
+            # wins, that store's active batch total is the fallback — see the
+            # "Store stock overlay" convention). Saving writes straight to
+            # store_inventories, matching Store Product Summary's own edit path.
+            store_stock_value = if product.persisted? && !product.has_multiple_quantities?
+              @current_store.available_stock_for(product.id)
+            end
+            stock_field_opts = { class: "form-control", min: 0, required: true, placeholder: "0", id: "product_stock" }
+            stock_field_opts[:value] = store_stock_value unless store_stock_value.nil?
+          %>
           <%= form.label :stock, class: "form-label" do %>
             Available Stock <span class="required-mark">*</span>
           <% end %>
-          <%= form.number_field :stock, class: "form-control",
-              min: 0, required: true, placeholder: "0", id: "product_stock" %>
-          <div class="help-text">Current available quantity</div>
+          <%= form.number_field :stock, stock_field_opts %>
+          <div class="help-text">Current available quantity at <%= @current_store.name %></div>
         </div>
 
         <div class="form-group">
