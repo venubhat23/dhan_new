@@ -119,7 +119,7 @@
               <%
                 variants = product.sorted_variants
                 s_qty    = @store_prod_qty[product.id]
-                s_thr    = @store_threshold[[product.id, nil]]
+                s_thr    = @store_prod_thr[product.id]
               %>
               <tr>
                 <td class="ps-3 fw-semibold"><%= product.name %></td>

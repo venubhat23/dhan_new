@@ -52,23 +52,21 @@ class StoreAdmin::ProductSummaryController < StoreAdmin::ApplicationController
       @store_threshold[key] = row.low_stock_threshold
     end
 
-    # Fall back to this store's active batch stock where there's no inventory row.
-    @batch_qty = Hash.new(0.0).merge(
-      @current_store.stock_batches.where(product_id: product_ids, status: 'active')
-                    .where('quantity_remaining > 0')
-                    .group(:product_id).sum(:quantity_remaining)
-    )
-
-    # Aggregated store quantity per product (plain row + variant rows), nil when
-    # the store carries no inventory row for the product at all.
+    # Per-product roll-up, identical to the store columns on Admin::ProductSummary:
+    # a variant product's total is the sum of its variants' rows ONLY (never
+    # also a product-level row — that would double-count); a simple product
+    # uses its own product-level row. nil when the store has no row at all.
     @store_prod_qty = {}
+    @store_prod_thr = {}
     @products.each do |product|
-      keys = [[product.id, nil]] + product.product_variants.map { |v| [product.id, v.id] }
-      if keys.any? { |k| @store_qty.key?(k) }
-        @store_prod_qty[product.id] = keys.sum { |k| @store_qty[k].to_f }
-      elsif @batch_qty[product.id].to_f.positive?
-        @store_prod_qty[product.id] = @batch_qty[product.id].to_f
-      end
+      keys = if product.has_multiple_quantities?
+               product.product_variants.map { |v| [product.id, v.id] }
+             else
+               [[product.id, nil]]
+             end
+      next unless keys.any? { |k| @store_qty.key?(k) }
+      @store_prod_qty[product.id] = keys.sum { |k| @store_qty[k].to_f }
+      @store_prod_thr[product.id] = keys.sum { |k| @store_threshold[k].to_i }
     end
   end
 
@@ -80,7 +78,7 @@ class StoreAdmin::ProductSummaryController < StoreAdmin::ApplicationController
 
     @variants_by_id = ProductVariant.where(id: sv.keys.map(&:to_i)).includes(:product).index_by(&:id)
     product_ids = (sp.keys.map(&:to_i) + @variants_by_id.values.map(&:product_id)).uniq
-    @products_by_id = Product.where(id: product_ids).index_by(&:id)
+    @products_by_id = Product.where(id: product_ids).includes(:product_variants).index_by(&:id)
 
     @store_inv = {}
     StoreInventory.where(store_id: @current_store.id, product_id: product_ids).each do |row|
@@ -118,7 +116,18 @@ class StoreAdmin::ProductSummaryController < StoreAdmin::ApplicationController
       else
         product = @products_by_id[rid.to_i]
         next unless product
-        product_id, variant_id = product.id, nil
+
+        if product.has_multiple_quantities?
+          # Parent row of a variant product is a display roll-up — write
+          # through to the default variant's row (same as the admin screen)
+          # rather than creating a product-level row that double-counts.
+          variant = product.sorted_variants.first
+          next unless variant
+          product_id, variant_id = product.id, variant.id
+        else
+          variant = nil
+          product_id, variant_id = product.id, nil
+        end
       end
 
       qty_in = attrs[:qty]
