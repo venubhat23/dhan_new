@@ -23,20 +23,16 @@ class Admin::OrdersController < Admin::ApplicationController
       @orders = @orders.where(created_at: params[:date_from]..params[:date_to])
     end
 
-    @status_counts = {
-      all: Order.count,
-      draft: Order.draft.count,
-      ordered_and_delivery_pending: Order.ordered_and_delivery_pending.count,
-      confirmed: Order.confirmed.count,
-      processing: Order.processing.count,
-      packed: Order.packed.count,
-      shipped: Order.shipped.count,
-      out_for_delivery: Order.out_for_delivery.count,
-      delivered: Order.delivered.count,
-      completed: Order.completed.count,
-      cancelled: Order.cancelled.count,
-      returned: Order.returned.count
-    }
+    # One GROUP BY instead of 12 COUNTs. Raw rows (not .group.count) so the values
+    # are matched against exactly what the enum scopes serialize into the column.
+    raw_counts = Order.connection.select_rows('SELECT status, COUNT(*) FROM orders GROUP BY status')
+                      .to_h { |status, count| [status.to_s, count.to_i] }
+    count_for = ->(name) { raw_counts[Order.statuses[name].to_s].to_i }
+    @status_counts = { all: raw_counts.values.sum }
+    %w[draft ordered_and_delivery_pending confirmed processing packed shipped
+       out_for_delivery delivered completed cancelled returned].each do |name|
+      @status_counts[name.to_sym] = count_for.call(name)
+    end
   end
 
   def show

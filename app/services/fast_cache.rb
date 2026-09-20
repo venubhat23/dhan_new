@@ -16,4 +16,9 @@ module FastCache
   def self.fetch(key, expires_in:, &block)
     STORE.fetch(key, expires_in: expires_in, &block)
   end
+
+  # Drops every cached dashboard payload (see DashboardCacheBust).
+  def self.bust_dashboard!
+    STORE.delete_matched(/\Adashboard:/)
+  end
 end

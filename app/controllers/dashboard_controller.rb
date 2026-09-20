@@ -579,7 +579,29 @@ class DashboardController < ApplicationController
   # Booking statuses that count as fulfilled revenue.
   FULFILLED_BOOKING_STATUSES = %w[completed delivered].freeze
 
+  # The dashboard runs ~30 aggregate queries and every one is a full round trip
+  # to the remote DB, so the finished figures are kept in process memory for a
+  # short while (see FastCache for why not Rails.cache). Writes to the models the
+  # dashboard reads call FastCache.bust_dashboard! (DashboardCacheBust), and
+  # ?refresh=1 forces a recompute, so the numbers don't visibly lag.
+  DASHBOARD_CACHE_TTL = 45.seconds
+
   def load_ecommerce_dashboard_data
+    cache_key = "dashboard:ecommerce:#{Date.current.iso8601}"
+    FastCache::STORE.delete(cache_key) if params[:refresh].present?
+
+    ivars = FastCache.fetch(cache_key, expires_in: DASHBOARD_CACHE_TTL) do
+      before = instance_variables
+      compute_ecommerce_dashboard_data
+      (instance_variables - before).to_h do |name|
+        value = instance_variable_get(name)
+        [name, value.is_a?(ActiveRecord::Relation) ? value.to_a : value]
+      end
+    end
+    ivars.each { |name, value| instance_variable_set(name, value) }
+  end
+
+  def compute_ecommerce_dashboard_data
     # Product counts — two queries (status is a string enum, group by is the cleanest)
     product_status_counts = Product.group(:status).count rescue {}
     @total_products     = product_status_counts.values.sum
@@ -624,22 +646,33 @@ class DashboardController < ApplicationController
     @avg_order_value = @completed_bookings > 0 ? (@total_revenue / @completed_bookings).round(2) : 0
 
     # Payment collection rate: share of real orders that are fully paid.
-    booking_payment_counts = Booking.where.not(status: NON_ORDER_BOOKING_STATUSES).group(:payment_status).count
-    paid_orders = booking_payment_counts['paid'].to_i
+    # One grouped query also supplies the unpaid count/total used further down.
+    booking_payment_rows = Booking.where.not(status: NON_ORDER_BOOKING_STATUSES)
+                                  .group(:payment_status)
+                                  .pluck(:payment_status, Arel.sql('COUNT(*)'), Arel.sql('COALESCE(SUM(total_amount), 0)'))
+                                  .index_by(&:first)
+    paid_orders = booking_payment_rows['paid']&.[](1).to_i
     @payment_collection_rate = @total_bookings > 0 ? ((paid_orders.to_f / @total_bookings) * 100).round(1) : 0
     @conversion_rate = @payment_collection_rate
 
     # Vendor metrics
-    @total_vendors       = Vendor.count rescue 0
-    @active_vendors      = Vendor.where(status: true).count rescue 0
-    @total_purchases     = VendorPurchase.count rescue 0
-    @pending_purchases   = VendorPurchase.where(status: 'pending').count rescue 0
-    @total_purchase_value = VendorPurchase.sum(:total_amount) rescue 0
+    vendor_counts        = Vendor.group(:status).count rescue {}
+    @total_vendors       = vendor_counts.values.sum
+    @active_vendors      = vendor_counts[true].to_i
+    purchase_row = VendorPurchase.select(Arel.sql(
+      "COUNT(*) AS total_cnt,
+       COUNT(*) FILTER (WHERE status = 'pending') AS pending_cnt,
+       COALESCE(SUM(total_amount), 0) AS total_value"
+    )).take rescue nil
+    @total_purchases      = purchase_row&.total_cnt.to_i
+    @pending_purchases    = purchase_row&.pending_cnt.to_i
+    @total_purchase_value = purchase_row&.total_value || 0
     @pending_payments    = VendorPayment.where(status: 'pending').sum(:amount) rescue 0
 
     # Store metrics
-    @total_stores  = Store.count rescue 0
-    @active_stores = Store.where(status: true).count rescue 0
+    store_counts   = Store.group(:status).count rescue {}
+    @total_stores  = store_counts.values.sum
+    @active_stores = store_counts[true].to_i
 
     # Inventory metrics — one "low stock" definition (Product::REAL_STOCK_SQL:
     # variant stock for multi-qty products, active central batch stock
@@ -654,16 +687,24 @@ class DashboardController < ApplicationController
     @top_categories = calculate_top_categories
 
     # Pending payments — real orders only (drafts are not unpaid orders)
-    unpaid_row = Booking.where(payment_status: 'unpaid')
-                        .where.not(status: NON_ORDER_BOOKING_STATUSES)
-                        .select(Arel.sql("COUNT(*) AS cnt, COALESCE(SUM(total_amount), 0) AS total"))
-                        .take
-    @pending_payments_count  = unpaid_row&.cnt.to_i
-    @pending_payments_amount = unpaid_row&.total.to_f
+    unpaid_row = booking_payment_rows['unpaid']
+    @pending_payments_count  = unpaid_row&.[](1).to_i
+    @pending_payments_amount = unpaid_row&.[](2).to_f
 
     # Customer metrics
-    @total_customers          = Customer.count
-    @new_customers_this_month = Customer.where(created_at: month_start..Date.current.end_of_month).count
+    # Total / this-month / growth-comparison figures all come from one query.
+    cur_month_start  = Date.current.beginning_of_month.beginning_of_day
+    prev_month_start = 1.month.ago.beginning_of_month.beginning_of_day
+    prev_month_end   = 1.month.ago.end_of_month.end_of_day
+    @customer_stats_row = Customer.select(Customer.sanitize_sql_array([
+      "COUNT(*) AS total_cnt,
+       COUNT(*) FILTER (WHERE created_at BETWEEN ? AND ?) AS month_cnt,
+       COUNT(*) FILTER (WHERE created_at >= ?) AS cur_cnt,
+       COUNT(*) FILTER (WHERE created_at BETWEEN ? AND ?) AS prev_cnt",
+      month_start, Date.current.end_of_month, cur_month_start, prev_month_start, prev_month_end
+    ])).take
+    @total_customers          = @customer_stats_row.total_cnt.to_i
+    @new_customers_this_month = @customer_stats_row.month_cnt.to_i
     @top_customers            = calculate_top_customers
 
     # Chart data
@@ -793,8 +834,10 @@ class DashboardController < ApplicationController
 
   def calculate_delivery_performance
     begin
-      delivered_on_time = Order.where('delivered_at <= created_at + INTERVAL \'3 days\'').count
-      total_delivered = Order.where.not(delivered_at: nil).count
+      delivered_on_time, total_delivered = Order.pick(
+        Arel.sql("COUNT(*) FILTER (WHERE delivered_at <= created_at + INTERVAL '3 days')"),
+        Arel.sql('COUNT(*) FILTER (WHERE delivered_at IS NOT NULL)')
+      ).map(&:to_i)
 
       {
         on_time_percentage: total_delivered > 0 ? ((delivered_on_time.to_f / total_delivered) * 100).round(1) : 0,
@@ -825,10 +868,7 @@ class DashboardController < ApplicationController
        COUNT(CASE WHEN created_at BETWEEN '#{prev_start}' AND '#{prev_end}'        THEN 1 END) AS prev_cnt"
     )).take
 
-    customer_row = Customer.select(Arel.sql(
-      "COUNT(CASE WHEN created_at >= '#{cur_start}'                                 THEN 1 END) AS cur_cnt,
-       COUNT(CASE WHEN created_at BETWEEN '#{prev_start}' AND '#{prev_end}'         THEN 1 END) AS prev_cnt"
-    )).take
+    customer_row = @customer_stats_row  # already computed with the customer metrics above
 
     @revenue_growth              = calculate_percentage_change(booking_row.cur_rev.to_f,  booking_row.prev_rev.to_f)
     @order_growth                = calculate_percentage_change(booking_row.cur_cnt.to_i,  booking_row.prev_cnt.to_i)

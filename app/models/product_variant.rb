@@ -1,4 +1,5 @@
 class ProductVariant < ApplicationRecord
+  include DashboardCacheBust
   belongs_to :product
 
   UNIT_TYPES = Product::UNIT_TYPES

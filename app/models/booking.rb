@@ -1,4 +1,5 @@
 class Booking < ApplicationRecord
+  include DashboardCacheBust
   belongs_to :customer, optional: true
   belongs_to :user, optional: true # Admin who created the booking
   belongs_to :booking_schedule, optional: true # For subscription bookings

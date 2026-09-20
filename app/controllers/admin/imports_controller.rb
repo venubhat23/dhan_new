@@ -824,8 +824,28 @@ class Admin::ImportsController < Admin::ApplicationController
   end
 
   # Statistics methods
+  # Count + latest created_at for the three importable tables in a single round trip
+  # (this used to be 3 COUNTs run 4 times over, plus 3 MAXes).
+  def import_table_stats
+    @import_table_stats ||= begin
+      row = ActiveRecord::Base.connection.select_one(<<~SQL.squish)
+        SELECT (SELECT COUNT(*) FROM customers)        AS customers_count,
+               (SELECT COUNT(*) FROM products)         AS products_count,
+               (SELECT COUNT(*) FROM delivery_people)  AS delivery_people_count,
+               (SELECT MAX(created_at) FROM customers)       AS customers_last,
+               (SELECT MAX(created_at) FROM products)        AS products_last,
+               (SELECT MAX(created_at) FROM delivery_people) AS delivery_people_last
+      SQL
+      last_values = %w[customers_last products_last delivery_people_last].map { |k| row[k] }.compact
+      {
+        total: row.values_at('customers_count', 'products_count', 'delivery_people_count').sum(&:to_i),
+        last: last_values.map { |v| v.is_a?(String) ? Time.zone.parse(v + ' UTC') : v }.max
+      }
+    end
+  end
+
   def get_total_imports_count
-    Customer.count + Product.count + DeliveryPerson.count
+    import_table_stats[:total]
   end
 
   def get_successful_imports_count
@@ -837,10 +857,6 @@ class Admin::ImportsController < Admin::ApplicationController
   end
 
   def get_last_import_date
-    [
-      Customer.maximum(:created_at),
-      Product.maximum(:created_at),
-      DeliveryPerson.maximum(:created_at)
-    ].compact.max
+    import_table_stats[:last]
   end
 end

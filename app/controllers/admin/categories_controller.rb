@@ -3,7 +3,7 @@ class Admin::CategoriesController < Admin::ApplicationController
   before_action :authenticate_user!
 
   def index
-    @categories = Category.includes(:products)
+    @categories = Category.with_attached_image
                          .order(:display_order, :name)
 
     if params[:search].present?
@@ -15,10 +15,19 @@ class Admin::CategoriesController < Admin::ApplicationController
     end
 
     @categories = @categories.page(params[:page]).per(20)
+
+    # One grouped COUNT instead of loading every product of every category just
+    # to call .size on it (and 3 more per-page stat queries in the view).
+    category_ids = @categories.map(&:id)
+    product_counts = Product.where(category_id: category_ids).group(:category_id).count
+    @categories.each { |category| category.preloaded_products_count = product_counts[category.id].to_i }
+    @categories_with_products = category_ids.count { |id| product_counts[id].to_i > 0 }
+    @categories_without_products = category_ids.size - @categories_with_products
   end
 
   def show
-    @products = @category.products.includes(:category).recent.limit(10)
+    @products = @category.products.includes(:category, image_attachment: :blob, additional_images_attachments: :blob).recent.limit(10)
+    Product.preload_list_aggregates(@products) # stock status/rating for these rows in 2 queries, not per product
   end
 
   def new

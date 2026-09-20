@@ -1,4 +1,5 @@
 class Store < ApplicationRecord
+  include DashboardCacheBust
   # Associations
   has_many :bookings, dependent: :restrict_with_error
   belongs_to :store_admin_user, class_name: 'User', foreign_key: 'store_admin_user_id', optional: true

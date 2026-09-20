@@ -50,7 +50,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">With Products</h6>
-            <h4 class="mb-0"><%= @categories.joins(:products).distinct.count %></h4>
+            <h4 class="mb-0"><%= @categories_with_products %></h4>
           </div>
           <div class="text-info">
             <i class="bi bi-box fs-2"></i>
@@ -65,7 +65,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Empty Categories</h6>
-            <h4 class="mb-0"><%= @categories.left_joins(:products).where(products: { id: nil }).count %></h4>
+            <h4 class="mb-0"><%= @categories_without_products %></h4>
           </div>
           <div class="text-warning">
             <i class="bi bi-inbox fs-2"></i>

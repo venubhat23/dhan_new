@@ -2,7 +2,7 @@ class Customer::ProductsController < Customer::BaseController
   before_action :find_product, only: [:show]
 
   def index
-    @products = Product.active.includes(:category, :approved_reviews)
+    @products = Product.active.includes(:category, :approved_reviews, image_attachment: :blob, additional_images_attachments: :blob)
 
     # Apply filters
     @products = @products.by_category(params[:category_id]) if params[:category_id].present?
@@ -43,6 +43,7 @@ class Customer::ProductsController < Customer::BaseController
     end
 
     @products = @products.page(params[:page]).per(12)
+    Product.preload_list_aggregates(@products) # stock/rating for the page in 2 queries, not ~5 per product
 
     # For filters
     @categories = Category.where(status: true).order(:name)

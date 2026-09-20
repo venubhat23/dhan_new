@@ -217,9 +217,10 @@ class Admin::CustomerFormatsController < Admin::ApplicationController
   end
 
   def calculate_customer_format_stats
-    total = CustomerFormat.count
-    active = CustomerFormat.where(status: 'active').count
-    inactive = CustomerFormat.where(status: 'not_active').count
+    status_counts = CustomerFormat.group(:status).count
+    total = status_counts.values.sum
+    active = status_counts['active'].to_i
+    inactive = status_counts['not_active'].to_i
 
     pattern_counts = CustomerFormat.group(:pattern).count
 

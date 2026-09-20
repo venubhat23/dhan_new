@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_17_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_19_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -237,6 +237,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_17_000001) do
     t.index ["courier_service"], name: "index_bookings_on_courier_service"
     t.index ["created_at"], name: "index_bookings_on_created_at"
     t.index ["customer_email"], name: "index_bookings_on_customer_email_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["customer_id", "created_at"], name: "index_bookings_on_customer_id_and_created_at"
     t.index ["customer_id"], name: "index_bookings_on_customer_id"
     t.index ["customer_name"], name: "index_bookings_on_customer_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["customer_phone"], name: "index_bookings_on_customer_phone_trgm", opclass: :gin_trgm_ops, using: :gin
@@ -250,6 +251,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_17_000001) do
     t.index ["share_token"], name: "index_bookings_on_share_token", unique: true
     t.index ["stage_updated_at"], name: "index_bookings_on_stage_updated_at"
     t.index ["stage_updated_by"], name: "index_bookings_on_stage_updated_by"
+    t.index ["status", "created_at"], name: "index_bookings_on_status_and_created_at"
     t.index ["status"], name: "index_bookings_on_status"
     t.index ["store_id", "created_at"], name: "index_bookings_on_store_id_and_created_at"
     t.index ["store_id", "status"], name: "index_bookings_on_store_id_and_status"
@@ -400,6 +402,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_17_000001) do
     t.text "shipping_address"
     t.string "full_name"
     t.index "(((to_tsvector('simple'::regconfig, COALESCE((full_name)::text, ''::text)) || to_tsvector('simple'::regconfig, COALESCE((email)::text, ''::text))) || to_tsvector('simple'::regconfig, COALESCE((mobile)::text, ''::text))))", name: "index_customers_on_pg_search_tsvector", using: :gin
+    t.index ["created_at"], name: "index_customers_on_created_at"
     t.index ["email"], name: "index_customers_on_email", unique: true
     t.index ["full_name"], name: "index_customers_on_full_name"
     t.index ["full_name"], name: "index_customers_on_full_name_trgm", opclass: :gin_trgm_ops, using: :gin
@@ -611,6 +614,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_17_000001) do
     t.decimal "weight"
     t.decimal "annual_income"
     t.string "business_job"
+    t.index ["created_at"], name: "index_leads_on_created_at"
+    t.index ["current_stage"], name: "index_leads_on_current_stage"
   end
 
   create_table "milk_delivery_tasks", force: :cascade do |t|
@@ -1179,6 +1184,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_17_000001) do
     t.datetime "updated_at", null: false
     t.bigint "store_id"
     t.bigint "product_variant_id"
+    t.index ["product_id", "store_id"], name: "index_stock_batches_active_stock", where: "(((status)::text = 'active'::text) AND (quantity_remaining > (0)::numeric))", include: ["quantity_remaining", "product_variant_id"]
     t.index ["product_id", "store_id"], name: "index_stock_batches_on_product_id_and_store_id"
     t.index ["product_id"], name: "index_stock_batches_on_product_id"
     t.index ["product_variant_id"], name: "index_stock_batches_on_product_variant_id"
@@ -1459,6 +1465,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_17_000001) do
     t.index ["pan_no"], name: "index_users_on_pan_no", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["role"], name: "index_users_on_role"
+    t.index ["role_id"], name: "index_users_on_role_id"
     t.index ["status"], name: "index_users_on_status"
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
     t.index ["user_type"], name: "index_users_on_user_type"

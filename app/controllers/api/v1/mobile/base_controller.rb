@@ -38,10 +38,15 @@ class Api::V1::Mobile::BaseController < ApplicationController
 
       case role
       when 'customer'
-        # For customers, user_id is the User record ID, need to find associated Customer
-        user_record = User.find(user_id)
-        @current_user = Customer.find_by(email: user_record.email)
+        # For customers, user_id is the User record ID, need to find associated Customer.
+        # One JOIN instead of User.find + Customer.find_by (two round trips per request).
+        @current_user = Customer.joins('INNER JOIN users ON users.email = customers.email')
+                                .where(users: { id: user_id })
+                                .take
         if @current_user.nil?
+          # Keep the original outcomes: unknown user -> RecordNotFound ('User not found'),
+          # known user without a matching customer -> 'Customer account not found'.
+          User.find(user_id)
           return render json: {
             success: false,
             message: 'Customer account not found'

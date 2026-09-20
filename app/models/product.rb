@@ -1,4 +1,5 @@
 class Product < ApplicationRecord
+  include DashboardCacheBust
   # Product Type Constants
   PRODUCT_TYPES = [
     ['Milk', 'Milk'],
@@ -168,7 +169,7 @@ class Product < ApplicationRecord
     words.inject(all) { |relation, word| relation.where('name ILIKE :q OR sku ILIKE :q', q: "%#{word}%") }
   }
   scope :recent, -> { order(created_at: :desc) }
-  scope :by_stock_availability, -> { order(Arel.sql("CASE WHEN stock > 0 THEN 0 ELSE 1 END ASC, display_order ASC NULLS LAST, name ASC")) }
+  scope :by_stock_availability, -> { order(Arel.sql("CASE WHEN products.stock > 0 THEN 0 ELSE 1 END ASC, products.display_order ASC NULLS LAST, products.name ASC")) }
   scope :occasional, -> { where(is_occasional_product: true) }
   scope :regular, -> { where(is_occasional_product: false) }
   scope :occasional_active_now, -> { occasional.where('occasional_start_date <= ? AND occasional_end_date >= ?', Time.current, Time.current) }
@@ -198,6 +199,15 @@ class Product < ApplicationRecord
 
   def default_variant
     sorted_variants.first
+  end
+
+  # Same ordering as the ProductVariant.ordered scope (display_order, weight),
+  # served from the preloaded association when available so list views don't
+  # run a query per product.
+  def ordered_variants
+    return product_variants.ordered.to_a unless product_variants.loaded?
+
+    product_variants.sort_by { |v| [v.display_order.nil? ? 1 : 0, v.display_order.to_i, v.weight.to_f] }
   end
 
   # Same ordering as the default_first scope, served from a preloaded
@@ -409,12 +419,45 @@ class Product < ApplicationRecord
 
   # Review methods (using new ProductReview model)
   def average_rating
+    if @preloaded_review_stats
+      count, average = @preloaded_review_stats
+      return 0 if count.zero?
+      return (average || 0).round(1)
+    end
+
     return 0 if approved_reviews.empty?
     (approved_reviews.average(:rating) || 0).round(1)
   end
 
   def total_reviews
+    return @preloaded_review_stats[0] if @preloaded_review_stats
+
     approved_reviews.count
+  end
+
+  attr_writer :preloaded_batch_stock, :preloaded_review_stats
+
+  # List endpoints (mobile catalogue, search, ...) render stock status and rating
+  # for every product, which otherwise costs ~5 queries per product (batch SUM x3,
+  # review EXISTS/COUNT/AVG). This computes them for the whole page in 2 grouped
+  # queries and stashes the results on each instance; total_batch_stock,
+  # average_rating and total_reviews return them instead of querying. Values are
+  # identical to the per-product queries they replace.
+  def self.preload_list_aggregates(products)
+    products = products.to_a
+    ids = products.map(&:id).compact
+    return products if ids.empty?
+
+    stock_by_id = StockBatch.active.where(product_id: ids).group(:product_id).sum(:quantity_remaining)
+    review_rows = ProductReview.approved.where(product_id: ids).group(:product_id)
+                               .pluck(:product_id, Arel.sql('COUNT(*)'), Arel.sql('AVG(rating)'))
+                               .index_by(&:first)
+
+    products.each do |product|
+      product.preloaded_batch_stock = stock_by_id[product.id] || 0
+      _, review_count, review_average = review_rows[product.id]
+      product.preloaded_review_stats = [review_count.to_i, review_average]
+    end
   end
 
   def review_distribution
@@ -651,6 +694,9 @@ class Product < ApplicationRecord
     if respond_to?(:cached_stock) && cached_stock.present?
       return cached_stock.to_f
     end
+
+    # Filled in by Product.preload_list_aggregates for whole lists at once
+    return @preloaded_batch_stock unless @preloaded_batch_stock.nil?
 
     # Fallback to regular stock if stock_batches table doesn't exist
     return stock if !ActiveRecord::Base.connection.table_exists?('stock_batches')

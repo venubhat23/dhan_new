@@ -213,7 +213,7 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
 
   def batch_inventory
     # Get all stock batches with filters
-    stock_batches_query = StockBatch.includes(:vendor, :vendor_purchase, product: :category)
+    stock_batches_query = StockBatch.includes(:vendor, :vendor_purchase, product: [:category, :image_attachment])
                                    .order(:batch_date, :created_at)
 
     stock_batches_query = stock_batches_query.joins(:product).where('products.name ILIKE ?', "%#{params[:search]}%") if params[:search].present?

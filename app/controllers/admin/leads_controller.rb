@@ -40,14 +40,15 @@ class Admin::LeadsController < Admin::ApplicationController
     @leads = paginate_records(@leads.order(created_at: :desc).includes(:converted_customer, :created_policy))
 
     # Statistics for dashboard
-    @total_leads = Lead.count
-    @lead_generated_leads = Lead.lead_generated.count
-    @consultation_leads = Lead.consultation_scheduled.count
-    @one_on_one_leads = Lead.one_on_one.count
-    @follow_up_leads = Lead.follow_up.count
-    @converted_leads = Lead.converted.count
-    @policy_created_leads = Lead.policy_created.count
-    @lead_closed_leads = Lead.lead_closed.count
+    stage_counts = Lead.group(:current_stage).count
+    @total_leads = stage_counts.values.sum
+    @lead_generated_leads = stage_counts['lead_generated'].to_i
+    @consultation_leads = stage_counts['consultation_scheduled'].to_i
+    @one_on_one_leads = stage_counts['one_on_one'].to_i
+    @follow_up_leads = stage_counts['follow_up'].to_i
+    @converted_leads = stage_counts['converted'].to_i
+    @policy_created_leads = stage_counts['policy_created'].to_i
+    @lead_closed_leads = stage_counts['lead_closed'].to_i
 
     # Conversion rate calculation
     total_converted = @converted_leads + @policy_created_leads

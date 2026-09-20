@@ -49,6 +49,14 @@ Rails.application.configure do
   # Replace the default in-process memory cache store with a durable alternative.
   config.cache_store = :solid_cache_store
 
+  # Render runs plain `rails server` (no Thruster in front), so nothing compresses
+  # responses. Admin pages are 100KB+ of HTML; gzip typically cuts that ~85%.
+  # Only text-like types, and Rack::Deflater skips anything already encoded.
+  config.middleware.use Rack::Deflater, include: %w[
+    text/html text/plain text/css text/csv application/javascript text/javascript
+    application/json image/svg+xml
+  ]
+
   # Replace the default in-process and non-durable queuing backend for Active Job.
   config.active_job.queue_adapter = :solid_queue
   config.solid_queue.connects_to = { database: { writing: :queue } }

@@ -1,4 +1,5 @@
 class Vendor < ApplicationRecord
+  include DashboardCacheBust
   has_many :vendor_purchases, dependent: :destroy
   has_many :stock_batches, dependent: :destroy
   has_many :vendor_payments, through: :vendor_purchases

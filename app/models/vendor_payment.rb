@@ -1,4 +1,5 @@
 class VendorPayment < ApplicationRecord
+  include DashboardCacheBust
   belongs_to :vendor
   belongs_to :vendor_purchase
 

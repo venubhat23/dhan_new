@@ -1,4 +1,5 @@
 class StockBatch < ApplicationRecord
+  include DashboardCacheBust
   belongs_to :product
   belongs_to :vendor
   belongs_to :vendor_purchase, optional: true

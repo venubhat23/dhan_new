@@ -1,4 +1,5 @@
 class Category < ApplicationRecord
+  include DashboardCacheBust
   has_many :products, dependent: :destroy
 
   has_one_attached :image
@@ -31,7 +32,10 @@ class Category < ApplicationRecord
   # `products.count` always hits the DB even when `products` is preloaded —
   # the categories index/show controllers preload it specifically so this
   # doesn't run a fresh COUNT per category row.
+  attr_writer :preloaded_products_count
+
   def products_count
+    return @preloaded_products_count if defined?(@preloaded_products_count) && !@preloaded_products_count.nil?
     products.loaded? ? products.size : products.count
   end
 

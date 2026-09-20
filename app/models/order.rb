@@ -1,4 +1,5 @@
 class Order < ApplicationRecord
+  include DashboardCacheBust
   # belongs_to :booking, optional: true  # Temporarily disabled until booking_id column is added
   belongs_to :customer, optional: true
   belongs_to :user, optional: true

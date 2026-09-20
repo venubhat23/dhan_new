@@ -1,4 +1,5 @@
 class Customer < ApplicationRecord
+  include DashboardCacheBust
   include PgSearch::Model
 
   # Associations

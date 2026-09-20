@@ -1,4 +1,5 @@
 class BookingItem < ApplicationRecord
+  include DashboardCacheBust
   belongs_to :booking, counter_cache: true
   belongs_to :product
   belongs_to :product_variant, optional: true

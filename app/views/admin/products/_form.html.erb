@@ -682,17 +682,32 @@
           <div class="col-12">
             <%= form.label :stock, "Available Stock", class: "form-label" %>
             <span class="text-danger">*</span>
-            <%= form.number_field :stock, class: "form-control", min: 0, placeholder: "0", required: true, id: "product_current_stock" %>
-            <div class="form-text">Current available quantity</div>
+            <% variant_rollup = @product.persisted? && @product.has_multiple_quantities? && @product.product_variants.any? %>
+            <% if variant_rollup %>
+              <%# Variant products: parent stock/threshold columns drift; show the same roll-up as Product Summary. %>
+              <%= form.number_field :stock, value: @product.product_variants.sum { |v| v.available_stock.to_f }.to_i, class: "form-control", min: 0, placeholder: "0", required: true, id: "product_current_stock", readonly: true %>
+              <div class="form-text">Total of all variants' stock (edit per variant)</div>
+            <% else %>
+              <%= form.number_field :stock, class: "form-control", min: 0, placeholder: "0", required: true, id: "product_current_stock" %>
+              <div class="form-text">Current available quantity</div>
+            <% end %>
           </div>
 
           <div class="col-12">
             <%= form.label :low_stock_threshold, "Low Stock Threshold", class: "form-label" %>
-            <%= form.number_field :low_stock_threshold, class: "form-control", min: 0, placeholder: "10" %>
-            <div class="form-text">
-              <i class="bi bi-exclamation-triangle text-warning me-1"></i>
-              Alert when stock falls at or below this quantity (default: 10)
-            </div>
+            <% if variant_rollup %>
+              <%= form.number_field :low_stock_threshold, value: @product.product_variants.sum { |v| v.low_stock_threshold.to_i }, class: "form-control", min: 0, readonly: true %>
+              <div class="form-text">
+                <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                Total of all variants' low thresholds (edit per variant in the table above)
+              </div>
+            <% else %>
+              <%= form.number_field :low_stock_threshold, class: "form-control", min: 0, placeholder: "10" %>
+              <div class="form-text">
+                <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                Alert when stock falls at or below this quantity (default: 10)
+              </div>
+            <% end %>
           </div>
 
           <div class="col-12">

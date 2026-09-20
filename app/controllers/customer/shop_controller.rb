@@ -8,7 +8,7 @@ class Customer::ShopController < Customer::BaseController
 
     # Simple query without complex SQL to avoid syntax errors
     @products = Product.active
-                      .includes(:category, :stock_batches, :product_reviews, :product_variants)
+                      .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
                       .by_stock_availability
 
     # Apply search filter if present
@@ -23,6 +23,11 @@ class Customer::ShopController < Customer::BaseController
     if params[:category_id].present? && params[:category_id] != ''
       @products = @products.where(category_id: params[:category_id])
     end
+
+    # Stock totals for the whole grid in one grouped query (the view reads
+    # cached_total_batch_stock per product) instead of loading every stock batch
+    # and review row into memory.
+    Product.preload_list_aggregates(@products)
 
     # Get customer info if logged in
     @customer_addresses = current_customer&.customer_addresses || []

@@ -6,13 +6,17 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
   # GET /api/v1/mobile/ecommerce/categories
   def categories
     categories_data = Rails.cache.fetch(MobileApiCache.categories_key, expires_in: MobileApiCache::CATEGORY_TTL) do
-      Category.active.ordered.includes(:products).map do |category|
+      # Grouped COUNT + preloaded image attachments, instead of loading every
+      # product of every category and one attachment lookup per category.
+      categories = Category.active.ordered.with_attached_image.to_a
+      product_counts = Product.where(category_id: categories.map(&:id)).group(:category_id).count
+      categories.map do |category|
         {
           id: category.id,
           name: category.name,
           description: category.description,
           image_url: category.image.attached? ? url_for(category.image) : nil,
-          products_count: category.products.size,
+          products_count: product_counts[category.id].to_i,
           display_order: category.display_order
         }
       end
@@ -57,7 +61,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     cache_key = MobileApiCache.products_key(cache_params)
 
     result = Rails.cache.fetch(cache_key, expires_in: MobileApiCache::PRODUCT_TTL) do
-      scope = Product.active.available_for_sale.includes(:product_variants, :category)
+      scope = Product.active.available_for_sale.includes(*PRODUCT_LIST_INCLUDES)
 
       scope = scope.where(category_id: params[:category_id]) if params[:category_id].present?
       scope = scope.where('price >= ?', params[:min_price]) if params[:min_price].present?
@@ -80,7 +84,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       total_count = count_result.is_a?(Hash) ? count_result.size : count_result
       products = scope.offset((page - 1) * per_page).limit(per_page)
 
-      { products_data: products.map { |p| format_product_data(p) }, total_count: total_count }
+      { products_data: format_products_data(products), total_count: total_count }
     end
 
     json_response({
@@ -113,7 +117,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     per_page = params[:per_page]&.to_i || 20
     per_page = [per_page, 50].min
 
-    @products = Product.active.available_for_sale.includes(:product_variants, :category).where(category_id: @category.id)
+    @products = Product.active.available_for_sale.includes(*PRODUCT_LIST_INCLUDES).where(category_id: @category.id)
 
     @products = @products.where('price >= ?', params[:min_price]) if params[:min_price].present?
     @products = @products.where('price <= ?', params[:max_price]) if params[:max_price].present?
@@ -137,7 +141,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
 
     @products = @products.offset((page - 1) * per_page).limit(per_page)
 
-    products_data = @products.map { |product| format_product_data(product) }
+    products_data = format_products_data(@products)
 
     json_response({
       success: true,
@@ -633,7 +637,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     per_page = [per_page, 50].min
 
     begin
-      @products = Product.active.available_for_sale.includes(:product_variants, :category).search(query)
+      @products = Product.active.available_for_sale.includes(*PRODUCT_LIST_INCLUDES).search(query)
 
       # Apply additional filters
       @products = @products.where(category_id: params[:category_id]) if params[:category_id].present?
@@ -658,7 +662,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       total_count = count_result.is_a?(Hash) ? count_result.size : count_result
 
       @products = @products.offset((page - 1) * per_page).limit(per_page)
-      products_data = @products.map { |product| format_product_data(product) }
+      products_data = format_products_data(@products)
 
       json_response({
         success: true,
@@ -712,11 +716,12 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
 
     begin
       products_data = Rails.cache.fetch(MobileApiCache.featured_products_key(limit), expires_in: MobileApiCache::PRODUCT_TTL) do
-        Product.active.available_for_sale
-               .includes(:product_variants, :category)
-               .order(created_at: :desc)
-               .limit(limit)
-               .map { |product| format_product_data(product) }
+        format_products_data(
+          Product.active.available_for_sale
+                 .includes(*PRODUCT_LIST_INCLUDES)
+                 .order(created_at: :desc)
+                 .limit(limit)
+        )
       end
 
       json_response({
@@ -786,10 +791,13 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
         related_products = Product.active.in_stock
                                   .where(category_id: product.category_id)
                                   .where.not(id: product.id)
-                                  .includes(:product_variants, :category)
+                                  .includes(*PRODUCT_LIST_INCLUDES)
                                   .limit(5)
 
         recent_reviews = product.product_reviews.approved.recent.limit(10).includes(:customer)
+
+        related_products = related_products.to_a
+        Product.preload_list_aggregates([product] + related_products)
 
         format_product_data(product).merge({
           related_products: related_products.map { |p| format_product_data(p) },
@@ -1625,6 +1633,17 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     @product = Product.active.find(params[:id] || params[:product_id])
   rescue ActiveRecord::RecordNotFound
     json_response({ success: false, message: 'Product not found' }, :not_found)
+  end
+
+  # Attachments are preloaded because format_product_data reads image/additional_images
+  # (images_attached?, images) for every product on the page.
+  PRODUCT_LIST_INCLUDES = [:product_variants, :category, { image_attachment: :blob, additional_images_attachments: :blob }].freeze
+
+  # Formats a whole page of products, preloading their stock/review aggregates in
+  # bulk (see Product.preload_list_aggregates) instead of per-product queries.
+  def format_products_data(products)
+    products = Product.preload_list_aggregates(products)
+    products.map { |product| format_product_data(product) }
   end
 
   def format_product_data(product)

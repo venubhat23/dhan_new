@@ -724,7 +724,7 @@
                   <div class="mb-3">
                     <%
                       if product.has_multiple_quantities? && product.product_variants.any?
-                        shop_default_v = product.default_variant || product.product_variants.ordered.first
+                        shop_default_v = product.default_variant || product.ordered_variants.first
                         selling_price = shop_default_v.effective_price
                       else
                         shop_default_v = nil
@@ -751,7 +751,7 @@
                     <% if product.has_multiple_quantities? && product.product_variants.any? %>
                       <!-- Variant pills -->
                       <div class="d-flex flex-wrap gap-1 mb-2" id="shop-variant-pills-<%= product.id %>">
-                        <% product.product_variants.ordered.each do |v| %>
+                        <% product.ordered_variants.each do |v| %>
                           <button type="button"
                                   class="btn btn-xs px-2 py-1 shop-variant-pill <%= v.id == shop_default_v.id ? 'btn-primary' : 'btn-outline-secondary' %>"
                                   style="font-size:0.75rem; line-height:1.2;"

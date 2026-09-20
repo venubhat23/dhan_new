@@ -238,7 +238,7 @@
           <select class="mob-input mob-select mt-1" style="font-size:0.78rem;padding:5px 8px;"
                   id="var-<%= product.id %>"
                   onchange="updateVariant(<%= product.id %>, this)">
-            <% product.product_variants.default_first.each do |v| %>
+            <% product.sorted_variants.each do |v| %>
               <option value="<%= v.id %>"
                       data-price="<%= v.effective_price %>"
                       data-stock="<%= v.available_stock %>"

@@ -75,16 +75,20 @@ class Admin::NotesController < ApplicationController
   end
 
   def calculate_note_stats
-    all_notes = Note.all
+    # One grouped query (count + sum per status) instead of 7 separate aggregates.
+    by_status = Note.group(:status).pluck(:status, Arel.sql('COUNT(*)'), Arel.sql('COALESCE(SUM(amount), 0)'))
+                    .index_by(&:first)
+    count_of  = ->(status) { by_status[status]&.[](1).to_i }
+    amount_of = ->(status) { by_status[status]&.[](2) || 0 }
 
     {
-      total_notes: all_notes.count,
-      total_amount: all_notes.sum(:amount),
-      pending_count: all_notes.where(status: 'pending').count,
-      completed_count: all_notes.where(status: 'completed').count,
-      cancelled_count: all_notes.where(status: 'cancelled').count,
-      pending_amount: all_notes.where(status: 'pending').sum(:amount),
-      completed_amount: all_notes.where(status: 'completed').sum(:amount)
+      total_notes: by_status.values.sum { |row| row[1].to_i },
+      total_amount: by_status.values.sum { |row| row[2] || 0 },
+      pending_count: count_of.call('pending'),
+      completed_count: count_of.call('completed'),
+      cancelled_count: count_of.call('cancelled'),
+      pending_amount: amount_of.call('pending'),
+      completed_amount: amount_of.call('completed')
     }
   end
 end

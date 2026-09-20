@@ -1,4 +1,5 @@
 class VendorPurchase < ApplicationRecord
+  include DashboardCacheBust
   belongs_to :vendor
   has_many :vendor_purchase_items, dependent: :destroy
   has_many :products, through: :vendor_purchase_items

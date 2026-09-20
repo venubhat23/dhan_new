@@ -111,7 +111,7 @@
                           <% @products.each do |product| %>
                             <% if product.product_variants.any? %>
                               <optgroup label="<%= product.name %>">
-                                <% product.product_variants.default_first.each do |v| %>
+                                <% product.sorted_variants.each do |v| %>
                                   <option value="<%= product.id %>|<%= v.id %>"
                                           data-price="<%= v.effective_price %>"
                                           <%= 'selected' if item.product_id == product.id && item.product_variant_id == v.id %>>
@@ -190,7 +190,7 @@
                     <% @products.each do |product| %>
                       <% if product.product_variants.any? %>
                         <optgroup label="<%= product.name %>">
-                          <% product.product_variants.default_first.each do |v| %>
+                          <% product.sorted_variants.each do |v| %>
                             <option value="<%= product.id %>|<%= v.id %>" data-price="<%= v.effective_price %>">
                               <%= product.name %> - <%= v.label %> — ₹<%= number_with_delimiter(v.effective_price) %>
                             </option>

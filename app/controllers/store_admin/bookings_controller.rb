@@ -484,7 +484,7 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     effective = "COALESCE(#{inv_sum}, #{batch_sum})"
 
     Product.active
-           .includes(:category, :product_variants, image_attachment: :blob)
+           .includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
            .select("products.*, #{effective} AS cached_stock")
            .order(Arel.sql("CASE WHEN #{effective} > 0 THEN 0 ELSE 1 END ASC, products.name ASC"))
   end
