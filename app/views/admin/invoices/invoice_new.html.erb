@@ -491,9 +491,9 @@
                             <td><strong><%= item['product_name'] %></strong></td>
                             <td></td>
                             <td><%= item['quantity'] %> liters</td>
-                            <td>₹<%= '%.1f' % item['price'] %></td>
+                            <td>₹<%= '%.2f' % item['price'] %></td>
                             <td>₹0<br><small>(0%)</small></td>
-                            <td>₹<%= '%.1f' % item['total'] %></td>
+                            <td>₹<%= '%.2f' % item['total'] %></td>
                         </tr>
                     <% end %>
                 </tbody>
@@ -554,7 +554,7 @@
                             <tr style="border-bottom: 1px solid #dee2e6;">
                                 <td style="padding: 8px; text-align: right; color: #6c757d;">SUBTOTAL</td>
                                 <td style="padding: 8px; text-align: right; font-weight: 600;">-</td>
-                                <td style="padding: 8px; text-align: right; font-weight: 600; color: #28a745;">₹ <%= '%.1f' % (@invoice.subtotal || 0) %></td>
+                                <td style="padding: 8px; text-align: right; font-weight: 600; color: #28a745;">₹ <%= '%.2f' % (@invoice.subtotal || 0) %></td>
                             </tr>
                         </table>
 
@@ -572,7 +572,7 @@
                             </div>
                             <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 18px; color: #28a745;">
                                 <span>TOTAL AMOUNT</span>
-                                <span>₹<%= '%.1f' % (@invoice.total_amount || 0) %></span>
+                                <span>₹<%= '%.2f' % (@invoice.total_amount || 0) %></span>
                             </div>
                         </div>
 

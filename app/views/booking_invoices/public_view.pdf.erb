@@ -560,9 +560,9 @@
                 <div class="product-name"><%= item['product_name'] || 'Product' %></div>
               </td>
               <td class="text-center"><%= number_with_precision(item['quantity'] || 0, precision: 2, strip_insignificant_zeros: true) %></td>
-              <td class="text-right">₹<%= number_with_delimiter(item['price'] || 0, delimiter: ',') %></td>
+              <td class="text-right">₹<%= number_with_precision(item['price'] || 0, precision: 2, delimiter: ',') %></td>
               <td class="text-right">₹0<br /><span class="tax-rate">(0%)</span></td>
-              <td class="text-right">₹<%= number_with_delimiter((item['quantity'] || 0).to_f * (item['price'] || 0).to_f, delimiter: ',') %></td>
+              <td class="text-right">₹<%= number_with_precision((item['quantity'] || 0).to_f * (item['price'] || 0).to_f, precision: 2, delimiter: ',') %></td>
             </tr>
           <% end %>
         <% elsif @booking&.booking_items&.any? %>
@@ -584,12 +584,12 @@
                 <div class="product-name"><%= item.product&.name || 'Product' %></div>
               </td>
               <td class="text-center"><%= number_with_precision(item.quantity, precision: 2, strip_insignificant_zeros: true) %></td>
-              <td class="text-right">₹<%= number_with_delimiter(item.price || 0, delimiter: ',') %></td>
+              <td class="text-right">₹<%= number_with_precision(item.price || 0, precision: 2, delimiter: ',') %></td>
               <td class="text-right">
-                ₹<%= number_with_delimiter(tax_amount, delimiter: ',') %><br />
+                ₹<%= number_with_precision(tax_amount, precision: 2, delimiter: ',') %><br />
                 <span class="tax-rate">(<%= tax_rate %>%)</span>
               </td>
-              <td class="text-right">₹<%= number_with_delimiter((base_amount + tax_amount).round(2), delimiter: ',') %></td>
+              <td class="text-right">₹<%= number_with_precision((base_amount + tax_amount), precision: 2, delimiter: ',') %></td>
             </tr>
           <% end %>
         <% else %>
@@ -598,9 +598,9 @@
               <div class="product-name">Service/Product</div>
             </td>
             <td class="text-center">1</td>
-            <td class="text-right">₹<%= number_with_delimiter(final_total, delimiter: ',') %></td>
+            <td class="text-right">₹<%= number_with_precision(final_total, precision: 2, delimiter: ',') %></td>
             <td class="text-right">₹0<br /><span class="tax-rate">(0%)</span></td>
-            <td class="text-right">₹<%= number_with_delimiter(final_total, delimiter: ',') %></td>
+            <td class="text-right">₹<%= number_with_precision(final_total, precision: 2, delimiter: ',') %></td>
           </tr>
         <% end %>
       </tbody>
@@ -610,8 +610,8 @@
     <div class="subtotal-section">
       <div class="subtotal-left">SUBTOTAL</div>
       <div class="subtotal-right">
-        Tax: ₹<%= number_with_delimiter(total_tax.round(2), delimiter: ',') %> |
-        Total: ₹<%= number_with_delimiter(final_total.round(2), delimiter: ',') %>
+        Tax: ₹<%= number_with_precision(total_tax, precision: 2, delimiter: ',') %> |
+        Total: ₹<%= number_with_precision(final_total, precision: 2, delimiter: ',') %>
       </div>
     </div>
 
@@ -651,46 +651,46 @@
         <div class="section-heading">TAX SUMMARY</div>
         <div class="tax-line">
           <div class="tax-line-left">TAXABLE AMOUNT</div>
-          <div class="tax-line-right">₹<%= number_with_delimiter(taxable_amount.round(2), delimiter: ',') %></div>
+          <div class="tax-line-right">₹<%= number_with_precision(taxable_amount, precision: 2, delimiter: ',') %></div>
         </div>
         <% if total_cgst > 0 %>
           <div class="tax-line">
             <div class="tax-line-left">CGST</div>
-            <div class="tax-line-right">₹<%= number_with_delimiter(total_cgst.round(2), delimiter: ',') %></div>
+            <div class="tax-line-right">₹<%= number_with_precision(total_cgst, precision: 2, delimiter: ',') %></div>
           </div>
         <% end %>
         <% if total_sgst > 0 %>
           <div class="tax-line">
             <div class="tax-line-left">SGST</div>
-            <div class="tax-line-right">₹<%= number_with_delimiter(total_sgst.round(2), delimiter: ',') %></div>
+            <div class="tax-line-right">₹<%= number_with_precision(total_sgst, precision: 2, delimiter: ',') %></div>
           </div>
         <% end %>
         <% if total_igst > 0 %>
           <div class="tax-line">
             <div class="tax-line-left">IGST</div>
-            <div class="tax-line-right">₹<%= number_with_delimiter(total_igst.round(2), delimiter: ',') %></div>
+            <div class="tax-line-right">₹<%= number_with_precision(total_igst, precision: 2, delimiter: ',') %></div>
           </div>
         <% end %>
         <% if delivery_charge > 0 %>
           <div class="tax-line">
             <div class="tax-line-left">DELIVERY CHARGES</div>
-            <div class="tax-line-right">₹<%= number_with_delimiter(delivery_charge.round(2), delimiter: ',') %></div>
+            <div class="tax-line-right">₹<%= number_with_precision(delivery_charge, precision: 2, delimiter: ',') %></div>
           </div>
         <% end %>
         <% if discount_amount > 0 %>
           <div class="tax-line">
             <div class="tax-line-left">DISCOUNT</div>
-            <div class="tax-line-right">- ₹<%= number_with_delimiter(discount_amount.round(2), delimiter: ',') %></div>
+            <div class="tax-line-right">- ₹<%= number_with_precision(discount_amount, precision: 2, delimiter: ',') %></div>
           </div>
         <% end %>
         <div class="tax-total">
           <div class="tax-line">
             <div class="tax-line-left">TOTAL AMOUNT</div>
-            <div class="tax-line-right">₹<%= number_with_delimiter(final_total.round(2), delimiter: ',') %></div>
+            <div class="tax-line-right">₹<%= number_with_precision(final_total, precision: 2, delimiter: ',') %></div>
           </div>
           <div class="tax-line" style="font-weight: normal; font-size: 10px;">
             <div class="tax-line-left">Received Amount</div>
-            <div class="tax-line-right">₹<%= @invoice.status == 'paid' ? number_with_delimiter(final_total.round(2), delimiter: ',') : '0' %></div>
+            <div class="tax-line-right">₹<%= @invoice.status == 'paid' ? number_with_precision(final_total, precision: 2, delimiter: ',') : '0.00' %></div>
           </div>
         </div>
         <div class="amount-words">
