@@ -13,14 +13,33 @@ class Admin::BookingsController < Admin::ApplicationController
     @bookings = base_scope.recent
 
     if params[:search].present?
+      # ILIKE so "pooja" finds "Pooja"; also match the linked customer's name,
+      # since the list shows customer.display_name ahead of booking.customer_name.
+      term = "%#{params[:search].strip}%"
       @bookings = @bookings.where(
-        "booking_number LIKE ? OR customer_name LIKE ? OR customer_email LIKE ? OR customer_phone LIKE ?",
-        "%#{params[:search]}%", "%#{params[:search]}%", "%#{params[:search]}%", "%#{params[:search]}%"
+        "bookings.booking_number ILIKE :t OR bookings.customer_name ILIKE :t OR bookings.customer_email ILIKE :t " \
+        "OR bookings.customer_phone ILIKE :t OR bookings.customer_id IN (SELECT id FROM customers WHERE full_name ILIKE :t OR mobile ILIKE :t)",
+        t: term
       )
     end
     @bookings = @bookings.where(status: params[:status])           if params[:status].present? && params[:status].strip != ''
     @bookings = @bookings.where(created_at: params[:date_from]..params[:date_to]) if params[:date_from].present? && params[:date_to].present?
-    @bookings = @bookings.where(customer_id: params[:customer_id]) if params[:customer_id].present? && params[:customer_id].strip != ''
+    if params[:customer_id].present? && params[:customer_id].strip != ''
+      # Bookings keyed in with a typed name/phone but never linked to the customer
+      # record (customer_id NULL) still belong to them — match those by the last
+      # 10 digits of the phone so formats like "+91 91104 06710" line up.
+      filter_customer = Customer.find_by(id: params[:customer_id])
+      mobile_digits = filter_customer&.mobile.to_s.gsub(/\D/, '').last(10)
+      @bookings =
+        if mobile_digits.length == 10
+          @bookings.where(
+            "bookings.customer_id = :id OR (bookings.customer_id IS NULL AND RIGHT(REGEXP_REPLACE(bookings.customer_phone, '\\D', '', 'g'), 10) = :m)",
+            id: filter_customer.id, m: mobile_digits
+          )
+        else
+          @bookings.where(customer_id: params[:customer_id])
+        end
+    end
     @bookings = @bookings.where(is_b2b: true)                      if params[:b2b] == '1'
     @bookings = @bookings.where(booked_by: params[:booked_by])     if params[:booked_by].present? && params[:booked_by].strip != ''
     @bookings = @bookings.where(payment_status: params[:payment_status]) if params[:payment_status].present? && params[:payment_status].strip != ''
