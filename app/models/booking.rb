@@ -182,6 +182,10 @@ class Booking < ApplicationRecord
         booking_items.destroy_all
       end
 
+      # The where.not(...).destroy_all above runs on a separate query, so the
+      # association loaded by index_by still holds the removed rows; reload it so
+      # calculate_totals (before_validation) recomputes total_amount from what's left.
+      booking_items.reset
       update!(shipping_charges: invoice.delivery_charge.to_f)
     end
   rescue => e
@@ -531,11 +535,6 @@ class Booking < ApplicationRecord
     when 'refunded'       then 'Refunded'
     else 'Unpaid'
     end
-  end
-
-  # Method to provide booking_items_count functionality
-  def booking_items_count
-    booking_items.size
   end
 
   # Temporary method to handle missing booking_id column in orders table
