@@ -332,8 +332,19 @@
                       <% end %>
                     <% end %>
                     <% if customer_mobile.present? %>
+                      <%
+                        # Public (no-login) PDF link for the customer.
+                        if model_object.is_a?(Invoice)
+                          model_object.generate_share_token! if model_object.share_token.blank?
+                          wa_share_url = public_invoice_by_token_url(token: model_object.share_token, format: :pdf)
+                        elsif model_object.respond_to?(:share_token) && model_object.share_token.present?
+                          wa_share_url = public_invoice_download_url(token: model_object.share_token)
+                        else
+                          wa_share_url = admin_invoice_url(invoice_id)
+                        end
+                      %>
                       <button type="button" class="btn btn-sm btn-outline-success"
-                             onclick="shareViaWhatsApp('<%= invoice_id %>', '<%= customer_mobile %>', '<%= invoice_number %>', <%= total_amount %>)"
+                             onclick="shareViaWhatsApp('<%= j wa_share_url %>', '<%= customer_mobile %>', '<%= invoice_number %>', <%= total_amount %>)"
                              title="Share via WhatsApp"
                              data-bs-toggle="tooltip">
                         <i class="bi bi-whatsapp"></i>
@@ -1680,7 +1691,7 @@ async function deleteSelectedInvoices() {
 }
 
 // WhatsApp sharing functions
-function shareViaWhatsApp(invoiceId, customerMobile, invoiceNumber, totalAmount) {
+function shareViaWhatsApp(invoiceUrl, customerMobile, invoiceNumber, totalAmount) {
   // Format the customer mobile number (remove any non-digit characters and ensure it starts with country code)
   const phoneNumber = formatPhoneNumber(customerMobile);
 
@@ -1689,16 +1700,13 @@ function shareViaWhatsApp(invoiceId, customerMobile, invoiceNumber, totalAmount)
     return;
   }
 
-  // Generate invoice URL
-  const invoiceUrl = `${window.location.origin}/admin/invoices/${invoiceId}`;
-
   // Create a nicely formatted message
   const message = `🧾 *Invoice from Dhanvantari Naturals*
 
 📋 Invoice Number: ${invoiceNumber}
 💰 Amount: ₹${totalAmount.toFixed(2)}
 
-🔗 View Invoice: ${invoiceUrl}
+📄 Download Invoice PDF: ${invoiceUrl}
 
 Thank you for your business! 🙏`;
 
