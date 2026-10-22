@@ -16,12 +16,12 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
       term = "%#{params[:search]}%"
       @bookings = @bookings.where('booking_number LIKE ? OR customer_name LIKE ? OR customer_email LIKE ? OR customer_phone LIKE ?', term, term, term, term)
     end
-    @bookings = @bookings.where(status: params[:status])                if params[:status].present? && params[:status].strip != ''
+    @bookings = @bookings.where(status: Booking.status_filter_values(params[:status]))                if params[:status].present? && params[:status].strip != ''
     @bookings = @bookings.where(created_at: params[:date_from]..params[:date_to]) if params[:date_from].present? && params[:date_to].present?
     @bookings = @bookings.where(customer_id: params[:customer_id])      if params[:customer_id].present? && params[:customer_id].strip != ''
     @bookings = @bookings.where(is_b2b: true)                           if params[:b2b] == '1'
     @bookings = @bookings.where(payment_status: params[:payment_status]) if params[:payment_status].present? && params[:payment_status].strip != ''
-    @bookings = @bookings.where.not(status: %w[delivered completed cancelled returned]) if params[:delivery_pending] == '1'
+    @bookings = @bookings.where.not(status: %w[delivered completed cancelled returned refund]) if params[:delivery_pending] == '1'
 
     stats_counts = @bookings.reorder('').group(:status).count
     @booking_stats = {
@@ -61,12 +61,8 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     end
 
     @summary = calculate_bookings_summary
-    # The filter dropdown's customer list is identical for every store_admin
-    # user on every request; cache it briefly instead of re-running a
-    # 500-row ORDER BY on every page load.
-    @customers = Rails.cache.fetch('store_admin_bookings_customer_picker', expires_in: 2.minutes) do
-      Customer.select(:id, :full_name, :email, :mobile).order(:full_name).limit(500).to_a
-    end
+    # Not cached/capped: a freshly created customer must show up immediately.
+    @customers = Customer.select(:id, :full_name, :email, :mobile).order(:full_name).to_a
   end
 
   STATUS_FILTER_ACTIONS = {
@@ -104,7 +100,8 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     @products = products_for_picker
     @variant_stock = variant_store_stock_map(@products)
     @categories = Category.where(status: true).order(:name)
-    @customers = Customer.select(:id, :full_name, :email, :mobile).order(:full_name).limit(500)
+    # No cap: the picker searches this list client-side, so a limit hid newer customers
+    @customers = Customer.select(:id, :full_name, :email, :mobile).order(:full_name)
     @store_products = @current_store.store_products_with_inventory.includes(:product_variants).by_stock_availability rescue @products
   end
 
@@ -236,9 +233,9 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     new_status = params[:new_status] || params[:status]
     if @booking.respond_to?(:next_possible_statuses) && @booking.next_possible_statuses.include?(new_status)
       apply_named_status_transition(new_status)
-      message = "Status updated to #{new_status.humanize}."
+      message = "Status updated to #{Booking.status_label(new_status)}."
     elsif @booking.update(status: new_status)
-      message = "Status updated to #{new_status.to_s.humanize}."
+      message = "Status updated to #{Booking.status_label(new_status)}."
     else
       return respond_to do |format|
         format.html { redirect_to store_admin_booking_path(@booking, list_state_params), alert: 'Invalid status transition!' }
@@ -339,7 +336,7 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
 
   def manage_stage
     @list_state = list_state_params
-    @available_statuses = Booking.statuses.keys.map { |s| [s.humanize, s] }
+    @available_statuses = Booking.status_options
     @next_stages = @booking.next_possible_statuses
   end
 
@@ -350,7 +347,7 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
       return redirect_to(manage_stage_store_admin_booking_path(@booking, list_state: @list_state), alert: 'Please select a target stage.')
     end
     if update_booking_with_stage_transition(build_stage_transition_data)
-      redirect_to store_admin_bookings_path(@list_state), notice: "Booking stage updated to #{@target_stage.humanize} successfully."
+      redirect_to store_admin_bookings_path(@list_state), notice: "Booking stage updated to #{Booking.status_label(@target_stage)} successfully."
     else
       redirect_to manage_stage_store_admin_booking_path(@booking, list_state: @list_state),
                   alert: "Failed to update stage: #{@booking.errors.full_messages.join(', ')}"
@@ -687,7 +684,7 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     stage_redirect('Return processed successfully!')
   end
 
-  def process_general_transition = stage_redirect("Booking updated to #{@target_stage.humanize}!")
+  def process_general_transition = stage_redirect("Booking updated to #{Booking.status_label(@target_stage)}!")
 
   def stage_redirect(message, alert: false, to: nil)
     target = to || store_admin_bookings_path

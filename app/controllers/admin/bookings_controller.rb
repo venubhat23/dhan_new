@@ -22,7 +22,7 @@ class Admin::BookingsController < Admin::ApplicationController
         t: term
       )
     end
-    @bookings = @bookings.where(status: params[:status])           if params[:status].present? && params[:status].strip != ''
+    @bookings = @bookings.where(status: Booking.status_filter_values(params[:status]))           if params[:status].present? && params[:status].strip != ''
     @bookings = @bookings.where(created_at: params[:date_from]..params[:date_to]) if params[:date_from].present? && params[:date_to].present?
     if params[:customer_id].present? && params[:customer_id].strip != ''
       # Bookings keyed in with a typed name/phone but never linked to the customer
@@ -43,7 +43,7 @@ class Admin::BookingsController < Admin::ApplicationController
     @bookings = @bookings.where(is_b2b: true)                      if params[:b2b] == '1'
     @bookings = @bookings.where(booked_by: params[:booked_by])     if params[:booked_by].present? && params[:booked_by].strip != ''
     @bookings = @bookings.where(payment_status: params[:payment_status]) if params[:payment_status].present? && params[:payment_status].strip != ''
-    @bookings = @bookings.where.not(status: %w[delivered completed cancelled returned]) if params[:delivery_pending] == '1'
+    @bookings = @bookings.where.not(status: %w[delivered completed cancelled returned refund]) if params[:delivery_pending] == '1'
 
     # Pre-compute stats with a single GROUP BY — avoids 6 COUNT queries in the view
     stats_counts = @bookings.reorder('').group(:status).count
@@ -492,7 +492,7 @@ class Admin::BookingsController < Admin::ApplicationController
         message = 'Order completed!'
       else
         @booking.update!(status: new_status)
-        message = "Status updated to #{new_status.humanize}!"
+        message = "Status updated to #{Booking.status_label(new_status)}!"
       end
 
       respond_to do |format|
@@ -772,7 +772,7 @@ class Admin::BookingsController < Admin::ApplicationController
   def manage_stage
     # This will render the manage_stage.html.erb view
     @list_state = list_state_params
-    @available_statuses = Booking.statuses.keys.map { |status| [status.humanize, status] }
+    @available_statuses = Booking.status_options
     @next_stages = @booking.next_possible_statuses
   end
 
@@ -791,7 +791,7 @@ class Admin::BookingsController < Admin::ApplicationController
 
       # Update booking with new status and transition data
       if update_booking_with_stage_transition(transition_data)
-        redirect_to admin_bookings_path(@list_state), notice: "Booking stage updated to #{@target_stage.humanize} successfully."
+        redirect_to admin_bookings_path(@list_state), notice: "Booking stage updated to #{Booking.status_label(@target_stage)} successfully."
       else
         redirect_to manage_stage_admin_booking_path(@booking, list_state: @list_state), alert: "Failed to update stage: #{@booking.errors.full_messages.join(', ')}"
       end
@@ -1330,8 +1330,8 @@ class Admin::BookingsController < Admin::ApplicationController
 
   def process_general_transition
     respond_to do |format|
-      format.html { redirect_to admin_bookings_path, notice: "Booking updated to #{@target_stage.humanize}!" }
-      format.json { render json: { success: true, message: "Booking updated to #{@target_stage.humanize}!", status: @booking.status } }
+      format.html { redirect_to admin_bookings_path, notice: "Booking updated to #{Booking.status_label(@target_stage)}!" }
+      format.json { render json: { success: true, message: "Booking updated to #{Booking.status_label(@target_stage)}!", status: @booking.status } }
     end
   rescue => e
     respond_to do |format|

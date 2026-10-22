@@ -138,19 +138,7 @@
           Order Status
         </label>
         <%= f.select :status,
-            options_for_select([
-              ['All Statuses', ''],
-              ['Pending', 'ordered_and_delivery_pending'],
-              ['Confirmed', 'confirmed'],
-              ['Processing', 'processing'],
-              ['Packed', 'packed'],
-              ['Shipped', 'shipped'],
-              ['Out for Delivery', 'out_for_delivery'],
-              ['Delivered', 'delivered'],
-              ['Completed', 'completed'],
-              ['Cancelled', 'cancelled'],
-              ['Returned', 'returned']
-            ], params[:status]),
+            options_for_select([['All Statuses', '']] + Booking.status_options, params[:status]),
             { include_blank: false },
             { class: "form-select", id: "status" } %>
       </div>
@@ -234,27 +222,27 @@
                   <% when 'confirmed', 'processing', 'packed' %>
                     <span class="badge bg-info-subtle text-info">
                       <i class="bi bi-arrow-clockwise me-1"></i>
-                      <%= booking.status.humanize %>
+                      <%= booking.status_label %>
                     </span>
                   <% when 'shipped', 'out_for_delivery' %>
                     <span class="badge bg-warning-subtle text-warning">
                       <i class="bi bi-truck me-1"></i>
-                      <%= booking.status.humanize %>
+                      <%= booking.status_label %>
                     </span>
                   <% when 'completed', 'delivered' %>
                     <span class="badge bg-success-subtle text-success">
                       <i class="bi bi-check-circle me-1"></i>
-                      <%= booking.status.humanize %>
+                      <%= booking.status_label %>
                     </span>
                   <% when 'cancelled', 'returned' %>
                     <span class="badge bg-danger-subtle text-danger">
                       <i class="bi bi-x-circle me-1"></i>
-                      <%= booking.status.humanize %>
+                      <%= booking.status_label %>
                     </span>
                   <% else %>
                     <span class="badge bg-secondary-subtle text-secondary">
                       <i class="bi bi-clock me-1"></i>
-                      <%= booking.status.humanize %>
+                      <%= booking.status_label %>
                     </span>
                   <% end %>
                 </td>

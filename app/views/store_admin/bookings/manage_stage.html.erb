@@ -22,7 +22,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Current Stage</h6>
-            <h5 class="mb-0"><%= @booking.status&.humanize %></h5>
+            <h5 class="mb-0"><%= @booking.status_label %></h5>
           </div>
           <div class="text-<%= @booking.status_color %>">
             <i class="bi <%= @booking.status_icon %> fs-3"></i>
@@ -85,7 +85,7 @@
       <h5 class="mb-0">Update Order Stage</h5>
       <span class="badge bg-<%= @booking.status_color %>-subtle text-<%= @booking.status_color %> px-3 py-2">
         <i class="bi <%= @booking.status_icon %> me-1"></i>
-        <%= @booking.status&.humanize %>
+        <%= @booking.status_label %>
       </span>
     </div>
   </div>
@@ -103,7 +103,7 @@
 
           <% available_stages.each do |stage| %>
             <option value="<%= stage %>">
-              <%= stage.humanize %> - <%= stage_description_full(stage) %>
+              <%= Booking.status_label(stage) %> - <%= stage_description_full(stage) %>
             </option>
           <% end %>
         </select>
@@ -472,7 +472,7 @@
               <tr>
                 <td>
                   <span class="badge bg-primary-subtle text-primary px-3 py-2">
-                    <%= history['to_stage']&.humanize %>
+                    <%= Booking.status_label(history['to_stage']) if history['to_stage'] %>
                   </span>
                 </td>
                 <td>

@@ -59,19 +59,7 @@
 
     <div class="eb-field">
       <div class="eb-label">Booking Status</div>
-      <%= f.select :status, [
-            ['Draft',            'draft'],
-            ['Pending',          'ordered_and_delivery_pending'],
-            ['Confirmed',        'confirmed'],
-            ['Processing',       'processing'],
-            ['Packed',           'packed'],
-            ['Shipped',          'shipped'],
-            ['Out for Delivery', 'out_for_delivery'],
-            ['Delivered',        'delivered'],
-            ['Completed',        'completed'],
-            ['Cancelled',        'cancelled'],
-            ['Returned',         'returned']
-          ], { selected: @booking.status }, class: 'eb-select' %>
+      <%= f.select :status, @booking.status_select_options, { selected: @booking.status_for_select }, class: 'eb-select' %>
     </div>
 
     <div class="eb-field">

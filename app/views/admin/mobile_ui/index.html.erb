@@ -195,20 +195,7 @@
     </div>
 
     <div class="filter-pills">
-      <% statuses = [
-           ['All', ''],
-           ['Draft', 'draft'],
-           ['Pending', 'ordered_and_delivery_pending'],
-           ['Confirmed', 'confirmed'],
-           ['Processing', 'processing'],
-           ['Packed', 'packed'],
-           ['Shipped', 'shipped'],
-           ['Out for Delivery', 'out_for_delivery'],
-           ['Delivered', 'delivered'],
-           ['Completed', 'completed'],
-           ['Cancelled', 'cancelled'],
-           ['Returned', 'returned']
-         ] %>
+      <% statuses = [['All', '']] + Booking.status_options %>
       <% statuses.each do |label, val| %>
         <a href="#"
            class="filter-pill <%= params[:status].to_s == val ? 'active' : '' %>"
@@ -276,7 +263,7 @@
           <div class="booking-date"><i class="bi bi-calendar3 me-1"></i><%= bdate %></div>
         </div>
         <div class="d-flex flex-column align-items-end gap-1">
-          <span class="status-pill <%= status_css %>"><%= booking.status&.humanize || 'Unknown' %></span>
+          <span class="status-pill <%= status_css %>"><%= booking.status_label %></span>
           <span class="status-pill <%= pay_css %>"><%= booking.payment_status&.humanize || 'Unpaid' %></span>
         </div>
       </div>

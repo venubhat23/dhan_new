@@ -322,7 +322,7 @@
                     <i class="bi bi-flag me-1"></i>Status/Stage <span class="text-danger">*</span>
                   </label>
                   <%= f.select :status,
-                      options_for_select([['Select Status', '']] + Booking.statuses.map { |key, value| [key.humanize, key] }, 'completed'),
+                      options_for_select([['Select Status', '']] + Booking.status_options, Booking::DEFAULT_STATUS),
                       {},
                       { class: 'form-select', required: true, id: 'booking_status' } %>
                   <div class="form-text">
@@ -1523,7 +1523,9 @@ function updateStatusPreview() {
     'delivered': { color: 'bg-success', icon: 'bi-house-check' },
     'completed': { color: 'bg-success', icon: 'bi-check-all' },
     'cancelled': { color: 'bg-danger', icon: 'bi-x-circle' },
-    'returned': { color: 'bg-danger', icon: 'bi-arrow-return-left' }
+    'returned': { color: 'bg-danger', icon: 'bi-arrow-return-left' },
+    'refund': { color: 'bg-danger', icon: 'bi-cash-coin' },
+    'reconfirm_order': { color: 'bg-info', icon: 'bi-telephone' }
   };
 
   const config = statusConfigs[selectedValue] || { color: 'bg-secondary', icon: 'bi-question-circle' };

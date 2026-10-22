@@ -49,7 +49,7 @@ class Admin::MobileUiController < ActionController::Base
     end
 
     if params[:status].present? && params[:status] != ''
-      @bookings = @bookings.where(status: params[:status])
+      @bookings = @bookings.where(status: Booking.status_filter_values(params[:status]))
     end
 
     if params[:customer_id].present?
@@ -79,7 +79,7 @@ class Admin::MobileUiController < ActionController::Base
     # regular desktop-admin bookings.
     @booking.booked_by = 'mobile_ui'
     @booking.booking_date = Time.current unless @booking.booking_date.present?
-    @booking.status ||= 'completed'
+    @booking.status ||= Booking::DEFAULT_STATUS
 
     # Clean discount
     raw_discount = params.dig(:booking, :discount_amount).to_s.gsub(/\s+/, '').strip

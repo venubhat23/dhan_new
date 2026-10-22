@@ -44,7 +44,7 @@
             </div>
             <h5 class="mb-2">
               <span class="badge bg-<%= @booking.status_color %> px-3 py-2 fs-6">
-                <%= @booking.status&.humanize %>
+                <%= @booking.status_label %>
               </span>
             </h5>
           </div>
@@ -107,7 +107,7 @@
               when 'cancelled' then 'danger'
               when 'returned' then 'warning'
               else 'secondary'
-              end %>"><%= params[:target_stage]&.humanize %></strong>
+              end %>"><%= Booking.status_label(params[:target_stage]) if params[:target_stage] %></strong>
           </h6>
         </div>
         <div class="card-body">
@@ -343,7 +343,7 @@
               <%= link_to admin_bookings_path, class: "btn btn-secondary" do %>
                 <i class="bi bi-x me-1"></i> Cancel
               <% end %>
-              <%= f.submit "Update to #{params[:target_stage]&.humanize}",
+              <%= f.submit "Update to #{Booking.status_label(params[:target_stage])}",
                   class: "btn btn-#{
                     case params[:target_stage]
                     when 'confirmed' then 'success'

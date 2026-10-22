@@ -288,20 +288,7 @@
               <i class="bi bi-flag me-1"></i>Status
             </label>
             <%= form.select :status,
-                options_for_select([
-                  ['All Stages', ''],
-                  ['Draft', 'draft'],
-                  ['Pending Delivery', 'ordered_and_delivery_pending'],
-                  ['Confirmed', 'confirmed'],
-                  ['Processing', 'processing'],
-                  ['Packed', 'packed'],
-                  ['Shipped', 'shipped'],
-                  ['Out for Delivery', 'out_for_delivery'],
-                  ['Delivered', 'delivered'],
-                  ['Completed', 'completed'],
-                  ['Cancelled', 'cancelled'],
-                  ['Returned', 'returned']
-                ], params[:status]),
+                options_for_select([['All Stages', '']] + Booking.status_options, params[:status]),
                 {},
                 { class: "form-select form-select-sm shadow-sm", onchange: "this.form.submit();" } %>
           </div>
@@ -528,9 +515,9 @@
 
                   <!-- Current Status -->
                   <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-<%= booking.status_color %> px-2 py-1" title="<%= booking.status&.humanize || 'Unknown' %>">
+                    <span class="badge bg-<%= booking.status_color %> px-2 py-1" title="<%= booking.status_label %>">
                       <i class="bi <%= booking.status_icon %> me-1"></i>
-                      <% status_text = booking.status&.humanize || 'Unknown' %>
+                      <% status_text = booking.status_label %>
                       <%= status_text.length > 12 ? status_text[0..11] + '...' : status_text %>
                     </span>
 
@@ -547,7 +534,7 @@
                                   method: :patch, class: "dropdown-item",
                                   confirm: status == 'cancelled' ? 'Are you sure you want to cancel this order?' : nil do %>
                                 <i class="bi bi-arrow-right me-2"></i>
-                                <%= status.humanize %>
+                                <%= Booking.status_label(status) %>
                               <% end %>
                             </li>
                           <% end %>
@@ -559,13 +546,12 @@
                 <td class="align-middle">
                   <div class="progress-container">
                     <%
-                      stages = ['draft', 'ordered_and_delivery_pending', 'confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'completed']
-                      current_stage_index = stages.index(booking.status) || 0
-                      total_stages = stages.length
+                      total_stages = Booking::PROGRESS_STAGES.length
+                      current_stage_index = booking.progress_stage_index || 0
                       progress_percentage = ((current_stage_index + 1).to_f / total_stages * 100).round(0)
 
-                      # Special handling for cancelled/returned
-                      if ['cancelled', 'returned'].include?(booking.status)
+                      # Cancelled / returned / refund are off the normal path
+                      if booking.progress_stage_index.nil?
                         progress_percentage = 0
                         progress_color = 'bg-danger'
                       else
@@ -591,7 +577,7 @@
 
                     <div class="d-flex justify-content-between">
                       <small class="text-muted">
-                        Stage <%= current_stage_index + 1 %>/9
+                        Stage <%= current_stage_index + 1 %>/<%= total_stages %>
                       </small>
                       <small class="text-muted">
                         <%= progress_percentage %>%
@@ -599,14 +585,14 @@
                     </div>
 
                     <!-- Next Steps -->
-                    <% if booking.next_possible_statuses.any? %>
+                    <% if booking.next_stage %>
                       <div class="mt-1">
                         <small class="text-primary">
                           <i class="bi bi-arrow-right me-1"></i>
-                          Next: <%= booking.next_possible_statuses.first.humanize %>
+                          Next: <%= Booking.status_label(booking.next_stage) %>
                         </small>
                       </div>
-                    <% elsif booking.status == 'completed' %>
+                    <% elsif %w[delivered completed].include?(booking.status) %>
                       <div class="mt-1">
                         <small class="text-success">
                           <i class="bi bi-check-all me-1"></i>

@@ -35,7 +35,7 @@ class Franchise::BookingsController < Franchise::BaseController
     end
 
     if params[:status].present? && params[:status].strip != ''
-      @bookings = @bookings.where(status: params[:status])
+      @bookings = @bookings.where(status: Booking.status_filter_values(params[:status]))
     end
 
     if params[:date_from].present? && params[:date_to].present?
@@ -336,7 +336,7 @@ class Franchise::BookingsController < Franchise::BaseController
         message = 'Order completed!'
       else
         @booking.update!(status: new_status)
-        message = "Status updated to #{new_status.humanize}!"
+        message = "Status updated to #{Booking.status_label(new_status)}!"
       end
 
       respond_to do |format|
@@ -441,7 +441,7 @@ class Franchise::BookingsController < Franchise::BaseController
   end
 
   def manage_stage
-    @available_statuses = Booking.statuses.keys.map { |status| [status.humanize, status] }
+    @available_statuses = Booking.status_options
     @next_stages = @booking.next_possible_statuses
   end
 
@@ -459,7 +459,7 @@ class Franchise::BookingsController < Franchise::BaseController
 
       # Update booking with new status and transition data
       if update_booking_with_stage_transition(transition_data)
-        redirect_to franchise_bookings_path, notice: "Booking stage updated to #{@target_stage.humanize} successfully."
+        redirect_to franchise_bookings_path, notice: "Booking stage updated to #{Booking.status_label(@target_stage)} successfully."
       else
         redirect_to manage_stage_franchise_booking_path(@booking), alert: "Failed to update stage: #{@booking.errors.full_messages.join(', ')}"
       end

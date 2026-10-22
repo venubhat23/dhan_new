@@ -18,7 +18,7 @@ class Customer::OrdersController < Customer::BaseController
     end
 
     if params[:status].present? && params[:status].strip != ''
-      @bookings = @bookings.where(status: params[:status])
+      @bookings = @bookings.where(status: Booking.status_filter_values(params[:status]))
     end
 
     if params[:date_from].present? && params[:date_to].present?

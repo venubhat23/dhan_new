@@ -5,7 +5,7 @@
     <p class="text-muted mb-0">
       <span class="badge bg-<%= @booking.status_color %> me-2">
         <i class="bi <%= @booking.status_icon %> me-1"></i>
-        <%= @booking.status&.humanize || 'Pending' %>
+        <%= @booking.status_label %>
       </span>
       Booking #<%= @booking.booking_number %>
     </p>
@@ -183,19 +183,7 @@
             <div class="col-md-6">
               <label class="form-label">Current Status</label>
               <%= f.select :status,
-                  options_for_select([
-                    ['Draft', 'draft'],
-                    ['Ordered & Delivery Pending', 'ordered_and_delivery_pending'],
-                    ['Confirmed', 'confirmed'],
-                    ['Processing', 'processing'],
-                    ['Packed', 'packed'],
-                    ['Shipped', 'shipped'],
-                    ['Out for Delivery', 'out_for_delivery'],
-                    ['Delivered', 'delivered'],
-                    ['Completed', 'completed'],
-                    ['Cancelled', 'cancelled'],
-                    ['Returned', 'returned']
-                  ], @booking.status),
+                  options_for_select(@booking.status_select_options, @booking.status_for_select),
                   {},
                   { class: 'form-select' } %>
             </div>

@@ -71,7 +71,7 @@ class Store < ApplicationRecord
 
   def daily_sales_summary(date = Date.current)
     bookings.where(created_at: date.beginning_of_day..date.end_of_day)
-            .where.not(status: ['cancelled', 'returned'])
+            .where.not(status: ['cancelled', 'returned', 'refund'])
             .sum(:total_amount)
   end
 
