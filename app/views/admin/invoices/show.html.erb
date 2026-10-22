@@ -670,8 +670,22 @@
       wa_cname  = @invoice.customer_display_name
       wa_amount = number_with_precision(@invoice.total_amount.to_f, precision: 2, delimiter: ',')
       wa_idate  = @invoice.invoice_date&.strftime('%d %b %Y')
-      wa_invoice_link = "\n📋 View your invoice: #{public_invoice_by_token_url(token: @invoice.share_token)}"
-      wa_thank_msg = "Dear #{wa_cname},\n\nThank you for your order with Dhanvantari Naturals! 🌿\n\nInvoice #: #{@invoice.invoice_number}\nDate: #{wa_idate}\nAmount: ₹#{wa_amount}#{wa_invoice_link}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
+      wa_inv_url     = public_invoice_by_token_url(token: @invoice.share_token)
+      wa_inv_pdf_url = public_invoice_by_token_url(token: @invoice.share_token, format: :pdf)
+      # Same messages as the booking page's Thanks / Invoice buttons.
+      wa_booking = Booking.find_by(invoice_number: @invoice.invoice_number) if @invoice.invoice_number.present?
+      if wa_booking
+        wa_booking.ensure_share_token!
+        wa_ref_line = "Booking #: #{wa_booking.booking_number}"
+        wa_idate = (wa_booking.booking_date || wa_booking.created_at)&.strftime('%d %b %Y') || wa_idate
+        wa_view_line = "📋 View your booking: #{request.base_url}/booking/#{wa_booking.share_token}"
+      else
+        wa_ref_line = "Invoice #: #{@invoice.invoice_number}"
+        wa_view_line = "📋 View your invoice: #{wa_inv_url}"
+      end
+      wa_thank_msg = "Dear #{wa_cname},\n\nThank you for your booking with Dhanvantari Naturals! 🌿\n\n#{wa_ref_line}\nDate: #{wa_idate}\nAmount: ₹#{wa_amount}\n\n#{wa_view_line}\n📄 Download Invoice PDF: #{wa_inv_pdf_url}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
+      wa_inv_msg   = "Dear #{wa_cname},\n\nHere is your invoice from Dhanvantari Naturals 🌿\n\n#{wa_ref_line}\nDate: #{wa_idate}\nAmount: ₹#{wa_amount}\n\n📋 View Invoice: #{wa_inv_url}\n📄 Download PDF: #{wa_inv_pdf_url}\n\nThank you!\n🙏 Dhanvantari Naturals Team"
+      wa_icon = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style="vertical-align:-2px;margin-right:4px"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>'.html_safe
     %>
     <div class="invoice-action-bar">
       <%= link_to (local_assigns[:mobile_ui] ? admin_mobile_ui_bookings_path : admin_invoices_path), class: "back-button" do %>
@@ -681,8 +695,16 @@
         <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
            target="_blank" class="whatsapp-thanks-button"
            title="Send Thank You on WhatsApp">
-          <span aria-hidden="true">&#9993;</span> Thank You
+          <%= wa_icon %>Thanks
         </a>
+        <% if @invoice.fully_paid? %>
+          <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_inv_msg) %>"
+             target="_blank" class="whatsapp-thanks-button"
+             style="background-color:#7b1fa2;"
+             title="Share Invoice via WhatsApp">
+            <%= wa_icon %>Invoice
+          </a>
+        <% end %>
       <% end %>
     </div>
 
