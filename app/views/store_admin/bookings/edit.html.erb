@@ -87,163 +87,6 @@
         </div>
       </div>
 
-      <!-- Booking Items -->
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-transparent border-0">
-          <h5 class="mb-0">
-            <i class="bi bi-basket text-primary me-2"></i>
-            Booking Items
-          </h5>
-        </div>
-        <div class="card-body">
-          <div id="booking-items">
-            <% if @booking.booking_items.any? %>
-              <% @booking.booking_items.each_with_index do |item, index| %>
-                <div class="booking-item-row border rounded p-3 mb-3" id="item-<%= index %>">
-                  <%= f.fields_for :booking_items, item do |item_form| %>
-                    <div class="row g-3 align-items-center">
-                      <div class="col-md-4">
-                        <label class="form-label small">Product</label>
-                        <%= item_form.hidden_field :product_id, data: { index: index } %>
-                        <%= item_form.hidden_field :product_variant_id, data: { index: index } %>
-                        <select class="form-select" onchange="updateItemPrice(this)" data-index="<%= index %>">
-                          <option value="">Select Product</option>
-                          <% @products.each do |product| %>
-                            <% if product.product_variants.any? %>
-                              <optgroup label="<%= product.name %>">
-                                <% product.sorted_variants.each do |v| %>
-                                  <option value="<%= product.id %>|<%= v.id %>"
-                                          data-price="<%= v.effective_price %>"
-                                          <%= 'selected' if item.product_id == product.id && item.product_variant_id == v.id %>>
-                                    <%= product.name %> - <%= v.label %> — ₹<%= number_with_delimiter(v.effective_price) %>
-                                  </option>
-                                <% end %>
-                              </optgroup>
-                            <% else %>
-                              <option value="<%= product.id %>|"
-                                      data-price="<%= product.price %>"
-                                      <%= 'selected' if item.product_id == product.id && item.product_variant_id.nil? %>>
-                                <%= product.name %> - ₹<%= number_with_delimiter(product.price) %>
-                              </option>
-                            <% end %>
-                          <% end %>
-                        </select>
-                      </div>
-
-                      <div class="col-md-1">
-                        <label class="form-label small">Qty</label>
-                        <%= item_form.number_field :quantity, class: 'form-control', min: 0.1, step: 0.1, onchange: 'calculateItemTotal(this)', data: { index: index } %>
-                      </div>
-
-                      <div class="col-md-2">
-                        <label class="form-label small">Unit Price</label>
-                        <%= item_form.number_field :price, class: 'form-control', step: '0.01', onchange: 'calculateItemTotal(this)', data: { index: index } %>
-                      </div>
-
-                      <div class="col-md-3">
-                        <label class="form-label small">Product Discount</label>
-                        <div class="input-group">
-                          <%= item_form.select :discount_type,
-                                options_for_select([['None', ''], ['%', 'percentage'], ['₹', 'fixed']], item.discount_type),
-                                {}, class: 'form-select flex-grow-0 w-auto', onchange: 'calculateItemTotal(this)' %>
-                          <%= item_form.number_field :discount_value, class: 'form-control', min: 0, step: '0.01',
-                                value: item.discount_value, placeholder: '0', onchange: 'calculateItemTotal(this)' %>
-                        </div>
-                      </div>
-
-                      <div class="col-md-1">
-                        <label class="form-label small">Total</label>
-                        <div class="form-control bg-light px-2" id="item-total-<%= index %>" style="font-size:0.85rem;">
-                          ₹<%= number_with_delimiter(item.total.to_f > 0 ? item.total.to_f : ((item.quantity || 0) * (item.price || 0)).to_f) %>
-                        </div>
-                      </div>
-
-                      <div class="col-md-1">
-                        <label class="form-label small d-block">&nbsp;</label>
-                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeBookingItem(<%= index %>)">
-                          <i class="bi bi-trash"></i>
-                        </button>
-                      </div>
-                    </div>
-                  <% end %>
-                </div>
-              <% end %>
-            <% end %>
-          </div>
-
-          <!-- Add Item Button -->
-          <button type="button" class="btn btn-outline-primary" onclick="addBookingItem()">
-            <i class="bi bi-plus-circle me-1"></i>
-            Add Item
-          </button>
-
-          <!-- Item Template (Hidden) -->
-          <div id="item-template" style="display: none;">
-            <div class="booking-item-row border rounded p-3 mb-3">
-              <div class="row g-3 align-items-center">
-                <div class="col-md-4">
-                  <label class="form-label small">Product</label>
-                  <input type="hidden" name="booking[booking_items_attributes][INDEX][product_id]">
-                  <input type="hidden" name="booking[booking_items_attributes][INDEX][product_variant_id]">
-                  <select class="form-select" onchange="updateItemPrice(this)">
-                    <option value="">Select Product</option>
-                    <% @products.each do |product| %>
-                      <% if product.product_variants.any? %>
-                        <optgroup label="<%= product.name %>">
-                          <% product.sorted_variants.each do |v| %>
-                            <option value="<%= product.id %>|<%= v.id %>" data-price="<%= v.effective_price %>">
-                              <%= product.name %> - <%= v.label %> — ₹<%= number_with_delimiter(v.effective_price) %>
-                            </option>
-                          <% end %>
-                        </optgroup>
-                      <% else %>
-                        <option value="<%= product.id %>|" data-price="<%= product.price %>">
-                          <%= product.name %> - ₹<%= number_with_delimiter(product.price) %>
-                        </option>
-                      <% end %>
-                    <% end %>
-                  </select>
-                </div>
-
-                <div class="col-md-1">
-                  <label class="form-label small">Qty</label>
-                  <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][quantity]" min="0.1" step="0.1" value="1" onchange="calculateItemTotal(this)">
-                </div>
-
-                <div class="col-md-2">
-                  <label class="form-label small">Unit Price</label>
-                  <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][price]" step="0.01" onchange="calculateItemTotal(this)">
-                </div>
-
-                <div class="col-md-3">
-                  <label class="form-label small">Product Discount</label>
-                  <div class="input-group">
-                    <select class="form-select flex-grow-0 w-auto" name="booking[booking_items_attributes][INDEX][discount_type]" onchange="calculateItemTotal(this)">
-                      <option value="">None</option>
-                      <option value="percentage">%</option>
-                      <option value="fixed">₹</option>
-                    </select>
-                    <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][discount_value]" min="0" step="0.01" placeholder="0" onchange="calculateItemTotal(this)">
-                  </div>
-                </div>
-
-                <div class="col-md-1">
-                  <label class="form-label small">Total</label>
-                  <div class="form-control bg-light item-total px-2" style="font-size:0.85rem;">₹0</div>
-                </div>
-
-                <div class="col-md-1">
-                  <label class="form-label small d-block">&nbsp;</label>
-                  <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewBookingItem(this)">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Payment Information -->
       <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-transparent border-0">
@@ -467,6 +310,167 @@
                 <i class="bi bi-file-earmark-pdf me-1"></i>View Invoice
               <% end %>
             <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Booking Items (full width) -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="bi bi-basket text-primary me-2"></i>
+            Booking Items
+          </h5>
+        </div>
+        <div class="card-body">
+          <div id="booking-items">
+            <% if @booking.booking_items.any? %>
+              <% @booking.booking_items.each_with_index do |item, index| %>
+                <div class="booking-item-row border rounded p-3 mb-3" id="item-<%= index %>">
+                  <%= f.fields_for :booking_items, item do |item_form| %>
+                    <div class="row g-3 align-items-center">
+                      <div class="col-md-4">
+                        <label class="form-label small">Product</label>
+                        <%= item_form.hidden_field :product_id, data: { index: index } %>
+                        <%= item_form.hidden_field :product_variant_id, data: { index: index } %>
+                        <select class="form-select" onchange="updateItemPrice(this)" data-index="<%= index %>">
+                          <option value="">Select Product</option>
+                          <% @products.each do |product| %>
+                            <% if product.product_variants.any? %>
+                              <optgroup label="<%= product.name %>">
+                                <% product.sorted_variants.each do |v| %>
+                                  <option value="<%= product.id %>|<%= v.id %>"
+                                          data-price="<%= v.effective_price %>"
+                                          <%= 'selected' if item.product_id == product.id && item.product_variant_id == v.id %>>
+                                    <%= product.name %> - <%= v.label %> — ₹<%= number_with_delimiter(v.effective_price) %>
+                                  </option>
+                                <% end %>
+                              </optgroup>
+                            <% else %>
+                              <option value="<%= product.id %>|"
+                                      data-price="<%= product.price %>"
+                                      <%= 'selected' if item.product_id == product.id && item.product_variant_id.nil? %>>
+                                <%= product.name %> - ₹<%= number_with_delimiter(product.price) %>
+                              </option>
+                            <% end %>
+                          <% end %>
+                        </select>
+                      </div>
+
+                      <div class="col-md-1">
+                        <label class="form-label small">Qty</label>
+                        <%= item_form.number_field :quantity, class: 'form-control', min: 0.1, step: 0.1, onchange: 'calculateItemTotal(this)', data: { index: index } %>
+                      </div>
+
+                      <div class="col-md-2">
+                        <label class="form-label small">Unit Price</label>
+                        <%= item_form.number_field :price, class: 'form-control', step: '0.01', onchange: 'calculateItemTotal(this)', data: { index: index } %>
+                      </div>
+
+                      <div class="col-md-3">
+                        <label class="form-label small">Product Discount</label>
+                        <div class="input-group">
+                          <%= item_form.select :discount_type,
+                                options_for_select([['None', ''], ['%', 'percentage'], ['₹', 'fixed']], item.discount_type),
+                                {}, class: 'form-select flex-grow-0 w-auto', onchange: 'calculateItemTotal(this)' %>
+                          <%= item_form.number_field :discount_value, class: 'form-control', min: 0, step: '0.01',
+                                value: item.discount_value, placeholder: '0', onchange: 'calculateItemTotal(this)' %>
+                        </div>
+                      </div>
+
+                      <div class="col-md-1">
+                        <label class="form-label small">Total</label>
+                        <div class="form-control bg-light px-2" id="item-total-<%= index %>" style="font-size:0.85rem;">
+                          ₹<%= number_with_delimiter(item.total.to_f > 0 ? item.total.to_f : ((item.quantity || 0) * (item.price || 0)).to_f) %>
+                        </div>
+                      </div>
+
+                      <div class="col-md-1">
+                        <label class="form-label small d-block">&nbsp;</label>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeBookingItem(<%= index %>)">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+
+          <!-- Add Item Button -->
+          <button type="button" class="btn btn-outline-primary" onclick="addBookingItem()">
+            <i class="bi bi-plus-circle me-1"></i>
+            Add Item
+          </button>
+
+          <!-- Item Template (Hidden) -->
+          <div id="item-template" style="display: none;">
+            <div class="booking-item-row border rounded p-3 mb-3">
+              <div class="row g-3 align-items-center">
+                <div class="col-md-4">
+                  <label class="form-label small">Product</label>
+                  <input type="hidden" name="booking[booking_items_attributes][INDEX][product_id]">
+                  <input type="hidden" name="booking[booking_items_attributes][INDEX][product_variant_id]">
+                  <select class="form-select" onchange="updateItemPrice(this)">
+                    <option value="">Select Product</option>
+                    <% @products.each do |product| %>
+                      <% if product.product_variants.any? %>
+                        <optgroup label="<%= product.name %>">
+                          <% product.sorted_variants.each do |v| %>
+                            <option value="<%= product.id %>|<%= v.id %>" data-price="<%= v.effective_price %>">
+                              <%= product.name %> - <%= v.label %> — ₹<%= number_with_delimiter(v.effective_price) %>
+                            </option>
+                          <% end %>
+                        </optgroup>
+                      <% else %>
+                        <option value="<%= product.id %>|" data-price="<%= product.price %>">
+                          <%= product.name %> - ₹<%= number_with_delimiter(product.price) %>
+                        </option>
+                      <% end %>
+                    <% end %>
+                  </select>
+                </div>
+
+                <div class="col-md-1">
+                  <label class="form-label small">Qty</label>
+                  <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][quantity]" min="0.1" step="0.1" value="1" onchange="calculateItemTotal(this)">
+                </div>
+
+                <div class="col-md-2">
+                  <label class="form-label small">Unit Price</label>
+                  <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][price]" step="0.01" onchange="calculateItemTotal(this)">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label small">Product Discount</label>
+                  <div class="input-group">
+                    <select class="form-select flex-grow-0 w-auto" name="booking[booking_items_attributes][INDEX][discount_type]" onchange="calculateItemTotal(this)">
+                      <option value="">None</option>
+                      <option value="percentage">%</option>
+                      <option value="fixed">₹</option>
+                    </select>
+                    <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][discount_value]" min="0" step="0.01" placeholder="0" onchange="calculateItemTotal(this)">
+                  </div>
+                </div>
+
+                <div class="col-md-1">
+                  <label class="form-label small">Total</label>
+                  <div class="form-control bg-light item-total px-2" style="font-size:0.85rem;">₹0</div>
+                </div>
+
+                <div class="col-md-1">
+                  <label class="form-label small d-block">&nbsp;</label>
+                  <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewBookingItem(this)">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
