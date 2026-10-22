@@ -333,8 +333,14 @@
                     <% end %>
                     <% if customer_mobile.present? %>
                       <%
-                        # Public (no-login) PDF link for the customer.
-                        if model_object.is_a?(Invoice)
+                        # Public (no-login) link for the customer: the booking page when
+                        # the invoice came from a booking, else the public invoice PDF.
+                        wa_booking = model_object.try(:booking).presence ||
+                                     (Booking.find_by(invoice_number: invoice_number) if invoice_number.present?)
+                        if wa_booking
+                          wa_booking.ensure_share_token!
+                          wa_share_url = public_booking_summary_url(token: wa_booking.share_token)
+                        elsif model_object.is_a?(Invoice)
                           model_object.generate_share_token! if model_object.share_token.blank?
                           wa_share_url = public_invoice_by_token_url(token: model_object.share_token, format: :pdf)
                         elsif model_object.respond_to?(:share_token) && model_object.share_token.present?
@@ -1708,7 +1714,7 @@ function shareViaWhatsApp(invoiceUrl, customerMobile, invoiceNumber, totalAmount
 Invoice Number: ${invoiceNumber}
 Amount: ₹${totalAmount.toFixed(2)}
 
-Download Invoice PDF: ${invoiceUrl}
+View your invoice: ${invoiceUrl}
 
 Thank you for your business!`;
 
