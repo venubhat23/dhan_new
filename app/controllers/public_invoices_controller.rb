@@ -24,45 +24,23 @@ class PublicInvoicesController < ApplicationController
     respond_to do |format|
       format.html { render template: 'public_invoices/show' }
       format.pdf do
-        # Simple test PDF generation
-        html = <<~HTML
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; }
-              .invoice-header { text-align: center; margin-bottom: 20px; }
-              .invoice-details { margin: 20px 0; }
-              table { width: 100%; border-collapse: collapse; }
-              th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-            </style>
-          </head>
-          <body>
-            <div class="invoice-header">
-              <h1>TAX INVOICE</h1>
-              <h2>Atma Nirbhar Farm</h2>
-            </div>
-            <div class="invoice-details">
-              <p><strong>Invoice Number:</strong> #{@invoice.invoice_number}</p>
-              <p><strong>Customer:</strong> #{@customer&.display_name || 'N/A'}</p>
-              <p><strong>Date:</strong> #{@invoice.invoice_date&.strftime('%d/%m/%Y') || Date.current.strftime('%d/%m/%Y')}</p>
-              <p><strong>Total Amount:</strong> ₹#{@invoice.total_amount}</p>
-            </div>
-          </body>
-          </html>
-        HTML
-
+        # Same full invoice as the admin "Download PDF".
+        @invoice_items = @invoice.invoice_items.includes(:product, :product_variant, :milk_delivery_task)
         pdf = WickedPdf.new.pdf_from_string(
-          html,
+          render_to_string(template: 'admin/invoices/show', formats: [:html], layout: false),
           page_size: 'A4',
-          orientation: 'Portrait',
-          margin: { top: 10, bottom: 10, left: 10, right: 10 }
+          margin: { top: '0.5in', bottom: '0.5in', left: '0.5in', right: '0.5in' },
+          dpi: 300,
+          encoding: 'UTF-8',
+          disable_smart_shrinking: true,
+          print_media_type: true,
+          orientation: 'Portrait'
         )
 
-        send_data(pdf,
-                  filename: "Invoice_#{@invoice.invoice_number}.pdf",
+        send_data pdf,
+                  filename: "invoice-#{@invoice.invoice_number}.pdf",
                   type: 'application/pdf',
-                  disposition: 'inline')
+                  disposition: 'attachment'
       end
     end
   rescue ActiveRecord::RecordNotFound
