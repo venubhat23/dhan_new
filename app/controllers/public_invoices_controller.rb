@@ -22,7 +22,12 @@ class PublicInvoicesController < ApplicationController
 
   def show
     respond_to do |format|
-      format.html { render template: 'public_invoices/show' }
+      format.html do
+        # Same invoice template as the admin page and the PDF, so totals match.
+        @invoice_items = @invoice.invoice_items.includes(:product, :product_variant, :milk_delivery_task)
+        @public_view = true
+        render template: 'admin/invoices/show'
+      end
       format.pdf do
         # Same full invoice as the admin "Download PDF".
         @invoice_items = @invoice.invoice_items.includes(:product, :product_variant, :milk_delivery_task)
