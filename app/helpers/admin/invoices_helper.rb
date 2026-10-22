@@ -12,18 +12,18 @@ module Admin::InvoicesHelper
         variants = product.product_variants.sort_by { |v| [v.display_order || 0, v.weight.to_f] }
         # Best-effort match: pick the variant whose price is closest to what was
         # actually saved on the line item, since invoice_items has no variant_id.
-        closest_variant = variants.min_by { |v| (v.effective_price.to_f - selected_unit_price.to_f).abs } if selected_product_id == product.id
+        closest_variant = variants.min_by { |v| (invoice_base_price(v.effective_price, gst_rate) - selected_unit_price.to_f).abs } if selected_product_id == product.id
 
         variants.each do |variant|
           options << content_tag(:option, "#{product.name} - #{variant.label} - ₹#{variant.effective_price}",
             value: product.id,
-            data: { price: variant.effective_price, description: "#{product.name} - #{variant.label}", gst_rate: gst_rate },
+            data: { price: invoice_base_price(variant.effective_price, gst_rate), description: "#{product.name} - #{variant.label}", gst_rate: gst_rate },
             selected: selected_product_id == product.id && variant == closest_variant)
         end
       else
         options << content_tag(:option, "#{product.name} - ₹#{product.selling_price}/#{product.unit_type}",
           value: product.id,
-          data: { price: product.selling_price, description: product.name, gst_rate: gst_rate },
+          data: { price: invoice_base_price(product.selling_price, gst_rate), description: product.name, gst_rate: gst_rate },
           selected: selected_product_id == product.id)
       end
     end
@@ -55,6 +55,15 @@ module Admin::InvoicesHelper
 
   # GST rate (%) that applies to a product's line total, matching the tax
   # calculation used on the invoice show page.
+  # Product/variant prices are GST-inclusive, but invoice line unit_price is the
+  # pre-GST base (tax is added back on top), so strip GST before prefilling.
+  def invoice_base_price(inclusive_price, gst_rate)
+    price = inclusive_price.to_f
+    return price unless gst_rate.to_f > 0
+
+    (price / (1 + gst_rate.to_f / 100)).round(2)
+  end
+
   def invoice_gst_rate_for(product)
     return 0 unless product&.gst_enabled
 

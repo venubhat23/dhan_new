@@ -45,8 +45,9 @@ class ProductVariant < ApplicationRecord
     (effective_price * effective_gst_percentage / 100.0).round(2)
   end
 
+  # selling_price is GST-inclusive, so the customer-facing price already contains GST.
   def price_with_gst
-    (effective_price + computed_gst_amount).round(2)
+    effective_price.to_f.round(2)
   end
 
   def in_stock?
@@ -71,7 +72,7 @@ class ProductVariant < ApplicationRecord
     if pct && pct > 0 && selling_price.present?
       base = effective_price
       self.gst_amount = (base * pct / 100.0).round(2)
-      self.final_price_with_gst = (base + gst_amount).round(2)
+      self.final_price_with_gst = base.to_f.round(2)
     else
       self.gst_amount = 0
       self.final_price_with_gst = effective_price
