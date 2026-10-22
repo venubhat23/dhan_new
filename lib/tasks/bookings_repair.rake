@@ -47,7 +47,9 @@ namespace :bookings do
   # price (e.g. ₹450 stored as ₹472.50). The invoice edit form used to prefill
   # the inclusive price as the pre-GST unit_price; on save that synced back to
   # booking_items as price * (1 + rate). A line is fixed only when its price is
-  # exactly a known product/variant price grossed up by the product's GST rate.
+  # exactly a known price (product/variant current, discount, previous or B2B
+  # price, or a price charged on another booking) grossed up by the GST rate.
+  # Lines/totals that look off but can't be matched are listed for review only.
   # Saving the booking re-syncs its generated invoice's items.
   # Also resets product_variants.final_price_with_gst, which used to add GST on top.
   #
@@ -68,17 +70,35 @@ namespace :bookings do
       variant.update_columns(final_price_with_gst: variant.effective_price) if apply
     end
 
+    # Known GST-inclusive prices per product: current/discount/previous/B2B prices
+    # on the product and its variants, plus prices charged on any booking line.
+    # A value that is itself another known price grossed up by GST is the bug, not
+    # a real price, so it is dropped from the set.
+    peer_prices = BookingItem.distinct.pluck(:product_id, :price).group_by(&:first)
+                             .transform_values { |rows| rows.map { |_, pr| pr.to_f } }
+    known_prices = Hash.new do |hash, product|
+      rate = product.gst_percentage.to_f
+      raw = [product.price, product.selling_price, product.try(:discount_price), product.try(:today_price),
+             product.try(:yesterday_price), product.try(:b2b_price),
+             *product.product_variants.flat_map { |v| [v.selling_price, v.effective_price, v.try(:b2b_price)] },
+             *peer_prices.fetch(product.id, [])]
+              .compact.map(&:to_f).select(&:positive?).map { |v| v.round(2) }.uniq
+      hash[product] = raw.reject { |v| raw.any? { |c| c != v && (v - (c * (1 + rate / 100)).round(2)).abs < 0.01 } }
+    end
+    gst_product = ->(product) { product&.gst_enabled? && product.gst_percentage.to_f > 0 }
+    review = []
+
     Booking.includes(booking_items: { product: :product_variants }).find_each do |booking|
       bad_items = booking.booking_items.filter_map do |item|
         product = item.product
-        next unless product&.gst_enabled? && product.gst_percentage.to_f > 0
+        next unless gst_product.(product)
 
         rate = product.gst_percentage.to_f
-        candidates = [product.price, product.selling_price, *product.product_variants.map(&:effective_price)]
-                       .compact.map(&:to_f).uniq
-        next if candidates.any? { |c| (item.price.to_f - c).abs < 0.01 }
+        known = known_prices[product]
+        next if known.any? { |c| (item.price.to_f - c).abs < 0.01 }
 
-        correct = candidates.find { |c| (item.price.to_f - (c * (1 + rate / 100)).round(2)).abs < 0.01 }
+        correct = known.find { |c| (item.price.to_f - (c * (1 + rate / 100)).round(2)).abs < 0.01 }
+        review << "#{booking.booking_number} (##{booking.id}): #{product.name} ₹#{item.price} matches no known price" unless correct
         [item, correct] if correct
       end
       next if bad_items.empty?
@@ -90,7 +110,8 @@ namespace :bookings do
       next unless apply
 
       Booking.transaction do
-        bad_items.each { |item, correct| item.update!(price: correct) }
+        # Price-only change: stock was allocated when the line was created.
+        bad_items.each { |item, correct| item.price = correct; item.save!(validate: false) }
         booking.booking_items.reset
         booking.save!
       end
@@ -98,16 +119,15 @@ namespace :bookings do
     end
 
     # Invoices with no linked booking (or whose lines weren't caught above): a
-    # line whose base unit_price is exactly a current GST-inclusive price.
+    # line whose base unit_price is exactly a known GST-inclusive price.
     invoice_items_fixed = 0
     Invoice.includes(invoice_items: { product: :product_variants }).find_each do |invoice|
       bad_items = invoice.invoice_items.filter_map do |item|
         product = item.product
-        next unless product&.gst_enabled? && product.gst_percentage.to_f > 0
+        next unless gst_product.(product)
 
         rate = product.gst_percentage.to_f
-        inclusive = [product.price, product.selling_price, *product.product_variants.map(&:effective_price)]
-                      .compact.map(&:to_f).uniq
+        inclusive = known_prices[product]
         next if inclusive.any? { |c| (item.unit_price.to_f - c / (1 + rate / 100)).abs < 0.01 }
 
         match = inclusive.find { |c| (item.unit_price.to_f - c).abs < 0.01 }
@@ -131,6 +151,20 @@ namespace :bookings do
         invoice.save!
       end
       puts "  total now ₹#{invoice.total_amount}"
+    end
+
+    # Report-only: booking and its generated invoice disagree on the total.
+    Booking.where(invoice_generated: true).where.not(invoice_number: [nil, ""]).find_each do |booking|
+      invoice = Invoice.find_by(invoice_number: booking.invoice_number)
+      next unless invoice
+      next if (invoice.total_amount.to_f - booking.total_amount.to_f).abs < 1
+
+      review << "#{booking.booking_number} (##{booking.id}): booking total ₹#{booking.total_amount} vs #{invoice.invoice_number} ₹#{invoice.total_amount}"
+    end
+
+    if review.any?
+      puts "\nReview manually (not changed):"
+      review.each { |line| puts "  #{line}" }
     end
 
     FastCache.bust_dashboard! if apply && (items_fixed + invoice_items_fixed) > 0
