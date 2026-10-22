@@ -697,6 +697,12 @@
       <%= link_to (local_assigns[:mobile_ui] ? admin_mobile_ui_bookings_path : admin_invoices_path), class: "back-button" do %>
         ← Back to <%= local_assigns[:mobile_ui] ? 'Bookings' : 'Invoices' %>
       <% end %>
+      <% if wa_booking %>
+        <%= link_to admin_booking_path(wa_booking), class: "back-button", style: "background-color:#0d6efd;",
+                    title: "Open booking #{wa_booking.booking_number}" do %>
+          &#128203; View Booking
+        <% end %>
+      <% end %>
       <% if wa_phone.length >= 10 %>
         <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
            target="_blank" class="whatsapp-thanks-button"
