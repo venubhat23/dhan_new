@@ -125,8 +125,9 @@ class StoreAdmin::InvoicesController < StoreAdmin::ApplicationController
       format.pdf do
         pdf = WickedPdf.new.pdf_from_string(
           render_to_string(template: 'admin/invoices/show', formats: [:html], layout: false),
-          page_size: 'A4', margin: { top: '0.5in', bottom: '0.5in', left: '0.5in', right: '0.5in' },
-          dpi: 300, encoding: 'UTF-8', disable_smart_shrinking: true, print_media_type: true, orientation: 'Portrait'
+          page_size: 'A4', margin: { top: '0.25in', bottom: '0.25in', left: '0.25in', right: '0.25in' },
+          dpi: 300, encoding: 'UTF-8', disable_smart_shrinking: true, print_media_type: true, orientation: 'Portrait',
+          zoom: 1.2 # fill the A4 page instead of a small block at the top
         )
         send_data pdf, filename: "invoice-#{@invoice.invoice_number}.pdf", type: 'application/pdf', disposition: 'attachment'
       end
