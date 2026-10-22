@@ -58,6 +58,9 @@ class BookingItem < ApplicationRecord
 
   def check_stock_availability
     return unless quantity.present? && product.present?
+    # Stock for an existing line was already allocated on create; a save that
+    # doesn't change quantity (e.g. a price fix) must not re-check it.
+    return if persisted? && !quantity_changed?
 
     available_stock = stock_batches_scope.sum(:quantity_remaining)
 
