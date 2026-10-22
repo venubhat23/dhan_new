@@ -50,7 +50,7 @@ class VendorPurchase < ApplicationRecord
           variant_id: nil,
           name: product.name,
           unit_type: product.unit_type || 'units',
-          default_selling_price: product.default_selling_price.to_f,
+          default_selling_price: (product.default_selling_price.to_f.positive? ? product.default_selling_price : product.price).to_f,
           default_purchase_price: product.try(:buying_price).to_f
         }]
       end

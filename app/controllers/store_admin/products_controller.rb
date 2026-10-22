@@ -35,6 +35,13 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
     @variant_store_stock = @current_store.store_inventories.where.not(product_variant_id: nil)
                                          .group(:product_variant_id).sum(:quantity)
     @total_products = store_products.count
+
+    if request.format.csv?
+      csv = Product.export_csv(scope.order(:name).to_a, stock_for: ->(product, variant) {
+        variant ? (@variant_store_stock[variant.id] || variant.available_stock) : @store_stock[product.id]
+      })
+      send_data csv, filename: "#{@current_store.name.parameterize}_products_#{Date.current}.csv", type: 'text/csv'
+    end
   end
 
   def show

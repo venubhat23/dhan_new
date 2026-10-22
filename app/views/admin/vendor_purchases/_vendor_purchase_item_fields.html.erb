@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (purchasePrice > 0 && sellingPrice > 0) {
       const profitPerUnit = sellingPrice - purchasePrice;
-      const profitMargin = ((profitPerUnit / purchasePrice) * 100).toFixed(1);
+      const profitMargin = ((profitPerUnit / sellingPrice) * 100).toFixed(1); // margin on selling price, like the profit reports
 
       if (profitMarginSpan) {
         profitMarginSpan.textContent = `${profitMargin}%`;

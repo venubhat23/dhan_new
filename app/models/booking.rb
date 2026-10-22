@@ -68,6 +68,7 @@ class Booking < ApplicationRecord
   validates :total_amount, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
   before_validation :generate_booking_number, on: :create
+  before_validation :link_or_create_customer, on: :create
   before_create     :generate_share_token
   before_validation :calculate_totals
   before_validation :calculate_final_amount_after_discount
@@ -317,10 +318,11 @@ class Booking < ApplicationRecord
 
         # Check if product has GST enabled
         if item.product && item.product.gst_enabled && item.product.gst_percentage.to_f > 0
-          # Price is inclusive of GST: tax = price * rate/100, base = price - tax
+          # Price is inclusive of GST: tax is extracted (rate/(100+rate)), base = price - tax.
+          # Matches the invoice, whose base unit_price is price / (1 + rate).
           gst_rate = item.product.gst_percentage.to_f
           total_price = price * quantity
-          item_gst = (total_price * gst_rate / 100).round(2)
+          item_gst = (total_price * gst_rate / (100 + gst_rate)).round(2)
           item_base = total_price - item_gst
 
           items_total += item_base
@@ -656,6 +658,16 @@ class Booking < ApplicationRecord
       # BookingInvoice creation disabled - invoices will be generated via consolidated system
       # create_booking_invoice_record
     end
+  end
+
+  # A booking typed in with just a name/phone (no customer picked) still gets
+  # a Customer record, so new customers appear in the customers list.
+  def link_or_create_customer
+    return if customer_id.present? || customer.present? || customer_phone.blank?
+
+    self.customer = Customer.find_or_create_from_booking_contact(
+      name: customer_name, phone: customer_phone, email: customer_email
+    )
   end
 
   private

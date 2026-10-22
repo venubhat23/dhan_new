@@ -361,7 +361,7 @@
       <div id="checkoutItems"><p style="color:#aaa;text-align:center;font-size:0.88rem;">No items added</p></div>
       <div id="checkoutTotals" style="display:none;margin-top:12px;">
         <div class="total-row"><span>Subtotal</span><span>₹<span id="coSubtotal">0</span></span></div>
-        <div class="total-row"><span>Tax</span><span>₹<span id="coTax">0</span></span></div>
+        <div class="total-row"><span>Tax (incl.)</span><span>₹<span id="coTax">0</span></span></div>
         <div class="total-row" style="align-items:center;">
           <span>Discount</span>
           <span style="display:flex;align-items:center;gap:6px;">
@@ -458,6 +458,9 @@ const allCustomers = <%= raw @customers.map { |c|
     email: c.email.to_s
   }
 }.to_json %>;
+
+// GST % per product (prices are GST-inclusive; tax is shown extracted, same as Booking#calculate_totals)
+const gstRates = <%= raw @products.each_with_object({}) { |p, h| h[p.id] = p.gst_percentage.to_f if p.gst_enabled && p.gst_percentage.to_f > 0 }.to_json %>;
 
 // ── Cart state ──────────────────────────────────────────────────────────
 let cart = {}; // key => { productId, variantId, name, price, qty, stock }
@@ -648,8 +651,9 @@ function setDiscountType(type) {
 function updateTotals() {
   const items = Object.values(cart);
   const sub   = items.reduce((s,i)=>s+(i.price*i.qty),0);
-  const tax   = 0; // GST handled server-side via model
-  const maxDiscount = sub + tax;
+  // Included in sub (prices are GST-inclusive) — display only, not added to the total
+  const tax   = items.reduce((s,i)=>{ const r = gstRates[i.productId] || 0; return s + i.price*i.qty*r/(100+r); },0);
+  const maxDiscount = sub;
 
   let discInputVal = parseFloat(document.getElementById('discountInput')?.value) || 0;
   if (discInputVal < 0) discInputVal = 0;
@@ -680,7 +684,7 @@ function updateTotals() {
   let deliveryCharge = parseFloat(document.getElementById('deliveryChargeInput')?.value) || 0;
   if (deliveryCharge < 0 || isNaN(deliveryCharge)) deliveryCharge = 0;
 
-  const total = Math.max(0, sub + tax - disc + deliveryCharge);
+  const total = Math.max(0, sub - disc + deliveryCharge);
   document.getElementById('coSubtotal').textContent = sub.toFixed(2);
   document.getElementById('coTax').textContent = tax.toFixed(2);
   document.getElementById('coTotal').textContent  = total.toFixed(2);

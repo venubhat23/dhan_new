@@ -443,6 +443,39 @@ class Product < ApplicationRecord
   # queries and stashes the results on each instance; total_batch_stock,
   # average_rating and total_reviews return them instead of querying. Values are
   # identical to the per-product queries they replace.
+  EXPORT_HEADERS = ['Product ID', 'Product Name', 'Variant', 'SKU', 'Barcode', 'Category', 'Unit',
+                    'Selling Price (incl. GST)', 'Buying Price', 'B2B Price', 'GST %', 'HSN Code',
+                    'Available Stock', 'Low Stock Threshold', 'Status'].freeze
+
+  # Whole product list as CSV: one row per product, plus one row per variant for
+  # multi-quantity products. stock_for.(product, variant_or_nil) supplies the
+  # stock figure so admin (central stock) and store admin (store stock) share this.
+  def self.export_csv(products, stock_for:)
+    require 'csv'
+    CSV.generate(headers: true) do |csv|
+      csv << EXPORT_HEADERS
+      products.each do |product|
+        gst = product.gst_enabled ? product.gst_percentage.to_f : 0
+        base = [product.id, product.name]
+        common = [product.category&.name, product.unit_type]
+        status = product.status ? 'Active' : 'Inactive'
+        variants = product.has_multiple_quantities? ? product.sorted_variants : []
+
+        if variants.any?
+          variants.each do |v|
+            csv << base + [v.label, v.try(:sku).presence || product.sku, product.barcode] + common +
+                   [v.effective_price.to_f, v.buying_price.to_f, v.b2b_price.to_f, gst, product.hsn_code,
+                    stock_for.(product, v).to_f, v.low_stock_threshold, status]
+          end
+        else
+          csv << base + ['', product.sku, product.barcode] + common +
+                 [product.price.to_f, product.buying_price.to_f, product.b2b_price.to_f, gst, product.hsn_code,
+                  stock_for.(product, nil).to_f, product.low_stock_threshold, status]
+        end
+      end
+    end
+  end
+
   def self.preload_list_aggregates(products)
     products = products.to_a
     ids = products.map(&:id).compact

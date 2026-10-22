@@ -226,4 +226,30 @@ namespace :bookings do
     FastCache.bust_dashboard! if apply && synced > 0
     puts "#{apply ? 'Synced' : 'Would sync'} #{synced - failed} booking(s)#{", #{failed} failed" if failed > 0}.#{' Re-run with APPLY=1 to write.' unless apply}"
   end
+
+  # Bookings entered with a typed name/phone (no customer picked) never created
+  # a Customer, so those customers were missing from the customers list. New
+  # bookings now do this in Booking#link_or_create_customer; this backfills.
+  #   bin/rails bookings:link_missing_customers
+  #   APPLY=1 bin/rails bookings:link_missing_customers
+  desc "Create/link Customer records for bookings that have only a typed customer name/phone"
+  task link_missing_customers: :environment do
+    apply = ENV["APPLY"] == "1"
+    linked = 0
+
+    Booking.where(customer_id: nil).where.not(customer_phone: [nil, ""]).find_each do |booking|
+      puts "##{booking.id} #{booking.booking_number}: #{booking.customer_name} #{booking.customer_phone}"
+      next unless apply
+
+      customer = Customer.find_or_create_from_booking_contact(
+        name: booking.customer_name, phone: booking.customer_phone, email: booking.customer_email
+      )
+      next puts("  could not create customer") unless customer
+
+      booking.update_column(:customer_id, customer.id)
+      linked += 1
+    end
+
+    puts apply ? "Linked #{linked} booking(s)." : "Re-run with APPLY=1 to write."
+  end
 end

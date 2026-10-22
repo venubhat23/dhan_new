@@ -163,6 +163,29 @@ has_many :pending_amounts, dependent: :destroy
   end
 
 
+  # Customer for a booking entered with only a typed name/phone: reuse the
+  # customer with that mobile, otherwise create one so they show up in the
+  # customers list. Same default password scheme as the mobile-UI quick add
+  # ("<first 4 digits>@123"). Returns nil if no valid customer can be made.
+  def self.find_or_create_from_booking_contact(name:, phone:, email: nil)
+    mobile = new.send(:normalize_indian_mobile, phone.to_s.strip)
+    return nil if mobile.blank?
+
+    existing = find_by(mobile: mobile)
+    return existing if existing
+
+    email = email.to_s.strip.downcase.presence
+    email = nil if email && (!email.match?(URI::MailTo::EMAIL_REGEXP) || exists?(email: email))
+
+    password = "#{mobile.gsub(/\D/, '')[0..3]}@123"
+    customer = new(full_name: name.to_s.strip.presence || mobile, mobile: mobile, email: email,
+                   password: password, password_confirmation: password)
+    return customer if customer.save
+
+    Rails.logger.warn "Could not auto-create customer for booking contact #{mobile}: #{customer.errors.full_messages.join(', ')}"
+    nil
+  end
+
   def self.generate_random_password(length = 10)
     charset = Array('A'..'Z') + Array('a'..'z') + Array('0'..'9') + ['@', '#', '$', '%', '&']
     password = Array.new(length) { charset.sample }.join

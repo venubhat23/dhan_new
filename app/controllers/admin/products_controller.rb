@@ -38,6 +38,12 @@ class Admin::ProductsController < Admin::ApplicationController
       end
     end
 
+    if request.format.csv?
+      products = @products.recent.to_a
+      csv = Product.export_csv(products, stock_for: ->(product, variant) { variant ? variant.available_stock : product.current_stock })
+      return send_data csv, filename: "products_#{Date.current}.csv", type: 'text/csv'
+    end
+
     @products = @products.recent.page(params[:page]).per(20)
     @categories = Category.active.ordered
   end

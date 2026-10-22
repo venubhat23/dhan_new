@@ -23,9 +23,10 @@ class VendorPurchaseItem < ApplicationRecord
     product_variant_id.present? ? "#{product_id}-v#{product_variant_id}" : product_id.to_s
   end
 
+  # Margin on selling price (profit / selling × 100), same basis as ProfitCalculationService.
   def profit_margin
-    return 0 if purchase_price.zero?
-    ((selling_price - purchase_price) / purchase_price * 100).round(2)
+    return 0 if selling_price.to_f.zero?
+    ((selling_price - purchase_price) / selling_price * 100).round(2)
   end
 
   def total_profit_potential

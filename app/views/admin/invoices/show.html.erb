@@ -698,6 +698,9 @@
       <%= link_to (local_assigns[:mobile_ui] ? admin_mobile_ui_bookings_path : admin_invoices_path), class: "back-button" do %>
         ← Back to <%= local_assigns[:mobile_ui] ? 'Bookings' : 'Invoices' %>
       <% end %>
+      <%# Public token URL so it also works from the mobile UI (no Devise session there) %>
+      <a href="<%= public_invoice_by_token_url(token: @invoice.share_token, format: :pdf) %>"
+         class="back-button" style="background-color:#dc3545;" data-turbo="false">&#128196; Download PDF</a>
       <% if wa_booking %>
         <%= link_to admin_booking_path(wa_booking), class: "back-button", style: "background-color:#0d6efd;",
                     title: "Open booking #{wa_booking.booking_number}" do %>

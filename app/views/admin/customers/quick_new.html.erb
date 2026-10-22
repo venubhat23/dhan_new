@@ -140,6 +140,22 @@
             </div>
           </div>
 
+          <div class="mb-4">
+            <label class="form-label fw-semibold">
+              Notes <span class="text-muted fw-normal">(Optional)</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0 align-self-start">
+                <i class="bi bi-pencil-square text-muted"></i>
+              </span>
+              <%= form.text_area "customer[notes]",
+                  class: "form-control border-start-0",
+                  placeholder: "Any additional notes or special requirements",
+                  rows: 3,
+                  value: @customer.notes %>
+            </div>
+          </div>
+
           <div class="alert alert-info border-0 mb-4">
             <div class="d-flex align-items-start">
               <i class="bi bi-info-circle me-2 mt-1"></i>

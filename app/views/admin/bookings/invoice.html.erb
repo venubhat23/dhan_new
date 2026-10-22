@@ -621,7 +621,7 @@
           end
 
           # Calculate total tax first to maintain consistency with item display
-          total_item_tax = (base_amount * total_gst_rate / 100)
+          total_item_tax = (base_amount * total_gst_rate / (100 + total_gst_rate)) # extracted: price is GST-inclusive
 
           # Split the total tax proportionally to avoid rounding differences
           if total_gst_rate > 0
@@ -791,7 +791,7 @@
                       # If individual rates not set, use main GST percentage
                       total_gst_rate = item.product.gst_percentage || 0
                     end
-                    tax_amount = (base_amount * total_gst_rate) / 100
+                    tax_amount = (base_amount * total_gst_rate) / (100 + total_gst_rate)
                   else
                     total_gst_rate = 0
                     tax_amount = 0
@@ -900,7 +900,7 @@
 
                 (@booking.booking_items || []).each do |item|
                   if item.product&.gst_enabled
-                    base_amount = item.quantity * (item.price || 0)
+                    base_amount = item.quantity * item.discounted_unit_price
 
                     # Handle CGST/SGST calculation
                     if item.product.cgst_percentage.present? && item.product.sgst_percentage.present?
@@ -917,12 +917,12 @@
                     end
 
                     if cgst_rate > 0
-                      cgst_amount = (base_amount * cgst_rate / 100).round(2)
+                      cgst_amount = (base_amount * cgst_rate / (100 + cgst_rate + sgst_rate)).round(2)
                       cgst_groups[cgst_rate] = (cgst_groups[cgst_rate] || 0) + cgst_amount
                     end
 
                     if sgst_rate > 0
-                      sgst_amount = (base_amount * sgst_rate / 100).round(2)
+                      sgst_amount = (base_amount * sgst_rate / (100 + cgst_rate + sgst_rate)).round(2)
                       sgst_groups[sgst_rate] = (sgst_groups[sgst_rate] || 0) + sgst_amount
                     end
                   end

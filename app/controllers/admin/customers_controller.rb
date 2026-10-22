@@ -850,6 +850,7 @@ class Admin::CustomersController < Admin::ApplicationController
     @customer.full_name = params[:customer][:full_name].to_s.strip
     @customer.mobile = params[:customer][:mobile].to_s.strip
     @customer.email = params[:customer][:email].to_s.strip.presence
+    @customer.notes = params[:customer][:notes].to_s.strip.presence
 
     # Generate password: first 4 digits of mobile + @123
     mobile_digits = @customer.mobile.gsub(/\D/, '')

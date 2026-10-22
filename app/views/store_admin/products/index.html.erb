@@ -19,6 +19,9 @@
     <small class="text-muted">Products stocked or sold at <%= @current_store.name %></small>
   </div>
   <div>
+    <%= link_to store_admin_products_path(request.query_parameters.except('page').merge(format: :csv)), class: "btn btn-outline-success me-2", data: { turbo: false } do %>
+      <i class="bi bi-download me-1"></i>Export Products
+    <% end %>
     <%= link_to new_store_admin_product_path, class: "btn btn-primary" do %>
       <i class="bi bi-plus-lg me-1"></i>Add New Product
     <% end %>

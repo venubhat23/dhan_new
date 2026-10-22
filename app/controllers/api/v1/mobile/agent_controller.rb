@@ -135,7 +135,7 @@ class Api::V1::Mobile::AgentController < Api::V1::Mobile::BaseController
     customer_params = params.permit(
       :customer_type, :full_name, :company_name, :email,
       :mobile, :gender, :birth_date, :address, :city, :state, :pincode,
-      :pan_no, :gst_no, :occupation, :annual_income, :marital_status,
+      :pan_no, :gst_no, :occupation, :annual_income, :marital_status, :notes,
       :image_url, :password, :password_confirmation, :file1, :file2,
       documents: [:document_type, :document_file]
     )
@@ -144,7 +144,6 @@ class Api::V1::Mobile::AgentController < Api::V1::Mobile::BaseController
     validation_errors = []
     validation_errors << 'Full name is required' if customer_params[:full_name].blank?
     validation_errors << 'Mobile number is required' if customer_params[:mobile].blank?
-    validation_errors << 'Email is required' if customer_params[:email].blank?
 
     # Auto-generate password if not provided
     auto_generated_password = false
@@ -2365,7 +2364,8 @@ class Api::V1::Mobile::AgentController < Api::V1::Mobile::BaseController
       user = User.new(
         first_name: customer.full_name.to_s.split(' ').first.presence || 'Customer',
         last_name: customer.full_name.to_s.split(' ')[1..-1]&.join(' ').presence || 'User',
-        email: customer.email,
+        # Email is optional; customers without one log in by mobile (see Customer#placeholder_email)
+        email: customer.email.presence || customer.placeholder_email,
         password: password,
         password_confirmation: password,
         mobile: customer.mobile,
@@ -2381,8 +2381,9 @@ class Api::V1::Mobile::AgentController < Api::V1::Mobile::BaseController
         {
           created: true,
           user_id: user.id,
-          email: user.email,
-          message: 'User account created successfully. Customer can now login with email and password.'
+          email: customer.real_email? ? user.email : nil,
+          login_identifier: customer.login_identifier,
+          message: "User account created successfully. Customer can now login with #{customer.real_email? ? 'email' : 'mobile number'} and password."
         }
       else
         Rails.logger.error "Failed to create user account for customer #{customer.id}: #{user.errors.full_messages}"

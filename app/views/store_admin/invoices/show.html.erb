@@ -676,6 +676,9 @@
       <%= link_to (local_assigns[:mobile_ui] ? store_admin_bookings_path : store_admin_invoices_path), class: "back-button" do %>
         ← Back to <%= local_assigns[:mobile_ui] ? 'Bookings' : 'Invoices' %>
       <% end %>
+      <%# Public token URL so it also works from the mobile UI (no Devise session there) %>
+      <a href="<%= public_invoice_by_token_url(token: @invoice.share_token, format: :pdf) %>"
+         class="back-button" style="background-color:#dc3545;" data-turbo="false">&#128196; Download PDF</a>
       <% if wa_phone.length >= 10 %>
         <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
            target="_blank" class="whatsapp-thanks-button"

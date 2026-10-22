@@ -363,12 +363,12 @@
 
                       <div class="col-md-1">
                         <label class="form-label small">Qty</label>
-                        <%= item_form.number_field :quantity, class: 'form-control', min: 0.1, step: 0.1, onchange: 'calculateItemTotal(this)', data: { index: index } %>
+                        <%= item_form.number_field :quantity, class: 'form-control', min: 0.1, step: 0.1, onchange: 'calculateItemTotal(this)', oninput: 'calculateItemTotal(this)', data: { index: index } %>
                       </div>
 
                       <div class="col-md-2">
                         <label class="form-label small">Unit Price</label>
-                        <%= item_form.number_field :price, class: 'form-control', step: '0.01', onchange: 'calculateItemTotal(this)', data: { index: index } %>
+                        <%= item_form.number_field :price, class: 'form-control', step: '0.01', onchange: 'calculateItemTotal(this)', oninput: 'calculateItemTotal(this)', data: { index: index } %>
                       </div>
 
                       <div class="col-md-3">
@@ -376,9 +376,9 @@
                         <div class="input-group">
                           <%= item_form.select :discount_type,
                                 options_for_select([['None', ''], ['%', 'percentage'], ['₹', 'fixed']], item.discount_type),
-                                {}, class: 'form-select flex-grow-0 w-auto', onchange: 'calculateItemTotal(this)' %>
+                                {}, class: 'form-select flex-grow-0 w-auto', onchange: 'calculateItemTotal(this)', oninput: 'calculateItemTotal(this)' %>
                           <%= item_form.number_field :discount_value, class: 'form-control', min: 0, step: '0.01',
-                                value: item.discount_value, placeholder: '0', onchange: 'calculateItemTotal(this)' %>
+                                value: item.discount_value, placeholder: '0', onchange: 'calculateItemTotal(this)', oninput: 'calculateItemTotal(this)' %>
                         </div>
                       </div>
 
@@ -438,12 +438,12 @@
 
                 <div class="col-md-1">
                   <label class="form-label small">Qty</label>
-                  <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][quantity]" min="0.1" step="0.1" value="1" onchange="calculateItemTotal(this)">
+                  <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][quantity]" min="0.1" step="0.1" value="1" onchange="calculateItemTotal(this)" oninput="calculateItemTotal(this)">
                 </div>
 
                 <div class="col-md-2">
                   <label class="form-label small">Unit Price</label>
-                  <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][price]" step="0.01" onchange="calculateItemTotal(this)">
+                  <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][price]" step="0.01" onchange="calculateItemTotal(this)" oninput="calculateItemTotal(this)">
                 </div>
 
                 <div class="col-md-3">
@@ -454,7 +454,7 @@
                       <option value="percentage">%</option>
                       <option value="fixed">₹</option>
                     </select>
-                    <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][discount_value]" min="0" step="0.01" placeholder="0" onchange="calculateItemTotal(this)">
+                    <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][discount_value]" min="0" step="0.01" placeholder="0" onchange="calculateItemTotal(this)" oninput="calculateItemTotal(this)">
                   </div>
                 </div>
 
@@ -480,8 +480,8 @@
 
 <!-- JavaScript -->
 <script>
-let itemIndex = <%= @booking.booking_items.count %>;
-let discountType = 'amount'; // 'amount' or 'percent'
+var itemIndex = <%= @booking.booking_items.count %>;
+var discountType = 'amount'; // 'amount' or 'percent'
 
 // Toggle discount entry between a flat rupee amount and a percentage
 function setDiscountType(type) {
@@ -668,7 +668,8 @@ function fillCustomerDetails(select) {
 }
 
 // Initialize page
-document.addEventListener('DOMContentLoaded', function() {
+// Runs on full loads and Turbo visits (script sits after the form)
+(function() {
   // Calculate initial totals
   calculateTotals();
 
@@ -682,7 +683,7 @@ document.addEventListener('DOMContentLoaded', function() {
       calculateItemTotal(this);
     });
   });
-});
+})();
 </script>
 
 <style>

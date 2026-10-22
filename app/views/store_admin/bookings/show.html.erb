@@ -396,7 +396,7 @@
       </div>
       <div class="card-body">
         <%
-          # Calculate GST correctly with smart rounding - item.price is inclusive of GST
+          # Calculate GST - item.price is inclusive of GST, so tax is extracted from it
           total_tax_rate = 0
           total_base_amount = 0
           total_tax_amount = 0
@@ -405,18 +405,17 @@
             total_item_discount += item.line_discount_amount
             if item.product&.gst_enabled && item.product.gst_percentage.to_f > 0
               gst_rate = item.product.gst_percentage.to_f
-              # Apply smart rounding logic like in the shopping cart; per-product
-              # discount is baked into the unit price first.
+              # Per-product discount is baked into the unit price first.
               final_price_per_unit = item.discounted_unit_price
               quantity = item.quantity
 
-              # Smart rounding: round final price, then calculate base price from rounded value
-              rounded_final_per_unit = final_price_per_unit.round
-              rounded_base_per_unit = (rounded_final_per_unit / (1 + (gst_rate / 100.0))).round
-              rounded_tax_per_unit = rounded_final_per_unit - rounded_base_per_unit
+              # Extract the GST embedded in the inclusive line total, exactly as the
+              # invoice does (its base unit_price = inclusive / (1 + rate)).
+              line_total = final_price_per_unit * quantity
+              line_tax = (line_total * gst_rate / (100 + gst_rate)).round(2)
 
-              total_base_amount += rounded_base_per_unit * quantity
-              total_tax_amount += rounded_tax_per_unit * quantity
+              total_base_amount += line_total - line_tax
+              total_tax_amount += line_tax
               total_tax_rate += gst_rate
             else
               # No GST for this item
