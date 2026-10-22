@@ -171,3 +171,59 @@ namespace :bookings do
     puts "#{apply ? 'Fixed' : 'Would fix'} #{items_fixed} booking item(s), #{invoice_items_fixed} invoice item(s), #{variants_fixed} variant(s).#{' Re-run with APPLY=1 to write.' unless apply}"
   end
 end
+
+namespace :bookings do
+  # Bookings whose generated invoice was edited (prices changed) before the
+  # booking<->invoice line sync existed, so the two disagree. The invoice is what
+  # the customer received, so its lines are copied onto the booking via
+  # Booking#rebuild_items_from_invoice! (updates lines in place, no stock churn).
+  # Differences under ₹5 are bulk-discount rounding and are skipped.
+  #
+  # Dry run by default; pass APPLY=1 to write. IDS=44,50 limits to those bookings.
+  #   bin/rails bookings:sync_from_invoice
+  #   APPLY=1 bin/rails bookings:sync_from_invoice
+  desc "Make bookings match their edited invoices (invoice prices win)"
+  task sync_from_invoice: :environment do
+    apply = ENV["APPLY"] == "1"
+    ids = ENV["IDS"].to_s.split(",").map(&:strip).reject(&:empty?)
+    synced = 0
+    failed = 0
+
+    scope = Booking.where(invoice_generated: true).where.not(invoice_number: [nil, ""])
+    scope = scope.where(id: ids) if ids.any?
+    scope.includes(booking_items: :product).find_each do |booking|
+      invoice = Invoice.find_by(invoice_number: booking.invoice_number)
+      next unless invoice
+      next if (invoice.total_amount.to_f - booking.total_amount.to_f).abs < 5
+      next if booking.items_match_invoice?(invoice)
+
+      synced += 1
+      puts "#{booking.booking_number} (##{booking.id}) vs #{invoice.invoice_number}: booking ₹#{booking.total_amount} -> invoice ₹#{invoice.total_amount}"
+      by_product = booking.booking_items.index_by(&:product_id)
+      invoice.invoice_items.includes(:product).each do |ii|
+        next unless ii.product
+        new_price = booking.final_price_for(ii.product, booking.invoice_item_list_price(ii)).round(2)
+        old = by_product.delete(ii.product_id)
+        if old.nil?
+          puts "  + #{ii.product.name}: qty #{ii.quantity.to_f} @ ₹#{new_price} (new line)"
+        elsif old.quantity.to_f.round(3) != ii.quantity.to_f.round(3) || (old.price.to_f - new_price).abs >= 0.01
+          puts "  ~ #{ii.product.name}: qty #{old.quantity.to_f} -> #{ii.quantity.to_f}, price ₹#{old.price.to_f} -> ₹#{new_price}"
+        end
+      end
+      by_product.each_value { |bi| puts "  - #{bi.product&.name}: removed (not on invoice)" }
+      next unless apply
+
+      booking.rebuild_items_from_invoice!(invoice)
+      booking.reload
+      if booking.items_match_invoice?(invoice)
+        puts "  synced, booking total now ₹#{booking.total_amount}"
+      else
+        failed += 1
+        puts "  FAILED to sync (see log/production.log)"
+      end
+    end
+
+    FastCache.bust_dashboard! if apply && synced > 0
+    puts "#{apply ? 'Synced' : 'Would sync'} #{synced - failed} booking(s)#{", #{failed} failed" if failed > 0}.#{' Re-run with APPLY=1 to write.' unless apply}"
+  end
+end
