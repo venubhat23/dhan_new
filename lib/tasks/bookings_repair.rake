@@ -97,7 +97,43 @@ namespace :bookings do
       puts "  total now ₹#{booking.total_amount}"
     end
 
-    FastCache.bust_dashboard! if apply && items_fixed > 0
-    puts "#{apply ? 'Fixed' : 'Would fix'} #{items_fixed} booking item(s), #{variants_fixed} variant(s).#{' Re-run with APPLY=1 to write.' unless apply}"
+    # Invoices with no linked booking (or whose lines weren't caught above): a
+    # line whose base unit_price is exactly a current GST-inclusive price.
+    invoice_items_fixed = 0
+    Invoice.includes(invoice_items: { product: :product_variants }).find_each do |invoice|
+      bad_items = invoice.invoice_items.filter_map do |item|
+        product = item.product
+        next unless product&.gst_enabled? && product.gst_percentage.to_f > 0
+
+        rate = product.gst_percentage.to_f
+        inclusive = [product.price, product.selling_price, *product.product_variants.map(&:effective_price)]
+                      .compact.map(&:to_f).uniq
+        next if inclusive.any? { |c| (item.unit_price.to_f - c / (1 + rate / 100)).abs < 0.01 }
+
+        match = inclusive.find { |c| (item.unit_price.to_f - c).abs < 0.01 }
+        [item, (match / (1 + rate / 100)).round(2)] if match
+      end
+      next if bad_items.empty?
+
+      bad_items.each do |item, base|
+        invoice_items_fixed += 1
+        puts "#{invoice.invoice_number} (##{invoice.id}): #{item.product.name} unit_price ₹#{item.unit_price} -> ₹#{base}"
+      end
+      next unless apply
+
+      Invoice.transaction do
+        bad_items.each do |item, base|
+          attrs = { unit_price: base }
+          attrs[:original_unit_price] = base if (item.original_unit_price.to_f - item.unit_price.to_f).abs < 0.01
+          item.update!(attrs)
+        end
+        invoice.invoice_items.reset
+        invoice.save!
+      end
+      puts "  total now ₹#{invoice.total_amount}"
+    end
+
+    FastCache.bust_dashboard! if apply && (items_fixed + invoice_items_fixed) > 0
+    puts "#{apply ? 'Fixed' : 'Would fix'} #{items_fixed} booking item(s), #{invoice_items_fixed} invoice item(s), #{variants_fixed} variant(s).#{' Re-run with APPLY=1 to write.' unless apply}"
   end
 end
