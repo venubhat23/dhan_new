@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_22_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -130,6 +130,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
     t.decimal "discount_value", precision: 10, scale: 2
     t.decimal "discount_amount", precision: 10, scale: 2, default: "0.0"
     t.index ["booking_id"], name: "index_booking_items_on_booking_id"
+    t.index ["product_id"], name: "index_booking_items_on_product_id"
     t.index ["product_variant_id"], name: "index_booking_items_on_product_variant_id"
   end
 
@@ -161,7 +162,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
     t.integer "user_id"
     t.string "booking_number"
     t.datetime "booking_date"
-    t.string "status"
+    t.string "status", default: "delivered"
     t.string "payment_method"
     t.string "payment_status"
     t.decimal "subtotal"
@@ -236,6 +237,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
     t.index ["courier_service"], name: "index_bookings_on_courier_service"
     t.index ["created_at"], name: "index_bookings_on_created_at"
     t.index ["customer_email"], name: "index_bookings_on_customer_email_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["customer_id", "created_at"], name: "index_bookings_on_customer_id_and_created_at"
     t.index ["customer_id"], name: "index_bookings_on_customer_id"
     t.index ["customer_name"], name: "index_bookings_on_customer_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["customer_phone"], name: "index_bookings_on_customer_phone_trgm", opclass: :gin_trgm_ops, using: :gin
@@ -249,6 +251,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
     t.index ["share_token"], name: "index_bookings_on_share_token", unique: true
     t.index ["stage_updated_at"], name: "index_bookings_on_stage_updated_at"
     t.index ["stage_updated_by"], name: "index_bookings_on_stage_updated_by"
+    t.index ["status", "created_at"], name: "index_bookings_on_status_and_created_at"
     t.index ["status"], name: "index_bookings_on_status"
     t.index ["store_id", "created_at"], name: "index_bookings_on_store_id_and_created_at"
     t.index ["store_id", "status"], name: "index_bookings_on_store_id_and_status"
@@ -399,7 +402,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
     t.text "shipping_address"
     t.string "full_name"
     t.index "(((to_tsvector('simple'::regconfig, COALESCE((full_name)::text, ''::text)) || to_tsvector('simple'::regconfig, COALESCE((email)::text, ''::text))) || to_tsvector('simple'::regconfig, COALESCE((mobile)::text, ''::text))))", name: "index_customers_on_pg_search_tsvector", using: :gin
+    t.index ["created_at"], name: "index_customers_on_created_at"
     t.index ["email"], name: "index_customers_on_email", unique: true
+    t.index ["full_name"], name: "index_customers_on_full_name"
     t.index ["full_name"], name: "index_customers_on_full_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["latitude", "longitude"], name: "index_customers_on_location"
     t.index ["mobile"], name: "index_customers_on_mobile"
@@ -609,6 +614,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
     t.decimal "weight"
     t.decimal "annual_income"
     t.string "business_job"
+    t.index ["created_at"], name: "index_leads_on_created_at"
+    t.index ["current_stage"], name: "index_leads_on_current_stage"
   end
 
   create_table "milk_delivery_tasks", force: :cascade do |t|
@@ -922,6 +929,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
     t.decimal "b2b_percentage", precision: 5, scale: 2
     t.index ["barcode"], name: "index_products_on_barcode", unique: true
     t.index ["category_id"], name: "index_products_on_category_id"
+    t.index ["created_at"], name: "index_products_on_created_at"
     t.index ["is_occasional_product", "occasional_start_date", "occasional_end_date"], name: "index_products_on_occasional_dates"
     t.index ["is_occasional_product"], name: "index_products_on_is_occasional_product"
     t.index ["is_subscription_enabled"], name: "index_products_on_is_subscription_enabled"
@@ -1176,6 +1184,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
     t.datetime "updated_at", null: false
     t.bigint "store_id"
     t.bigint "product_variant_id"
+    t.index ["product_id", "store_id"], name: "index_stock_batches_active_stock", where: "(((status)::text = 'active'::text) AND (quantity_remaining > (0)::numeric))", include: ["quantity_remaining", "product_variant_id"]
     t.index ["product_id", "store_id"], name: "index_stock_batches_on_product_id_and_store_id"
     t.index ["product_id"], name: "index_stock_batches_on_product_id"
     t.index ["product_variant_id"], name: "index_stock_batches_on_product_variant_id"
@@ -1456,6 +1465,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_000003) do
     t.index ["pan_no"], name: "index_users_on_pan_no", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["role"], name: "index_users_on_role"
+    t.index ["role_id"], name: "index_users_on_role_id"
     t.index ["status"], name: "index_users_on_status"
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
     t.index ["user_type"], name: "index_users_on_user_type"

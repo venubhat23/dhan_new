@@ -97,7 +97,7 @@
         <label class="form-label fw-bold">Select New Stage</label>
         <select name="target_stage" class="form-select form-select-lg" onchange="showStageFields(this.value)" required>
           <option value="">-- Select Stage --</option>
-          <% all_stages = ['draft', 'ordered_and_delivery_pending', 'confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'completed', 'cancelled', 'returned'] %>
+          <% all_stages = Booking::STATUS_LABELS.keys %>
           <% # Remove current stage from available stages %>
           <% available_stages = all_stages.reject { |stage| stage == @booking.status } %>
 

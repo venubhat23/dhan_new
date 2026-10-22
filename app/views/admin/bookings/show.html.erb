@@ -158,7 +158,7 @@
           <% end %>
         <% end %>
 
-        <% if @booking.out_for_delivery? %>
+        <% if @booking.shipped? %>
           <%= link_to mark_delivered_admin_booking_path(@booking, list_state: @list_state), method: :patch,
               class: "btn btn-success btn-sm w-100 mb-2",
               confirm: "Mark this order as delivered?" do %>
@@ -167,14 +167,6 @@
           <% end %>
         <% end %>
 
-        <% if @booking.delivered? %>
-          <%= link_to mark_completed_admin_booking_path(@booking, list_state: @list_state), method: :patch,
-              class: "btn btn-primary btn-sm w-100",
-              confirm: "Mark this order as completed?" do %>
-            <i class="bi bi-check-all me-1"></i>
-            Mark as Completed
-          <% end %>
-        <% end %>
       </div>
     </div>
   </div>

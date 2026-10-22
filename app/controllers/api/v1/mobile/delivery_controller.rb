@@ -379,7 +379,7 @@ module Api
         def map_booking_status(status)
           case status
           when 'ordered_and_delivery_pending' then 'pending'
-          when 'out_for_delivery' then 'in_progress'
+          when 'packed', 'shipped' then 'in_progress'
           when 'delivered' then 'completed'
           else status
           end

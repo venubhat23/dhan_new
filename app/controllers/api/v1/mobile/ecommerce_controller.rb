@@ -397,7 +397,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
     user_type = 'customer'
 
     # Filter by status if provided
-    @bookings = @bookings.where(status: params[:status]) if params[:status].present?
+    @bookings = @bookings.where(status: Booking.status_filter_values(params[:status])) if params[:status].present?
 
     total_count = @bookings.count
     @bookings = @bookings.offset((page - 1) * per_page).limit(per_page)
@@ -1541,6 +1541,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
         booking_id: booking.id,
         booking_number: booking.booking_number,
         status: booking.status,
+        status_label: booking.status_label,
         payment_status: booking.payment_status,
         payment_method: booking.payment_method,
         payment_gateway: booking.payment_gateway,
@@ -1614,6 +1615,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       booking_id: booking.id,
       booking_number: booking.booking_number,
       status: booking.status,
+      status_label: booking.status_label,
       payment_status: booking.payment_status,
       cashfree_order_id: booking.cashfree_order_id,
       cashfree_payment_id: booking.cashfree_payment_id,
@@ -1734,6 +1736,7 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
       booking_number: booking.booking_number,
       booking_date: booking.booking_date,
       status: booking.status,
+      status_label: booking.status_label,
       payment_status: booking.payment_status,
       payment_method: booking.payment_method,
       subtotal: booking.subtotal.to_f,

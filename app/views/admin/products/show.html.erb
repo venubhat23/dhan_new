@@ -684,14 +684,39 @@
 
           <hr>
 
-          <%= link_to admin_product_path(@product),
-              class: "btn btn-outline-danger",
-              data: {
-                turbo_method: :delete,
-                turbo_confirm: "Delete '#{@product.name}'?\n\nThis will permanently delete the product and all its reviews, ratings, stock batches, and delivery rules.\n\nThis action cannot be undone."
-              } do %>
+          <button type="button" class="btn btn-outline-danger"
+                  onclick="confirmDeleteProductWithDependencies(<%= @product.name.to_json %>, '<%= admin_product_path(@product) %>', this)">
             <i class="bi bi-trash me-1"></i> Delete Product
-          <% end %>
+          </button>
+          <%= form_with url: admin_product_path(@product), method: :delete, id: 'deleteProductShowForm', data: { turbo: false } do %><% end %>
+          <script>
+            // Same confirmation as the products list: show everything connected
+            // to this product before it is deleted along with it.
+            function confirmDeleteProductWithDependencies(productName, deleteUrl, btn) {
+              btn.disabled = true;
+              fetch(deleteUrl + '/dependencies', { headers: { 'Accept': 'application/json' } })
+                .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+                .then(function (data) {
+                  var msg = 'Delete "' + productName + '"?\n\n';
+                  var groups = (data && data.groups) || [];
+                  if (groups.length) {
+                    msg += 'The following ' + (data.total || 0) + ' connected record(s) will also be permanently removed:\n\n';
+                    groups.forEach(function (g) { msg += '  • ' + g.label + ': ' + g.count + '\n'; });
+                    msg += '\n';
+                  } else {
+                    msg += 'No other records are connected to this product.\n\n';
+                  }
+                  return msg + 'This cannot be undone. Click OK to remove the product and all associated records.';
+                })
+                .catch(function () {
+                  return 'Delete "' + productName + '"?\n\nThis will permanently remove the product and all associated data. This cannot be undone.';
+                })
+                .then(function (msg) {
+                  btn.disabled = false;
+                  if (confirm(msg)) document.getElementById('deleteProductShowForm').submit();
+                });
+            }
+          </script>
         </div>
       </div>
     </div>

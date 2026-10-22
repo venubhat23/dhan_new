@@ -23,25 +23,20 @@ class Booking < ApplicationRecord
   end
 
 
-  # Enums - Comprehensive status for complete workflow
+  # Delivery stages — the only booking statuses (DB, admin, store admin, mobile
+  # UI, API). Order = display order; Delivered is the default.
   enum :status, {
-    draft: 'draft',                                 # Initial booking creation
-    ordered_and_delivery_pending: 'ordered_and_delivery_pending', # Order placed, waiting for processing
-    confirmed: 'confirmed',                         # Booking confirmed, payment received
-    processing: 'processing',                       # Order being prepared
-    packed: 'packed',                               # Items packed and ready
-    shipped: 'shipped',                             # Shipped out
-    out_for_delivery: 'out_for_delivery',          # Out for delivery
-    delivered: 'delivered',                         # Successfully delivered
-    completed: 'completed',                         # Transaction completed
-    cancelled: 'cancelled',                         # Cancelled
-    returned: 'returned',                           # Returned
-    refund: 'refund',                               # Refund issued
-    reconfirm_order: 'reconfirm_order'              # Needs re-confirmation with the customer
+    ordered_and_delivery_pending: 'ordered_and_delivery_pending',
+    packed: 'packed',
+    shipped: 'shipped',
+    delivered: 'delivered',
+    cancelled: 'cancelled',
+    returned: 'returned',
+    refund: 'refund',
+    reconfirm_order: 'reconfirm_order'
   }
 
-  # The statuses staff can pick, in display order, with their one official name.
-  # Every status dropdown/badge uses these so the naming is the same on all pages.
+  # One official name per stage; every dropdown, badge and message uses these.
   STATUS_LABELS = {
     'ordered_and_delivery_pending' => 'Delivery Pending',
     'packed'          => 'Packed',
@@ -53,14 +48,15 @@ class Booking < ApplicationRecord
     'reconfirm_order' => 'Reconfirm order'
   }.freeze
 
-  # Older statuses still on existing records / used by the API. 'completed' is
-  # treated as delivered everywhere (revenue, dashboards), so it shows as Delivered.
-  LEGACY_STATUS_LABELS = {
-    'completed'        => 'Delivered',
-    'draft'            => 'Draft',
-    'confirmed'        => 'Confirmed',
-    'processing'       => 'Processing',
-    'out_for_delivery' => 'Out for Delivery'
+  # Retired statuses (migrated away in the DB). Anything still sending them —
+  # older mobile app builds, checkout/payment code, stage_history entries — is
+  # mapped onto the current stage instead of failing.
+  LEGACY_STATUS_MAP = {
+    'draft'            => 'ordered_and_delivery_pending',
+    'confirmed'        => 'ordered_and_delivery_pending',
+    'processing'       => 'ordered_and_delivery_pending',
+    'out_for_delivery' => 'shipped',
+    'completed'        => 'delivered'
   }.freeze
 
   DEFAULT_STATUS = 'delivered'.freeze
@@ -68,18 +64,24 @@ class Booking < ApplicationRecord
   # Forward path shown as the progress bar on booking lists.
   PROGRESS_STAGES = %w[ordered_and_delivery_pending packed shipped delivered].freeze
 
-  # Status filter values: filtering by Delivered also matches legacy 'completed'.
+  def self.normalize_status(value)
+    LEGACY_STATUS_MAP.fetch(value.to_s, value)
+  end
+
+  def status=(value)
+    super(self.class.normalize_status(value))
+  end
+
+  # Value for a status filter param (old links may still say e.g. 'completed').
   def self.status_filter_values(status)
-    status.to_s == 'delivered' ? %w[delivered completed] : status.to_s
+    normalize_status(status).to_s
   end
 
   # 0-based position on PROGRESS_STAGES (nil for cancelled/returned/refund).
   def progress_stage_index
-    case status_for_select
-    when 'cancelled', 'returned', 'refund' then nil
-    when 'out_for_delivery' then 2
-    else PROGRESS_STAGES.index(status_for_select) || 0
-    end
+    return nil if %w[cancelled returned refund].include?(status)
+
+    PROGRESS_STAGES.index(status) || 0
   end
 
   # Next step along the normal flow, or nil when delivered/closed.
@@ -89,7 +91,7 @@ class Booking < ApplicationRecord
   end
 
   def self.status_label(status)
-    STATUS_LABELS[status.to_s] || LEGACY_STATUS_LABELS[status.to_s] || status.to_s.humanize.presence || 'Unknown'
+    STATUS_LABELS[normalize_status(status).to_s] || status.to_s.humanize.presence || 'Unknown'
   end
 
   # [[label, value], ...] for a status <select>.
@@ -101,17 +103,12 @@ class Booking < ApplicationRecord
     self.class.status_label(status)
   end
 
-  # Value to pre-select in a status dropdown ('completed' shows as Delivered).
   def status_for_select
-    status.to_s == 'completed' ? 'delivered' : status.to_s
+    status.to_s
   end
 
-  # Dropdown options for this booking; keeps a legacy status selectable so
-  # opening and saving the form doesn't silently change it.
   def status_select_options
-    opts = self.class.status_options
-    current = status_for_select
-    current.present? && !STATUS_LABELS.key?(current) ? opts + [[status_label, current]] : opts
+    self.class.status_options
   end
 
   enum :payment_status, {
@@ -324,9 +321,9 @@ class Booking < ApplicationRecord
   scope :recent, -> { order(created_at: :desc) }
   scope :today, -> { where(created_at: Date.current.all_day) }
   scope :active, -> { where.not(status: [:cancelled, :returned, :refund]) }
-  scope :completed_orders, -> { where(status: [:delivered, :completed]) }
-  scope :pending_orders, -> { where(status: [:draft, :ordered_and_delivery_pending, :confirmed]) }
-  scope :in_progress, -> { where(status: [:processing, :packed, :shipped, :out_for_delivery]) }
+  scope :completed_orders, -> { where(status: :delivered) }
+  scope :pending_orders, -> { where(status: [:ordered_and_delivery_pending, :reconfirm_order]) }
+  scope :in_progress, -> { where(status: [:packed, :shipped]) }
 
   def generate_booking_number
     self.booking_number ||= "BK#{Date.current.strftime('%Y%m%d')}#{SecureRandom.hex(3).upcase}"
@@ -470,27 +467,29 @@ class Booking < ApplicationRecord
 
   # Status management methods
   def can_cancel?
-    %w[draft ordered_and_delivery_pending confirmed processing].include?(status)
+    %w[ordered_and_delivery_pending reconfirm_order packed].include?(status)
   end
 
   def can_return?
-    %w[delivered completed].include?(status)
+    delivered?
   end
 
+  # "Confirmed" is no longer a separate stage: confirming a re-confirm order puts
+  # it back to Delivery Pending and sends the confirmation email.
   def mark_as_confirmed!
-    if draft? || ordered_and_delivery_pending?
-      update!(status: :confirmed)
-      # Send booking confirmation email when order is confirmed
+    if ordered_and_delivery_pending? || reconfirm_order?
+      update!(status: :ordered_and_delivery_pending)
       send_booking_confirmation_email
     end
   end
 
+  # Kept for older callers; "processing" is part of Delivery Pending → Packed.
   def mark_as_processing!
-    update!(status: :processing) if confirmed?
+    mark_as_packed!
   end
 
   def mark_as_packed!
-    update!(status: :packed) if processing?
+    update!(status: :packed) if ordered_and_delivery_pending? || reconfirm_order?
   end
 
   def mark_as_shipped!(tracking_number = nil)
@@ -501,27 +500,25 @@ class Booking < ApplicationRecord
     end
   end
 
+  # Kept for older callers; "out for delivery" is part of Shipped.
   def mark_as_out_for_delivery!
-    update!(status: :out_for_delivery) if shipped?
+    mark_as_shipped!
   end
 
   def mark_as_delivered!
-    if out_for_delivery?
-      update!(
-        status: :delivered,
-        notes: "#{notes}\nDelivered at: #{Time.current.strftime('%d/%m/%Y %I:%M %p')}"
-      )
-      # Auto-transition to completed when delivered (as per user requirement)
-      mark_as_completed!
-    end
+    return if delivered? || %w[cancelled returned refund].include?(status)
+
+    update!(
+      status: :delivered,
+      notes: "#{notes}\nDelivered at: #{Time.current.strftime('%d/%m/%Y %I:%M %p')}"
+    )
+    # Generate and send invoice when booking is delivered
+    generate_and_send_completion_notification
   end
 
+  # "Completed" is the same stage as Delivered now.
   def mark_as_completed!
-    if delivered?
-      update!(status: :completed)
-      # Generate and send invoice when booking is completed
-      generate_and_send_completion_notification
-    end
+    mark_as_delivered!
   end
 
   def cancel_order!(reason = nil)
@@ -547,11 +544,10 @@ class Booking < ApplicationRecord
   # Display helpers
   def status_color
     case status
-    when 'draft', 'ordered_and_delivery_pending' then 'secondary'
-    when 'confirmed' then 'info'
-    when 'processing', 'packed' then 'warning'
-    when 'shipped', 'out_for_delivery' then 'primary'
-    when 'delivered', 'completed' then 'success'
+    when 'ordered_and_delivery_pending' then 'secondary'
+    when 'packed' then 'warning'
+    when 'shipped' then 'primary'
+    when 'delivered' then 'success'
     when 'cancelled', 'returned', 'refund' then 'danger'
     when 'reconfirm_order' then 'info'
     else 'secondary'
@@ -560,15 +556,10 @@ class Booking < ApplicationRecord
 
   def status_icon
     case status
-    when 'draft' then 'bi-pencil'
     when 'ordered_and_delivery_pending' then 'bi-clock'
-    when 'confirmed' then 'bi-check-circle'
-    when 'processing' then 'bi-gear'
     when 'packed' then 'bi-box'
     when 'shipped' then 'bi-truck'
-    when 'out_for_delivery' then 'bi-geo-alt'
     when 'delivered' then 'bi-house-check'
-    when 'completed' then 'bi-check-all'
     when 'cancelled' then 'bi-x-circle'
     when 'returned' then 'bi-arrow-return-left'
     when 'refund' then 'bi-cash-coin'
@@ -943,7 +934,7 @@ class Booking < ApplicationRecord
   end
 
   def can_initiate_payment?
-    draft? && total_amount.present? && total_amount > 0 && customer.present?
+    ordered_and_delivery_pending? && total_amount.present? && total_amount > 0 && customer.present?
   end
 
   def payment_pending?

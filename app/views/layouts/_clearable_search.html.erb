@@ -1,0 +1,92 @@
+<%# Adds a small "×" clear button to search text boxes (and Select2 dropdown
+    search fields) so users don't have to backspace out what they typed.
+    Clearing fires an `input` event, so each page's existing live-search
+    handlers run exactly as if the user had deleted the text by hand.
+    Opt out on a given input with data-no-clear. %>
+<style>
+  .clearable-wrap { position: relative; display: block; width: 100%; }
+  .input-group > .clearable-wrap { flex: 1 1 auto; width: 1%; min-width: 0; }
+  .clearable-wrap > input { padding-right: 2rem !important; }
+  .clearable-btn {
+    position: absolute; top: 50%; right: .5rem; transform: translateY(-50%);
+    display: none; align-items: center; justify-content: center;
+    width: 1.35rem; height: 1.35rem; padding: 0; border: 0; border-radius: 50%;
+    background: #e9ecef; color: #6c757d; font-size: .95rem; line-height: 1;
+    cursor: pointer; z-index: 6;
+  }
+  .clearable-btn:hover { background: #dc3545; color: #fff; }
+  /* Pure CSS visibility (:placeholder-shown tracks the live value, including
+     values set from JS without an input event). Hidden/disabled inputs get no ×. */
+  .clearable-wrap:has(> input:not(:placeholder-shown):not(:disabled):not([readonly]):not([style*="display: none"]):not([style*="display:none"])) > .clearable-btn { display: inline-flex; }
+  /* Hide a trailing search icon sitting where the × goes (e.g. customers table search) */
+  .clearable-wrap:has(> input:not(:placeholder-shown)) ~ .bi-search.end-0 { display: none; }
+  /* Avoid a double × in Chrome on type="search" inputs */
+  input.clearable-native-off::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+</style>
+<script>
+  (function() {
+    if (window.__clearableSearchInit) return;
+    window.__clearableSearchInit = true;
+
+    var SELECTOR = [
+      'input[type="search"]',
+      'input[type="text"][id*="search" i]',
+      'input[type="text"][placeholder^="search" i]',
+      'input[data-clearable]',
+      '.select2-search--dropdown .select2-search__field'
+    ].join(',');
+
+    function enhance(input) {
+      if (input.dataset.clearableReady || input.hasAttribute('data-no-clear')) return;
+      input.dataset.clearableReady = '1';
+      if (input.type === 'search') input.classList.add('clearable-native-off');
+      // :placeholder-shown (which drives the CSS) needs a placeholder to exist
+      if (!input.getAttribute('placeholder')) input.setAttribute('placeholder', ' ');
+
+      var wrap = document.createElement('span');
+      wrap.className = 'clearable-wrap';
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'clearable-btn';
+      btn.setAttribute('aria-label', 'Clear');
+      btn.tabIndex = -1;
+      btn.innerHTML = '&times;';
+      // mousedown + preventDefault keeps focus in the input (so dropdowns such
+      // as Select2's or the booking customer search don't close on click).
+      btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.focus();
+      });
+      wrap.appendChild(btn);
+    }
+
+    function scan(root) {
+      if (!root || !root.querySelectorAll) return;
+      if (root.matches && root.matches(SELECTOR)) enhance(root);
+      root.querySelectorAll(SELECTOR).forEach(enhance);
+    }
+
+    function start() {
+      scan(document.body);
+      new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) { m.addedNodes.forEach(scan); });
+      }).observe(document.documentElement, { childList: true, subtree: true });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', start);
+    } else {
+      start();
+    }
+    document.addEventListener('turbo:load', function() { scan(document.body); });
+  })();
+</script>

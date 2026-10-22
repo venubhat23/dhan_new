@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_19_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_22_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -162,7 +162,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_19_000001) do
     t.integer "user_id"
     t.string "booking_number"
     t.datetime "booking_date"
-    t.string "status"
+    t.string "status", default: "delivered"
     t.string "payment_method"
     t.string "payment_status"
     t.decimal "subtotal"

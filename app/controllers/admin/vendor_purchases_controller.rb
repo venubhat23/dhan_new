@@ -124,9 +124,10 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
       return
     end
 
-    # Find purchases that are not already paid
+    # Find purchases that are not already paid. payment_status is computed
+    # (VendorPurchase#payment_status), not a column, so filter on the amounts.
     purchases_to_update = VendorPurchase.where(id: purchase_ids)
-                                       .where.not(payment_status: 'paid')
+                                       .where('COALESCE(paid_amount, 0) < COALESCE(total_amount, 0)')
 
     if purchases_to_update.empty?
       render json: { success: false, error: 'No unpaid purchases found to update' }, status: :bad_request

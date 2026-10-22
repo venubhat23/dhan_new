@@ -236,6 +236,8 @@
                    when 'completed'                     then 's-completed'
                    when 'cancelled'                     then 's-cancelled'
                    when 'returned'                      then 's-returned'
+                   when 'refund'                                then 's-cancelled'
+                   when 'reconfirm_order'                       then 's-confirmed'
                    else 's-draft'
                    end
 

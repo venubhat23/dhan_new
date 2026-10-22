@@ -460,31 +460,16 @@ module ApplicationHelper
 
   # Booking stage helpers
   def stage_description_full(stage)
-    case stage.to_s
-    when 'draft'
-      'Set order as draft for preparation and review'
-    when 'ordered_and_delivery_pending'
-      'Order placed and waiting for processing setup'
-    when 'confirmed'
-      'Confirm order and notify customer'
-    when 'processing'
-      'Start processing the order'
-    when 'packed'
-      'Mark order as packed and ready'
-    when 'shipped'
-      'Ship order with tracking details'
-    when 'out_for_delivery'
-      'Assign for delivery'
-    when 'delivered'
-      'Confirm successful delivery'
-    when 'completed'
-      'Complete the order transaction'
-    when 'cancelled'
-      'Cancel this order'
-    when 'returned'
-      'Process return request'
-    else
-      'Update order stage'
+    case Booking.normalize_status(stage).to_s
+    when 'ordered_and_delivery_pending' then 'Order placed, waiting to be packed and delivered'
+    when 'packed'          then 'Items packed and ready to ship'
+    when 'shipped'         then 'Shipped / out for delivery'
+    when 'delivered'       then 'Delivered to the customer'
+    when 'cancelled'       then 'Cancel this order'
+    when 'returned'        then 'Customer returned the order'
+    when 'refund'          then 'Refund issued to the customer'
+    when 'reconfirm_order' then 'Order needs to be re-confirmed with the customer'
+    else 'Update order stage'
     end
   end
 
