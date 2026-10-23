@@ -267,6 +267,7 @@ Rails.application.routes.draw do
         patch :mark_delivered
         patch :mark_completed
         patch :mark_paid
+        post :partial_payment
         get :stage_transition
         get :manage_stage
         patch :process_stage_transition

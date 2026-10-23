@@ -140,6 +140,32 @@ class Invoice < ApplicationRecord
     payment_status == 'partially_paid' || (paid_amount && paid_amount > 0 && paid_amount < total_amount)
   end
 
+  # Records a payment of `amount` against this invoice: partially_paid while a
+  # balance remains, fully_paid once it's settled. The originating booking's
+  # payment_status follows via sync_booking_payment_status. Returns the
+  # remaining balance. Notes are only kept if invoices ever get a notes column
+  # (they have none today, which used to crash partial payments with notes).
+  def record_payment!(amount, notes: nil)
+    amount = amount.to_d
+    new_paid_amount = (paid_amount || 0) + amount
+    raise ArgumentError, 'Payment amount exceeds remaining invoice amount' if new_paid_amount > total_amount
+
+    transaction do
+      if new_paid_amount >= total_amount
+        update!(paid_amount: total_amount, payment_status: :fully_paid, status: :paid, paid_at: Time.current)
+      else
+        update!(paid_amount: new_paid_amount, payment_status: :partially_paid)
+      end
+
+      if notes.present? && has_attribute?(:notes)
+        payment_note = "Payment of ₹#{amount} on #{Time.current.strftime('%Y-%m-%d %H:%M')} - #{notes}"
+        update!(notes: [self.notes.presence, payment_note].compact.join("\n"))
+      end
+    end
+
+    total_amount - paid_amount
+  end
+
   # Keeps the originating Booking's booking_items in step with this invoice's
   # invoice_items (products/quantities/prices), so editing line items from either
   # screen propagates to the other. Mirrors Booking#sync_invoice_items_from_booking.

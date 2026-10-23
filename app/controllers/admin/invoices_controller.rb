@@ -429,52 +429,11 @@ class Admin::InvoicesController < Admin::ApplicationController
 
       invoice = Invoice.find(invoice_id)
 
-      # Get current paid amount (initialize if needed)
-      current_paid_amount = invoice.paid_amount || 0
-      new_paid_amount = current_paid_amount + amount
-
-      # Calculate remaining amount
-      remaining_amount = invoice.total_amount - new_paid_amount
-
-      # Validate payment amount
-      if new_paid_amount > invoice.total_amount
-        render json: {
-          success: false,
-          error: 'Payment amount exceeds remaining invoice amount'
-        }, status: :bad_request
+      begin
+        remaining_amount = invoice.record_payment!(amount, notes: notes)
+      rescue ArgumentError => e
+        render json: { success: false, error: e.message }, status: :bad_request
         return
-      end
-
-      # Update invoice with payment information
-      Invoice.transaction do
-        # Update paid amount and payment status
-        if remaining_amount <= 0
-          invoice.update!(
-            paid_amount: invoice.total_amount,
-            payment_status: :fully_paid,
-            status: :paid,
-            paid_at: Time.current
-          )
-        else
-          invoice.update!(
-            paid_amount: new_paid_amount,
-            payment_status: :partially_paid
-          )
-        end
-
-        # Create a payment record/note if notes are provided
-        if notes.present?
-          # You can create a separate payment record here if needed
-          # For now, we'll just update the invoice notes
-          existing_notes = invoice.notes.present? ? invoice.notes : ""
-          payment_note = "Payment of ₹#{amount} on #{Time.current.strftime('%Y-%m-%d %H:%M')} - #{notes}"
-
-          if existing_notes.present?
-            invoice.update!(notes: "#{existing_notes}\n#{payment_note}")
-          else
-            invoice.update!(notes: payment_note)
-          end
-        end
       end
 
       render json: {

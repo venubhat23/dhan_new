@@ -1,6 +1,6 @@
 class Admin::BookingsController < Admin::ApplicationController
   before_action :authenticate_user!
-  before_action :set_booking, only: [:show, :edit, :update, :destroy, :generate_invoice, :invoice, :convert_to_order, :update_status, :cancel_order, :mark_delivered, :mark_completed, :mark_paid, :manage_stage, :update_stage, :update_delivery_charge]
+  before_action :set_booking, only: [:show, :edit, :update, :destroy, :generate_invoice, :invoice, :convert_to_order, :update_status, :cancel_order, :mark_delivered, :mark_completed, :mark_paid, :partial_payment, :manage_stage, :update_stage, :update_delivery_charge]
 
   LIST_STATE_PARAMS = %i[page search status date_from date_to customer_id b2b booked_by payment_status delivery_pending].freeze
   INITIAL_PICKER_LIMIT = 40
@@ -98,6 +98,11 @@ class Admin::BookingsController < Admin::ApplicationController
         b.instance_variable_set(:@associated_invoice, inv_by_number[b.booking_number])
       end
     end
+
+    # Paid amounts for the list's Mark as Paid / Partial Payment buttons, in one query.
+    @payment_invoices = Invoice.where(invoice_number: @bookings.map(&:invoice_number).compact_blank)
+                               .select(:id, :invoice_number, :total_amount, :paid_amount, :payment_status)
+                               .index_by(&:invoice_number)
 
     # The customer filter dropdown searches on demand via the search_customers
     # AJAX endpoint now, instead of preloading up to 500 customers (a full extra
@@ -535,9 +540,10 @@ class Admin::BookingsController < Admin::ApplicationController
     redirect_to admin_booking_path(@booking, list_state_params), notice: 'Order marked as completed!'
   end
 
+  # Redirects back to wherever it was triggered from (booking page or the list).
   def mark_paid
     if @booking.payment_status_paid?
-      redirect_to admin_booking_path(@booking, list_state_params), notice: 'Booking is already marked as paid.'
+      redirect_back fallback_location: admin_booking_path(@booking, list_state_params), notice: 'Booking is already marked as paid.'
       return
     end
 
@@ -546,12 +552,43 @@ class Admin::BookingsController < Admin::ApplicationController
 
     invoice = @booking.invoice_generated? ? Invoice.find_by(invoice_number: @booking.invoice_number) : generate_immediate_invoice_for_booking(@booking)
     if invoice
-      redirect_to admin_booking_path(@booking, list_state_params), notice: "Booking marked as paid. Invoice ##{invoice.invoice_number} updated."
+      redirect_back fallback_location: admin_booking_path(@booking, list_state_params), notice: "Booking marked as paid. Invoice ##{invoice.invoice_number} updated."
     else
-      redirect_to admin_booking_path(@booking, list_state_params), notice: 'Booking marked as paid.'
+      redirect_back fallback_location: admin_booking_path(@booking, list_state_params), notice: 'Booking marked as paid.'
     end
   rescue => e
-    redirect_to admin_booking_path(@booking, list_state_params), alert: "Failed to mark as paid: #{e.message}"
+    redirect_back fallback_location: admin_booking_path(@booking, list_state_params), alert: "Failed to mark as paid: #{e.message}"
+  end
+
+  # Partial (or settling) payment from the bookings list. The amount is tracked
+  # on the booking's Invoice (generated now if the booking has none yet), whose
+  # payment_status callback then moves the booking to partially_paid / paid.
+  def partial_payment
+    amount = params[:amount].to_f
+    if amount <= 0
+      render json: { success: false, error: 'Please enter a valid payment amount' }, status: :bad_request
+      return
+    end
+
+    invoice = Invoice.find_by(invoice_number: @booking.invoice_number) if @booking.invoice_generated? && @booking.invoice_number.present?
+    invoice ||= generate_immediate_invoice_for_booking(@booking)
+    unless invoice
+      render json: { success: false, error: 'Could not find or generate an invoice for this booking' }, status: :unprocessable_entity
+      return
+    end
+
+    remaining_amount = invoice.record_payment!(amount)
+    render json: {
+      success: true,
+      message: remaining_amount <= 0 ? 'Booking marked as fully paid' : 'Partial payment recorded',
+      paid_amount: invoice.paid_amount,
+      remaining_amount: remaining_amount
+    }
+  rescue ArgumentError => e
+    render json: { success: false, error: e.message }, status: :bad_request
+  rescue => e
+    Rails.logger.error "Booking partial payment error: #{e.message}"
+    render json: { success: false, error: "Error processing payment: #{e.message}" }, status: :internal_server_error
   end
 
   def update_delivery_charge

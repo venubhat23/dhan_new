@@ -390,11 +390,14 @@
             <% end %>
           </div>
 
-          <!-- Add Item Button -->
-          <button type="button" class="btn btn-outline-primary" onclick="addBookingItem()">
-            <i class="bi bi-plus-circle me-1"></i>
-            Add Item
-          </button>
+          <!-- Add Item + Update Booking (same submit as the sidebar's Actions card) -->
+          <div class="d-flex justify-content-between align-items-center gap-2">
+            <button type="button" class="btn btn-outline-primary" onclick="addBookingItem()">
+              <i class="bi bi-plus-circle me-1"></i>
+              Add Item
+            </button>
+            <%= f.submit 'Update Booking', class: 'btn btn-primary' %>
+          </div>
 
           <!-- Item Template (Hidden) -->
           <div id="item-template" style="display: none;">
