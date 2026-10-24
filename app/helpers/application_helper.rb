@@ -586,4 +586,15 @@ module ApplicationHelper
 
     result.strip
   end
+
+  # QR image URL for a UPI payment link with the amount pre-filled, so the
+  # customer's UPI app shows the payable amount instead of asking for it.
+  # The whole UPI URI is encoded so its &pn= / &am= survive as part of `data`.
+  def upi_payment_qr_url(upi_id, payee_name, amount, size: 100)
+    params = { pa: upi_id, pn: payee_name }
+    params[:am] = format('%.2f', amount.to_f) if amount.to_f > 0
+    params[:cu] = 'INR'
+    upi_uri = "upi://pay?" + params.map { |k, v| "#{k}=#{ERB::Util.url_encode(v.to_s).gsub('%40', '@')}" }.join('&')
+    "https://api.qrserver.com/v1/create-qr-code/?size=#{size}x#{size}&data=#{ERB::Util.url_encode(upi_uri)}"
+  end
 end

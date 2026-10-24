@@ -159,9 +159,9 @@
         <% end %>
 
         <% if @booking.shipped? %>
-          <%= link_to mark_delivered_admin_booking_path(@booking, list_state: @list_state), method: :patch,
+          <%= button_to mark_delivered_admin_booking_path(@booking, list_state: @list_state), method: :patch,
               class: "btn btn-success btn-sm w-100 mb-2",
-              confirm: "Mark this order as delivered?" do %>
+              form: { data: { turbo_confirm: "Mark this order as delivered?" } } do %>
             <i class="bi bi-check-circle me-1"></i>
             Mark as Delivered
           <% end %>

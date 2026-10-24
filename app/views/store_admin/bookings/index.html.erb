@@ -506,9 +506,9 @@
                           <li class="dropdown-header">Quick Stage Update</li>
                           <% booking.next_possible_statuses.each do |status| %>
                             <li>
-                              <%= link_to update_status_store_admin_booking_path(booking, status: status, list_state: list_state, return_to: 'index'),
+                              <%= button_to update_status_store_admin_booking_path(booking, status: status, list_state: list_state, return_to: 'index'),
                                   method: :patch, class: "dropdown-item",
-                                  confirm: status == 'cancelled' ? 'Are you sure you want to cancel this order?' : nil do %>
+                                  form: { data: (status == 'cancelled' ? { turbo_confirm: 'Are you sure you want to cancel this order?' } : {}) } do %>
                                 <i class="bi bi-arrow-right me-2"></i>
                                 <%= Booking.status_label(status) %>
                               <% end %>

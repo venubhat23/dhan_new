@@ -801,7 +801,7 @@
                     </div>
                   </td>
                   <td style="text-align: center;">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=upi://pay?pa=<%= business_settings.upi_id || '9972808044@ybl' %>&pn=<%= CGI.escape(business_settings.business_name || 'Dhanvantari Naturals') %>" alt="QR Code" class="qr-image" />
+                    <img src="<%= upi_payment_qr_url(business_settings.upi_id || '9972808044@ybl', business_settings.business_name || 'Dhanvantari Naturals', final_total) %>" alt="QR Code" class="qr-image" />
                   </td>
                 </tr>
               </table>

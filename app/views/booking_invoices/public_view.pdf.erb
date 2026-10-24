@@ -641,7 +641,7 @@
           <div class="qr-section">
             <div class="section-heading">PAYMENT QR CODE</div>
             <div class="upi-id">UPI ID: <%= @business_settings.upi_id %></div>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=upi://pay?pa=<%= @business_settings.upi_id %>&pn=<%= CGI.escape(@business_settings.business_name || 'Ecommerce Store') %>" alt="QR Code" class="qr-image" />
+            <img src="<%= upi_payment_qr_url(@business_settings.upi_id, @business_settings.business_name || 'Ecommerce Store', final_total) %>" alt="QR Code" class="qr-image" />
           </div>
         <% end %>
       </div>

@@ -102,10 +102,10 @@
 <div class="card border-0 shadow-sm mb-3" id="searchSection">
   <div class="card-body py-2">
     <div class="row g-2 align-items-center">
-      <div class="col-md-5">
-        <input type="text" class="form-control form-control-sm" placeholder="Search products by name, SKU, or category..." id="productSearch">
-      </div>
       <div class="col-md-3">
+        <input type="text" class="form-control form-control-sm" placeholder="Search products..." id="productSearch">
+      </div>
+      <div class="col-md-2">
         <select class="form-select form-select-sm" id="categoryFilter">
           <option value="">All Categories</option>
           <% @categories.each do |category| %>
@@ -830,7 +830,7 @@ function updateCartDisplay() {
           </button>
         </div>
         <div class="d-flex justify-content-between align-items-center">
-          <div class="input-group input-group-sm" style="width: 140px;">
+          <div class="input-group input-group-sm flex-nowrap" style="width: 170px;">
             <button class="btn btn-outline-secondary px-3" type="button" onclick="decreaseCartQuantity('${productId}')" ${item.quantity <= 0.1 ? 'disabled' : ''}>
               <i class="bi bi-dash"></i>
             </button>
@@ -2591,10 +2591,19 @@ function stopCamera() {
   border-color: #0d6efd;
 }
 
+.cart-item-card .input-group .btn {
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+}
+
 .cart-item-card .input-group .form-control {
   border-left: 1px solid #dee2e6;
   border-right: 1px solid #dee2e6;
   font-size: 0.95rem;
+  /* Leave room for multi-digit / decimal quantities (e.g. 20, 12.5) */
+  min-width: 64px;
+  padding-left: 2px;
+  padding-right: 2px;
 }
 
 /* Minimized Cart Button */
