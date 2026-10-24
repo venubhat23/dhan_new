@@ -731,11 +731,11 @@ function updateCartDisplay() {
         </div>
         <div class="d-flex justify-content-between align-items-center">
           <div class="input-group input-group-sm flex-nowrap" style="width: 170px;">
-            <button class="btn btn-outline-secondary px-3" type="button" onclick="decreaseCartQuantity(${productId})" ${item.quantity <= 0.1 ? 'disabled' : ''}>
+            <button class="btn btn-outline-secondary px-2" type="button" onclick="decreaseCartQuantity(${productId})" ${item.quantity <= 0.1 ? 'disabled' : ''}>
               <i class="bi bi-dash"></i>
             </button>
             <input type="text" class="form-control text-center fw-bold" value="${item.quantity}" readonly style="background: white;">
-            <button class="btn btn-outline-secondary px-3" type="button" onclick="increaseCartQuantity(${productId})" ${item.quantity >= item.stock ? 'disabled' : ''}>
+            <button class="btn btn-outline-secondary px-2" type="button" onclick="increaseCartQuantity(${productId})" ${item.quantity >= item.stock ? 'disabled' : ''}>
               <i class="bi bi-plus"></i>
             </button>
           </div>
@@ -2229,11 +2229,6 @@ function showBookingDateAlert(message, type, icon) {
   background: #0d6efd;
   color: white;
   border-color: #0d6efd;
-}
-
-.cart-item-card .input-group .btn {
-  padding-left: 0.6rem;
-  padding-right: 0.6rem;
 }
 
 .cart-item-card .input-group .form-control {
