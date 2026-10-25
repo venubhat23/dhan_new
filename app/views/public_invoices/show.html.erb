@@ -784,7 +784,7 @@
                   </div>
                 </td>
                 <td class="center-align"><%= item.product&.hsn_code || '-' %></td>
-                <td class="center-align"><%= item.quantity %> <%= item.product&.unit_type || 'PCS' %></td>
+                <td class="center-align"><%= line_item_quantity_label(item) %></td>
                 <td class="right-align">
                   <%
                     # Display base unit price (without GST); already net of any per-product discount

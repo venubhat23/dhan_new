@@ -675,6 +675,14 @@ function fillCustomerDetails(select) {
 </script>
 
 <style>
+/* Hide the up/down spinner arrows on the Discount and Delivery Charge boxes */
+#discountInput::-webkit-outer-spin-button,
+#discountInput::-webkit-inner-spin-button,
+input[name="booking[shipping_charges]"]::-webkit-outer-spin-button,
+input[name="booking[shipping_charges]"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#discountInput,
+input[name="booking[shipping_charges]"] { -moz-appearance: textfield; appearance: textfield; }
+
 .booking-item-row {
   background: #f8f9fa;
   border: 1px dashed #dee2e6 !important;

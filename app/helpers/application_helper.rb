@@ -1,4 +1,22 @@
 module ApplicationHelper
+  # Quantity text for an invoice/bill line. A variant line shows its pack size
+  # ("1 × 250 Gram") instead of the product's base unit (which said "1 Kg" for a
+  # 250 g pack). A Gram/Ml product with no weight set is a fixed pack, so "1 Gram"
+  # becomes "1 Pack".
+  def line_item_quantity_label(item)
+    qty = item.quantity.to_f.to_s.sub(/\.0$/, '')
+    variant = item.try(:product_variant)
+    return "#{qty} × #{variant.label}" if variant.present?
+
+    product = item.try(:product)
+    unit = product&.unit_type.presence || 'Pcs'
+    if %w[Gram Ml].include?(unit)
+      return "#{qty} Pack" if product.weight.blank?
+      return "#{qty} × #{product.weight.to_f.to_s.sub(/\.0$/, '')} #{unit}"
+    end
+    "#{qty} #{unit}"
+  end
+
   # Permission checking helpers
   def current_user_can?(module_name, action = 'read')
     return true if current_user&.admin? || current_user&.user_type == 'admin'

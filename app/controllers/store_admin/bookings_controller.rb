@@ -249,6 +249,15 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
       end
       format.json { render json: { success: true, message: message, new_status: @booking.status } }
     end
+  rescue ActiveRecord::RecordInvalid => e
+    alert = "Could not update status: #{e.record.errors.full_messages.to_sentence}"
+    respond_to do |format|
+      format.html do
+        target = params[:return_to] == 'index' ? store_admin_bookings_path(list_state_params) : store_admin_booking_path(@booking, list_state_params)
+        redirect_to target, alert: alert
+      end
+      format.json { render json: { success: false, error: alert }, status: :unprocessable_entity }
+    end
   end
 
   def cancel

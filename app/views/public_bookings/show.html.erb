@@ -324,9 +324,14 @@
                row_total    = row[:total]
           %>
           <tr>
-            <td><%= item.product&.name || 'Product' %></td>
+            <td>
+              <%= item.product&.name || 'Product' %>
+              <% if item.product_variant.present? %>
+                <div class="tax-rate"><%= item.product_variant.label %></div>
+              <% end %>
+            </td>
             <td class="c col-hsn"><%= item.product&.hsn_code || '-' %></td>
-            <td class="c"><%= item.quantity.to_s.sub(/\.0$/,'') %> <%= item.product&.unit_type || 'Pcs' %></td>
+            <td class="c"><%= line_item_quantity_label(item) %></td>
             <td class="r">₹<%= number_with_precision(unit_price, precision: 2, delimiter: ',') %></td>
             <td class="r col-tax">
               ₹<%= number_with_precision(row_tax, precision: 2, delimiter: ',') %><br/>

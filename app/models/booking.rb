@@ -383,6 +383,10 @@ class Booking < ApplicationRecord
     total_gst = 0
 
     booking_items.each do |item|
+      # Rows removed on the edit form (_destroy) are still in the association
+      # until save; counting them left total_amount above the real total.
+      next if item.marked_for_destruction?
+
       if item.quantity.present? && item.price.present?
         quantity = item.quantity
         # Per-product (line-item) discount is applied to the tax-inclusive price
@@ -735,6 +739,10 @@ class Booking < ApplicationRecord
   private
 
   def ensure_total_amount_present
+    # Status/payment-only updates on an existing ₹0 booking (e.g. free items)
+    # must not fail here — only flag it when the items/total are being changed.
+    return if persisted? && !will_save_change_to_total_amount?
+
     if total_amount.blank? || total_amount <= 0
       errors.add(:base, "Please add at least one item to the booking")
     end

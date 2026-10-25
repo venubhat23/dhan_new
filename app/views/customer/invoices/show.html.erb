@@ -160,7 +160,7 @@
               </td>
               <td class="align-middle text-center">
                 <span class="badge bg-primary-subtle text-primary">
-                  <%= item.quantity %> <%= item.product&.unit_type || 'pcs' %>
+                  <%= line_item_quantity_label(item) %>
                 </span>
               </td>
               <td class="align-middle text-end">

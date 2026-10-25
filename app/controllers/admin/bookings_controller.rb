@@ -522,6 +522,18 @@ class Admin::BookingsController < Admin::ApplicationController
         format.json { render json: { success: false, error: 'Invalid status transition!' } }
       end
     end
+  rescue ActiveRecord::RecordInvalid => e
+    alert = "Could not update status: #{e.record.errors.full_messages.to_sentence}"
+    respond_to do |format|
+      format.html {
+        if params[:return_to] == 'index'
+          redirect_to admin_bookings_path(list_state_params), alert: alert
+        else
+          redirect_to admin_booking_path(@booking, list_state_params), alert: alert
+        end
+      }
+      format.json { render json: { success: false, error: alert }, status: :unprocessable_entity }
+    end
   end
 
   def cancel_order
