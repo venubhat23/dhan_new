@@ -4,6 +4,7 @@ class Admin::LowStockAlertController < Admin::ApplicationController
     # variant stock for multi-qty products, active central batch stock otherwise.
     @products = Product
       .with_real_stock_amount
+      .select(Arel.sql("(#{Product::REAL_THRESHOLD_SQL}) AS real_threshold"))
       .real_at_or_below_threshold
       .left_joins(:category)
       .select("categories.name AS cat_name")

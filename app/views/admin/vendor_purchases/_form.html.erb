@@ -96,6 +96,12 @@
           <% end %>
         <% end %>
       </div>
+      <div class="text-center pb-3 pt-3 mx-3 border-top">
+        <button type="button" class="btn btn-outline-primary btn-sm" id="add-product-btn-bottom">
+          <i class="bi bi-plus-lg me-1"></i>
+          Add Product
+        </button>
+      </div>
     </div>
   </div>
 
@@ -362,8 +368,8 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
   }
 
-  // Add product row
-  addBtn.addEventListener('click', function() {
+  // Add product row (header button and the one below the last row)
+  function addProductRow() {
     const newIndex = new Date().getTime(); // Unique index
     const newItemHtml = createProductItemHtml(newIndex);
 
@@ -373,6 +379,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize the new row
     const newRow = container.lastElementChild;
     initializeProductRow(newRow);
+  }
+  addBtn.addEventListener('click', addProductRow);
+  document.getElementById('add-product-btn-bottom').addEventListener('click', function() {
+    addProductRow();
+    const $select = $(container.lastElementChild).find('select.product-select');
+    if ($select.length && $select.data('select2')) $select.select2('open');
   });
 
   // Reload the product list (e.g. after adding a product in another tab) without

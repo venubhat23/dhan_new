@@ -79,7 +79,9 @@
             <% @products.each do |product| %>
               <%
                 stock     = product.current_stock.to_i
-                threshold = (product.low_stock_threshold.to_i > 0 ? product.low_stock_threshold.to_i : 5)
+                # Same threshold the list is filtered on: variant products use the sum of
+                # their variants' thresholds, not the (default 10) product column.
+                threshold = product.real_threshold.to_i
                 if stock == 0
                   status_label = 'Out of Stock'
                   status_class = 'danger'

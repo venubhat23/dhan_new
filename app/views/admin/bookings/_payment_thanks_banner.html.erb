@@ -1,0 +1,16 @@
+<%# Shown after a payment is recorded (mark_paid / partial_payment set the flash). %>
+<% if (thanks_booking = flash[:payment_thanks_booking_id].presence && Booking.find_by(id: flash[:payment_thanks_booking_id])) %>
+  <% thanks_url = booking_payment_thanks_whatsapp_url(thanks_booking) %>
+  <div class="alert alert-success d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <span>
+      <i class="bi bi-check-circle me-2"></i>
+      Payment recorded for booking #<%= thanks_booking.booking_number %>.
+      <% unless thanks_url %>No customer mobile number on file to send a thank-you note.<% end %>
+    </span>
+    <% if thanks_url %>
+      <a href="<%= thanks_url %>" target="_blank" rel="noopener" class="btn btn-success btn-sm">
+        <i class="bi bi-whatsapp me-1"></i>Send Thank You on WhatsApp
+      </a>
+    <% end %>
+  </div>
+<% end %>

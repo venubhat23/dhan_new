@@ -61,7 +61,7 @@
     <div class="card border-0 shadow-sm"><div class="card-body">
       <div class="d-flex align-items-center">
         <div class="flex-grow-1"><h6 class="text-muted mb-1">Low Stock (this page)</h6>
-          <h4 class="mb-0"><%= @products.count { |p| s = store_stock_for.call(p); s > 0 && s <= (p.low_stock_threshold || 10) } %></h4></div>
+          <h4 class="mb-0"><%= @products.count { |p| s = store_stock_for.call(p); s > 0 && s <= p.effective_low_stock_threshold } %></h4></div>
         <div class="text-warning"><i class="bi bi-exclamation-triangle fs-2"></i></div>
       </div>
     </div></div>
@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <% end %>
                   </td>
                   <td class="align-middle">
-                    <% threshold = product.low_stock_threshold || 10 %>
+                    <% threshold = product.effective_low_stock_threshold %>
                     <div class="d-flex flex-column gap-1">
                       <div>
                         <% if s_stock > threshold %>

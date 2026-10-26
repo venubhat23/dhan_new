@@ -307,7 +307,7 @@
 
                   <!-- Low Stock Threshold -->
                   <div class="col-lg-3 col-sm-6">
-                    <% threshold = @product.low_stock_threshold || 10 %>
+                    <% threshold = @product.effective_low_stock_threshold %>
                     <% is_low = @product.stock.to_i <= threshold && @product.stock.to_i > 0 %>
                     <div class="p-2 border border-dashed <%= is_low ? 'border-warning' : '' %> rounded">
                       <div class="d-flex align-items-center">

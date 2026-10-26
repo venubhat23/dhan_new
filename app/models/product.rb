@@ -153,13 +153,25 @@ class Product < ApplicationRecord
                   AND sb.status = 'active' AND sb.store_id IS NULL), 0)
     END
   SQL
+  # Effective low-stock threshold, matching #effective_low_stock_threshold:
+  # multi-qty products roll up their variants' thresholds (same as Product
+  # Summary), since the products.low_stock_threshold column is not edited for them.
+  REAL_THRESHOLD_SQL = <<~SQL.squish.freeze
+    CASE WHEN products.has_multiple_quantities
+              AND EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = products.id) THEN
+      (SELECT COALESCE(SUM(pv.low_stock_threshold), 0) FROM product_variants pv
+        WHERE pv.product_id = products.id)
+    ELSE
+      COALESCE(products.low_stock_threshold, 10)
+    END
+  SQL
   scope :real_in_stock, -> { where(Arel.sql("(#{REAL_STOCK_SQL}) > 0")) }
   scope :real_out_of_stock, -> { where(Arel.sql("(#{REAL_STOCK_SQL}) <= 0")) }
   scope :real_low_stock, -> {
-    where(Arel.sql("(#{REAL_STOCK_SQL}) > 0 AND (#{REAL_STOCK_SQL}) <= COALESCE(products.low_stock_threshold, 5)"))
+    where(Arel.sql("(#{REAL_STOCK_SQL}) > 0 AND (#{REAL_STOCK_SQL}) <= (#{REAL_THRESHOLD_SQL})"))
   }
   scope :real_at_or_below_threshold, -> {
-    where(Arel.sql("(#{REAL_STOCK_SQL}) <= COALESCE(products.low_stock_threshold, 5)"))
+    where(Arel.sql("(#{REAL_STOCK_SQL}) <= (#{REAL_THRESHOLD_SQL})"))
   }
   scope :with_real_stock_amount, -> { select(Arel.sql("products.*, (#{REAL_STOCK_SQL}) AS current_stock")) }
 
@@ -1162,8 +1174,16 @@ class Product < ApplicationRecord
     cached_total_batch_stock <= 0
   end
 
+  def effective_low_stock_threshold
+    if has_multiple_quantities? && product_variants.any?
+      product_variants.sum { |v| v.low_stock_threshold.to_i }
+    else
+      low_stock_threshold || 10
+    end
+  end
+
   def low_stock?
-    threshold = low_stock_threshold || 10
+    threshold = effective_low_stock_threshold
     stock_amount = cached_total_batch_stock
     stock_amount > 0 && stock_amount <= threshold
   end

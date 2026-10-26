@@ -497,6 +497,36 @@ function addBookingItem() {
 
   document.getElementById('booking-items').appendChild(newItem);
   itemIndex++;
+  initProductSearch(newItem.querySelector('select[onchange^="updateItemPrice"]'));
+}
+
+// Product dropdown search matches each typed word anywhere in the name, in any
+// order — "ghee", "cow", "a2" or "cow ghee" all find "DESI COW GHEE (A2)".
+function productWordMatcher(params, data) {
+  const terms = (params.term || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return data;
+  const hit = text => terms.every(w => (text || '').toLowerCase().includes(w));
+
+  if (data.children && data.children.length) {
+    const kids = data.children.filter(c => hit(c.text) || hit(data.text + ' ' + c.text));
+    if (!kids.length) return null;
+    const match = $.extend(true, {}, data);
+    match.children = kids;
+    return match;
+  }
+  return hit(data.text) ? data : null;
+}
+
+function initProductSearch(select) {
+  if (!select || !window.jQuery || !$.fn.select2) return;
+  const $select = $(select);
+  if ($select.data('select2')) return;
+  $select.select2({
+    theme: 'bootstrap-5',
+    width: '100%',
+    placeholder: 'Search product...',
+    matcher: productWordMatcher
+  });
 }
 
 // Remove existing booking item
@@ -658,6 +688,8 @@ function fillCustomerDetails(select) {
 // Initialize page
 // Runs on full loads and Turbo visits (script sits after the form)
 (function() {
+  document.querySelectorAll('#booking-items select[onchange^="updateItemPrice"]').forEach(initProductSearch);
+
   // Calculate initial totals
   calculateTotals();
 

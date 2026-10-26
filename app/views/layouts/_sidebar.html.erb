@@ -532,6 +532,67 @@
     </div>
     <% end %>
 
+    <!-- Inventory Section -->
+    <% if current_user.has_sidebar_permission?('vendors') || current_user.has_sidebar_permission?('vendor_purchases') %>
+    <div class="nav-section">
+      <div class="nav-section-title">Inventory</div>
+      <ul class="nav-menu">
+        <!-- Vendors -->
+        <% if current_user.has_sidebar_permission?('vendors') %>
+        <li class="nav-item">
+          <%= link_to admin_vendors_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/vendors')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-indigo">
+                <i class="bi bi-building"></i>
+              </div>
+            </div>
+            <span class="nav-text">Vendors</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+        <% end %>
+        <!-- Vendor Purchases -->
+        <% if current_user.has_sidebar_permission?('vendor_purchases') %>
+        <li class="nav-item dropdown-menu-item">
+          <a href="#" class="nav-link-modern dropdown-toggle #{'active' if request.path.include?('/admin/vendor_purchases')}" data-bs-toggle="collapse" data-bs-target="#vendorPurchasesSubmenu" aria-expanded="false">
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-emerald">
+                <i class="bi bi-receipt-cutoff"></i>
+              </div>
+            </div>
+            <span class="nav-text">Vendor Purchase</span>
+            <span class="dropdown-arrow ms-auto">
+              <i class="bi bi-chevron-down"></i>
+            </span>
+          </a>
+          <div class="submenu collapse" id="vendorPurchasesSubmenu">
+            <ul class="submenu-list">
+              <li>
+                <%= link_to new_admin_vendor_purchase_path, class: "submenu-link #{'active' if current_page?(new_admin_vendor_purchase_path)}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>New Purchase</span>
+                <% end %>
+              </li>
+              <li>
+                <%= link_to admin_vendor_purchases_path, class: "submenu-link #{'active' if current_page?(admin_vendor_purchases_path)}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>Purchase History</span>
+                <% end %>
+              </li>
+              <li>
+                <%= link_to batch_inventory_admin_vendor_purchases_path, class: "submenu-link #{'active' if current_page?(batch_inventory_admin_vendor_purchases_path)}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>Batch Inventory</span>
+                <% end %>
+              </li>
+            </ul>
+          </div>
+        </li>
+        <% end %>
+      </ul>
+    </div>
+    <% end %>
+
     <!-- Master Data Section -->
     <% if current_user.has_sidebar_permission?('categories') || current_user.has_sidebar_permission?('coupons') || current_user.has_sidebar_permission?('customer_wallets') || current_user.has_sidebar_permission?('franchises') || current_user.has_sidebar_permission?('affiliates') %>
     <div class="nav-section">
@@ -861,67 +922,6 @@
             <% end %>
             <div class="nav-indicator"></div>
           <% end %>
-        </li>
-        <% end %>
-      </ul>
-    </div>
-    <% end %>
-
-    <!-- Inventory Section -->
-    <% if current_user.has_sidebar_permission?('vendors') || current_user.has_sidebar_permission?('vendor_purchases') %>
-    <div class="nav-section">
-      <div class="nav-section-title">Inventory</div>
-      <ul class="nav-menu">
-        <!-- Vendors -->
-        <% if current_user.has_sidebar_permission?('vendors') %>
-        <li class="nav-item">
-          <%= link_to admin_vendors_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/vendors')}" do %>
-            <div class="nav-icon-modern">
-              <div class="icon-bg gradient-indigo">
-                <i class="bi bi-building"></i>
-              </div>
-            </div>
-            <span class="nav-text">Vendors</span>
-            <div class="nav-indicator"></div>
-          <% end %>
-        </li>
-        <% end %>
-        <!-- Vendor Purchases -->
-        <% if current_user.has_sidebar_permission?('vendor_purchases') %>
-        <li class="nav-item dropdown-menu-item">
-          <a href="#" class="nav-link-modern dropdown-toggle #{'active' if request.path.include?('/admin/vendor_purchases')}" data-bs-toggle="collapse" data-bs-target="#vendorPurchasesSubmenu" aria-expanded="false">
-            <div class="nav-icon-modern">
-              <div class="icon-bg gradient-emerald">
-                <i class="bi bi-receipt-cutoff"></i>
-              </div>
-            </div>
-            <span class="nav-text">Vendor Purchase</span>
-            <span class="dropdown-arrow ms-auto">
-              <i class="bi bi-chevron-down"></i>
-            </span>
-          </a>
-          <div class="submenu collapse" id="vendorPurchasesSubmenu">
-            <ul class="submenu-list">
-              <li>
-                <%= link_to new_admin_vendor_purchase_path, class: "submenu-link #{'active' if current_page?(new_admin_vendor_purchase_path)}" do %>
-                  <span class="submenu-bullet">•</span>
-                  <span>New Purchase</span>
-                <% end %>
-              </li>
-              <li>
-                <%= link_to admin_vendor_purchases_path, class: "submenu-link #{'active' if current_page?(admin_vendor_purchases_path)}" do %>
-                  <span class="submenu-bullet">•</span>
-                  <span>Purchase History</span>
-                <% end %>
-              </li>
-              <li>
-                <%= link_to batch_inventory_admin_vendor_purchases_path, class: "submenu-link #{'active' if current_page?(batch_inventory_admin_vendor_purchases_path)}" do %>
-                  <span class="submenu-bullet">•</span>
-                  <span>Batch Inventory</span>
-                <% end %>
-              </li>
-            </ul>
-          </div>
         </li>
         <% end %>
       </ul>

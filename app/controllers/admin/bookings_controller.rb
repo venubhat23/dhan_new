@@ -561,6 +561,7 @@ class Admin::BookingsController < Admin::ApplicationController
 
     @booking.payment_status = :paid
     @booking.save! # syncs the existing invoice to fully_paid via the payment_status callback, if one exists
+    flash[:payment_thanks_booking_id] = @booking.id # bookings list offers the WhatsApp thank-you note
 
     invoice = @booking.invoice_generated? ? Invoice.find_by(invoice_number: @booking.invoice_number) : generate_immediate_invoice_for_booking(@booking)
     if invoice
@@ -590,6 +591,7 @@ class Admin::BookingsController < Admin::ApplicationController
     end
 
     remaining_amount = invoice.record_payment!(amount)
+    flash[:payment_thanks_booking_id] = @booking.id # shown after the list reloads
     render json: {
       success: true,
       message: remaining_amount <= 0 ? 'Booking marked as fully paid' : 'Partial payment recorded',
@@ -731,8 +733,7 @@ class Admin::BookingsController < Admin::ApplicationController
     # its own stock_batches query per product — was ~5-7 queries per result.
     store = Store.active.find_by(id: params[:store_id]) if params[:store_id].present?
 
-    base = Product.active
-                  .where("name ILIKE ? OR sku ILIKE ?", "%#{params[:q]}%", "%#{params[:q]}%")
+    base = apply_picker_filters(Product.active, q: params[:q], category_id: nil)
                   .includes(image_attachment: :blob)
                   .limit(10)
 
@@ -1134,8 +1135,11 @@ class Admin::BookingsController < Admin::ApplicationController
   end
 
   def apply_picker_filters(scope, q:, category_id:)
-    if q.present?
-      scope = scope.where("products.name ILIKE ? OR products.sku ILIKE ?", "%#{q}%", "%#{q}%")
+    # Every typed word must appear somewhere in the name (or SKU), in any
+    # order — "ghee", "cow ghee" or "a2" all find "DESI COW GHEE (A2)".
+    q.to_s.split.each do |word|
+      term = "%#{ActiveRecord::Base.sanitize_sql_like(word)}%"
+      scope = scope.where("products.name ILIKE ? OR products.sku ILIKE ?", term, term)
     end
     scope = scope.where(category_id: category_id) if category_id.present?
     scope

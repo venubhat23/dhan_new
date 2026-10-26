@@ -22,7 +22,17 @@ class VendorPurchase < ApplicationRecord
 
   before_save :calculate_totals
   after_save :create_stock_batches, if: :saved_change_to_id?
-  after_update :update_stock_batches, if: :saved_change_to_vendor_purchase_items?
+  # Runs after the nested items have been saved (the autosave callbacks are
+  # declared first), so dirty tracking on the items is already cleared here —
+  # reconcile against the batches instead. Only for saves that submitted items
+  # (the edit form), not status/payment updates.
+  after_update :sync_stock_batches, if: -> { @items_submitted }
+  after_save -> { @items_submitted = false }
+
+  def vendor_purchase_items_attributes=(attributes)
+    @items_submitted = true
+    super
+  end
 
   # Flat option list for the purchase form's product picker. Multi-quantity
   # products expand to one entry per variant (so a purchase line can target a
@@ -164,97 +174,124 @@ class VendorPurchase < ApplicationRecord
   end
 
   def create_stock_batches
-    vendor_purchase_items.each do |item|
-      product = item.product
-      variant = item.product_variant
-      current_stock = variant ? variant.available_stock.to_f : product.total_batch_stock
-
-      # Create stock batch
-      StockBatch.create!(
-        product: product,
-        product_variant: variant,
-        vendor: vendor,
-        vendor_purchase: self,
-        quantity_purchased: item.quantity,
-        quantity_remaining: item.quantity,
-        purchase_price: item.purchase_price,
-        selling_price: item.selling_price,
-        batch_date: purchase_date,
-        status: 'active'
-      )
-
-      # Update the on-hand stock field: variant available_stock for a variant
-      # line, product stock (kept in sync with batch totals) otherwise.
-      # Use update_column to skip validations since we're only updating stock.
-      if variant
-        new_stock = (variant.available_stock.to_f + item.quantity.to_f).round
-        variant.update_column(:available_stock, new_stock)
-      else
-        new_stock = product.total_batch_stock
-        product.update_column(:stock, new_stock)
-      end
-
-      # Create stock movement record
-      product.stock_movements.create!(
-        reference_type: 'vendor_purchase',
-        reference_id: id,
-        movement_type: 'added',
-        quantity: item.quantity.to_f, # Positive for addition
-        stock_before: current_stock,
-        stock_after: new_stock,
-        notes: "Stock added from vendor purchase: #{purchase_number} - #{item.display_name} (Qty: #{item.quantity})"
-      )
-    end
+    vendor_purchase_items.each { |item| add_item_stock(item) }
   end
 
-  def update_stock_batches
-    # Update existing batches when purchase items are modified
-    vendor_purchase_items.each do |item|
-      batch = stock_batches.find_by(product_id: item.product_id, product_variant_id: item.product_variant_id)
+  # Brings the purchase's stock batches in line with its current items after an
+  # edit: new lines get a batch, changed quantities adjust the batch by the
+  # difference (keeping whatever has already been sold from it), and removed
+  # lines take their unsold quantity back out of stock.
+  def sync_stock_batches
+    items = vendor_purchase_items.reload.to_a
+    batches = stock_batches.reload.to_a
+
+    items.each do |item|
+      batch = batches.find { |b| b.product_id == item.product_id && b.product_variant_id == item.product_variant_id }
       if batch
-        product = item.product
-        variant = item.product_variant
-        current_stock = variant ? variant.available_stock.to_f : product.total_batch_stock
-        old_quantity = batch.quantity_purchased.to_f
-        new_quantity = item.quantity.to_f
-        quantity_difference = new_quantity - old_quantity
-
-        batch.update!(
-          quantity_purchased: item.quantity,
-          quantity_remaining: item.quantity,
-          purchase_price: item.purchase_price,
-          selling_price: item.selling_price
-        )
-
-        # Update the on-hand stock field (variant available_stock or product
-        # stock). Use update_column to skip validations.
-        if variant
-          new_stock = [(variant.available_stock.to_f + quantity_difference).round, 0].max
-          variant.update_column(:available_stock, new_stock)
-        else
-          new_stock = product.total_batch_stock
-          product.update_column(:stock, new_stock)
-        end
-
-        # Create stock movement record if quantity changed
-        if quantity_difference != 0
-          movement_type = quantity_difference > 0 ? 'added' : 'adjusted'
-
-          product.stock_movements.create!(
-            reference_type: 'vendor_purchase',
-            reference_id: id,
-            movement_type: movement_type,
-            quantity: quantity_difference,
-            stock_before: current_stock,
-            stock_after: new_stock,
-            notes: "Vendor purchase updated: #{purchase_number} - #{item.display_name} quantity changed by #{quantity_difference}"
-          )
-        end
+        batches.delete(batch)
+        adjust_item_stock(item, batch)
+      else
+        add_item_stock(item)
       end
     end
+
+    batches.each { |batch| remove_batch_stock(batch) }
   end
 
-  def saved_change_to_vendor_purchase_items?
-    vendor_purchase_items.any?(&:changed?)
+  def add_item_stock(item)
+    product = item.product
+    variant = item.product_variant
+    current_stock = on_hand_stock(product, variant)
+
+    StockBatch.create!(
+      product: product,
+      product_variant: variant,
+      vendor: vendor,
+      vendor_purchase: self,
+      quantity_purchased: item.quantity,
+      quantity_remaining: item.quantity,
+      purchase_price: item.purchase_price,
+      selling_price: item.selling_price,
+      batch_date: purchase_date,
+      status: 'active'
+    )
+
+    new_stock = apply_on_hand_change(product, variant, item.quantity.to_f)
+    product.stock_movements.create!(
+      reference_type: 'vendor_purchase',
+      reference_id: id,
+      movement_type: 'added',
+      quantity: item.quantity.to_f, # Positive for addition
+      stock_before: current_stock,
+      stock_after: new_stock,
+      notes: "Stock added from vendor purchase: #{purchase_number} - #{item.display_name} (Qty: #{item.quantity})"
+    )
+  end
+
+  def adjust_item_stock(item, batch)
+    product = item.product
+    variant = item.product_variant
+    current_stock = on_hand_stock(product, variant)
+    quantity_difference = item.quantity.to_f - batch.quantity_purchased.to_f
+    # Can't take back more than is still unsold in this batch.
+    remaining_change = [quantity_difference, -batch.quantity_remaining.to_f].max
+
+    batch.update!(
+      quantity_purchased: item.quantity,
+      quantity_remaining: batch.quantity_remaining.to_f + remaining_change,
+      purchase_price: item.purchase_price,
+      selling_price: item.selling_price
+    )
+    return if remaining_change.zero?
+
+    new_stock = apply_on_hand_change(product, variant, remaining_change)
+    product.stock_movements.create!(
+      reference_type: 'vendor_purchase',
+      reference_id: id,
+      movement_type: remaining_change > 0 ? 'added' : 'adjusted',
+      quantity: remaining_change,
+      stock_before: current_stock,
+      stock_after: new_stock,
+      notes: "Vendor purchase updated: #{purchase_number} - #{item.display_name} quantity changed by #{quantity_difference}"
+    )
+  end
+
+  def remove_batch_stock(batch)
+    product = batch.product
+    variant = batch.product_variant
+    current_stock = on_hand_stock(product, variant)
+    unsold = batch.quantity_remaining.to_f
+
+    batch.update!(quantity_remaining: 0, status: 'exhausted')
+    return if unsold.zero?
+
+    new_stock = apply_on_hand_change(product, variant, -unsold)
+    product.stock_movements.create!(
+      reference_type: 'vendor_purchase',
+      reference_id: id,
+      movement_type: 'adjusted',
+      quantity: -unsold,
+      stock_before: current_stock,
+      stock_after: new_stock,
+      notes: "Vendor purchase updated: #{purchase_number} - #{variant ? "#{product.name} #{variant.label}" : product.name} line removed"
+    )
+  end
+
+  def on_hand_stock(product, variant)
+    variant ? variant.available_stock.to_f : product.total_batch_stock
+  end
+
+  # Update the on-hand stock field: variant available_stock for a variant
+  # line, product stock (kept in sync with batch totals) otherwise. Uses
+  # update_column to skip validations since only stock is changing.
+  def apply_on_hand_change(product, variant, quantity)
+    if variant
+      new_stock = [(variant.available_stock.to_f + quantity).round, 0].max
+      variant.update_column(:available_stock, new_stock)
+    else
+      new_stock = product.total_batch_stock
+      product.update_column(:stock, new_stock)
+    end
+    new_stock
   end
 end

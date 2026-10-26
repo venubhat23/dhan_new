@@ -143,6 +143,8 @@
 
 <% list_state = params.permit(:page, :search, :status, :date_from, :date_to, :customer_id, :b2b, :booked_by, :payment_status, :delivery_pending).to_h %>
 
+<%= render 'admin/bookings/payment_thanks_banner' %>
+
 <!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
@@ -518,6 +520,16 @@
                     </span>
                     <% if booking.payment_method.present? %>
                       <small class="text-muted ms-1">(<%= booking.payment_method_display %>)</small>
+                    <% end %>
+                    <% if booking.payment_status_paid? || (booking.payment_status_partially_paid? && paid_so_far > 0) %>
+                      <% thanks_url = booking_payment_thanks_whatsapp_url(booking, invoice: pay_invoice) %>
+                      <% if thanks_url %>
+                        <a href="<%= thanks_url %>" target="_blank" rel="noopener"
+                           class="btn btn-sm btn-outline-success py-0 px-2 mt-1 d-inline-flex align-items-center"
+                           title="Acknowledge payment and send a thank-you note on WhatsApp">
+                          <i class="bi bi-whatsapp me-1"></i><small>Payment Thank You</small>
+                        </a>
+                      <% end %>
                     <% end %>
                   </div>
 

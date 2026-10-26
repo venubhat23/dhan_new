@@ -75,7 +75,7 @@
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
             <h6 class="text-muted mb-1">Low Stock</h6>
-            <h4 class="mb-0"><%= @products.respond_to?(:select) ? @products.select { |p| s = (p.respond_to?(:current_stock) ? p.current_stock.to_i : p.stock.to_i); s > 0 && s <= (p.low_stock_threshold || 10) }.count : 0 %></h4>
+            <h4 class="mb-0"><%= @products.respond_to?(:select) ? @products.select { |p| s = (p.respond_to?(:current_stock) ? p.current_stock.to_i : p.stock.to_i); s > 0 && s <= p.effective_low_stock_threshold }.count : 0 %></h4>
           </div>
           <div class="text-warning">
             <i class="bi bi-exclamation-triangle fs-2"></i>
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                   </td>
                   <td class="align-middle">
-                    <% threshold = product.low_stock_threshold || 10 %>
+                    <% threshold = product.effective_low_stock_threshold %>
                     <div class="d-flex flex-column gap-1">
                       <div>
                         <% if display_stock > threshold %>

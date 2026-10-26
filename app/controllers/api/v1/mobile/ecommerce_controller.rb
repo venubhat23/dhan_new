@@ -334,16 +334,13 @@ class Api::V1::Mobile::EcommerceController < Api::V1::Mobile::BaseController
 
         @booking.save!
 
-        # Update product stock
+        # Update product stock (variant lines are deducted by BookingItem itself)
         @booking.booking_items.each do |item|
           product = item.product
-          if product.has_multiple_quantities? && item.product_variant_id.present?
-            variant = ProductVariant.find_by(id: item.product_variant_id)
-            variant&.update!(available_stock: [variant.available_stock - item.quantity, 0].max)
-          else
-            new_stock = [product.stock - item.quantity, 0].max
-            product.update!(stock: new_stock)
-          end
+          next if product.has_multiple_quantities? && item.product_variant_id.present?
+
+          new_stock = [product.stock - item.quantity, 0].max
+          product.update!(stock: new_stock)
         end
 
         booking_response_data = format_booking_data(@booking).merge({

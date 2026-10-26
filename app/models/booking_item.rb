@@ -62,7 +62,7 @@ class BookingItem < ApplicationRecord
     # doesn't change quantity (e.g. a price fix) must not re-check it.
     return if persisted? && !quantity_changed?
 
-    available_stock = stock_batches_scope.sum(:quantity_remaining)
+    available_stock = central_variant_line? ? product_variant.available_stock.to_f : stock_batches_scope.sum(:quantity_remaining)
 
     if persisted? && quantity_changed?
       available_stock += quantity_was
@@ -97,6 +97,7 @@ class BookingItem < ApplicationRecord
     new_stock = stock_batches_scope.reload.sum(:quantity_remaining)
     product.update_column(:stock, product.total_batch_stock)
     sync_store_inventory_row
+    adjust_variant_stock(-quantity.to_f)
 
     store_note = booking_store_id.present? ? " at #{booking.store.name}" : ''
     product.stock_movements.create!(
@@ -137,10 +138,6 @@ class BookingItem < ApplicationRecord
     elsif quantity_difference < 0
       quantity_to_restore = quantity_difference.abs.to_f
 
-      restore_scope = booking_store_id.present? \
-        ? product.stock_batches.where(store_id: booking_store_id).order(:batch_date, :created_at) \
-        : product.stock_batches.order(:batch_date, :created_at)
-
       restore_scope.reverse_each do |batch|
         break if quantity_to_restore <= 0
 
@@ -160,6 +157,7 @@ class BookingItem < ApplicationRecord
     new_stock = stock_batches_scope.reload.sum(:quantity_remaining)
     product.update_column(:stock, product.total_batch_stock)
     sync_store_inventory_row
+    adjust_variant_stock(-quantity_difference.to_f)
 
     # Create stock movement record for the change
     if quantity_difference != 0
@@ -184,10 +182,6 @@ class BookingItem < ApplicationRecord
     current_stock = stock_batches_scope.sum(:quantity_remaining)
     quantity_to_restore = quantity.to_f
 
-    restore_scope = booking_store_id.present? \
-      ? product.stock_batches.where(store_id: booking_store_id).order(:batch_date, :created_at) \
-      : product.stock_batches.order(:batch_date, :created_at)
-
     restore_scope.reverse_each do |batch|
       break if quantity_to_restore <= 0
 
@@ -206,6 +200,7 @@ class BookingItem < ApplicationRecord
     new_stock = stock_batches_scope.reload.sum(:quantity_remaining)
     product.update_column(:stock, product.total_batch_stock)
     sync_store_inventory_row
+    adjust_variant_stock(quantity.to_f)
 
     product.stock_movements.create!(
       reference_type: 'booking',
@@ -241,11 +236,42 @@ class BookingItem < ApplicationRecord
     row.update_column(:quantity, [on_hand, 0].max)
   end
 
-  def stock_batches_scope
+  # A central (no store) sale of a specific variant. The variant's own
+  # available_stock is the on-hand figure for these — Product::REAL_STOCK_SQL,
+  # Product Summary, the booking picker and
+  # Admin::BookingsController#validate_stock_availability all read it — so it
+  # is what gets checked and moved, not the product's pooled batch total (which
+  # mixes every variant's batches and drifts from the variant figures).
+  def central_variant_line?
+    product_variant_id.present? && product&.has_multiple_quantities? && booking_store_id.blank?
+  end
+
+  def adjust_variant_stock(delta)
+    return unless central_variant_line? && product_variant && delta != 0
+
+    product_variant.reload
+    product_variant.update_column(:available_stock, [(product_variant.available_stock.to_f + delta).round, 0].max)
+  end
+
+  # Batches this line draws from / restores to. Central variant lines only touch
+  # their own variant's batches (or untagged ones, e.g. a variant's initial
+  # stock batch), never a sibling variant's.
+  def line_batches
+    scope = product.stock_batches
     if booking_store_id.present?
-      product.stock_batches.active.where(store_id: booking_store_id).order(:batch_date, :created_at)
+      scope.where(store_id: booking_store_id)
+    elsif central_variant_line?
+      scope.where(product_variant_id: [product_variant_id, nil])
     else
-      product.stock_batches.active.order(:batch_date, :created_at)
+      scope
     end
+  end
+
+  def stock_batches_scope
+    line_batches.active.order(:batch_date, :created_at)
+  end
+
+  def restore_scope
+    line_batches.order(:batch_date, :created_at)
   end
 end

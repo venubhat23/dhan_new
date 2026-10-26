@@ -1245,9 +1245,16 @@
           <%= form.label :low_stock_threshold, class: "form-label" do %>
             Low Stock Alert Threshold
           <% end %>
-          <%= form.number_field :low_stock_threshold, class: "form-control",
-              min: 0, placeholder: "10", id: "low_stock_threshold" %>
-          <div class="help-text">Show low-stock warning when quantity drops to this level (default: 10)</div>
+          <% if product.persisted? && product.has_multiple_quantities? && product.product_variants.any? %>
+            <%# Variant products: the effective threshold is the sum of the variant thresholds. %>
+            <%= form.number_field :low_stock_threshold, class: "form-control", min: 0, id: "low_stock_threshold",
+                value: product.effective_low_stock_threshold, readonly: true %>
+            <div class="help-text">Total of all variants' low-stock thresholds (edit per variant above)</div>
+          <% else %>
+            <%= form.number_field :low_stock_threshold, class: "form-control",
+                min: 0, placeholder: "10", id: "low_stock_threshold" %>
+            <div class="help-text">Show low-stock warning when quantity drops to this level (default: 10)</div>
+          <% end %>
         </div>
 
         <!-- Stock Update Vendor Purchase Linking (shown only when editing) -->

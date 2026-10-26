@@ -291,6 +291,7 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     end
     @booking.payment_status = :paid
     @booking.save!
+    flash[:payment_thanks_booking_id] = @booking.id # bookings list offers the WhatsApp thank-you note
     invoice = @booking.invoice_generated? ? Invoice.find_by(invoice_number: @booking.invoice_number) : generate_immediate_invoice_for_booking(@booking)
     notice = invoice ? "Booking marked as paid. Invoice ##{invoice.invoice_number} updated." : 'Booking marked as paid.'
     redirect_to store_admin_booking_path(@booking, list_state_params), notice: notice
@@ -394,7 +395,11 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
 
   def search_products
     q = params[:q].to_s.strip
-    products = Product.active.where('name ILIKE ? OR sku ILIKE ?', "%#{q}%", "%#{q}%").limit(15)
+    # Every typed word must appear in the name (or SKU), in any order.
+    products = q.split.inject(Product.active) do |scope, word|
+      term = "%#{ActiveRecord::Base.sanitize_sql_like(word)}%"
+      scope.where('name ILIKE ? OR sku ILIKE ?', term, term)
+    end.limit(15)
     render json: products.map { |p|
       store_stock = @current_store.available_stock_for(p.id)
       { id: p.id, text: "#{p.name} - #{p.try(:formatted_selling_price) || p.price}", name: p.name, sku: p.sku,
