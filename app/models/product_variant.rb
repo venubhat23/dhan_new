@@ -19,6 +19,7 @@ class ProductVariant < ApplicationRecord
   before_save :calculate_discount_amount
   before_save :calculate_gst_fields
   before_save :ensure_single_default
+  before_destroy :release_references
 
   after_create :create_initial_stock_records, if: -> { available_stock.present? && available_stock > 0 }
   after_commit :bust_mobile_product_cache
@@ -120,5 +121,17 @@ class ProductVariant < ApplicationRecord
     )
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "Failed to create initial stock records for ProductVariant #{id}: #{e.message}"
+  end
+
+  # Removing a variant from the product form must not trip the foreign keys
+  # from stock/purchase/invoice history rows. Keep that history (product_id
+  # stays set) but detach it from this variant: its batches are retired so
+  # they stop counting as stock, and its per-store stock overlay rows go.
+  def release_references
+    StockBatch.where(product_variant_id: id).update_all(product_variant_id: nil, status: 'exhausted', updated_at: Time.current)
+    StoreInventory.where(product_variant_id: id).delete_all
+    [VendorPurchaseItem, InvoiceItem, BookingItem].each do |model|
+      model.where(product_variant_id: id).update_all(product_variant_id: nil) if model.column_names.include?('product_variant_id')
+    end
   end
 end

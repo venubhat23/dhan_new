@@ -1,3 +1,5 @@
+<%# Inline scripts here (top-level let / DOMContentLoaded) only work on a full page load — make Turbo do one. %>
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
 <%# Floating Toggle Buttons %>
 <div class="position-fixed" style="top: 90px; right: 20px; z-index: 1050;">
   <div class="d-flex gap-2">
@@ -147,7 +149,7 @@
           <h5 class="mb-0">Booking Details</h5>
         </div>
         <div class="card-body">
-          <%= form_with model: [:admin, @booking], local: true, html: { id: 'bookingForm' } do |f| %>
+          <%= form_with model: [:admin, @booking], local: true, data: { turbo: false }, html: { id: 'bookingForm' } do |f| %>
             <% if @booking.errors.any? %>
               <div class="alert alert-danger">
                 <h6><i class="bi bi-exclamation-triangle me-2"></i>Please fix the following errors:</h6>
@@ -158,6 +160,36 @@
                 </ul>
               </div>
             <% end %>
+
+            <%# Payment Status — kept at the top so it is reachable without scrolling %>
+            <div class="mb-4">
+              <h6 class="mb-3"><i class="bi bi-check-circle me-2"></i>Payment Status</h6>
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label" for="paymentStatusSelect">Payment Received</label>
+                  <%= f.select :payment_status,
+                      options_for_select([
+                        ['Unpaid', 'unpaid'],
+                        ['Partially Paid', 'partially_paid'],
+                        ['Paid', 'paid']
+                      ], 'unpaid'),
+                      {},
+                      { class: "form-select", id: "paymentStatusSelect" } %>
+                  <div class="form-text">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Choose whether payment has been fully received, partially received, or not yet received
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="alert alert-light border d-flex align-items-center mb-0" id="paymentStatusAlert">
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                    <span id="paymentStatusText">Payment not received</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <%# Customer Information %>
             <div class="mb-4">
@@ -352,36 +384,6 @@
                   <div class="col-md-6">
                     <label class="form-label">Change to Return</label>
                     <%= f.number_field :change_amount, class: 'form-control', readonly: true, placeholder: '0.00' %>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <%# Payment Status %>
-            <div class="mb-4">
-              <h6 class="mb-3"><i class="bi bi-check-circle me-2"></i>Payment Status</h6>
-
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label" for="paymentStatusSelect">Payment Received</label>
-                  <%= f.select :payment_status,
-                      options_for_select([
-                        ['Unpaid', 'unpaid'],
-                        ['Partially Paid', 'partially_paid'],
-                        ['Paid', 'paid']
-                      ], 'unpaid'),
-                      {},
-                      { class: "form-select", id: "paymentStatusSelect" } %>
-                  <div class="form-text">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Choose whether payment has been fully received, partially received, or not yet received
-                  </div>
-                </div>
-
-                <div class="col-md-6">
-                  <div class="alert alert-light border d-flex align-items-center mb-0" id="paymentStatusAlert">
-                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
-                    <span id="paymentStatusText">Payment not received</span>
                   </div>
                 </div>
               </div>

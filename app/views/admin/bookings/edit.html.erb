@@ -1,3 +1,5 @@
+<%# Inline scripts here (top-level let / DOMContentLoaded) only work on a full page load — make Turbo do one. %>
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
 <!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
@@ -23,7 +25,7 @@
 </div>
 
 <!-- Main Form -->
-<%= form_with model: [:admin, @booking], local: true do |f| %>
+<%= form_with model: [:admin, @booking], local: true, data: { turbo: false } do |f| %>
   <% (@list_state || {}).each do |key, value| %>
     <%= hidden_field_tag "list_state[#{key}]", value %>
   <% end %>
@@ -46,48 +48,7 @@
   <div class="row">
     <!-- Main Form Sections -->
     <div class="col-lg-8">
-      <!-- Customer Information -->
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-transparent border-0">
-          <h5 class="mb-0">
-            <i class="bi bi-person text-primary me-2"></i>
-            Customer Information
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-12">
-              <label class="form-label">Existing Customer</label>
-              <%= f.select :customer_id,
-                  options_for_select([['Select existing customer', '']] + Customer.limit(100).map { |c| ["#{c.display_name} - #{c.mobile}", c.id] }, @booking.customer_id),
-                  {},
-                  { class: 'form-select', onchange: 'fillCustomerDetails(this)' } %>
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label">Customer Name <span class="text-danger">*</span></label>
-              <%= f.text_field :customer_name, class: 'form-control', placeholder: 'Enter customer name', required: true %>
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label">Mobile Number <span class="text-danger">*</span></label>
-              <%= f.text_field :customer_phone, class: 'form-control', placeholder: 'Enter mobile number', required: true %>
-            </div>
-
-            <div class="col-12">
-              <label class="form-label">Email Address</label>
-              <%= f.email_field :customer_email, class: 'form-control', placeholder: 'Enter email address' %>
-            </div>
-
-            <div class="col-12">
-              <label class="form-label">Delivery Address</label>
-              <%= f.text_area :delivery_address, class: 'form-control', rows: 3, placeholder: 'Enter complete delivery address' %>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Payment Information -->
+      <!-- Payment Information (first, so Payment Status needs no scrolling) -->
       <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-transparent border-0">
           <h5 class="mb-0">
@@ -165,6 +126,47 @@
                   <%= f.number_field :change_amount, class: 'form-control', readonly: true, placeholder: '0.00' %>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customer Information -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="bi bi-person text-primary me-2"></i>
+            Customer Information
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Existing Customer</label>
+              <%= f.select :customer_id,
+                  options_for_select([['Select existing customer', '']] + Customer.limit(100).map { |c| ["#{c.display_name} - #{c.mobile}", c.id] }, @booking.customer_id),
+                  {},
+                  { class: 'form-select', onchange: 'fillCustomerDetails(this)' } %>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Customer Name <span class="text-danger">*</span></label>
+              <%= f.text_field :customer_name, class: 'form-control', placeholder: 'Enter customer name', required: true %>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Mobile Number <span class="text-danger">*</span></label>
+              <%= f.text_field :customer_phone, class: 'form-control', placeholder: 'Enter mobile number', required: true %>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Email Address</label>
+              <%= f.email_field :customer_email, class: 'form-control', placeholder: 'Enter email address' %>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Delivery Address</label>
+              <%= f.text_area :delivery_address, class: 'form-control', rows: 3, placeholder: 'Enter complete delivery address' %>
             </div>
           </div>
         </div>

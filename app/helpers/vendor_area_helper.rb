@@ -23,6 +23,14 @@ module VendorAreaHelper
     public_send("toggle_status_#{vendor_area}_vendor_path", vendor, *args)
   end
 
+  def vn_mark_paid_vendor_path(vendor, *args)
+    public_send("mark_paid_#{vendor_area}_vendor_path", vendor, *args)
+  end
+
+  def vn_bulk_mark_paid_vendors_path(*args)
+    public_send("bulk_mark_paid_#{vendor_area}_vendors_path", *args)
+  end
+
   # ---- Vendor Purchases ----
   def vn_vendor_purchases_path(*args)         = polymorphic_path([vendor_area, :vendor_purchases], *args)
   def vn_vendor_purchase_path(purchase, *args) = polymorphic_path([vendor_area, purchase], *args)

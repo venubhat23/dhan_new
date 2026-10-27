@@ -1,6 +1,6 @@
 class Admin::VendorsController < Admin::ApplicationController
   before_action :authenticate_user!
-  before_action :set_vendor, only: [:show, :edit, :update, :destroy, :toggle_status]
+  before_action :set_vendor, only: [:show, :edit, :update, :destroy, :toggle_status, :mark_paid]
   layout 'application'
 
   def index
@@ -79,6 +79,35 @@ class Admin::VendorsController < Admin::ApplicationController
           new_status: @vendor.status
         }
       }
+    end
+  end
+
+  def mark_paid
+    @vendor.mark_as_paid!
+    redirect_back fallback_location: vendors_path_for, notice: "#{@vendor.name} marked as paid."
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back fallback_location: vendors_path_for, alert: "Could not mark #{@vendor.name} as paid: #{e.record.errors.full_messages.to_sentence}"
+  end
+
+  def bulk_mark_paid
+    vendors = Vendor.where(id: Array(params[:vendor_ids]).reject(&:blank?)).includes(:vendor_purchases).reject(&:settled?)
+    if vendors.empty?
+      redirect_to vendors_path_for, alert: 'No unpaid vendors were selected.'
+      return
+    end
+
+    failures = []
+    vendors.each do |vendor|
+      vendor.mark_as_paid!
+    rescue ActiveRecord::RecordInvalid => e
+      failures << "#{vendor.name} (#{e.record.errors.full_messages.to_sentence})"
+    end
+
+    paid_count = vendors.size - failures.size
+    if failures.any?
+      redirect_to vendors_path_for, alert: "Marked #{paid_count} vendor(s) as paid. Failed: #{failures.join(', ')}"
+    else
+      redirect_to vendors_path_for, notice: "Marked #{paid_count} vendor(s) as paid."
     end
   end
 

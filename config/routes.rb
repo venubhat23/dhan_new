@@ -115,6 +115,10 @@ Rails.application.routes.draw do
     resources :vendors do
       member do
         patch :toggle_status
+        patch :mark_paid
+      end
+      collection do
+        post :bulk_mark_paid
       end
     end
 
@@ -280,6 +284,7 @@ Rails.application.routes.draw do
         get :product_picker
         get :realtime_data
         get :store_booking
+        post :bulk_mark_paid
         # Status filters
         get :pending
         get :confirmed
@@ -647,6 +652,10 @@ Rails.application.routes.draw do
     resources :vendors do
       member do
         patch :toggle_status
+        patch :mark_paid
+      end
+      collection do
+        post :bulk_mark_paid
       end
     end
 

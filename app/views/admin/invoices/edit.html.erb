@@ -1,3 +1,5 @@
+<%# Inline scripts here (top-level let / DOMContentLoaded) only work on a full page load — make Turbo do one. %>
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h2 class="mb-1">Edit Invoice</h2>
@@ -13,7 +15,7 @@
   </div>
 </div>
 
-<%= form_with model: [:admin, @invoice], local: true, class: "invoice-edit-form", html: { novalidate: true } do |f| %>
+<%= form_with model: [:admin, @invoice], local: true, class: "invoice-edit-form", data: { turbo: false }, html: { novalidate: true } do |f| %>
   <% if local_assigns[:mobile_ui] %>
     <%= hidden_field_tag :mobile_ui, '1' %>
   <% end %>
@@ -366,10 +368,12 @@
             </div>
           <% end %>
 
-          <div class="text-center mt-3 pt-3 border-top">
+          <!-- Add Product + Update Invoice (same submit as the sidebar's button) -->
+          <div class="d-flex justify-content-between align-items-center gap-2 mt-3 pt-3 border-top">
             <button type="button" class="btn btn-outline-primary btn-sm" onclick="addNewLineItem()">
               <i class="bi bi-plus-lg me-1"></i>Add Product
             </button>
+            <%= f.submit "Update Invoice", class: "btn btn-primary" %>
           </div>
         </div>
       </div>

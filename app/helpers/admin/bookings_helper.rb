@@ -12,14 +12,15 @@ module Admin::BookingsHelper
     paid = booking.payment_status_paid? ? total : invoice&.paid_amount.to_f
     due = (total - paid).round(2)
 
-    booking.ensure_share_token!
     name = booking.customer&.display_name || booking.customer_name.presence || 'Customer'
+    received_on = (invoice&.paid_at || booking.payment_completed_at || Time.current).in_time_zone.strftime('%d-%b-%Y')
+    reference = invoice&.invoice_number.presence || booking.booking_number
 
+    # Wording as requested by the client (mirrors their accounting app's "Payment-in" receipt).
     lines = ["Dear #{name},", '',
-             "We have received your payment of ₹#{number_with_delimiter(format('%.2f', paid))} for booking #{booking.booking_number}. Thank you!"]
-    lines << "Balance due: ₹#{number_with_delimiter(format('%.2f', due))}" if due > 0
-    lines += ['', "View your booking: #{request.base_url}/booking/#{booking.share_token}", '',
-              'Thank you for choosing Dhanvantari Naturals.', 'Dhanvantari Naturals Team']
+             "Payment-in(number: #{reference}) of Rs. #{format('%.2f', paid)} has been received from you on #{received_on}"]
+    lines << "Balance due: Rs. #{format('%.2f', due)}" if due > 0
+    lines += ['', 'Thank you for your business.', '', 'Dhanvantari Naturals']
 
     "https://wa.me/91#{digits}?text=#{ERB::Util.url_encode(lines.join("\n"))}"
   end

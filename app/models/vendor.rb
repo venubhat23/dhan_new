@@ -36,6 +36,23 @@ class Vendor < ApplicationRecord
     total_purchases - total_paid + (opening_balance || 0)
   end
 
+  def settled?
+    payment_type == 'Paid' && outstanding_balance <= 0
+  end
+
+  # "Mark vendor as Paid" from the vendors list: settles every unpaid purchase
+  # (paid_amount = total, same as VendorPurchase mark_as_paid), clears the
+  # opening balance so the outstanding shows ₹0, and sets payment_type to Paid.
+  # Also repairs legacy payment_type values (e.g. "Cash") that fail validation.
+  def mark_as_paid!
+    transaction do
+      vendor_purchases.where('COALESCE(paid_amount, 0) < COALESCE(total_amount, 0)').find_each do |purchase|
+        purchase.update!(paid_amount: purchase.total_amount)
+      end
+      update!(payment_type: 'Paid', opening_balance: 0)
+    end
+  end
+
   def can_be_deleted?
     vendor_purchases.empty?
   end

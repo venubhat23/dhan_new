@@ -108,7 +108,7 @@
           %>
           <tr>
             <td class="text-center"><%= index + 1 %></td>
-            <td><%= item.product&.name || 'Product' %></td>
+            <td><strong><%= item.product&.name || 'Product' %></strong></td>
             <td class="text-center"><%= item.product.respond_to?(:hsn_code) ? (item.product&.hsn_code || '0401') : '0401' %></td>
             <td class="text-center"><%= item.quantity %></td>
             <td class="text-center">Ltr</td>

@@ -18,7 +18,8 @@ class Admin::BookingsController < Admin::ApplicationController
       term = "%#{params[:search].strip}%"
       @bookings = @bookings.where(
         "bookings.booking_number ILIKE :t OR bookings.customer_name ILIKE :t OR bookings.customer_email ILIKE :t " \
-        "OR bookings.customer_phone ILIKE :t OR bookings.customer_id IN (SELECT id FROM customers WHERE full_name ILIKE :t OR mobile ILIKE :t)",
+        "OR bookings.customer_phone ILIKE :t OR bookings.customer_id IN (SELECT id FROM customers WHERE full_name ILIKE :t OR mobile ILIKE :t) " \
+        "OR bookings.id IN (SELECT bi.booking_id FROM booking_items bi JOIN products p ON p.id = bi.product_id WHERE p.name ILIKE :t)",
         t: term
       )
     end
@@ -101,7 +102,7 @@ class Admin::BookingsController < Admin::ApplicationController
 
     # Paid amounts for the list's Mark as Paid / Partial Payment buttons, in one query.
     @payment_invoices = Invoice.where(invoice_number: @bookings.map(&:invoice_number).compact_blank)
-                               .select(:id, :invoice_number, :total_amount, :paid_amount, :payment_status)
+                               .select(:id, :invoice_number, :total_amount, :paid_amount, :payment_status, :paid_at)
                                .index_by(&:invoice_number)
 
     # The customer filter dropdown searches on demand via the search_customers
@@ -603,6 +604,36 @@ class Admin::BookingsController < Admin::ApplicationController
   rescue => e
     Rails.logger.error "Booking partial payment error: #{e.message}"
     render json: { success: false, error: "Error processing payment: #{e.message}" }, status: :internal_server_error
+  end
+
+  # Bulk "Mark as Paid" from the bookings list checkboxes. Same per-booking
+  # effect as mark_paid: saving payment_status=paid syncs (or generates) the
+  # booking's invoice via Booking#sync_invoice_payment_status.
+  def bulk_mark_paid
+    ids = Array(params[:booking_ids]).reject(&:blank?)
+    scope = current_user.franchise? ? Booking.where(user_id: current_user.id) : Booking.all
+    bookings = scope.where(id: ids).where("bookings.payment_status IS NULL OR bookings.payment_status NOT IN ('paid', 'refunded')")
+
+    paid_ids = []
+    failures = []
+    bookings.find_each do |booking|
+      booking.payment_status = :paid
+      booking.save!
+      paid_ids << booking.id
+    rescue => e
+      failures << "##{booking.booking_number} (#{e.message})"
+    end
+
+    updated = paid_ids.size
+    flash[:payment_thanks_booking_id] = paid_ids.first if updated == 1 # single booking: offer the WhatsApp thank-you
+    if updated.zero? && failures.empty?
+      redirect_to admin_bookings_path(list_state_params), alert: 'No unpaid bookings were selected.'
+    elsif failures.any?
+      redirect_to admin_bookings_path(list_state_params),
+                  alert: "Marked #{updated} booking(s) as paid. Failed: #{failures.join(', ')}"
+    else
+      redirect_to admin_bookings_path(list_state_params), notice: "Marked #{updated} booking(s) as paid."
+    end
   end
 
   def update_delivery_charge

@@ -852,7 +852,7 @@
               <% v_gst = vf.object.gst_percentage.presence&.to_f || @product.gst_percentage.to_f %>
               <% v_eff = vf.object.effective_price.to_f %>
               <% v_gst_amt = v_gst > 0 ? (v_eff * v_gst / 100.0).round(2) : 0 %>
-              <div class="variant-row border rounded p-3 bg-white shadow-sm position-relative">
+              <div class="variant-row border rounded p-3 bg-white shadow-sm position-relative" data-persisted="<%= vf.object.persisted? %>">
                 <!-- Header row: label + default + delete -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                   <span class="fw-semibold text-primary"><i class="bi bi-layers me-1"></i>Variant</span>
@@ -2925,8 +2925,12 @@ function copyImageUrl(imageUrl) {
     card.querySelector('.variant-discount-type')?.addEventListener('change', () => recalcVariantRow(card));
     card.querySelector('.variant-discount-value')?.addEventListener('input', () => recalcVariantRow(card));
     card.querySelector('.remove-variant-row')?.addEventListener('click', function() {
+      // Saved variants are flagged with data-persisted: their hidden [id] input is
+      // rendered by fields_for *after* the card, so it can't be found inside it —
+      // checking for it sent every saved variant down the remove() branch and the
+      // _destroy flag never reached the server.
       const destroyField = card.querySelector('.destroy-field');
-      if (destroyField && card.querySelector('input[name*="[id]"]')) {
+      if (destroyField && card.dataset.persisted === 'true') {
         destroyField.value = '1';
         card.style.display = 'none';
       } else {
