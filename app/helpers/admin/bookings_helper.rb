@@ -32,11 +32,15 @@ module Admin::BookingsHelper
   end
 
   # "Send Invoice" text: points the customer at the booking's public bill page
-  # (/booking/:token). Plain text for the same wa.me emoji reason as above.
+  # (/booking/:token). No emojis for the same wa.me reason as above (₹ is fine).
   def booking_send_invoice_message(booking, public_url)
     name = booking.customer&.display_name || booking.customer_name.presence || 'Customer'
-    ["Dear #{name},", '', "Your bill for booking #{booking.booking_number} is here:", public_url, '',
-     'Thank you for your business!', '', 'Dhanvantari Naturals'].join("\n")
+    date = (booking.booking_date || booking.created_at || Time.current).in_time_zone.strftime('%d %b %Y')
+    amount = number_to_currency(booking.total_amount.to_f, unit: '₹', precision: 2)
+    ["Dear #{name},", '', 'Thank you for your booking with Dhanvantari Naturals!', '',
+     "Booking #: #{booking.booking_number}", "Date: #{date}", "Amount: #{amount}", '',
+     "View your booking: #{public_url}", '', 'We appreciate your trust in us!', '',
+     'Dhanvantari Naturals'].join("\n")
   end
 
   def payment_thanks_text(name, headline, due: 0)

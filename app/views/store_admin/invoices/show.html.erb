@@ -670,7 +670,7 @@
       wa_amount = number_with_precision(@invoice.total_amount.to_f, precision: 2, delimiter: ',')
       wa_idate  = @invoice.invoice_date&.strftime('%d %b %Y')
       wa_invoice_link = "\n📋 View your invoice: #{public_invoice_by_token_url(token: @invoice.share_token)}"
-      wa_thank_msg = "Dear #{wa_cname},\n\nThank you for your order with Dhanvantari Naturals! 🌿\n\nInvoice #: #{@invoice.invoice_number}\nDate: #{wa_idate}\nAmount: ₹#{wa_amount}#{wa_invoice_link}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
+      wa_thank_msg = "Dear #{wa_cname},\n\nThank you for your order with Dhanvantari Naturals! 🌿\n\nInvoice #: #{@invoice.invoice_number}\nDate: #{wa_idate}\nAmount: ₹#{wa_amount}#{wa_invoice_link}\n\nWe appreciate your trust in us!\n\nDhanvantari Naturals"
     %>
     <div class="invoice-action-bar">
       <%= link_to (local_assigns[:mobile_ui] ? store_admin_bookings_path : store_admin_invoices_path), class: "back-button" do %>

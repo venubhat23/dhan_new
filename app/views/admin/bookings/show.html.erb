@@ -66,7 +66,7 @@
         <%
           inv_url     = "#{request.base_url}/invoice/#{bi.share_token}"
           inv_pdf_url = "#{request.base_url}/invoice/#{bi.share_token}/download"
-          wa_inv_msg  = "Dear #{cname},\n\nHere is your invoice from Dhanvantari Naturals 🌿\n\nBooking #: #{@booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View Invoice: #{inv_url}\n📄 Download PDF: #{inv_pdf_url}\n\nThank you!\n🙏 Dhanvantari Naturals Team"
+          wa_inv_msg  = "Dear #{cname},\n\nHere is your invoice from Dhanvantari Naturals 🌿\n\nBooking #: #{@booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View Invoice: #{inv_url}\n📄 Download PDF: #{inv_pdf_url}\n\nThank you!\nDhanvantari Naturals"
         %>
         <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_inv_msg) %>"
            target="_blank" class="btn btn-success"

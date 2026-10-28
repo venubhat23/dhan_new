@@ -677,7 +677,7 @@
                         <% if bi&.share_token.present? %>
                           <% wa_inv_url = public_invoice_url(token: bi.share_token) %>
                           <% wa_inv_pdf_url = "#{request.base_url}/invoice/#{bi.share_token}/download" %>
-                          <% wa_text = "Dear #{wa_cname},\n\nHere is your invoice from Dhanvantari Naturals 🌿\n\nBooking #: #{booking.booking_number}\nAmount: ₹#{wa_amount}\n\n📋 View Invoice: #{wa_inv_url}\n📄 Download PDF: #{wa_inv_pdf_url}\n\nThank you!\n🙏 Dhanvantari Naturals Team" %>
+                          <% wa_text = "Dear #{wa_cname},\n\nHere is your invoice from Dhanvantari Naturals 🌿\n\nBooking #: #{booking.booking_number}\nAmount: ₹#{wa_amount}\n\n📋 View Invoice: #{wa_inv_url}\n📄 Download PDF: #{wa_inv_pdf_url}\n\nThank you!\nDhanvantari Naturals" %>
                           <a href="https://wa.me/<%= wa_phone_full.present? ? wa_phone_full : '' %>?text=<%= ERB::Util.url_encode(wa_text) %>"
                              class="action-icon whatsapp"
                              target="_blank"
