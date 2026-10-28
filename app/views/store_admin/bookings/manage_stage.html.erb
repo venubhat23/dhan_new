@@ -97,14 +97,17 @@
         <label class="form-label fw-bold">Select New Stage</label>
         <select name="target_stage" class="form-select form-select-lg" onchange="showStageFields(this.value)" required>
           <option value="">-- Select Stage --</option>
-          <% all_stages = Booking::STATUS_LABELS.keys %>
-          <% # Remove current stage from available stages %>
-          <% available_stages = all_stages.reject { |stage| stage == @booking.status } %>
-
-          <% available_stages.each do |stage| %>
-            <option value="<%= stage %>">
-              <%= Booking.status_label(stage) %> - <%= stage_description_full(stage) %>
-            </option>
+          <% # All stages listed; the current one is shown but can't be picked %>
+          <% Booking::STATUS_LABELS.each_key do |stage| %>
+            <% if stage == @booking.status_for_select %>
+              <option value="<%= stage %>" disabled>
+                <%= Booking.status_label(stage) %> (current)
+              </option>
+            <% else %>
+              <option value="<%= stage %>">
+                <%= Booking.status_label(stage) %> - <%= stage_description_full(stage) %>
+              </option>
+            <% end %>
           <% end %>
         </select>
         <div class="form-text">Available stages based on current order status</div>

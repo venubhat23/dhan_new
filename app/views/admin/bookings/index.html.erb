@@ -381,9 +381,9 @@
           <%= hidden_field_tag "list_state[#{key}]", value %>
         <% end %>
       <% end %>
-      <%# Floats at the bottom of the screen so it stays reachable while ticking rows anywhere in the list. %>
+      <%# Pinned to the top of the screen so it stays visible while ticking rows anywhere in the list. %>
       <div id="bulkPaidBar" class="align-items-center gap-2 px-3 py-2 bg-success-subtle border border-success rounded-pill shadow"
-           style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1050;">
+           style="display: none; position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 2000;">
         <span class="small fw-semibold"><span id="bulkPaidCount">0</span> selected</span>
         <button type="submit" form="bulkPaidForm" class="btn btn-success btn-sm">
           <i class="bi bi-check-circle me-1"></i>Mark Selected as Paid
@@ -611,7 +611,16 @@
                         </button>
                         <ul class="dropdown-menu">
                           <li class="dropdown-header">Quick Stage Update</li>
-                          <% booking.next_possible_statuses.each do |status| %>
+                          <% Booking::STATUS_LABELS.each_key do |status| %>
+                            <% if status == booking.status_for_select %>
+                              <li>
+                                <span class="dropdown-item text-muted" style="cursor: default;">
+                                  <i class="bi bi-check2 me-2"></i>
+                                  <%= Booking.status_label(status) %> (current)
+                                </span>
+                              </li>
+                              <% next %>
+                            <% end %>
                             <li>
                               <%= button_to update_status_admin_booking_path(booking, status: status, list_state: list_state, return_to: 'index'),
                                   method: :patch, class: "dropdown-item",
@@ -1634,7 +1643,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Handle form submission
-  document.getElementById('stageTransitionForm').addEventListener('submit', function(e) {
+  document.getElementById('stageTransitionForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
 
     const formData = new FormData(this);
@@ -2492,6 +2501,8 @@ td .d-flex.gap-2 {
       const all = visibleBoxes();
       const checked = document.querySelectorAll('.bulk-paid-checkbox:checked').length;
       const bar = document.getElementById('bulkPaidBar');
+      // A transformed ancestor would make position:fixed scroll with it; park the bar on <body>.
+      if (bar && bar.parentElement !== document.body) document.body.appendChild(bar);
       if (bar) bar.style.display = checked > 0 ? 'flex' : 'none';
       const count = document.getElementById('bulkPaidCount');
       if (count) count.textContent = checked;

@@ -437,7 +437,16 @@
                         </button>
                         <ul class="dropdown-menu">
                           <li class="dropdown-header">Quick Stage Update</li>
-                          <% booking.next_possible_statuses.each do |status| %>
+                          <% Booking::STATUS_LABELS.each_key do |status| %>
+                            <% if status == booking.status_for_select %>
+                              <li>
+                                <span class="dropdown-item text-muted" style="cursor: default;">
+                                  <i class="bi bi-check2 me-2"></i>
+                                  <%= Booking.status_label(status) %> (current)
+                                </span>
+                              </li>
+                              <% next %>
+                            <% end %>
                             <li>
                               <!-- Status updates limited for franchise users -->
                               <span class="dropdown-item text-muted" style="cursor: not-allowed;">

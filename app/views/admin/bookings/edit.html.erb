@@ -131,6 +131,32 @@
         </div>
       </div>
 
+      <!-- Booking Status -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="bi bi-gear text-primary me-2"></i>
+            Booking Status
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Current Status</label>
+              <%= f.select :status,
+                  options_for_select(@booking.status_select_options, @booking.status_for_select),
+                  {},
+                  { class: 'form-select' } %>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Booking Date</label>
+              <%= f.datetime_local_field :booking_date, class: 'form-control' %>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Customer Information -->
       <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-transparent border-0">
@@ -167,32 +193,6 @@
             <div class="col-12">
               <label class="form-label">Delivery Address</label>
               <%= f.text_area :delivery_address, class: 'form-control', rows: 3, placeholder: 'Enter complete delivery address' %>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Booking Status -->
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-transparent border-0">
-          <h5 class="mb-0">
-            <i class="bi bi-gear text-primary me-2"></i>
-            Booking Status
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Current Status</label>
-              <%= f.select :status,
-                  options_for_select(@booking.status_select_options, @booking.status_for_select),
-                  {},
-                  { class: 'form-select' } %>
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label">Booking Date</label>
-              <%= f.datetime_local_field :booking_date, class: 'form-control' %>
             </div>
           </div>
         </div>
