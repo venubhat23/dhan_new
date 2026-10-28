@@ -82,7 +82,8 @@
 
                 <div class="col-md-3">
                   <div class="form-check">
-                    <%= f.radio_button :payment_method, 'upi', class: 'form-check-input', id: 'payment_upi', onchange: 'selectPaymentMethod("upi")' %>
+                    <%= f.radio_button :payment_method, 'upi', class: 'form-check-input', id: 'payment_upi', onchange: 'selectPaymentMethod("upi")',
+                                       checked: @booking.payment_method.blank? || @booking.payment_method.to_s == 'upi' %><%# UPI is the default when none chosen %>
                     <label class="form-check-label" for="payment_upi">
                       <i class="bi bi-phone me-1"></i>UPI Payment
                     </label>
@@ -109,7 +110,7 @@
                     ['Paid', 'paid'],
                     ['Partially Paid', 'partially_paid'],
                     ['Refunded', 'refunded']
-                  ], @booking.payment_status),
+                  ], @booking.payment_status.presence || 'unpaid'),
                   {},
                   { class: 'form-select' } %>
             </div>
@@ -696,7 +697,7 @@ function initBookingEditPage() {
   document.querySelectorAll('#booking-items select[onchange^="updateItemPrice"]').forEach(initProductSearch);
   calculateTotals();
 
-  const currentPaymentMethod = '<%= @booking.payment_method %>';
+  const currentPaymentMethod = '<%= @booking.payment_method.presence || 'upi' %>';
   selectPaymentMethod(currentPaymentMethod);
 }
 if (document.readyState === 'loading') {
