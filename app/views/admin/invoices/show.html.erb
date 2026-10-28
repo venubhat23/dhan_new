@@ -690,7 +690,7 @@
         wa_inv_total = @invoice.total_amount.to_f
         wa_inv_paid  = @invoice.payment_status_fully_paid? ? wa_inv_total : @invoice.paid_amount.to_f
         wa_thank_msg = if wa_inv_paid > 0
-          payment_thanks_text(wa_cname, "Payment-in(number: #{@invoice.invoice_number}) of Rs. #{format('%.2f', wa_inv_paid)} has been received from you on #{(@invoice.paid_at || Time.current).in_time_zone.strftime('%d-%b-%Y')}", due: wa_inv_total - wa_inv_paid)
+          payment_thanks_text(wa_cname, "Payment (Invoice number: #{@invoice.invoice_number}) of Rs. #{format('%.2f', wa_inv_paid)} has been received from you on #{(@invoice.paid_at || Time.current).in_time_zone.strftime('%d-%b-%Y')}", due: wa_inv_total - wa_inv_paid)
         else
           payment_thanks_text(wa_cname, "Invoice(number: #{@invoice.invoice_number}) of Rs. #{format('%.2f', wa_inv_total)} dated #{(@invoice.invoice_date || Date.current).strftime('%d-%b-%Y')}", due: wa_inv_total)
         end

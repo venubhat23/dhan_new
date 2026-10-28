@@ -11,7 +11,7 @@ module Admin::BookingsHelper
   end
 
   # The one WhatsApp thank-you text used by every "Thanks" button. Wording as
-  # requested by the client (mirrors their accounting app's "Payment-in" receipt).
+  # requested by the client (based on their accounting app's "Payment-in" receipt).
   # A booking with nothing paid yet quotes its full amount as the booking total.
   def booking_payment_thanks_message(booking, invoice: nil)
     invoice ||= Invoice.find_by(invoice_number: booking.invoice_number) if booking.invoice_number.present?
@@ -22,12 +22,21 @@ module Admin::BookingsHelper
 
     if paid > 0
       received_on = (invoice&.paid_at || booking.payment_completed_at || Time.current).in_time_zone.strftime('%d-%b-%Y')
-      headline = "Payment-in(number: #{reference}) of Rs. #{format('%.2f', paid)} has been received from you on #{received_on}"
+      ref_label = invoice&.invoice_number.present? ? 'Invoice number' : 'Booking number'
+      headline = "Payment (#{ref_label}: #{reference}) of Rs. #{format('%.2f', paid)} has been received from you on #{received_on}"
     else
       booked_on = (booking.booking_date || booking.created_at || Time.current).in_time_zone.strftime('%d-%b-%Y')
       headline = "Booking(number: #{booking.booking_number}) of Rs. #{format('%.2f', total)} has been received from you on #{booked_on}"
     end
     payment_thanks_text(name, headline, due: total - paid)
+  end
+
+  # "Send Invoice" text: points the customer at the booking's public bill page
+  # (/booking/:token). Plain text for the same wa.me emoji reason as above.
+  def booking_send_invoice_message(booking, public_url)
+    name = booking.customer&.display_name || booking.customer_name.presence || 'Customer'
+    ["Dear #{name},", '', "Your bill for booking #{booking.booking_number} is here:", public_url, '',
+     'Thank you for your business!', '', 'Dhanvantari Naturals'].join("\n")
   end
 
   def payment_thanks_text(name, headline, due: 0)
