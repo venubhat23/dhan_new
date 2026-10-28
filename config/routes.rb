@@ -24,6 +24,7 @@ Rails.application.routes.draw do
         get :search_products
         get :search_customers
         get :realtime_data
+        post :bulk_mark_paid
         get :pending
         get :confirmed
         get :processing

@@ -53,7 +53,7 @@
       public_url   = "#{request.base_url}/booking/#{@booking.share_token}"
       bi           = @booking.booking_invoices.first
       pdf_line     = bi&.share_token.present? ? "\n📄 Download Invoice PDF: #{request.base_url}/invoice/#{bi.share_token}/download" : ""
-      wa_thank_msg = "Dear #{cname},\n\nThank you for your booking with Dhanvantari Naturals! 🌿\n\nBooking #: #{@booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View your booking: #{public_url}#{pdf_line}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
+      wa_thank_msg = booking_payment_thanks_message(@booking)
     %>
     <% if wa_phone.length >= 10 %>
       <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"

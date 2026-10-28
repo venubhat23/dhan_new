@@ -299,6 +299,34 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     redirect_to store_admin_booking_path(@booking, list_state_params), alert: "Failed to mark as paid: #{e.message}"
   end
 
+  # Bulk "Mark as Paid" from the bookings list checkboxes; same per-booking
+  # effect as mark_paid (Booking#sync_invoice_payment_status syncs the invoice).
+  def bulk_mark_paid
+    ids = Array(params[:booking_ids]).reject(&:blank?)
+    bookings = store_bookings.where(id: ids).where("bookings.payment_status IS NULL OR bookings.payment_status NOT IN ('paid', 'refunded')")
+
+    paid_ids = []
+    failures = []
+    bookings.find_each do |booking|
+      booking.payment_status = :paid
+      booking.save!
+      paid_ids << booking.id
+    rescue => e
+      failures << "##{booking.booking_number} (#{e.message})"
+    end
+
+    updated = paid_ids.size
+    flash[:payment_thanks_booking_id] = paid_ids.first if updated == 1 # single booking: offer the WhatsApp thank-you
+    if updated.zero? && failures.empty?
+      redirect_to store_admin_bookings_path(list_state_params), alert: 'No unpaid bookings were selected.'
+    elsif failures.any?
+      redirect_to store_admin_bookings_path(list_state_params),
+                  alert: "Marked #{updated} booking(s) as paid. Failed: #{failures.join(', ')}"
+    else
+      redirect_to store_admin_bookings_path(list_state_params), notice: "Marked #{updated} booking(s) as paid."
+    end
+  end
+
   def update_delivery_charge
     new_charge = params[:shipping_charges].to_s.gsub(/\s+/, '').to_f
     new_charge = 0 if new_charge < 0

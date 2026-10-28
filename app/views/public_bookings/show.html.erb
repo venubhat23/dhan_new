@@ -83,6 +83,7 @@
       .items-table tbody tr:nth-child(even) { background: #f8f9fa; }
       .tax-rate { font-size: 9px; color: #888; }
       .items-table .tax-rate { font-weight: bold; color: #333; }
+      .items-table .item-name { font-size: 13px; }
 
       /* ── Subtotal bar ── */
       .inv-subtotal {
@@ -121,7 +122,7 @@
       .tax-box { background: #f9f9f9; padding: 10px; border-radius: 5px; border: 1px solid #e0e0e0; font-size: 11px; }
       .tax-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee; }
       .tax-row:last-child { border-bottom: none; }
-      .tax-val { font-weight: bold; min-width: 70px; text-align: right; }
+      .tax-val { font-weight: bold; color: #000; font-size: 12px; min-width: 70px; text-align: right; }
       .tax-total-block {
         background: #f0f0f0; padding: 7px; border-radius: 5px;
         border-top: 2px solid #5a4ec9; margin-top: 7px;
@@ -326,13 +327,20 @@
           %>
           <tr>
             <td>
-              <%= item.product&.name || 'Product' %>
-              <% if item.product_variant.present? %>
-                <div class="tax-rate"><%= item.product_variant.label %></div>
+              <span class="item-name"><%= item.product&.name || 'Product' %></span>
+              <%
+                # Pack size goes under the name so QTY can show just the count
+                # ("2", not "2 × 500 Gram"); loose units keep theirs ("10 Kg").
+                qty_label = line_item_quantity_label(item)
+                pack_size = qty_label[/×\s*(.+)\z/, 1]
+                qty_label = item.quantity.to_f.to_s.sub(/\.0$/, '') if pack_size
+              %>
+              <% if pack_size.present? %>
+                <div class="tax-rate"><%= pack_size %></div>
               <% end %>
             </td>
             <td class="c col-hsn"><%= item.product&.hsn_code || '-' %></td>
-            <td class="c"><%= line_item_quantity_label(item) %></td>
+            <td class="c"><%= qty_label %></td>
             <td class="r">₹<%= number_with_precision(unit_price, precision: 2, delimiter: ',') %></td>
             <td class="r col-tax">
               ₹<%= number_with_precision(row_tax, precision: 2, delimiter: ',') %><br/>
@@ -434,7 +442,7 @@
                 <span>TOTAL AMOUNT</span>
                 <span class="tax-val">₹ <%= number_with_precision(final_total, precision: 2, delimiter: ',') %></span>
               </div>
-              <div class="tax-row" style="font-size:10px;">
+              <div class="tax-row" style="font-weight:bold;">
                 <span>Received Amount</span>
                 <span class="tax-val">₹ <%= @booking.payment_status_paid? ? number_with_precision(final_total, precision: 2, delimiter: ',') : '0.00' %></span>
               </div>

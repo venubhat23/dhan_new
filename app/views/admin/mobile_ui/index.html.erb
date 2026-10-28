@@ -256,7 +256,7 @@
 
       # WhatsApp thank-you message — includes booking link + PDF link if invoice exists
       pdf_line = bi&.share_token.present? ? "\n📄 Download Invoice PDF: #{request.base_url}/invoice/#{bi.share_token}/download" : ""
-      wa_thank_msg = "Dear #{cname},\n\nThank you for your booking with Dhanvantari Naturals! 🌿\n\nBooking #: #{booking.booking_number}\nDate: #{bdate}\nAmount: ₹#{amount}\n\n📋 View your booking: #{public_url}#{pdf_line}\n\nWe appreciate your trust in us!\n\n🙏 Dhanvantari Naturals Team"
+      wa_thank_msg = booking_payment_thanks_message(booking)
     %>
     <div class="booking-card">
       <div class="booking-card-header">
