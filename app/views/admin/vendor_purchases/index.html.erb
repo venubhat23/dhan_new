@@ -158,8 +158,8 @@
                     </div>
                   </td>
                   <td>
-                    <div class="btn-group btn-group-sm" role="group">
-                      <%= link_to vn_vendor_purchase_path(purchase), class: "btn btn-outline-primary btn-sm", title: "View Details" do %>
+                    <div class="btn-group btn-group-sm vp-actions" role="group">
+                      <%= link_to vn_vendor_purchase_path(purchase), class: "btn btn-sm vp-view", title: "View Details" do %>
                         <i class="bi bi-eye"></i>
                       <% end %>
 
@@ -167,13 +167,13 @@
                       <% if purchase.has_invoice? %>
                         <a href="<%= purchase.invoice_url %>"
                            target="_blank"
-                           class="btn btn-outline-info btn-sm"
+                           class="btn btn-sm vp-pdf"
                            title="View Invoice">
                           <i class="bi bi-file-earmark-pdf"></i>
                         </a>
                       <% else %>
                         <button type="button"
-                                class="btn btn-outline-success btn-sm"
+                                class="btn btn-sm vp-invoice"
                                 title="Generate Invoice"
                                 onclick="generateVendorInvoice(<%= purchase.id %>)">
                           <i class="bi bi-receipt-cutoff"></i>
@@ -182,17 +182,17 @@
 
                       <!-- WhatsApp Share Button -->
                       <% if purchase.has_invoice? %>
-                        <button type="button" class="btn btn-outline-success btn-sm" title="Share Invoice on WhatsApp" onclick="shareExistingInvoiceOnWhatsApp('<%= purchase.purchase_number %>', '<%= purchase.invoice_url %>')">
+                        <button type="button" class="btn btn-sm vp-whatsapp" title="Share Invoice on WhatsApp" onclick="shareExistingInvoiceOnWhatsApp('<%= purchase.purchase_number %>', '<%= purchase.invoice_url %>')">
                           <i class="bi bi-whatsapp"></i>
                         </button>
                       <% else %>
-                        <button type="button" class="btn btn-outline-success btn-sm" title="Generate & Share on WhatsApp" onclick="shareVendorInvoiceOnWhatsApp(<%= purchase.id %>)">
+                        <button type="button" class="btn btn-sm vp-whatsapp" title="Generate & Share on WhatsApp" onclick="shareVendorInvoiceOnWhatsApp(<%= purchase.id %>)">
                           <i class="bi bi-whatsapp"></i>
                         </button>
                       <% end %>
 
                       <% if purchase.can_be_edited? %>
-                        <%= link_to vn_edit_vendor_purchase_path(purchase), class: "btn btn-outline-warning btn-sm", title: "Edit" do %>
+                        <%= link_to vn_edit_vendor_purchase_path(purchase), class: "btn btn-sm vp-edit", title: "Edit" do %>
                           <i class="bi bi-pencil"></i>
                         <% end %>
                       <% end %>
@@ -201,7 +201,7 @@
                         <%= link_to vn_mark_as_paid_vendor_purchase_path(purchase),
                             method: :patch,
                             confirm: "Mark this purchase as fully paid?",
-                            class: "btn btn-outline-success btn-sm",
+                            class: "btn btn-sm vp-paid",
                             title: "Mark as Paid" do %>
                           <i class="bi bi-check2-circle"></i>
                         <% end %>
@@ -211,7 +211,7 @@
                         <%= link_to vn_complete_purchase_vendor_purchase_path(purchase),
                             method: :patch,
                             confirm: "Mark this purchase as completed?",
-                            class: "btn btn-success btn-sm",
+                            class: "btn btn-sm vp-complete",
                             title: "Complete Purchase" do %>
                           <i class="bi bi-check-circle"></i>
                         <% end %>
@@ -221,7 +221,7 @@
                         <%= link_to vn_vendor_purchase_path(purchase),
                             method: :delete,
                             confirm: "Are you sure you want to delete this purchase?",
-                            class: "btn btn-outline-danger btn-sm",
+                            class: "btn btn-sm vp-delete",
                             title: "Delete" do %>
                           <i class="bi bi-trash"></i>
                         <% end %>
@@ -503,3 +503,32 @@ function clearSelection() {
   document.getElementById('bulk-actions').style.display = 'none';
 }
 </script>
+
+<style>
+  /* Row action buttons: the global theme paints every .btn-outline-success
+     with a green gradient fill, hiding the green icon on top of it. Give each
+     action its own colour as a plain white button with a coloured border/icon. */
+  .vp-actions .btn {
+    --vp-c: #6c757d;
+    background: #fff !important;
+    border: 1px solid var(--vp-c) !important;
+    color: var(--vp-c) !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+  .vp-actions .btn:hover,
+  .vp-actions .btn.vp-complete {
+    background: var(--vp-c) !important;
+    color: #fff !important;
+  }
+  .vp-actions .btn.vp-complete:hover { filter: brightness(0.9); }
+  .vp-actions .vp-view     { --vp-c: #0d6efd; }
+  .vp-actions .vp-pdf      { --vp-c: #6f42c1; }
+  .vp-actions .vp-invoice  { --vp-c: #6f42c1; }
+  .vp-actions .vp-whatsapp { --vp-c: #128c7e; }
+  .vp-actions .vp-edit     { --vp-c: #e67700; }
+  .vp-actions .vp-paid     { --vp-c: #198754; }
+  .vp-actions .vp-complete { --vp-c: #198754; }
+  .vp-actions .vp-delete   { --vp-c: #dc3545; }
+</style>
