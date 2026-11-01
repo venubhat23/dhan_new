@@ -302,7 +302,7 @@
     <div id="itemFields"></div>
     <%= f.hidden_field :discount_amount, value: 0, id: 'hdnDiscount' %>
     <%= f.hidden_field :shipping_charges, value: 0, id: 'hdnDeliveryCharge' %>
-    <%= f.hidden_field :status, value: 'completed' %>
+    <%= f.hidden_field :status, value: Booking::DEFAULT_STATUS %>
 
     <%# Customer ─────────────────────────────────────────── %>
     <div class="checkout-section">

@@ -52,7 +52,7 @@ class Admin::BookingsController < Admin::ApplicationController
       draft:      stats_counts['draft'].to_i,
       pending:    stats_counts['ordered_and_delivery_pending'].to_i,
       processing: stats_counts.slice('confirmed', 'processing', 'packed').values.sum,
-      shipped:    stats_counts.slice('shipped', 'out_for_delivery').values.sum,
+      shipped:    stats_counts.slice('shipped', 'shop_pickup', 'out_for_delivery').values.sum,
       completed:  stats_counts['completed'].to_i,
       issues:     (stats_counts['cancelled'].to_i + stats_counts['returned'].to_i)
     }
@@ -720,7 +720,7 @@ class Admin::BookingsController < Admin::ApplicationController
       draft:      status_counts['draft'].to_i,
       pending:    status_counts['ordered_and_delivery_pending'].to_i,
       processing: status_counts.values_at('confirmed', 'processing', 'packed').compact.sum,
-      shipped:    status_counts.values_at('shipped', 'out_for_delivery').compact.sum,
+      shipped:    status_counts.values_at('shipped', 'shop_pickup', 'out_for_delivery').compact.sum,
       delivered:  status_counts.values_at('delivered', 'completed').compact.sum,
       issues:     status_counts.values_at('cancelled', 'returned').compact.sum,
       total:      status_counts.values.sum,

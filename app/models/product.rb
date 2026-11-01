@@ -244,7 +244,7 @@ class Product < ApplicationRecord
   def total_sold_quantity
     # Get total quantity sold from booking items
     booking_items.joins(:booking)
-                 .where(bookings: { status: ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'completed'] })
+                 .where(bookings: { status: ['confirmed', 'processing', 'packed', 'shipped', 'shop_pickup', 'out_for_delivery', 'delivered', 'completed'] })
                  .sum(:quantity)
   end
 

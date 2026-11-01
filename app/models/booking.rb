@@ -29,6 +29,7 @@ class Booking < ApplicationRecord
     ordered_and_delivery_pending: 'ordered_and_delivery_pending',
     packed: 'packed',
     shipped: 'shipped',
+    shop_pickup: 'shop_pickup',
     delivered: 'delivered',
     cancelled: 'cancelled',
     returned: 'returned',
@@ -41,6 +42,7 @@ class Booking < ApplicationRecord
     'ordered_and_delivery_pending' => 'Delivery Pending',
     'packed'          => 'Packed',
     'shipped'         => 'Shipped',
+    'shop_pickup'     => 'Shop Pickup',
     'delivered'       => 'Delivered',
     'cancelled'       => 'Cancelled',
     'returned'        => 'Returned',
@@ -59,7 +61,7 @@ class Booking < ApplicationRecord
     'completed'        => 'delivered'
   }.freeze
 
-  DEFAULT_STATUS = 'delivered'.freeze
+  DEFAULT_STATUS = 'ordered_and_delivery_pending'.freeze
 
   # Forward path shown as the progress bar on booking lists.
   PROGRESS_STAGES = %w[ordered_and_delivery_pending packed shipped delivered].freeze
@@ -80,6 +82,8 @@ class Booking < ApplicationRecord
   # 0-based position on PROGRESS_STAGES (nil for cancelled/returned/refund).
   def progress_stage_index
     return nil if %w[cancelled returned refund].include?(status)
+    # Shop Pickup replaces shipping: same point on the path, next stop Delivered.
+    return PROGRESS_STAGES.index('shipped') if shop_pickup?
 
     PROGRESS_STAGES.index(status) || 0
   end
@@ -471,7 +475,7 @@ class Booking < ApplicationRecord
 
   # Status management methods
   def can_cancel?
-    %w[ordered_and_delivery_pending reconfirm_order packed].include?(status)
+    %w[ordered_and_delivery_pending reconfirm_order packed shop_pickup].include?(status)
   end
 
   def can_return?
@@ -493,15 +497,15 @@ class Booking < ApplicationRecord
   end
 
   def mark_as_packed!
-    update!(status: :packed) if ordered_and_delivery_pending? || reconfirm_order?
+    update!(status: :packed) unless packed?
   end
 
   def mark_as_shipped!(tracking_number = nil)
-    if packed?
-      updates = { status: :shipped }
-      updates[:notes] = "#{notes}\nTracking: #{tracking_number}" if tracking_number.present?
-      update!(updates)
-    end
+    return if shipped?
+
+    updates = { status: :shipped }
+    updates[:notes] = "#{notes}\nTracking: #{tracking_number}" if tracking_number.present?
+    update!(updates)
   end
 
   # Kept for older callers; "out for delivery" is part of Shipped.
@@ -551,6 +555,7 @@ class Booking < ApplicationRecord
     when 'ordered_and_delivery_pending' then 'secondary'
     when 'packed' then 'warning'
     when 'shipped' then 'primary'
+    when 'shop_pickup' then 'info'
     when 'delivered' then 'success'
     when 'cancelled', 'returned', 'refund' then 'danger'
     when 'reconfirm_order' then 'info'
@@ -563,6 +568,7 @@ class Booking < ApplicationRecord
     when 'ordered_and_delivery_pending' then 'bi-clock'
     when 'packed' then 'bi-box'
     when 'shipped' then 'bi-truck'
+    when 'shop_pickup' then 'bi-shop'
     when 'delivered' then 'bi-house-check'
     when 'cancelled' then 'bi-x-circle'
     when 'returned' then 'bi-arrow-return-left'

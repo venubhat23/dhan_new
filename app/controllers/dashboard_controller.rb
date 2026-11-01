@@ -88,7 +88,7 @@ class DashboardController < ApplicationController
     order_status_data = {
       'Completed' => status_counts.values_at('delivered', 'completed').compact.sum,
       'Processing' => status_counts.values_at('confirmed', 'processing', 'packed').compact.sum,
-      'Shipped' => status_counts.values_at('shipped', 'out_for_delivery').compact.sum,
+      'Shipped' => status_counts.values_at('shipped', 'shop_pickup', 'out_for_delivery').compact.sum,
       'Cancelled' => status_counts['cancelled'].to_i
     }
 
@@ -622,7 +622,7 @@ class DashboardController < ApplicationController
     @total_bookings     = real_order_counts.values.sum
     @total_orders       = @total_bookings
     @pending_bookings   = real_order_counts.slice('ordered_and_delivery_pending', 'confirmed', 'processing', 'packed').values.sum
-    @shipped_orders     = real_order_counts.slice('shipped', 'out_for_delivery').values.sum
+    @shipped_orders     = real_order_counts.slice('shipped', 'shop_pickup', 'out_for_delivery').values.sum
     @completed_bookings = real_order_counts.slice(*FULFILLED_BOOKING_STATUSES).values.sum
     @delivered_orders   = real_order_counts['delivered'] || 0
     @cancelled_bookings = real_order_counts.slice('cancelled', 'returned').values.sum

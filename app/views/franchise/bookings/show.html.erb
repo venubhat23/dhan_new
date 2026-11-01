@@ -63,13 +63,7 @@
         <h6 class="text-muted fw-semibold mb-3">Quick Actions</h6>
         <%= form_with model: @booking, url: franchise_booking_path(@booking), method: :patch, local: true do |form| %>
           <div class="mb-3">
-            <%= form.select :status, options_for_select([
-              ['Pending', 'pending'],
-              ['Processing', 'processing'],
-              ['Shipped', 'shipped'],
-              ['Delivered', 'delivered'],
-              ['Cancelled', 'cancelled']
-            ], @booking.status), {}, { class: "form-select form-select-sm" } %>
+            <%= form.select :status, options_for_select(@booking.status_select_options, @booking.status_for_select), {}, { class: "form-select form-select-sm" } %>
           </div>
           <%= form.submit "Update Status", class: "btn btn-primary btn-sm" %>
         <% end %>

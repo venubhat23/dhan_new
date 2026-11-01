@@ -40,7 +40,7 @@ class Customer::OrdersController < Customer::BaseController
       total:      status_counts.values.sum,
       pending:    status_counts['ordered_and_delivery_pending'].to_i,
       processing: status_counts.slice('confirmed', 'processing', 'packed').values.sum,
-      shipped:    status_counts.slice('shipped', 'out_for_delivery').values.sum,
+      shipped:    status_counts.slice('shipped', 'shop_pickup', 'out_for_delivery').values.sum,
       completed:  status_counts['completed'].to_i,
       issues:     status_counts.slice('cancelled', 'returned').values.sum
     }

@@ -10,7 +10,7 @@ class Franchise::DashboardController < Franchise::BaseController
     @pending_bookings = @bookings.ordered_and_delivery_pending.count
     @confirmed_bookings = @bookings.confirmed.count
     @processing_bookings = @bookings.where(status: [:processing, :packed]).count
-    @shipped_bookings = @bookings.where(status: [:shipped, :out_for_delivery]).count
+    @shipped_bookings = @bookings.where(status: [:shipped, :shop_pickup, :out_for_delivery]).count
     @delivered_bookings = @bookings.where(status: [:delivered, :completed]).count
     @cancelled_bookings = @bookings.where(status: [:cancelled, :returned]).count
 

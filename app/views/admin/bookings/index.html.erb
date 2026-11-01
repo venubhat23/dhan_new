@@ -696,13 +696,6 @@
                 </td>
                 <td class="align-middle">
                   <div class="d-flex gap-2 align-items-center">
-                    <!-- Stage Management Icon -->
-                    <%= link_to manage_stage_admin_booking_path(booking, list_state: list_state),
-                        class: "btn btn-sm btn-outline-primary stage-management-btn",
-                        title: "Manage Order Stages" do %>
-                      <i class="bi bi-arrows-move"></i>
-                    <% end %>
-
                     <!-- Actions Icons -->
                     <div class="action-icons">
                       <%= link_to admin_booking_path(booking, list_state: list_state), class: "action-icon view", title: "View Booking" do %>
@@ -1915,17 +1908,7 @@ document.addEventListener('DOMContentLoaded', function() {
   background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
 }
 
-.stage-management-btn {
-  transition: all 0.3s ease;
-  border-radius: 8px;
-}
-
-.stage-management-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-}
-
-/* Fix dropdown overlap with Manage Order Stages button */
+/* Keep the Quick Stage Update dropdown above neighbouring cells */
 .dropdown {
   position: relative;
 }

@@ -482,6 +482,7 @@ module ApplicationHelper
     when 'ordered_and_delivery_pending' then 'Order placed, waiting to be packed and delivered'
     when 'packed'          then 'Items packed and ready to ship'
     when 'shipped'         then 'Shipped / out for delivery'
+    when 'shop_pickup'     then 'Ready for the customer to collect from the shop'
     when 'delivered'       then 'Delivered to the customer'
     when 'cancelled'       then 'Cancel this order'
     when 'returned'        then 'Customer returned the order'

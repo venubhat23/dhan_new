@@ -375,7 +375,7 @@
               </div>
             </div>
             <span class="customer-nav-text">Orders</span>
-            <% active_orders_count = current_customer.bookings.where(status: ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery']).count if current_customer %>
+            <% active_orders_count = current_customer.bookings.where(status: ['confirmed', 'processing', 'packed', 'shipped', 'shop_pickup', 'out_for_delivery']).count if current_customer %>
             <% if active_orders_count.to_i > 0 %>
               <span class="customer-nav-badge"><%= active_orders_count %></span>
             <% end %>
