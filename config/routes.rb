@@ -278,6 +278,7 @@ Rails.application.routes.draw do
         patch :process_stage_transition
         patch :update_stage
         patch :update_delivery_charge
+        patch :update_delivery_date
       end
       collection do
         get :search_products

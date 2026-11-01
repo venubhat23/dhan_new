@@ -1,0 +1,71 @@
+<!-- Booking Delivery Date Modal -->
+<div class="modal fade" id="deliveryDateModal" tabindex="-1" aria-labelledby="deliveryDateModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <form class="modal-content" id="deliveryDateForm">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deliveryDateModalLabel"><i class="bi bi-calendar-event me-1"></i>Delivery Date</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2">Booking <span class="fw-medium" id="ddBookingNumber"></span></p>
+        <label for="ddDate" class="form-label">Delivery Date <span class="text-danger">*</span></label>
+        <input type="date" class="form-control" id="ddDate" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-danger me-auto" id="ddClearBtn">Clear</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="ddSaveBtn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function() {
+    let ddUrl = null;
+    const form = document.getElementById('deliveryDateForm');
+    const dateInput = document.getElementById('ddDate');
+    const clearBtn = document.getElementById('ddClearBtn');
+    const saveBtn = document.getElementById('ddSaveBtn');
+
+    window.openDeliveryDateModal = function(el) {
+      ddUrl = el.dataset.url;
+      document.getElementById('ddBookingNumber').textContent = '#' + el.dataset.bookingNumber;
+      dateInput.value = el.dataset.deliveryDate || '';
+      clearBtn.classList.toggle('d-none', !el.dataset.deliveryDate);
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('deliveryDateModal')).show();
+    };
+
+    function saveDeliveryDate(value) {
+      saveBtn.disabled = clearBtn.disabled = true;
+      fetch(ddUrl, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({ expected_delivery_date: value })
+      })
+      .then(r => r.json())
+      .then(result => {
+        if (result.success) {
+          location.reload();
+        } else {
+          alert('Error saving delivery date: ' + (result.error || 'Unknown error'));
+          saveBtn.disabled = clearBtn.disabled = false;
+        }
+      })
+      .catch(() => {
+        alert('Error saving delivery date. Please try again.');
+        saveBtn.disabled = clearBtn.disabled = false;
+      });
+    }
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      saveDeliveryDate(dateInput.value);
+    });
+    clearBtn.addEventListener('click', function() { saveDeliveryDate(''); });
+  })();
+</script>

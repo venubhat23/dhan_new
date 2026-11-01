@@ -400,6 +400,7 @@
               <th class="border-0 fw-semibold">Booking Details</th>
               <th class="border-0 fw-semibold">Customer</th>
               <th class="border-0 fw-semibold">Items & Amount</th>
+              <th class="border-0 fw-semibold">Delivery Date</th>
               <th class="border-0 fw-semibold">Payment & Status</th>
               <th class="border-0 fw-semibold">Progress</th>
               <th class="border-0 fw-semibold">Actions</th>
@@ -544,6 +545,9 @@
                       </div>
                     <% end %>
                   </div>
+                </td>
+                <td class="align-middle">
+                  <%= render 'admin/bookings/delivery_date_button', booking: booking %>
                 </td>
                 <td class="align-middle">
                   <!-- Payment Status -->
@@ -2392,6 +2396,8 @@ td .d-flex.gap-2 {
     </form>
   </div>
 </div>
+
+<%= render 'admin/bookings/delivery_date_modal' %>
 
 <script>
   (function() {

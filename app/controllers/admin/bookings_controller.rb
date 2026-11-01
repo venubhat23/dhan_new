@@ -1,6 +1,6 @@
 class Admin::BookingsController < Admin::ApplicationController
   before_action :authenticate_user!
-  before_action :set_booking, only: [:show, :edit, :update, :destroy, :generate_invoice, :invoice, :convert_to_order, :update_status, :cancel_order, :mark_delivered, :mark_completed, :mark_paid, :partial_payment, :manage_stage, :update_stage, :update_delivery_charge]
+  before_action :set_booking, only: [:show, :edit, :update, :destroy, :generate_invoice, :invoice, :convert_to_order, :update_status, :cancel_order, :mark_delivered, :mark_completed, :mark_paid, :partial_payment, :manage_stage, :update_stage, :update_delivery_charge, :update_delivery_date]
 
   LIST_STATE_PARAMS = %i[page search status date_from date_to customer_id b2b booked_by payment_status delivery_pending].freeze
   INITIAL_PICKER_LIMIT = 40
@@ -653,6 +653,19 @@ class Admin::BookingsController < Admin::ApplicationController
       format.html { redirect_to admin_booking_path(@booking), alert: "Failed to update delivery charge: #{e.message}" }
       format.json { render json: { success: false, error: e.message } }
     end
+  end
+
+  # Set or clear (blank value) the date from the bookings list / show page modal.
+  # update_columns because a plain save would recalculate totals and re-sync the
+  # invoice, none of which a delivery date affects.
+  def update_delivery_date
+    raw_date = params[:expected_delivery_date].to_s.strip
+    delivery_date = raw_date.present? ? Date.iso8601(raw_date) : nil
+
+    @booking.update_columns(expected_delivery_date: delivery_date, updated_at: Time.current)
+    render json: { success: true, expected_delivery_date: delivery_date&.iso8601 }
+  rescue Date::Error
+    render json: { success: false, error: 'Please enter a valid date' }, status: :unprocessable_entity
   end
 
   def stage_transition

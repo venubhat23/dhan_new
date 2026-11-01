@@ -1,0 +1,11 @@
+<%# Shows a booking's delivery date; clicking opens the modal in _delivery_date_modal. %>
+<% delivery_date = booking.expected_delivery_date %>
+<button type="button"
+        class="btn btn-sm text-nowrap <%= delivery_date ? 'btn-outline-primary' : 'btn-outline-secondary' %>"
+        title="<%= delivery_date ? 'Change delivery date' : 'Set delivery date' %>"
+        data-url="<%= update_delivery_date_admin_booking_path(booking) %>"
+        data-booking-number="<%= booking.booking_number %>"
+        data-delivery-date="<%= delivery_date&.iso8601 %>"
+        onclick="openDeliveryDateModal(this)">
+  <i class="bi bi-calendar-event me-1"></i><%= delivery_date ? delivery_date.strftime('%d %b %Y') : 'Set Date' %>
+</button>
