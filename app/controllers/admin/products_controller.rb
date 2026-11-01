@@ -12,31 +12,8 @@ class Admin::ProductsController < Admin::ApplicationController
     # drifts from it (see Product#update_stock_batch). Without this, the list
     # and its bulk-edit modal could show/pre-fill a stale number that
     # disagreed with Product Summary and the product's own edit page.
-    @products = Product.includes(:category, :product_variants, image_attachment: :blob)
-                        .with_real_stock_amount
-
-    if params[:search].present?
-      @products = @products.search(params[:search])
-    end
-
-    if params[:category_id].present?
-      @products = @products.by_category(params[:category_id])
-    end
-
-    if params[:status].present?
-      @products = @products.where(status: params[:status])
-    end
-
-    if params[:stock_status].present?
-      case params[:stock_status]
-      when 'in_stock'
-        @products = @products.real_in_stock
-      when 'out_of_stock'
-        @products = @products.real_out_of_stock
-      when 'low_stock'
-        @products = @products.real_low_stock
-      end
-    end
+    @products = filtered_products.includes(:category, :product_variants, image_attachment: :blob)
+                                 .with_real_stock_amount
 
     if request.format.csv?
       products = @products.recent.to_a
@@ -46,6 +23,13 @@ class Admin::ProductsController < Admin::ApplicationController
 
     @products = @products.recent.page(params[:page]).per(20)
     @categories = Category.active.ordered
+  end
+
+  # Select2 lookup for the list's search box — every product, not just the
+  # current page, narrowed by whichever filters are already applied.
+  def search
+    results = filtered_products.reorder(:name).limit(15)
+    render json: results.map { |p| { id: p.id, name: p.name, sku: p.sku, price: p.price.to_f } }
   end
 
   def show
@@ -566,6 +550,23 @@ class Admin::ProductsController < Admin::ApplicationController
   end
 
   private
+
+  # Shared by the list and its search dropdown so both honour the same filters.
+  # "Low Stock" uses at-or-below-threshold, the same rule as the Low Stock Alert
+  # page and Product Summary, so a product at 0 with a threshold of 0 still lists.
+  def filtered_products
+    products = Product.all
+    products = products.search(params[:search]) if params[:search].present?
+    products = products.by_category(params[:category_id]) if params[:category_id].present?
+    products = products.where(status: params[:status]) if params[:status].present?
+
+    case params[:stock_status]
+    when 'in_stock'     then products.real_in_stock
+    when 'out_of_stock' then products.real_out_of_stock
+    when 'low_stock'    then products.real_at_or_below_threshold
+    else products
+    end
+  end
 
   # Hard-deletes every row that references this product (see DEPENDENT_RELATIONS)
   # so the product itself can be removed without tripping a foreign-key

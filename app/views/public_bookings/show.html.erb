@@ -207,11 +207,21 @@
       taxable_amount  = 0
       tax_groups      = Hash.new(0)
       total_igst      = 0
+      total_product_discount = 0
 
       (@booking.booking_items || []).each do |item|
         quantity   = item.quantity.to_f
         unit_price = item.discounted_unit_price
-        gst_rate   = (item.product&.gst_enabled && item.product.gst_percentage.to_f > 0) ? item.product.gst_percentage.to_f : 0
+        total_product_discount += item.line_discount_amount
+        product    = item.product
+        gst_rate   =
+          if !product&.gst_enabled
+            0
+          elsif product.cgst_percentage.present? && product.sgst_percentage.present?
+            product.cgst_percentage.to_f + product.sgst_percentage.to_f + product.igst_percentage.to_f
+          else
+            product.gst_percentage.to_f
+          end
 
         if gst_rate > 0
           row_total  = unit_price * quantity
@@ -241,11 +251,18 @@
       # Invoice generated for this booking, for the customer's PDF download
       pdf_invoice = Invoice.find_by(invoice_number: @booking.invoice_number) if @booking.invoice_number.present?
       pdf_invoice&.generate_share_token! if pdf_invoice && pdf_invoice.share_token.blank?
+      pdf_url = @pdf_url.presence
+      pdf_url ||= public_invoice_by_token_url(token: pdf_invoice.share_token, format: :pdf) if pdf_invoice&.share_token.present?
+
+      # /invoice/:token keeps the date the invoice was issued; the booking page
+      # has no issued invoice of its own, so it shows today's date as before.
+      invoice_date = @invoice&.invoice_date || Date.current
+      due_date     = @invoice&.due_date || (Date.current + 30.days)
     %>
 
-    <% if pdf_invoice&.share_token.present? %>
+    <% if pdf_url %>
       <div class="pdf-bar">
-        <a href="<%= public_invoice_by_token_url(token: pdf_invoice.share_token, format: :pdf) %>">&#128196; Download Invoice PDF</a>
+        <a href="<%= pdf_url %>">&#128196; Download Invoice PDF</a>
       </div>
     <% end %>
 
@@ -283,8 +300,8 @@
       <!-- Invoice meta -->
       <div class="inv-meta">
         <div class="inv-meta-cell">Invoice No.<span><%= @booking.invoice_number || @booking.booking_number %></span></div>
-        <div class="inv-meta-cell">Invoice Date<span><%= Date.current.strftime('%d/%m/%Y') %></span></div>
-        <div class="inv-meta-cell">Due Date<span><%= (Date.current + 30.days).strftime('%d/%m/%Y') %></span></div>
+        <div class="inv-meta-cell">Invoice Date<span><%= invoice_date.strftime('%d/%m/%Y') %></span></div>
+        <div class="inv-meta-cell">Due Date<span><%= due_date.strftime('%d/%m/%Y') %></span></div>
       </div>
 
       <div class="inv-divider"></div>
@@ -341,7 +358,15 @@
             </td>
             <td class="c col-hsn"><%= item.product&.hsn_code || '-' %></td>
             <td class="c"><%= qty_label %></td>
-            <td class="r">₹<%= number_with_precision(unit_price, precision: 2, delimiter: ',') %></td>
+            <td class="r">
+              <% if item.line_discount_amount > 0 %>
+                <span style="text-decoration:line-through;color:#888;">₹<%= number_with_precision(item.price || 0, precision: 2, delimiter: ',') %></span><br/>
+              <% end %>
+              ₹<%= number_with_precision(unit_price, precision: 2, delimiter: ',') %>
+              <% if item.line_discount_amount > 0 %>
+                <br/><span class="tax-rate" style="color:#1a7f37;"><%= line_discount_text(item) %></span>
+              <% end %>
+            </td>
             <td class="r col-tax">
               ₹<%= number_with_precision(row_tax, precision: 2, delimiter: ',') %><br/>
               <span class="tax-rate">(<%= row_gst_rate.to_i == row_gst_rate ? row_gst_rate.to_i : row_gst_rate %>%)</span>
@@ -353,8 +378,15 @@
       </table>
 
       <!-- Subtotal -->
+      <% if total_product_discount > 0 %>
+        <div class="inv-subtotal">
+          <span>PRODUCT DISCOUNTS</span>
+          <span style="color:#1a7f37;">− ₹ <%= number_with_precision(total_product_discount, precision: 2, delimiter: ',') %></span>
+        </div>
+      <% end %>
+
       <div class="inv-subtotal">
-        <span>SUBTOTAL</span>
+        <span>SUBTOTAL<%= total_product_discount > 0 ? ' (after product discounts)' : '' %></span>
         <span>₹ <%= number_with_precision(subtotal_amount, precision: 2, delimiter: ',') %></span>
       </div>
 

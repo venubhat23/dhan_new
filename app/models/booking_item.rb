@@ -253,18 +253,19 @@ class BookingItem < ApplicationRecord
     product_variant.update_column(:available_stock, [(product_variant.available_stock.to_f + delta).round, 0].max)
   end
 
-  # Batches this line draws from / restores to. Central variant lines only touch
-  # their own variant's batches (or untagged ones, e.g. a variant's initial
-  # stock batch), never a sibling variant's.
+  # Batches this line draws from / restores to. A store booking stays within
+  # that store's batches; every other line stays within central (store_id NULL)
+  # batches — the figure Product Summary's Main Store column and the booking
+  # validation read — so a removed line can't land in a store's batch and leave
+  # Main Store stock unchanged. Central variant lines also only touch their own
+  # variant's batches (or untagged ones, e.g. a variant's initial stock batch),
+  # never a sibling variant's.
   def line_batches
     scope = product.stock_batches
-    if booking_store_id.present?
-      scope.where(store_id: booking_store_id)
-    elsif central_variant_line?
-      scope.where(product_variant_id: [product_variant_id, nil])
-    else
-      scope
-    end
+    return scope.where(store_id: booking_store_id) if booking_store_id.present?
+
+    scope = scope.central
+    central_variant_line? ? scope.where(product_variant_id: [product_variant_id, nil]) : scope
   end
 
   def stock_batches_scope

@@ -27,6 +27,7 @@
         position: absolute;
         top: 50%;
         left: 50%;
+        -webkit-transform: translate(-50%, -50%) rotate(-35deg); /* wkhtmltopdf */
         transform: translate(-50%, -50%) rotate(-35deg);
         font-size: 100px;
         font-weight: 900;
@@ -209,6 +210,11 @@
         font-size: 12px;
         font-weight: bold;
         text-align: left;
+        color: #333;
+      }
+
+      /* The PDF layout sets white header text for its own dark header. */
+      .items-table thead th {
         color: #333;
       }
 
@@ -579,8 +585,10 @@
   </head>
   <body>
     <!-- Back Button -->
-    <%= link_to admin_bookings_path, class: "back-button" do %>
-      ← Back to Bookings
+    <% unless @public_view %>
+      <%= link_to admin_bookings_path, class: "back-button" do %>
+        ← Back to Bookings
+      <% end %>
     <% end %>
 
     <%
@@ -716,8 +724,8 @@
       <table class="invoice-meta-table">
         <tr>
           <td>Invoice No.: <span><%= @booking.invoice_number || @booking.booking_number %></span></td>
-          <td>Invoice Date: <span><%= Date.current.strftime('%d/%m/%Y') %></span></td>
-          <td>Due Date: <span><%= (Date.current + 30.days).strftime('%d/%m/%Y') %></span></td>
+          <td>Invoice Date: <span><%= ((@invoice.invoice_date if @public_view) || Date.current).strftime('%d/%m/%Y') %></span></td>
+          <td>Due Date: <span><%= ((@invoice.due_date if @public_view) || (Date.current + 30.days)).strftime('%d/%m/%Y') %></span></td>
         </tr>
       </table>
 

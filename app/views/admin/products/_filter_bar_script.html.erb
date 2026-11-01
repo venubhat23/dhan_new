@@ -1,0 +1,53 @@
+<%# Product list filter bar, shared by /admin and /store_admin: Select2 search
+    across all products plus filters that apply as soon as they change. %>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('productFilterForm');
+  const $search = $('#productSearchInput');
+  const filterValue = name => form.elements[name]?.value || '';
+
+  $search.select2({
+    theme: 'bootstrap-5',
+    width: '100%',
+    placeholder: 'Search products...',
+    allowClear: true,
+    minimumInputLength: 1,
+    // Free text stays searchable (partial names, SKUs, the "create it" prompt).
+    tags: true,
+    createTag: params => {
+      const term = params.term.trim();
+      return term ? { id: term, text: term, freeText: true } : null;
+    },
+    insertTag: (data, tag) => data.push(tag),
+    ajax: {
+      url: $search.data('url'),
+      dataType: 'json',
+      delay: 250,
+      data: params => ({
+        search: params.term,
+        category_id: filterValue('category_id'),
+        status: filterValue('status'),
+        stock_status: filterValue('stock_status')
+      }),
+      processResults: products => ({
+        results: products.map(p => ({ id: p.name, text: p.name, sku: p.sku }))
+      })
+    },
+    templateResult: item => {
+      if (item.loading) return item.text;
+      if (item.freeText) return $('<span>').text('Search for "' + item.text + '"');
+      const $row = $('<div>').text(item.text);
+      if (item.sku) $row.append($('<small class="text-muted ms-2">').text(item.sku));
+      return $row;
+    }
+  });
+
+  // Select2 doesn't focus its search box under jQuery 3.6+.
+  $search.on('select2:open', () => document.querySelector('.select2-container--open .select2-search__field')?.focus());
+  $search.on('select2:select select2:clear', () => form.submit());
+
+  form.querySelectorAll('select:not(#productSearchInput)').forEach(select => {
+    select.addEventListener('change', () => form.submit());
+  });
+});
+</script>

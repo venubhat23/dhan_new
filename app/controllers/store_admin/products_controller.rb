@@ -8,20 +8,7 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
 
   # Products stocked at (or sold by) the current store.
   def index
-    scope = store_products.includes(:category, :product_variants, image_attachment: :blob)
-
-    scope = scope.search(params[:search])                if params[:search].present?
-    scope = scope.by_category(params[:category_id])      if params[:category_id].present?
-    scope = scope.where(status: params[:status])         if params[:status].present?
-
-    if params[:stock_status].present?
-      inv_ids = @current_store.store_inventories
-      case params[:stock_status]
-      when 'in_stock'      then scope = scope.where(id: inv_ids.where('quantity > 0').select(:product_id))
-      when 'out_of_stock'  then scope = scope.where(id: inv_ids.where('quantity <= 0').select(:product_id))
-      when 'low_stock'     then scope = scope.where(id: inv_ids.where('quantity > 0 AND quantity <= COALESCE(low_stock_threshold, 10)').select(:product_id))
-      end
-    end
+    scope = filtered_store_products.includes(:category, :product_variants, image_attachment: :blob)
 
     @products = scope.order(:name).page(params[:page]).per(20)
     @filter_categories = Category.where(id: store_products.distinct.pluck(:category_id).compact)
@@ -283,8 +270,7 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
   end
 
   def search
-    term = "%#{params[:q].to_s.strip}%"
-    results = store_products.where('products.name ILIKE ? OR products.sku ILIKE ?', term, term).limit(15)
+    results = filtered_store_products.reorder(:name).limit(15)
     render json: results.map { |p| { id: p.id, name: p.name, sku: p.sku, price: p.price.to_f } }
   end
 
@@ -380,6 +366,22 @@ class StoreAdmin::ProductsController < StoreAdmin::ApplicationController
   end
 
   private
+
+  # Shared by the list and its search dropdown so both honour the same filters.
+  def filtered_store_products
+    scope = store_products
+    scope = scope.search(params[:search])           if params[:search].present?
+    scope = scope.by_category(params[:category_id]) if params[:category_id].present?
+    scope = scope.where(status: params[:status])    if params[:status].present?
+
+    inv_ids = @current_store.store_inventories
+    case params[:stock_status]
+    when 'in_stock'     then scope.where(id: inv_ids.where('quantity > 0').select(:product_id))
+    when 'out_of_stock' then scope.where(id: inv_ids.where('quantity <= 0').select(:product_id))
+    when 'low_stock'    then scope.where(id: inv_ids.where('quantity > 0 AND quantity <= COALESCE(low_stock_threshold, 10)').select(:product_id))
+    else scope
+    end
+  end
 
   def set_product
     @product = store_products.includes(:product_variants).find(params[:id])
