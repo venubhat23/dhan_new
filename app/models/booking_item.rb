@@ -15,7 +15,8 @@ class BookingItem < ApplicationRecord
   before_validation :normalize_discount
   before_save :calculate_total
   after_create :reduce_product_stock
-  after_update :handle_quantity_change, if: :saved_change_to_quantity?
+  after_update :handle_quantity_change, if: -> { saved_change_to_quantity? && !line_target_changed_on_save? }
+  after_update :handle_line_target_change, if: :line_target_changed_on_save?
   after_destroy :restore_product_stock
 
   # Gross (pre-line-discount) tax-inclusive total for this line.
@@ -60,11 +61,14 @@ class BookingItem < ApplicationRecord
     return unless quantity.present? && product.present?
     # Stock for an existing line was already allocated on create; a save that
     # doesn't change quantity (e.g. a price fix) must not re-check it.
-    return if persisted? && !quantity_changed?
+    # A swapped product/variant is a fresh allocation against the new line, so
+    # the full quantity is checked and the old quantity is not credited back.
+    retargeted = persisted? && (product_id_changed? || product_variant_id_changed?)
+    return if persisted? && !quantity_changed? && !retargeted
 
     available_stock = central_variant_line? ? product_variant.available_stock.to_f : stock_batches_scope.sum(:quantity_remaining)
 
-    if persisted? && quantity_changed?
+    if persisted? && quantity_changed? && !retargeted
       available_stock += quantity_was
     end
 
@@ -174,6 +178,26 @@ class BookingItem < ApplicationRecord
         notes: "Booking item quantity changed from #{old_quantity} to #{new_quantity}"
       )
     end
+  end
+
+  def line_target_changed_on_save?
+    saved_change_to_product_id? || saved_change_to_product_variant_id?
+  end
+
+  # The product (or variant) on an existing line was swapped in the edit form:
+  # give the old line's quantity back to the old product/variant's stock, then
+  # allocate the (possibly new) quantity from the new one — exactly what a
+  # destroy + create of the line would do.
+  def handle_line_target_change
+    old_line = BookingItem.new(
+      booking: booking,
+      product_id: product_id_before_last_save,
+      product_variant_id: product_variant_id_before_last_save,
+      quantity: quantity_before_last_save
+    )
+    old_line.send(:restore_product_stock) if old_line.product.present?
+
+    reduce_product_stock
   end
 
   def restore_product_stock

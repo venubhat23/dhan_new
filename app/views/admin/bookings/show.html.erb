@@ -53,14 +53,14 @@
       public_url   = "#{request.base_url}/booking/#{@booking.share_token}"
       bi           = @booking.booking_invoices.first
       pdf_line     = bi&.share_token.present? ? "\n📄 Download Invoice PDF: #{request.base_url}/invoice/#{bi.share_token}/download" : ""
-      wa_thank_msg = booking_payment_thanks_message(@booking)
     %>
     <% if wa_phone.length >= 10 %>
-      <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(wa_thank_msg) %>"
+      <a href="https://wa.me/<%= wa_phone %>?text=<%= ERB::Util.url_encode(booking_send_invoice_message(@booking, public_url)) %>"
          target="_blank" class="btn btn-success"
-         title="Send Thank You on WhatsApp">
-        <i class="bi bi-whatsapp me-1"></i>
-        Thanks
+         style="background:#00897b;border-color:#00897b;"
+         title="Send Invoice on WhatsApp">
+        <i class="bi bi-send me-1"></i>
+        Send Invoice
       </a>
       <% if @booking.payment_status_paid? && bi&.share_token.present? %>
         <%

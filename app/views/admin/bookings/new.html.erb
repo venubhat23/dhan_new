@@ -161,36 +161,6 @@
               </div>
             <% end %>
 
-            <%# Payment Status — kept at the top so it is reachable without scrolling %>
-            <div class="mb-4">
-              <h6 class="mb-3"><i class="bi bi-check-circle me-2"></i>Payment Status</h6>
-
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label" for="paymentStatusSelect">Payment Received</label>
-                  <%= f.select :payment_status,
-                      options_for_select([
-                        ['Unpaid', 'unpaid'],
-                        ['Partially Paid', 'partially_paid'],
-                        ['Paid', 'paid']
-                      ], 'unpaid'),
-                      {},
-                      { class: "form-select", id: "paymentStatusSelect" } %>
-                  <div class="form-text">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Choose whether payment has been fully received, partially received, or not yet received
-                  </div>
-                </div>
-
-                <div class="col-md-6">
-                  <div class="alert alert-light border d-flex align-items-center mb-0" id="paymentStatusAlert">
-                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
-                    <span id="paymentStatusText">Payment not received</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <%# Customer Information %>
             <div class="mb-4">
               <h6 class="mb-3"><i class="bi bi-person me-2"></i>Customer Information</h6>
@@ -328,6 +298,36 @@
                 <div class="col-12">
                   <label class="form-label">Delivery Address</label>
                   <%= f.text_area :delivery_address, class: 'form-control', rows: 3, placeholder: 'Enter complete delivery address' %>
+                </div>
+              </div>
+            </div>
+
+            <%# Payment Status %>
+            <div class="mb-4">
+              <h6 class="mb-3"><i class="bi bi-check-circle me-2"></i>Payment Status</h6>
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label" for="paymentStatusSelect">Payment Received</label>
+                  <%= f.select :payment_status,
+                      options_for_select([
+                        ['Unpaid', 'unpaid'],
+                        ['Partially Paid', 'partially_paid'],
+                        ['Paid', 'paid']
+                      ], 'unpaid'),
+                      {},
+                      { class: "form-select", id: "paymentStatusSelect" } %>
+                  <div class="form-text">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Choose whether payment has been fully received, partially received, or not yet received
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="alert alert-light border d-flex align-items-center mb-0" id="paymentStatusAlert">
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                    <span id="paymentStatusText">Payment not received</span>
+                  </div>
                 </div>
               </div>
             </div>

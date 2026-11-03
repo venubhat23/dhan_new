@@ -27,13 +27,18 @@
     const dateInput = document.getElementById('ddDate');
     const clearBtn = document.getElementById('ddClearBtn');
     const saveBtn = document.getElementById('ddSaveBtn');
+    const modalEl = document.getElementById('deliveryDateModal');
+
+    // Bootstrap puts the backdrop on <body>; left inside the page content, the
+    // modal is trapped in that area's stacking context and renders under it.
+    document.body.appendChild(modalEl);
 
     window.openDeliveryDateModal = function(el) {
       ddUrl = el.dataset.url;
       document.getElementById('ddBookingNumber').textContent = '#' + el.dataset.bookingNumber;
       dateInput.value = el.dataset.deliveryDate || '';
       clearBtn.classList.toggle('d-none', !el.dataset.deliveryDate);
-      bootstrap.Modal.getOrCreateInstance(document.getElementById('deliveryDateModal')).show();
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
     };
 
     function saveDeliveryDate(value) {
