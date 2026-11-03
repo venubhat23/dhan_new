@@ -155,13 +155,16 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
 
   def update
     @list_state = list_state_params
+    # Apply the submitted changes first so the stock check sees what changed
+    # (untouched, already-booked lines are skipped).
+    @booking.assign_attributes(booking_params)
     unless validate_stock_availability(@booking, is_update: true)
       @products = products_for_picker
       @customers = Customer.order(:full_name)
       return render(:edit, status: :unprocessable_entity)
     end
 
-    if @booking.update(booking_params)
+    if @booking.save
       redirect_to store_admin_bookings_path(@list_state), notice: 'Booking updated successfully!'
     else
       @products = products_for_picker
@@ -562,6 +565,17 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     booking.generate_quick_invoice! if booking.respond_to?(:generate_quick_invoice!)
   end
 
+  # "Onion - 1 kg" for a variant line, plain product name otherwise — so the
+  # stock error names exactly which line is short.
+  def stock_error_name(e)
+    variant = e[:item].product_variant if e[:item].product_variant_id.present?
+    variant ? "#{e[:product].name} - #{variant.label}" : e[:product].name
+  end
+
+  def stock_qty(n)
+    helpers.number_with_precision(n.to_f, precision: 2, strip_insignificant_zeros: true)
+  end
+
   def validate_stock_availability(booking, is_update: false)
     active_items = booking.booking_items.reject(&:marked_for_destruction?).select { |i| i.product_id.present? && i.quantity.to_i > 0 }
     return true if active_items.empty?
@@ -576,6 +590,13 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     active_items.each do |item|
       product = products_by_id[item.product_id]
       next unless product
+      # Editing a booking must not re-validate lines that are already booked
+      # and untouched — their stock was deducted when they were saved, so the
+      # "available" figure no longer includes them (e.g. Onion at 0 left would
+      # block saving a payment/status change). Only new lines, quantity
+      # changes, and product/variant swaps need a stock check.
+      next if is_update && item.persisted? &&
+              !item.quantity_changed? && !item.product_id_changed? && !item.product_variant_id_changed?
       if product.has_multiple_quantities? && item.product_variant_id.present?
         variant = variants_by_id[item.product_variant_id]
         # Same overlay as products_for_picker / Store#available_stock_for:
@@ -597,17 +618,17 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
                       StockBatch.available_for_product(product.id, store_id: scope_store_id).sum(:quantity_remaining).to_f
                     end
       end
-      available += (item.quantity_was || 0) if is_update && item.persisted? && item.quantity_changed?
+      available += (item.quantity_was || 0) if is_update && item.persisted? && item.quantity_changed? && !item.product_id_changed? && !item.product_variant_id_changed?
       stock_errors << { product: product, requested: item.quantity, available: available, item: item } if item.quantity > available
     end
 
     return true if stock_errors.empty?
 
     stock_errors.each do |e|
-      booking.errors.add(:base, "#{e[:product].name}: Only #{e[:available]} units available, but #{e[:requested]} requested")
-      e[:item].errors.add(:quantity, "only #{e[:available]} units available")
+      booking.errors.add(:base, "#{stock_error_name(e)}: Only #{stock_qty(e[:available])} units available, but #{stock_qty(e[:requested])} requested")
+      e[:item].errors.add(:quantity, "only #{stock_qty(e[:available])} units available")
     end
-    flash.now[:alert] = "Stock validation failed: #{stock_errors.map { |e| "#{e[:product].name} (Available: #{e[:available]}, Requested: #{e[:requested]})" }.join(', ')}"
+    flash.now[:alert] = "Out of stock: #{stock_errors.map { |e| "#{stock_error_name(e)} (Available: #{stock_qty(e[:available])}, Requested: #{stock_qty(e[:requested])})" }.join(', ')}"
     false
   end
 

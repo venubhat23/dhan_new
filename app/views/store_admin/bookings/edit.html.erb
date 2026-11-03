@@ -319,7 +319,14 @@
           <div id="booking-items">
             <% if @booking.booking_items.any? %>
               <% @booking.booking_items.each_with_index do |item, index| %>
-                <div class="booking-item-row border rounded p-3 mb-3" id="item-<%= index %>">
+                <% qty_error = item.errors[:quantity].first %>
+                <div class="booking-item-row border rounded p-3 mb-3<%= ' border-danger border-2 bg-danger-subtle' if qty_error %>" id="item-<%= index %>">
+                  <% if qty_error %>
+                    <div class="text-danger small fw-semibold mb-2">
+                      <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                      Out of stock: <%= item.product&.name %><%= " - #{item.product_variant.label}" if item.product_variant %> — <%= qty_error %>, <%= number_with_precision(item.quantity.to_f, precision: 2, strip_insignificant_zeros: true) %> requested
+                    </div>
+                  <% end %>
                   <%= f.fields_for :booking_items, item do |item_form| %>
                     <div class="row g-3 align-items-center">
                       <div class="col-md-4">

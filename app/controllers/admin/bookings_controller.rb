@@ -335,7 +335,11 @@ class Admin::BookingsController < Admin::ApplicationController
   def update
     @list_state = list_state_params
 
-    # Validate stock availability for updates
+    # Apply the submitted changes first so the stock check sees what actually
+    # changed (it used to run against the saved rows, re-checking untouched
+    # lines whose stock is already deducted, and never seeing real edits).
+    @booking.assign_attributes(booking_params)
+
     unless validate_stock_availability(@booking, is_update: true)
       @products = Product.active.includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
       @customers = Customer.all.order(:full_name)
@@ -343,7 +347,7 @@ class Admin::BookingsController < Admin::ApplicationController
       return
     end
 
-    if @booking.update(booking_params)
+    if @booking.save
       redirect_to admin_bookings_path(@list_state), notice: 'Booking updated successfully!'
     else
       @products = Product.active.includes(:category, :product_variants, image_attachment: :blob, additional_images_attachments: :blob)
@@ -1214,6 +1218,17 @@ class Admin::BookingsController < Admin::ApplicationController
     end
   end
 
+  # "Onion - 1 kg" for a variant line, plain product name otherwise — so the
+  # stock error names exactly which line is short.
+  def stock_error_name(e)
+    variant = e[:item].product_variant if e[:item].product_variant_id.present?
+    variant ? "#{e[:product].name} - #{variant.label}" : e[:product].name
+  end
+
+  def stock_qty(n)
+    helpers.number_with_precision(n.to_f, precision: 2, strip_insignificant_zeros: true)
+  end
+
   def validate_stock_availability(booking, is_update: false)
     stock_errors = []
     active_items = booking.booking_items.reject(&:marked_for_destruction?).select { |i| i.product_id.present? && i.quantity.to_i > 0 }
@@ -1233,6 +1248,13 @@ class Admin::BookingsController < Admin::ApplicationController
     active_items.each do |item|
       product = products_by_id[item.product_id]
       next unless product
+      # Editing a booking must not re-validate lines that are already booked
+      # and untouched — their stock was deducted when they were saved, so the
+      # "available" figure no longer includes them (e.g. Onion at 0 left would
+      # block saving a payment/status change). Only new lines, quantity
+      # changes, and product/variant swaps need a stock check.
+      next if is_update && item.persisted? &&
+              !item.quantity_changed? && !item.product_id_changed? && !item.product_variant_id_changed?
 
       if product.has_multiple_quantities? && item.product_variant_id.present?
         variant = variants_by_id[item.product_variant_id]
@@ -1254,7 +1276,8 @@ class Admin::BookingsController < Admin::ApplicationController
       end
 
       # For updates, add back the current item's quantity if it exists
-      if is_update && item.persisted? && item.quantity_changed?
+      if is_update && item.persisted? && item.quantity_changed? &&
+         !item.product_id_changed? && !item.product_variant_id_changed?
         available_stock += (item.quantity_was || 0)
       end
 
@@ -1271,15 +1294,15 @@ class Admin::BookingsController < Admin::ApplicationController
     if stock_errors.any?
       stock_errors.each do |error|
         booking.errors.add(:base,
-          "#{error[:product].name}: Only #{error[:available]} units available, but #{error[:requested]} requested")
+          "#{stock_error_name(error)}: Only #{stock_qty(error[:available])} units available, but #{stock_qty(error[:requested])} requested")
 
         # Also add error to the specific booking item
         error[:item].errors.add(:quantity,
-          "only #{error[:available]} units available")
+          "only #{stock_qty(error[:available])} units available")
       end
 
-      flash.now[:alert] = "Stock validation failed: #{stock_errors.map { |e|
-        "#{e[:product].name} (Available: #{e[:available]}, Requested: #{e[:requested]})"
+      flash.now[:alert] = "Out of stock: #{stock_errors.map { |e|
+        "#{stock_error_name(e)} (Available: #{stock_qty(e[:available])}, Requested: #{stock_qty(e[:requested])})"
       }.join(', ')}"
 
       return false
