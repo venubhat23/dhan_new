@@ -373,7 +373,7 @@
                         <label class="form-label small">Product Discount</label>
                         <div class="input-group">
                           <%= item_form.select :discount_type,
-                                options_for_select([['None', ''], ['%', 'percentage'], ['₹', 'fixed']], item.discount_type),
+                                options_for_select([['%', 'percentage'], ['₹', 'fixed']], item.discount_type.presence || 'percentage'),
                                 {}, class: 'form-select flex-grow-0 w-auto', onchange: 'calculateItemTotal(this)' %>
                           <%= item_form.number_field :discount_value, class: 'form-control', min: 0, step: '0.01',
                                 value: item.discount_value, placeholder: '0', onchange: 'calculateItemTotal(this)', oninput: 'calculateItemTotal(this)' %>
@@ -451,8 +451,7 @@
                   <label class="form-label small">Product Discount</label>
                   <div class="input-group">
                     <select class="form-select flex-grow-0 w-auto" name="booking[booking_items_attributes][INDEX][discount_type]" onchange="calculateItemTotal(this)">
-                      <option value="">None</option>
-                      <option value="percentage">%</option>
+                      <option value="percentage" selected>%</option>
                       <option value="fixed">₹</option>
                     </select>
                     <input type="number" class="form-control" name="booking[booking_items_attributes][INDEX][discount_value]" min="0" step="0.01" placeholder="0" onchange="calculateItemTotal(this)" oninput="calculateItemTotal(this)">

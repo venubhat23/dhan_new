@@ -53,7 +53,10 @@ class BookingItem < ApplicationRecord
   private
 
   def normalize_discount
-    self.discount_type = nil if discount_type.blank?
+    # The edit form no longer offers "None" — a % / ₹ type with a blank or 0
+    # value just means no discount, so store it as none (keeps untouched lines
+    # unchanged on save instead of flipping nil → 'percentage').
+    self.discount_type = nil if discount_type.blank? || discount_value.to_f <= 0
     self.discount_value = nil if discount_type.nil?
   end
 
