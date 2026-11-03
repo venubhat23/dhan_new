@@ -488,6 +488,7 @@ module ApplicationHelper
     when 'returned'        then 'Customer returned the order'
     when 'refund'          then 'Refund issued to the customer'
     when 'reconfirm_order' then 'Order needs to be re-confirmed with the customer'
+    when 'rescheduled'     then 'Delivery rescheduled to another date'
     else 'Update order stage'
     end
   end

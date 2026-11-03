@@ -621,7 +621,7 @@ class DashboardController < ApplicationController
     @draft_bookings     = booking_status_counts.slice(*NON_ORDER_BOOKING_STATUSES).values.sum
     @total_bookings     = real_order_counts.values.sum
     @total_orders       = @total_bookings
-    @pending_bookings   = real_order_counts.slice('ordered_and_delivery_pending', 'confirmed', 'processing', 'packed').values.sum
+    @pending_bookings   = real_order_counts.slice('ordered_and_delivery_pending', 'rescheduled', 'confirmed', 'processing', 'packed').values.sum
     @shipped_orders     = real_order_counts.slice('shipped', 'shop_pickup', 'out_for_delivery').values.sum
     @completed_bookings = real_order_counts.slice(*FULFILLED_BOOKING_STATUSES).values.sum
     @delivered_orders   = real_order_counts['delivered'] || 0

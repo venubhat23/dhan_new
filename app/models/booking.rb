@@ -24,30 +24,33 @@ class Booking < ApplicationRecord
 
 
   # Delivery stages — the only booking statuses (DB, admin, store admin, mobile
-  # UI, API). Order = display order; Delivered is the default.
+  # UI, API). Order = display order (user-specified 2026-11-03: Delivery
+  # Pending, Delivered, Shop Pickup, Rescheduled, Reconfirm order, then the rest).
   enum :status, {
     ordered_and_delivery_pending: 'ordered_and_delivery_pending',
+    delivered: 'delivered',
+    shop_pickup: 'shop_pickup',
+    rescheduled: 'rescheduled',
+    reconfirm_order: 'reconfirm_order',
     packed: 'packed',
     shipped: 'shipped',
-    shop_pickup: 'shop_pickup',
-    delivered: 'delivered',
     cancelled: 'cancelled',
     returned: 'returned',
-    refund: 'refund',
-    reconfirm_order: 'reconfirm_order'
+    refund: 'refund'
   }
 
   # One official name per stage; every dropdown, badge and message uses these.
   STATUS_LABELS = {
     'ordered_and_delivery_pending' => 'Delivery Pending',
+    'delivered'       => 'Delivered',
+    'shop_pickup'     => 'Shop Pickup',
+    'rescheduled'     => 'Rescheduled',
+    'reconfirm_order' => 'Reconfirm order',
     'packed'          => 'Packed',
     'shipped'         => 'Shipped',
-    'shop_pickup'     => 'Shop Pickup',
-    'delivered'       => 'Delivered',
     'cancelled'       => 'Cancelled',
     'returned'        => 'Returned',
-    'refund'          => 'Refund',
-    'reconfirm_order' => 'Reconfirm order'
+    'refund'          => 'Refund'
   }.freeze
 
   # Retired statuses (migrated away in the DB). Anything still sending them —
@@ -326,7 +329,7 @@ class Booking < ApplicationRecord
   scope :today, -> { where(created_at: Date.current.all_day) }
   scope :active, -> { where.not(status: [:cancelled, :returned, :refund]) }
   scope :completed_orders, -> { where(status: :delivered) }
-  scope :pending_orders, -> { where(status: [:ordered_and_delivery_pending, :reconfirm_order]) }
+  scope :pending_orders, -> { where(status: [:ordered_and_delivery_pending, :rescheduled, :reconfirm_order]) }
   scope :in_progress, -> { where(status: [:packed, :shipped]) }
 
   def generate_booking_number
@@ -475,7 +478,7 @@ class Booking < ApplicationRecord
 
   # Status management methods
   def can_cancel?
-    %w[ordered_and_delivery_pending reconfirm_order packed shop_pickup].include?(status)
+    %w[ordered_and_delivery_pending rescheduled reconfirm_order packed shop_pickup].include?(status)
   end
 
   def can_return?
@@ -485,7 +488,7 @@ class Booking < ApplicationRecord
   # "Confirmed" is no longer a separate stage: confirming a re-confirm order puts
   # it back to Delivery Pending and sends the confirmation email.
   def mark_as_confirmed!
-    if ordered_and_delivery_pending? || reconfirm_order?
+    if ordered_and_delivery_pending? || rescheduled? || reconfirm_order?
       update!(status: :ordered_and_delivery_pending)
       send_booking_confirmation_email
     end
@@ -559,6 +562,7 @@ class Booking < ApplicationRecord
     when 'delivered' then 'success'
     when 'cancelled', 'returned', 'refund' then 'danger'
     when 'reconfirm_order' then 'info'
+    when 'rescheduled' then 'dark'
     else 'secondary'
     end
   end
@@ -574,6 +578,7 @@ class Booking < ApplicationRecord
     when 'returned' then 'bi-arrow-return-left'
     when 'refund' then 'bi-cash-coin'
     when 'reconfirm_order' then 'bi-telephone'
+    when 'rescheduled' then 'bi-calendar-event'
     else 'bi-question-circle'
     end
   end

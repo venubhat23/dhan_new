@@ -11,7 +11,7 @@ class StoreAdmin::DashboardController < StoreAdmin::ApplicationController
       pending_incoming_transfers: 0,
       pending_outgoing_transfers: 0,
       recent_bookings_count: store_bookings.where(created_at: 1.week.ago..Time.current).count,
-      pending_bookings_count: status_counts.values_at('draft', 'ordered_and_delivery_pending', 'confirmed').compact.sum,
+      pending_bookings_count: status_counts.values_at('draft', 'ordered_and_delivery_pending', 'rescheduled', 'confirmed').compact.sum,
       completed_bookings_count: status_counts.values_at('delivered', 'completed').compact.sum
     }
     @recent_bookings = store_bookings.order(created_at: :desc).limit(5).includes(:customer, booking_items: :product)

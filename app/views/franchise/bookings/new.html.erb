@@ -1526,7 +1526,8 @@ function updateStatusPreview() {
     'cancelled': { color: 'bg-danger', icon: 'bi-x-circle' },
     'returned': { color: 'bg-danger', icon: 'bi-arrow-return-left' },
     'refund': { color: 'bg-danger', icon: 'bi-cash-coin' },
-    'reconfirm_order': { color: 'bg-info', icon: 'bi-telephone' }
+    'reconfirm_order': { color: 'bg-info', icon: 'bi-telephone' },
+    'rescheduled': { color: 'bg-dark', icon: 'bi-calendar-event' }
   };
 
   const config = statusConfigs[selectedValue] || { color: 'bg-secondary', icon: 'bi-question-circle' };

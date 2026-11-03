@@ -479,6 +479,30 @@
 var itemIndex = <%= @booking.booking_items.count %>;
 var discountType = 'amount'; // 'amount' or 'percent'
 
+// Discount box opens in % mode. The booking stores the discount in rupees, so
+// show it as a % of the subtotal — unless it isn't a clean % (e.g. ₹47 on
+// ₹400 = 11.75% is fine, but ₹50 on ₹333 = 15.015…%): then stay in ₹ mode so
+// re-saving can't shift the total by a few paise.
+function initDiscountMode() {
+  const input = document.getElementById('discountInput');
+  if (!input) return;
+  const amount = parseFloat(input.value) || 0;
+  const subtotal = parseFloat(document.querySelector('input[name="booking[subtotal]"]')?.value) || 0;
+  if (amount <= 0) {
+    input.value = 0;
+    setDiscountType('percent');
+    return;
+  }
+  if (subtotal > 0) {
+    const pct = Math.round(amount / subtotal * 10000) / 100;
+    if (Math.abs(subtotal * pct / 100 - amount) < 0.005) {
+      input.value = pct;
+      setDiscountType('percent');
+    }
+  }
+}
+
+
 // Toggle discount entry between a flat rupee amount and a percentage
 function setDiscountType(type) {
   discountType = type;
@@ -700,6 +724,7 @@ function fillCustomerDetails(select) {
 
   // Calculate initial totals
   calculateTotals();
+  initDiscountMode();
 
   // Set initial payment method
   const currentPaymentMethod = '<%= @booking.payment_method.presence || 'upi' %>';
@@ -722,6 +747,14 @@ input[name="booking[shipping_charges]"]::-webkit-outer-spin-button,
 input[name="booking[shipping_charges]"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 #discountInput,
 input[name="booking[shipping_charges]"] { -moz-appearance: textfield; appearance: textfield; }
+
+/* Booking item Unit Price + Product Discount boxes: plain typed input, no up/down spinner arrows */
+.booking-item-row input[name*="[price]"]::-webkit-outer-spin-button,
+.booking-item-row input[name*="[price]"]::-webkit-inner-spin-button,
+.booking-item-row input[name*="[discount_value]"]::-webkit-outer-spin-button,
+.booking-item-row input[name*="[discount_value]"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.booking-item-row input[name*="[price]"],
+.booking-item-row input[name*="[discount_value]"] { -moz-appearance: textfield; appearance: textfield; }
 
 .booking-item-row {
   background: #f8f9fa;

@@ -464,10 +464,10 @@
               <span>Bulk Discount</span>
               <div class="d-flex align-items-center gap-2">
                 <div class="btn-group btn-group-sm" role="group" aria-label="Discount type">
-                  <button type="button" class="btn btn-outline-secondary active" id="discountTypeAmountBtn" onclick="setDiscountType('amount')">₹</button>
-                  <button type="button" class="btn btn-outline-secondary" id="discountTypePercentBtn" onclick="setDiscountType('percent')">%</button>
+                  <button type="button" class="btn btn-outline-secondary" id="discountTypeAmountBtn" onclick="setDiscountType('amount')">₹</button>
+                  <button type="button" class="btn btn-outline-secondary active" id="discountTypePercentBtn" onclick="setDiscountType('percent')">%</button>
                 </div>
-                <input type="number" id="checkoutDiscount" value="" placeholder="0" min="0" max="999999" step="1" class="form-control form-control-sm d-inline-block w-auto" style="width: 80px;" onchange="updateCheckoutTotals()" oninput="updateCheckoutTotals()">
+                <input type="number" id="checkoutDiscount" value="" placeholder="0" min="0" max="100" step="1" class="form-control form-control-sm d-inline-block w-auto" style="width: 80px;" onchange="updateCheckoutTotals()" oninput="updateCheckoutTotals()">
               </div>
             </div>
             <div class="d-flex justify-content-end mb-2" id="discountAmountPreviewRow" style="display: none;">
@@ -549,7 +549,7 @@
 // Shopping Cart System
 let cart = {};
 let currentView = 'products';
-let discountType = 'amount'; // 'amount' or 'percent'
+let discountType = 'percent'; // 'amount' or 'percent' — % is the default
 
 // Toggle discount entry between a flat rupee amount and a percentage
 function setDiscountType(type) {
@@ -1099,7 +1099,7 @@ function updateCheckoutDisplay() {
             <button type="button" class="btn btn-outline-secondary py-0 px-2 ${dType === 'percentage' ? 'active' : ''}" onclick="setItemDiscountType('${safeKey}', '${dType === 'percentage' ? 'none' : 'percentage'}')">%</button>
           </div>
           <input type="number" min="0" step="0.01" value="${dVal || ''}" placeholder="0"
-                 class="form-control form-control-sm py-0" style="width:70px;"
+                 class="form-control form-control-sm py-0 no-spin" style="width:70px;"
                  oninput="setItemDiscountValue('${safeKey}', this.value)">
           ${hasDisc ? `<span class="badge bg-success-subtle text-success">-₹${lineDisc.toFixed(2)}</span>` : ''}
         </div>
@@ -1706,7 +1706,8 @@ function updateStatusPreview() {
     'cancelled': { color: 'bg-danger', icon: 'bi-x-circle' },
     'returned': { color: 'bg-danger', icon: 'bi-arrow-return-left' },
     'refund': { color: 'bg-danger', icon: 'bi-cash-coin' },
-    'reconfirm_order': { color: 'bg-info', icon: 'bi-telephone' }
+    'reconfirm_order': { color: 'bg-info', icon: 'bi-telephone' },
+    'rescheduled': { color: 'bg-dark', icon: 'bi-calendar-event' }
   };
 
   const config = statusConfigs[selectedValue] || { color: 'bg-secondary', icon: 'bi-question-circle' };
@@ -2123,6 +2124,15 @@ function stopCamera() {
 </script>
 
 <style>
+/* Cart Discount / Bulk Discount / Delivery Charges: plain typed boxes, no up/down spinner arrows */
+#checkoutDiscount::-webkit-outer-spin-button,
+#checkoutDiscount::-webkit-inner-spin-button,
+#checkoutDeliveryCharge::-webkit-outer-spin-button,
+#checkoutDeliveryCharge::-webkit-inner-spin-button,
+.no-spin::-webkit-outer-spin-button,
+.no-spin::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#checkoutDiscount, #checkoutDeliveryCharge, .no-spin { -moz-appearance: textfield; appearance: textfield; }
+
 /* Hover effects */
 .hover-lift {
   transition: transform 0.2s ease, box-shadow 0.2s ease;

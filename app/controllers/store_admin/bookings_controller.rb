@@ -500,7 +500,7 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
 
     {
       total_bookings: status_counts.values.sum,
-      pending_bookings: status_counts.values_at('draft', 'ordered_and_delivery_pending', 'confirmed').compact.sum,
+      pending_bookings: status_counts.values_at('draft', 'ordered_and_delivery_pending', 'rescheduled', 'confirmed').compact.sum,
       processing_bookings: status_counts.values_at('processing', 'packed', 'shipped', 'shop_pickup', 'out_for_delivery').compact.sum,
       completed_bookings: status_counts.values_at('delivered', 'completed').compact.sum,
       cancelled_bookings: status_counts.values_at('cancelled', 'returned').compact.sum,

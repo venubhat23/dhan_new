@@ -398,9 +398,8 @@
                 <input class="form-check-input" type="checkbox" id="bulkPaidSelectAll" title="Select all unpaid bookings on this page">
               </th>
               <th class="border-0 fw-semibold">Booking Details</th>
-              <th class="border-0 fw-semibold">Customer</th>
+              <th class="border-0 fw-semibold">Customer & Delivery Date</th>
               <th class="border-0 fw-semibold">Items & Amount</th>
-              <th class="border-0 fw-semibold">Delivery Date</th>
               <th class="border-0 fw-semibold">Payment & Status</th>
               <th class="border-0 fw-semibold">Progress</th>
               <th class="border-0 fw-semibold">Actions</th>
@@ -505,6 +504,9 @@
                         <%= booking.delivery_store %>
                       </small>
                     <% end %>
+                    <div class="mt-2">
+                      <%= render 'admin/bookings/delivery_date_button', booking: booking %>
+                    </div>
                   </div>
                 </td>
                 <td class="align-middle">
@@ -545,9 +547,6 @@
                       </div>
                     <% end %>
                   </div>
-                </td>
-                <td class="align-middle">
-                  <%= render 'admin/bookings/delivery_date_button', booking: booking %>
                 </td>
                 <td class="align-middle">
                   <!-- Payment Status -->
