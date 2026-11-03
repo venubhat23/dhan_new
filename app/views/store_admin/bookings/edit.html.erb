@@ -324,7 +324,7 @@
                   <% if qty_error %>
                     <div class="text-danger small fw-semibold mb-2">
                       <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                      Out of stock: <%= item.product&.name %><%= " - #{item.product_variant.label}" if item.product_variant %> — <%= qty_error %>, <%= number_with_precision(item.quantity.to_f, precision: 2, strip_insignificant_zeros: true) %> requested
+                      Out of stock — <%= qty_error %>
                     </div>
                   <% end %>
                   <%= f.fields_for :booking_items, item do |item_form| %>

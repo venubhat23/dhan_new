@@ -572,6 +572,19 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     variant ? "#{e[:product].name} - #{variant.label}" : e[:product].name
   end
 
+  # Stock-error wording. `in_stock` is what's actually on the shelf (matches
+  # Product Summary); `held` is what this booking line already holds. When a
+  # booked line is being increased, say so instead of reporting
+  # in_stock + held as "available", which read like a wrong stock figure.
+  def stock_error_message(e)
+    in_stock = stock_qty(e[:available].to_f - e[:held].to_f)
+    if e[:held].to_f > 0
+      "#{stock_error_name(e)}: only #{in_stock} in stock — can't increase from #{stock_qty(e[:held])} to #{stock_qty(e[:requested])} (max #{stock_qty(e[:available])})"
+    else
+      "#{stock_error_name(e)}: only #{in_stock} in stock, but #{stock_qty(e[:requested])} requested"
+    end
+  end
+
   def stock_qty(n)
     helpers.number_with_precision(n.to_f, precision: 2, strip_insignificant_zeros: true)
   end
@@ -618,17 +631,18 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
                       StockBatch.available_for_product(product.id, store_id: scope_store_id).sum(:quantity_remaining).to_f
                     end
       end
-      available += (item.quantity_was || 0) if is_update && item.persisted? && item.quantity_changed? && !item.product_id_changed? && !item.product_variant_id_changed?
-      stock_errors << { product: product, requested: item.quantity, available: available, item: item } if item.quantity > available
+      held = is_update && item.persisted? && item.quantity_changed? && !item.product_id_changed? && !item.product_variant_id_changed? ? (item.quantity_was || 0).to_f : 0
+      available += held
+      stock_errors << { product: product, requested: item.quantity, available: available, held: held, item: item } if item.quantity > available
     end
 
     return true if stock_errors.empty?
 
     stock_errors.each do |e|
-      booking.errors.add(:base, "#{stock_error_name(e)}: Only #{stock_qty(e[:available])} units available, but #{stock_qty(e[:requested])} requested")
-      e[:item].errors.add(:quantity, "only #{stock_qty(e[:available])} units available")
+      booking.errors.add(:base, stock_error_message(e))
+      e[:item].errors.add(:quantity, stock_error_message(e))
     end
-    flash.now[:alert] = "Out of stock: #{stock_errors.map { |e| "#{stock_error_name(e)} (Available: #{stock_qty(e[:available])}, Requested: #{stock_qty(e[:requested])})" }.join(', ')}"
+    flash.now[:alert] = "Out of stock: #{stock_errors.map { |e| stock_error_message(e) }.join('; ')}"
     false
   end
 
