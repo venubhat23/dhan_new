@@ -666,8 +666,21 @@ class Admin::BookingsController < Admin::ApplicationController
     raw_date = params[:expected_delivery_date].to_s.strip
     delivery_date = raw_date.present? ? Date.iso8601(raw_date) : nil
 
-    @booking.update_columns(expected_delivery_date: delivery_date, updated_at: Time.current)
-    render json: { success: true, expected_delivery_date: delivery_date&.iso8601 }
+    # Optional 24h "HH:MM"; only kept when there is a date.
+    raw_time = params[:expected_delivery_time].to_s.strip
+    delivery_time = nil
+    if delivery_date && raw_time.present?
+      match = raw_time.match(/\A([01]\d|2[0-3]):([0-5]\d)\z/)
+      unless match
+        return render json: { success: false, error: 'Please enter a valid time' }, status: :unprocessable_entity
+      end
+      delivery_time = raw_time
+    end
+
+    @booking.update_columns(expected_delivery_date: delivery_date, expected_delivery_time: delivery_time,
+                            updated_at: Time.current)
+    render json: { success: true, expected_delivery_date: delivery_date&.iso8601,
+                   expected_delivery_time: delivery_time }
   rescue Date::Error
     render json: { success: false, error: 'Please enter a valid date' }, status: :unprocessable_entity
   end

@@ -10,6 +10,34 @@
         <p class="small text-muted mb-2">Booking <span class="fw-medium" id="ddBookingNumber"></span></p>
         <label for="ddDate" class="form-label">Delivery Date <span class="text-danger">*</span></label>
         <input type="date" class="form-control" id="ddDate" required>
+
+        <button type="button" class="btn btn-sm btn-outline-primary mt-3" id="ddAddTimeBtn">
+          <i class="bi bi-clock me-1"></i>Add Time
+        </button>
+
+        <div class="mt-3 d-none" id="ddTimeGroup">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label mb-0" for="ddHour">Delivery Time</label>
+            <button type="button" class="btn btn-link btn-sm text-danger p-0" id="ddRemoveTimeBtn">Remove</button>
+          </div>
+          <div class="input-group">
+            <select class="form-select" id="ddHour" aria-label="Hour">
+              <% (1..12).each do |h| %>
+                <option value="<%= h %>"><%= format('%02d', h) %></option>
+              <% end %>
+            </select>
+            <span class="input-group-text px-1">:</span>
+            <select class="form-select" id="ddMinute" aria-label="Minute">
+              <% (0..59).step(5).each do |m| %>
+                <option value="<%= m %>"><%= format('%02d', m) %></option>
+              <% end %>
+            </select>
+            <select class="form-select" id="ddMeridiem" aria-label="AM/PM">
+              <option value="AM">AM</option>
+              <option value="PM">PM</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-danger me-auto" id="ddClearBtn">Clear</button>
@@ -28,20 +56,60 @@
     const clearBtn = document.getElementById('ddClearBtn');
     const saveBtn = document.getElementById('ddSaveBtn');
     const modalEl = document.getElementById('deliveryDateModal');
+    const addTimeBtn = document.getElementById('ddAddTimeBtn');
+    const removeTimeBtn = document.getElementById('ddRemoveTimeBtn');
+    const timeGroup = document.getElementById('ddTimeGroup');
+    const hourSel = document.getElementById('ddHour');
+    const minuteSel = document.getElementById('ddMinute');
+    const meridiemSel = document.getElementById('ddMeridiem');
 
     // Bootstrap puts the backdrop on <body>; left inside the page content, the
     // modal is trapped in that area's stacking context and renders under it.
     document.body.appendChild(modalEl);
+
+    function showTime(show) {
+      timeGroup.classList.toggle('d-none', !show);
+      addTimeBtn.classList.toggle('d-none', show);
+    }
+
+    // "14:30" (24h, as stored) -> selects set to 02 : 30 PM
+    function setTime(value) {
+      const [h, m] = value.split(':').map(Number);
+      hourSel.value = String(h % 12 === 0 ? 12 : h % 12);
+      // Keep an off-step minute (e.g. 07) exactly as saved.
+      if (!minuteSel.querySelector('option[value="' + m + '"]')) {
+        minuteSel.add(new Option(String(m).padStart(2, '0'), String(m)));
+      }
+      minuteSel.value = String(m);
+      meridiemSel.value = h < 12 ? 'AM' : 'PM';
+    }
+
+    // selects -> "14:30"
+    function getTime() {
+      let h = parseInt(hourSel.value, 10) % 12;
+      if (meridiemSel.value === 'PM') h += 12;
+      return String(h).padStart(2, '0') + ':' + String(parseInt(minuteSel.value, 10)).padStart(2, '0');
+    }
 
     window.openDeliveryDateModal = function(el) {
       ddUrl = el.dataset.url;
       document.getElementById('ddBookingNumber').textContent = '#' + el.dataset.bookingNumber;
       dateInput.value = el.dataset.deliveryDate || '';
       clearBtn.classList.toggle('d-none', !el.dataset.deliveryDate);
+      const time = el.dataset.deliveryTime || '';
+      if (time) {
+        setTime(time);
+      } else {
+        hourSel.value = '10'; minuteSel.value = '0'; meridiemSel.value = 'AM';
+      }
+      showTime(!!time);
       bootstrap.Modal.getOrCreateInstance(modalEl).show();
     };
 
-    function saveDeliveryDate(value) {
+    addTimeBtn.addEventListener('click', function() { showTime(true); });
+    removeTimeBtn.addEventListener('click', function() { showTime(false); });
+
+    function saveDeliveryDate(date, time) {
       saveBtn.disabled = clearBtn.disabled = true;
       fetch(ddUrl, {
         method: 'PATCH',
@@ -50,7 +118,7 @@
           'Accept': 'application/json',
           'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         },
-        body: JSON.stringify({ expected_delivery_date: value })
+        body: JSON.stringify({ expected_delivery_date: date, expected_delivery_time: time })
       })
       .then(r => r.json())
       .then(result => {
@@ -69,8 +137,9 @@
 
     form.addEventListener('submit', function(e) {
       e.preventDefault();
-      saveDeliveryDate(dateInput.value);
+      const withTime = !timeGroup.classList.contains('d-none');
+      saveDeliveryDate(dateInput.value, withTime ? getTime() : '');
     });
-    clearBtn.addEventListener('click', function() { saveDeliveryDate(''); });
+    clearBtn.addEventListener('click', function() { saveDeliveryDate('', ''); });
   })();
 </script>

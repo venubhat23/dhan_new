@@ -736,15 +736,6 @@
                         </a>
                       <% end %>
                       <% if booking.has_invoice? %>
-                        <% if booking.invoice_link_path %>
-                          <%= link_to booking.invoice_link_path, class: "action-icon invoice", title: "View Invoice", target: "_blank" do %>
-                            <i class="bi bi-receipt"></i>
-                          <% end %>
-                        <% else %>
-                          <%= link_to "#", class: "action-icon invoice", title: "Invoice Generated", onclick: "alert('Invoice generated but link not available')" do %>
-                            <i class="bi bi-receipt-cutoff"></i>
-                          <% end %>
-                        <% end %>
                         <% bi = booking.booking_invoices.first %>
                         <% if bi&.share_token.present? %>
                           <% wa_inv_url = public_invoice_url(token: bi.share_token) %>
@@ -756,10 +747,6 @@
                              title="Share Invoice on WhatsApp">
                             <i class="bi bi-whatsapp"></i>
                           </a>
-                        <% end %>
-                      <% else %>
-                        <%= link_to "#", class: "action-icon invoice", title: "Generate Invoice", onclick: "alert('Invoice not generated yet')" do %>
-                          <i class="bi bi-receipt-cutoff"></i>
                         <% end %>
                       <% end %>
                     </div>

@@ -602,6 +602,14 @@ class Booking < ApplicationRecord
     end
   end
 
+  # expected_delivery_time ("14:30") as "02:30 PM"; nil when unset.
+  def expected_delivery_time_label
+    return if expected_delivery_time.blank?
+
+    hour, minute = expected_delivery_time.split(':').map(&:to_i)
+    format('%02d:%02d %s', (hour % 12).zero? ? 12 : hour % 12, minute, hour < 12 ? 'AM' : 'PM')
+  end
+
   def payment_method_label
     %w[card upi bank_transfer online cashfree cloudflare].include?(payment_method.to_s) ? 'Online Payment' : 'Cash on Delivery'
   end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_01_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_06_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -228,6 +228,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_000001) do
     t.boolean "is_b2b", default: false, null: false
     t.string "share_token"
     t.integer "booking_items_count", default: 0, null: false
+    t.string "expected_delivery_time", limit: 5
     t.index ["booked_by"], name: "index_bookings_on_booked_by"
     t.index ["booking_number"], name: "index_bookings_on_booking_number", unique: true
     t.index ["booking_number"], name: "index_bookings_on_booking_number_trgm", opclass: :gin_trgm_ops, using: :gin
