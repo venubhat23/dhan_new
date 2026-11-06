@@ -370,7 +370,7 @@ class Booking < ApplicationRecord
       customer: self.customer,
       invoice_number: self.invoice_number,
       invoice_date: Time.current,
-      due_date: 30.days.from_now,
+      due_date: 7.days.from_now,
       subtotal: self.subtotal || 0,
       tax_amount: self.tax_amount || 0,
       discount_amount: self.discount_amount || 0,
@@ -1007,7 +1007,7 @@ class Booking < ApplicationRecord
     invoice = Invoice.new(
       customer: customer,
       invoice_date: Date.current,
-      due_date: Date.current + 30.days,
+      due_date: Date.current + 7.days,
       status: :sent,
       payment_status: payment_status_paid? ? :fully_paid : :unpaid,
       paid_at: payment_status_paid? ? Time.current : nil,

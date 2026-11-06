@@ -725,7 +725,7 @@
         <tr>
           <td>Invoice No.: <span><%= @booking.invoice_number || @booking.booking_number %></span></td>
           <td>Invoice Date: <span><%= ((@invoice.invoice_date if @public_view) || Date.current).strftime('%d/%m/%Y') %></span></td>
-          <td>Due Date: <span><%= ((@invoice.due_date if @public_view) || (Date.current + 30.days)).strftime('%d/%m/%Y') %></span></td>
+          <td>Due Date: <span><%= ((@invoice.due_date if @public_view) || (Date.current + 7.days)).strftime('%d/%m/%Y') %></span></td>
         </tr>
       </table>
 

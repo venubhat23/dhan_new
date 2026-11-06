@@ -257,7 +257,7 @@
       # /invoice/:token keeps the date the invoice was issued; the booking page
       # has no issued invoice of its own, so it shows today's date as before.
       invoice_date = @invoice&.invoice_date || Date.current
-      due_date     = @invoice&.due_date || (Date.current + 30.days)
+      due_date     = @invoice&.due_date || (Date.current + 7.days)
     %>
 
     <% if pdf_url %>
