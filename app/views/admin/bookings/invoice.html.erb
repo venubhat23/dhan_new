@@ -733,12 +733,16 @@
       <div class="invoice-divider"></div>
 
       <!-- Bill to and Ship to section -->
+      <%# Billing = customer's Billing Address, Shipping = customer's Shipping Address;
+          each falls back to the booking's delivery address when the customer field is blank. %>
+      <% bill_address = @booking.customer&.address.presence || @booking.delivery_address.presence || 'Address' %>
+      <% ship_address = @booking.customer&.shipping_address.presence || @booking.delivery_address.presence || @booking.customer&.address.presence || 'Address' %>
       <table class="bill-ship-table">
         <tr>
           <td>
             <div class="bill-title">BILL TO</div>
             <div class="client-name"><%= @booking.customer_name || @booking.customer&.display_name || 'Customer Name' %></div>
-            <div><%= @booking.delivery_address || @booking.customer&.address || 'Address' %></div>
+            <div><%= bill_address %></div>
             <% if @booking.customer_phone.present? || @booking.customer&.mobile.present? %>
               <div class="mobile">Mobile: <%= @booking.customer_phone || @booking.customer&.mobile %></div>
             <% end %>
@@ -746,7 +750,7 @@
           <td>
             <div class="ship-title">SHIP TO</div>
             <div class="client-name"><%= @booking.customer_name || @booking.customer&.display_name || 'Customer Name' %></div>
-            <div><%= @booking.delivery_address || @booking.customer&.address || 'Address' %></div>
+            <div><%= ship_address %></div>
           </td>
         </tr>
       </table>

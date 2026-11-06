@@ -1,6 +1,7 @@
 <%# Shows a booking's delivery date (+ optional time); clicking opens the modal in _delivery_date_modal. %>
 <% delivery_date = booking.expected_delivery_date %>
-<% delivery_time_label = delivery_date && booking.expected_delivery_time_label %>
+<%# Pass show_time: false to show only the date (the modal still gets the saved time). %>
+<% delivery_time_label = delivery_date && local_assigns.fetch(:show_time, true) && booking.expected_delivery_time_label %>
 <button type="button"
         class="btn btn-sm text-nowrap <%= delivery_date ? 'btn-outline-primary' : 'btn-outline-secondary' %>"
         title="<%= delivery_date ? 'Change delivery date' : 'Set delivery date' %>"
@@ -9,7 +10,7 @@
         data-delivery-date="<%= delivery_date&.iso8601 %>"
         data-delivery-time="<%= booking.expected_delivery_time if delivery_date %>"
         onclick="openDeliveryDateModal(this)">
-  <i class="bi bi-calendar-event me-1"></i><%= delivery_date ? delivery_date.strftime('%d %b %Y') : 'Set Date' %>
+  <i class="bi bi-calendar-event me-1"></i><%= delivery_date ? delivery_date.strftime('%d %b %Y') : 'Set Date & Time' %>
   <% if delivery_time_label %>
     <span class="ms-1"><i class="bi bi-clock me-1"></i><%= delivery_time_label %></span>
   <% end %>

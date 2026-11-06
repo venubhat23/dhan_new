@@ -307,18 +307,26 @@
       <div class="inv-divider"></div>
 
       <!-- Bill To / Ship To -->
+      <% bill_address = @booking.customer&.address.presence || @booking.delivery_address %>
+      <% ship_address = @booking.customer&.shipping_address.presence || @booking.delivery_address.presence || @booking.customer&.address %>
       <div class="inv-addresses">
         <div class="inv-addr">
           <div class="inv-addr-title">BILL TO</div>
           <div class="inv-addr-name"><%= @booking.customer_name || @booking.customer&.display_name || 'Customer' %></div>
-          <div class="inv-addr-text"><%= @booking.delivery_address || @booking.customer&.address %></div>
+          <div class="inv-addr-text"><%= bill_address %></div>
           <% ph = @booking.customer_phone || @booking.customer&.mobile %>
           <% if ph.present? %><div class="inv-addr-text">Mobile: <%= ph %></div><% end %>
         </div>
         <div class="inv-addr">
           <div class="inv-addr-title">SHIP TO</div>
           <div class="inv-addr-name"><%= @booking.customer_name || @booking.customer&.display_name || 'Customer' %></div>
-          <div class="inv-addr-text"><%= @booking.delivery_address || @booking.customer&.address %></div>
+          <div class="inv-addr-text"><%= ship_address %></div>
+          <% delivery_url = @booking.customer&.location_link.to_s.strip %>
+          <% if delivery_url.match?(%r{\Ahttps?://}i) %>
+            <div class="inv-addr-text" style="word-break: break-all;">
+              Delivery URL: <a href="<%= delivery_url %>" target="_blank" rel="noopener"><%= delivery_url %></a>
+            </div>
+          <% end %>
         </div>
       </div>
 

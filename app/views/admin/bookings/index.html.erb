@@ -353,15 +353,20 @@
             </label>
             <%= hidden_field_tag :pay_sort, params[:pay_sort] if params[:pay_sort].present? %>
             <% sort_base = request.query_parameters.except('page', 'pay_sort') %>
-            <div class="btn-group btn-group-sm" role="group">
+            <style>
+              .pay-sort-group .btn { opacity: .75; }
+              .pay-sort-group .btn:hover, .pay-sort-group .btn.pay-sort-active { opacity: 1; }
+              .pay-sort-group .btn.pay-sort-active { box-shadow: inset 0 0 0 2px rgba(255,255,255,.85); text-decoration: underline; }
+            </style>
+            <div class="btn-group btn-group-sm pay-sort-group" role="group">
               <%= link_to 'FP', admin_bookings_path(sort_base.merge(pay_sort: 'fp')),
-                    class: "btn btn-sm #{params[:pay_sort] == 'fp' ? 'btn-success' : 'btn-outline-success'} py-0 px-2",
+                    class: "btn btn-sm btn-success fw-semibold py-0 px-2 #{'pay-sort-active' if params[:pay_sort] == 'fp'}",
                     title: 'Paid at bottom (unpaid first)' %>
               <%= link_to 'FUP', admin_bookings_path(sort_base.merge(pay_sort: 'fup')),
-                    class: "btn btn-sm #{params[:pay_sort] == 'fup' ? 'btn-danger' : 'btn-outline-danger'} py-0 px-2",
+                    class: "btn btn-sm btn-danger fw-semibold py-0 px-2 #{'pay-sort-active' if params[:pay_sort] == 'fup'}",
                     title: 'Unpaid at bottom (paid first)' %>
               <%= link_to 'RST', admin_bookings_path(sort_base),
-                    class: 'btn btn-sm btn-outline-secondary py-0 px-2',
+                    class: 'btn btn-sm btn-secondary fw-semibold py-0 px-2',
                     title: 'Reset to default order' %>
             </div>
           </div>
@@ -525,7 +530,7 @@
                       </small>
                     <% end %>
                     <div class="mt-2">
-                      <%= render 'admin/bookings/delivery_date_button', booking: booking %>
+                      <%= render 'admin/bookings/delivery_date_button', booking: booking, show_time: false %>
                     </div>
                   </div>
                 </td>
