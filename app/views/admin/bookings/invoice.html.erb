@@ -751,6 +751,12 @@
             <div class="ship-title">SHIP TO</div>
             <div class="client-name"><%= @booking.customer_name || @booking.customer&.display_name || 'Customer Name' %></div>
             <div><%= ship_address %></div>
+            <% delivery_url = @booking.customer&.location_link.to_s.strip %>
+            <% if delivery_url.match?(%r{\Ahttps?://}i) %>
+              <div style="word-break: break-all;">
+                Delivery URL: <a href="<%= delivery_url %>" target="_blank" rel="noopener"><%= delivery_url %></a>
+              </div>
+            <% end %>
           </td>
         </tr>
       </table>

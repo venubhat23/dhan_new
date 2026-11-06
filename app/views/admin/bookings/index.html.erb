@@ -10,10 +10,12 @@
   min-width: 120px;
 }
 
+/* 2 icons per row; the rest wrap onto the next line(s) */
 .action-icons {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 32px);
+  gap: 6px;
   justify-content: center;
-  gap: 8px;
   align-items: center;
 }
 
@@ -426,7 +428,6 @@
               <th class="border-0 fw-semibold">Customer & Delivery Date</th>
               <th class="border-0 fw-semibold">Items & Amount</th>
               <th class="border-0 fw-semibold">Payment & Status</th>
-              <th class="border-0 fw-semibold">Progress</th>
               <th class="border-0 fw-semibold">Actions</th>
             </tr>
           </thead>
@@ -659,65 +660,6 @@
                             </li>
                           <% end %>
                         </ul>
-                      </div>
-                    <% end %>
-                  </div>
-                </td>
-                <td class="align-middle">
-                  <div class="progress-container">
-                    <%
-                      total_stages = Booking::PROGRESS_STAGES.length
-                      current_stage_index = booking.progress_stage_index || 0
-                      progress_percentage = ((current_stage_index + 1).to_f / total_stages * 100).round(0)
-
-                      # Cancelled / returned / refund are off the normal path
-                      if booking.progress_stage_index.nil?
-                        progress_percentage = 0
-                        progress_color = 'bg-danger'
-                      else
-                        progress_color = case progress_percentage
-                                        when 0..20 then 'bg-secondary'
-                                        when 21..40 then 'bg-warning'
-                                        when 41..60 then 'bg-info'
-                                        when 61..80 then 'bg-primary'
-                                        else 'bg-success'
-                                        end
-                      end
-                    %>
-
-                    <div class="progress mb-1" style="height: 8px;">
-                      <div class="progress-bar <%= progress_color %>"
-                           role="progressbar"
-                           style="width: <%= progress_percentage %>%"
-                           aria-valuenow="<%= progress_percentage %>"
-                           aria-valuemin="0"
-                           aria-valuemax="100">
-                      </div>
-                    </div>
-
-                    <div class="d-flex justify-content-between">
-                      <small class="text-muted">
-                        Stage <%= current_stage_index + 1 %>/<%= total_stages %>
-                      </small>
-                      <small class="text-muted">
-                        <%= progress_percentage %>%
-                      </small>
-                    </div>
-
-                    <!-- Next Steps -->
-                    <% if booking.next_stage %>
-                      <div class="mt-1">
-                        <small class="text-primary">
-                          <i class="bi bi-arrow-right me-1"></i>
-                          Next: <%= Booking.status_label(booking.next_stage) %>
-                        </small>
-                      </div>
-                    <% elsif %w[delivered completed].include?(booking.status) %>
-                      <div class="mt-1">
-                        <small class="text-success">
-                          <i class="bi bi-check-all me-1"></i>
-                          Order Complete
-                        </small>
                       </div>
                     <% end %>
                   </div>
@@ -1175,13 +1117,11 @@ document.addEventListener('DOMContentLoaded', function() {
       const customerName = row.cells[2]?.textContent.toLowerCase() || '';
       const paymentInfo = row.cells[4]?.textContent.toLowerCase() || '';
       const statusInfo = row.cells[5]?.textContent.toLowerCase() || '';
-      const progressInfo = row.cells[6]?.textContent.toLowerCase() || '';
 
       if (bookingNumber.includes(searchTerm) ||
           customerName.includes(searchTerm) ||
           paymentInfo.includes(searchTerm) ||
-          statusInfo.includes(searchTerm) ||
-          progressInfo.includes(searchTerm)) {
+          statusInfo.includes(searchTerm)) {
         row.style.display = '';
         visibleCount++;
       } else {
