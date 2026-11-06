@@ -1232,7 +1232,9 @@ function displayCustomerResults(customerList, searchQuery = '') {
     const highlightedMobile = highlightSearchTerm(customer.mobile, searchQuery);
     const highlightedEmail = customer.email ? highlightSearchTerm(customer.email, searchQuery) : '';
 
-    html += '<div class="customer-search-item" onclick="selectCustomer(' + customer.id + ', \'' + escapeHtml(customer.name) + '\', \'' + customer.mobile + '\', \'' + escapeHtml(customer.email) + '\', \'' + escapeHtml(customer.address) + '\')" data-index="' + index + '">';
+    // Only the numeric index goes into the onclick: names/addresses with quotes or
+    // line breaks broke the inline JS string ("Invalid or unexpected token").
+    html += '<div class="customer-search-item" onclick="selectCustomerAt(' + index + ')" data-index="' + index + '">';
     html += '<div class="customer-result-card">';
     html += '<div class="customer-result-name">' + highlightedName + '</div>';
     html += '<div class="customer-result-details">';
@@ -1246,7 +1248,13 @@ function displayCustomerResults(customerList, searchQuery = '') {
     html += '</div>';
   });
 
+  window.customerSearchResultList = customerList;
   results.innerHTML = html;
+}
+
+function selectCustomerAt(index) {
+  const c = (window.customerSearchResultList || [])[index];
+  if (c) selectCustomer(c.id, c.name || '', c.mobile || '', c.email || '', c.address || '');
 }
 
 function highlightSearchTerm(text, searchTerm) {

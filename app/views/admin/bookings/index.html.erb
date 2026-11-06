@@ -153,7 +153,7 @@
 
 
 
-<% list_state = params.permit(:page, :search, :status, :date_from, :date_to, :customer_id, :b2b, :booked_by, :payment_status, :delivery_pending).to_h %>
+<% list_state = params.permit(:page, :search, :status, :date_from, :date_to, :customer_id, :b2b, :booked_by, :payment_status, :delivery_pending, :pay_sort).to_h %>
 
 <%= render 'admin/bookings/payment_thanks_banner' %>
 
@@ -346,6 +346,26 @@
             </div>
           </div>
 
+          <!-- Paid / Unpaid ordering -->
+          <div class="col-auto">
+            <label class="form-label text-muted mb-1 small fw-semibold d-block">
+              <i class="bi bi-sort-down me-1"></i>Sort
+            </label>
+            <%= hidden_field_tag :pay_sort, params[:pay_sort] if params[:pay_sort].present? %>
+            <% sort_base = request.query_parameters.except('page', 'pay_sort') %>
+            <div class="btn-group btn-group-sm" role="group">
+              <%= link_to 'FP', admin_bookings_path(sort_base.merge(pay_sort: 'fp')),
+                    class: "btn btn-sm #{params[:pay_sort] == 'fp' ? 'btn-success' : 'btn-outline-success'} py-0 px-2",
+                    title: 'Paid at bottom (unpaid first)' %>
+              <%= link_to 'FUP', admin_bookings_path(sort_base.merge(pay_sort: 'fup')),
+                    class: "btn btn-sm #{params[:pay_sort] == 'fup' ? 'btn-danger' : 'btn-outline-danger'} py-0 px-2",
+                    title: 'Unpaid at bottom (paid first)' %>
+              <%= link_to 'RST', admin_bookings_path(sort_base),
+                    class: 'btn btn-sm btn-outline-secondary py-0 px-2',
+                    title: 'Reset to default order' %>
+            </div>
+          </div>
+
           <!-- Filter Actions -->
           <div class="col-auto">
             <div class="filter-actions d-flex gap-2 align-items-center">
@@ -527,7 +547,7 @@
                     <% end %>
                     <% unless booking.payment_status_paid? || booking.payment_status_refunded? %>
                       <div class="d-flex gap-1 mt-1">
-                        <button type="button" class="btn btn-sm btn-outline-warning py-0 px-2"
+                        <button type="button" class="btn btn-sm btn-warning text-dark fw-medium py-0 px-2 text-nowrap"
                                 onclick="openBookingPaymentModal(this)"
                                 data-url="<%= partial_payment_admin_booking_path(booking) %>"
                                 data-booking-number="<%= booking.booking_number %>"
@@ -535,14 +555,14 @@
                                 data-total="<%= (pay_invoice&.total_amount || booking.total_amount).to_f %>"
                                 data-paid="<%= paid_so_far %>"
                                 title="Partial Payment">
-                          <i class="bi bi-cash"></i>
+                          <i class="bi bi-cash me-1"></i>Partial
                         </button>
                         <%= button_to mark_paid_admin_booking_path(booking),
                                       method: :patch,
-                                      class: "btn btn-sm btn-outline-success py-0 px-2",
+                                      class: "btn btn-sm btn-success fw-medium py-0 px-2 text-nowrap",
                                       title: "Mark as Paid",
                                       form: { style: "display: inline;", data: { turbo_confirm: "Mark booking ##{booking.booking_number} as fully paid?" } } do %>
-                          <i class="bi bi-check-circle"></i>
+                          <i class="bi bi-check-circle me-1"></i>Mark Paid
                         <% end %>
                       </div>
                     <% end %>
@@ -2371,7 +2391,7 @@ td .d-flex.gap-2 {
         </div>
         <div>
           <label for="bpAmount" class="form-label">Payment Amount <span class="text-danger">*</span></label>
-          <input type="number" step="0.01" min="0.01" class="form-control" id="bpAmount" name="amount" required>
+          <input type="text" inputmode="decimal" autocomplete="off" class="form-control" id="bpAmount" name="amount" placeholder="Enter amount" required>
           <div class="form-text">Paying the full remaining amount marks the booking as Paid.</div>
         </div>
       </div>
@@ -2389,6 +2409,10 @@ td .d-flex.gap-2 {
   (function() {
     let bpUrl = null, bpRemaining = 0;
     const fmt = n => (Math.round(n * 100) / 100).toFixed(2);
+
+    // Same fix as the delivery-date modal: Bootstrap puts the backdrop on <body>,
+    // so a modal left inside the page content renders underneath it.
+    document.body.appendChild(document.getElementById('bookingPaymentModal'));
 
     function setSubmitLabel(remainingAfter) {
       const btn = document.getElementById('bpSubmitBtn');
@@ -2412,7 +2436,6 @@ td .d-flex.gap-2 {
       document.getElementById('bpCustomer').textContent = el.dataset.customer;
       document.getElementById('bpTotal').textContent = fmt(total);
       document.getElementById('bpRemaining').textContent = fmt(bpRemaining);
-      document.getElementById('bpAmount').max = fmt(bpRemaining);
       setSubmitLabel(bpRemaining);
 
       const modalEl = document.getElementById('bookingPaymentModal');
@@ -2421,6 +2444,9 @@ td .d-flex.gap-2 {
     };
 
     document.getElementById('bpAmount').addEventListener('input', function() {
+      // Plain text box: keep only digits and a single decimal point.
+      const clean = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+      if (clean !== this.value) this.value = clean;
       const after = bpRemaining - (parseFloat(this.value) || 0);
       document.getElementById('bpRemaining').textContent = fmt(Math.max(after, 0));
       setSubmitLabel(after);

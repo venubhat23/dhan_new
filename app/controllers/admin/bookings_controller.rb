@@ -2,7 +2,7 @@ class Admin::BookingsController < Admin::ApplicationController
   before_action :authenticate_user!
   before_action :set_booking, only: [:show, :edit, :update, :destroy, :generate_invoice, :invoice, :convert_to_order, :update_status, :cancel_order, :mark_delivered, :mark_completed, :mark_paid, :partial_payment, :manage_stage, :update_stage, :update_delivery_charge, :update_delivery_date]
 
-  LIST_STATE_PARAMS = %i[page search status date_from date_to customer_id b2b booked_by payment_status delivery_pending].freeze
+  LIST_STATE_PARAMS = %i[page search status date_from date_to customer_id b2b booked_by payment_status delivery_pending pay_sort].freeze
   INITIAL_PICKER_LIMIT = 40
 
   def index
@@ -45,6 +45,14 @@ class Admin::BookingsController < Admin::ApplicationController
     @bookings = @bookings.where(booked_by: params[:booked_by])     if params[:booked_by].present? && params[:booked_by].strip != ''
     @bookings = @bookings.where(payment_status: params[:payment_status]) if params[:payment_status].present? && params[:payment_status].strip != ''
     @bookings = @bookings.where.not(status: %w[delivered completed cancelled returned refund]) if params[:delivery_pending] == '1'
+
+    # FP = paid bookings sink to the bottom (unpaid first); FUP = unpaid sink
+    # (paid first). Within each group the usual newest-first order is kept.
+    if %w[fp fup].include?(params[:pay_sort])
+      paid_rank = params[:pay_sort] == 'fp' ? "CASE WHEN bookings.payment_status = 'paid' THEN 1 ELSE 0 END" :
+                                              "CASE WHEN bookings.payment_status = 'paid' THEN 0 ELSE 1 END"
+      @bookings = @bookings.reorder(Arel.sql(paid_rank), Arel.sql('bookings.created_at DESC'))
+    end
 
     # Pre-compute stats with a single GROUP BY — avoids 6 COUNT queries in the view
     stats_counts = @bookings.reorder('').group(:status).count
