@@ -269,6 +269,28 @@ class SystemSetting < ApplicationRecord
     JSON.parse(shop_addresses) rescue []
   end
 
+  # Invoice Due Days: due date on every invoice = invoice date + this many days.
+  DEFAULT_INVOICE_DUE_DAYS = 30
+
+  def self.invoice_due_days
+    value = get_value('invoice_due_days')
+    value.present? ? value.to_i : DEFAULT_INVOICE_DUE_DAYS
+  end
+
+  def self.set_invoice_due_days(days)
+    set_value(
+      'invoice_due_days',
+      days.to_i.to_s,
+      description: 'Number of days after the invoice date that an invoice is due',
+      setting_type: 'integer'
+    )
+  end
+
+  # Due date for an invoice issued on the given date.
+  def self.invoice_due_date_for(invoice_date)
+    (invoice_date || Date.current).to_date + invoice_due_days.days
+  end
+
   # Low Stock Alert Methods
 
   def self.low_stock_alert_enabled?

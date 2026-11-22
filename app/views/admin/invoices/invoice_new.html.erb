@@ -443,7 +443,7 @@
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Due Date:</span>
-                    <span class="meta-value"><%= @invoice.due_date.strftime('%d/%m/%Y') %></span>
+                    <span class="meta-value"><%= SystemSetting.invoice_due_date_for(@invoice.invoice_date).strftime('%d/%m/%Y') %></span>
                 </div>
             </div>
         </div>

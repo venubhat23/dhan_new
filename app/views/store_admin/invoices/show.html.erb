@@ -724,7 +724,7 @@
         <tr>
           <td>Invoice No.: <span><%= @invoice.invoice_number %></span></td>
           <td>Invoice Date: <span><%= @invoice.invoice_date&.strftime('%d/%m/%Y') || @invoice.created_at&.strftime('%d/%m/%Y') %></span></td>
-          <td>Due Date: <span><%= @invoice.due_date&.strftime('%d/%m/%Y') || 1.month.from_now.strftime('%d/%m/%Y') %></span></td>
+          <td>Due Date: <span><%= SystemSetting.invoice_due_date_for(@invoice.invoice_date || @invoice.created_at).strftime('%d/%m/%Y') %></span></td>
         </tr>
       </table>
 

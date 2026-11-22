@@ -771,7 +771,7 @@
         <tr>
           <td>Invoice No.: <span><%= @invoice.invoice_number %></span></td>
           <td>Invoice Date: <span><%= @invoice.invoice_date&.strftime('%d/%m/%Y') || @invoice.created_at&.strftime('%d/%m/%Y') %></span></td>
-          <td>Due Date: <span><%= @invoice.due_date&.strftime('%d/%m/%Y') || 1.month.from_now.strftime('%d/%m/%Y') %></span></td>
+          <td>Due Date: <span><%= SystemSetting.invoice_due_date_for(@invoice.invoice_date || @invoice.created_at).strftime('%d/%m/%Y') %></span></td>
         </tr>
       </table>
 
@@ -797,6 +797,28 @@
         </tr>
       </table>
 
+      <%
+        # Per-line GST rates. CGST/SGST use the product's own split when set,
+        # otherwise half of gst_percentage each (same rule as the tax summary).
+        line_gst_rates = lambda do |item|
+          prod = item.product
+          next { cgst: 0, sgst: 0, igst: 0, total: 0 } unless prod&.gst_enabled
+          if prod.cgst_percentage.present? || prod.sgst_percentage.present?
+            c = prod.cgst_percentage || 0
+            sg = prod.sgst_percentage || 0
+            ig = prod.igst_percentage || 0
+          else
+            g = prod.gst_percentage || 0
+            c = sg = g / 2.0
+            ig = 0
+          end
+          { cgst: c, sgst: sg, igst: ig, total: c + sg + ig }
+        end
+        fmt_rate = ->(r) { r.to_i == r ? r.to_i : r.round(2) }
+        # Split the TAX column into CGST / SGST only when some line is taxed.
+        split_gst_columns = invoice_items.any? { |i| line_gst_rates.call(i)[:total] > 0 }
+        show_igst_column  = split_gst_columns && invoice_items.any? { |i| line_gst_rates.call(i)[:igst] > 0 }
+      %>
       <!-- Items table -->
       <table class="items-table">
         <thead>
@@ -805,7 +827,13 @@
             <th class="center-align">HSN</th>
             <th class="center-align">QTY.</th>
             <th class="right-align">RATE</th>
-            <th class="right-align">TAX</th>
+            <% if split_gst_columns %>
+              <th class="right-align">CGST</th>
+              <th class="right-align">SGST</th>
+              <% if show_igst_column %><th class="right-align">IGST</th><% end %>
+            <% else %>
+              <th class="right-align">TAX</th>
+            <% end %>
             <th class="right-align">AMOUNT</th>
           </tr>
         </thead>
@@ -837,26 +865,41 @@
                   <br /><span class="tax-rate" style="color:#1a7f37;"><%= item.discount_label %></span>
                 <% end %>
               </td>
-              <td class="right-align">
+              <%
+                base_amount = item.quantity * (item.unit_price || 0)
+                rates = line_gst_rates.call(item)
+                total_gst_rate = rates[:total]
+                tax_amount = (base_amount * total_gst_rate) / 100
+              %>
+              <% if split_gst_columns %>
                 <%
-                  base_amount = item.quantity * (item.unit_price || 0)
-                  if item.product&.gst_enabled
-                    # Use individual tax percentages if available, otherwise split the total GST rate
-                    if item.product.cgst_percentage.present? || item.product.sgst_percentage.present?
-                      total_gst_rate = (item.product.cgst_percentage || 0) + (item.product.sgst_percentage || 0) + (item.product.igst_percentage || 0)
-                    else
-                      # If individual rates not set, use main GST percentage
-                      total_gst_rate = item.product.gst_percentage || 0
-                    end
-                    tax_amount = (base_amount * total_gst_rate) / 100
-                  else
-                    total_gst_rate = 0
-                    tax_amount = 0
-                  end
+                  # Split the line's total tax by rate, absorbing rounding into CGST
+                  # so the columns always add up to the line tax.
+                  line_tax = tax_amount.round(2)
+                  sgst_amt = total_gst_rate > 0 ? (tax_amount * rates[:sgst] / total_gst_rate).round(2) : 0
+                  igst_amt = total_gst_rate > 0 ? (tax_amount * rates[:igst] / total_gst_rate).round(2) : 0
+                  cgst_amt = line_tax - sgst_amt - igst_amt
                 %>
-                ₹<%= number_with_precision(tax_amount, precision: 2, delimiter: ',') %><br />
-                <span class="tax-rate">(<%= total_gst_rate.to_i == total_gst_rate ? total_gst_rate.to_i : total_gst_rate %>%)</span>
-              </td>
+                <td class="right-align">
+                  ₹<%= number_with_precision(cgst_amt, precision: 2, delimiter: ',') %><br />
+                  <span class="tax-rate">(<%= fmt_rate.call(rates[:cgst]) %>%)</span>
+                </td>
+                <td class="right-align">
+                  ₹<%= number_with_precision(sgst_amt, precision: 2, delimiter: ',') %><br />
+                  <span class="tax-rate">(<%= fmt_rate.call(rates[:sgst]) %>%)</span>
+                </td>
+                <% if show_igst_column %>
+                  <td class="right-align">
+                    ₹<%= number_with_precision(igst_amt, precision: 2, delimiter: ',') %><br />
+                    <span class="tax-rate">(<%= fmt_rate.call(rates[:igst]) %>%)</span>
+                  </td>
+                <% end %>
+              <% else %>
+                <td class="right-align">
+                  ₹<%= number_with_precision(tax_amount, precision: 2, delimiter: ',') %><br />
+                  <span class="tax-rate">(<%= fmt_rate.call(total_gst_rate) %>%)</span>
+                </td>
+              <% end %>
               <td class="right-align">
                 <%
                   # Calculate final amount consistently with the rate display

@@ -41,7 +41,7 @@ class BookingInvoice < ApplicationRecord
 
   def set_defaults
     self.invoice_date ||= Time.current
-    self.due_date ||= 7.days.from_now
+    self.due_date ||= SystemSetting.invoice_due_date_for(invoice_date)
     self.status ||= :draft
 
     if booking.present?

@@ -1193,7 +1193,7 @@
                 </div>
                 <div class="detail-row">
                   <span class="detail-label"><i class="fas fa-calendar-check me-2"></i>Due Date:</span>
-                  <span class="detail-value"><%= invoice.due_date&.strftime('%d %b %Y') || 'Not set' %></span>
+                  <span class="detail-value"><%= SystemSetting.invoice_due_date_for(invoice.invoice_date || invoice.created_at).strftime('%d %b %Y') %></span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label"><i class="fas fa-info-circle me-2"></i>Status:</span>
@@ -1320,7 +1320,7 @@
 ───────────────────
 📋 Invoice #: ${invoiceNumber}
 💵 Total Amount: ₹${amount}
-📆 Due Date: ${new Date(Date.now() + 10*24*60*60*1000).toLocaleDateString('en-GB')}
+📆 Due Date: ${new Date(Date.now() + <%= SystemSetting.invoice_due_days %>*24*60*60*1000).toLocaleDateString('en-GB')}
 ───────────────────
 
 👇 Click below to view your invoice:

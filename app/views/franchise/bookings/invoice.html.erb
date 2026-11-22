@@ -680,7 +680,7 @@
         <tr>
           <td>Invoice No.: <span><%= @booking.invoice_number || @booking.booking_number %></span></td>
           <td>Invoice Date: <span><%= Date.current.strftime('%d/%m/%Y') %></span></td>
-          <td>Due Date: <span><%= (Date.current + 30.days).strftime('%d/%m/%Y') %></span></td>
+          <td>Due Date: <span><%= SystemSetting.invoice_due_date_for(Date.current).strftime('%d/%m/%Y') %></span></td>
         </tr>
       </table>
 

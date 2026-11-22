@@ -922,7 +922,7 @@ class Admin::InvoicesController < Admin::ApplicationController
     invoice = Invoice.new(
       customer: customer,
       invoice_date: end_date,
-      due_date: end_date + 30.days,
+      due_date: SystemSetting.invoice_due_date_for(end_date),
       status: :draft,
       payment_status: :unpaid
     )

@@ -175,7 +175,7 @@ class MonthlyInvoiceGenerationService
     invoice = Invoice.new(
       customer: customer,
       invoice_date: Date.new(year, month).end_of_month,
-      due_date: Date.new(year, month).end_of_month + 30.days,
+      due_date: SystemSetting.invoice_due_date_for(Date.new(year, month).end_of_month),
       status: 'sent'
     )
 

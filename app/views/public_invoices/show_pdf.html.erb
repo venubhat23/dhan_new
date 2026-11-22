@@ -609,7 +609,7 @@
           <tr>
             <td>Invoice No:<span><%= @invoice.invoice_number %></span></td>
             <td>Invoice Date:<span><%= @invoice.invoice_date&.strftime('%d/%m/%Y') || Date.current.strftime('%d/%m/%Y') %></span></td>
-            <td>Due Date:<span><%= @invoice.due_date&.strftime('%d/%m/%Y') || (Date.current + 30.days).strftime('%d/%m/%Y') %></span></td>
+            <td>Due Date:<span><%= SystemSetting.invoice_due_date_for(@invoice.invoice_date).strftime('%d/%m/%Y') %></span></td>
           </tr>
         </table>
 
@@ -917,7 +917,7 @@
                   <% end %>
                 <% else %>
                   <ol>
-                    <li>Payment is due within 30 days of invoice date</li>
+                    <li>Payment is due within <%= SystemSetting.invoice_due_days %> days of invoice date</li>
                     <li>All products sold are subject to availability</li>
                     <li>Returns accepted within 7 days with receipt</li>
                   </ol>

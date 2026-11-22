@@ -39,6 +39,9 @@ class Admin::Settings::SystemController < Admin::Settings::BaseController
     @low_stock_alert_enabled   = SystemSetting.low_stock_alert_enabled?
     @low_stock_alert_threshold = SystemSetting.low_stock_alert_threshold
     @low_stock_alert_email     = SystemSetting.low_stock_alert_email
+
+    # Invoice due days
+    @invoice_due_days = SystemSetting.invoice_due_days
   end
 
   def update
@@ -162,6 +165,18 @@ class Admin::Settings::SystemController < Admin::Settings::BaseController
         end
       rescue => e
         redirect_to admin_settings_system_path, alert: "Error updating Collect From Store settings: #{e.message}"
+        return
+      end
+    end
+
+    # Handle invoice due days
+    if params[:invoice_due_days_update] == "true"
+      days = Integer(params[:invoice_due_days].to_s, exception: false)
+      if days && days >= 0 && days <= 365
+        SystemSetting.set_invoice_due_days(days)
+        success_messages << "Invoice due days set to #{days}!"
+      else
+        redirect_to admin_settings_system_path, alert: 'Invalid due days. Please enter a whole number between 0 and 365.'
         return
       end
     end

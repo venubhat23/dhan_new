@@ -739,7 +739,7 @@
           </div>
           <div class="meta-luxury-card">
             <div class="meta-label">Due Date</div>
-            <div class="meta-value"><%= @invoice.due_date.strftime('%b %d, %Y') %></div>
+            <div class="meta-value"><%= SystemSetting.invoice_due_date_for(@invoice.invoice_date).strftime('%b %d, %Y') %></div>
           </div>
           <div class="meta-luxury-card">
             <div class="meta-label">Amount</div>
