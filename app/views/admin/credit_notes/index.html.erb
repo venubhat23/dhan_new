@@ -1,0 +1,76 @@
+<style>
+  .cn-stat { border-radius:16px; border:0; color:#fff; }
+  .cn-stat .bi { font-size:1.8rem; opacity:.8; }
+  .cn-g1 { background:linear-gradient(135deg,#0f766e,#14b8a6); }
+  .cn-g2 { background:linear-gradient(135deg,#be123c,#f43f5e); }
+  .cn-g3 { background:linear-gradient(135deg,#1d4ed8,#3b82f6); }
+  .cn-g4 { background:linear-gradient(135deg,#7c3aed,#a78bfa); }
+  .cn-chip { background:#e0f2fe; color:#0369a1; border-radius:20px; padding:2px 9px; font-size:.78rem; display:inline-block; margin:1px 2px; }
+</style>
+
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+      <h3 class="mb-0"><i class="bi bi-arrow-return-left text-success me-2"></i>Credit Notes</h3>
+      <small class="text-muted">Customer returns — stock added back and amount credited</small>
+    </div>
+    <%= link_to new_admin_credit_note_path, class: 'btn btn-success' do %><i class="bi bi-plus-lg me-1"></i>New Credit Note<% end %>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="card cn-stat cn-g1"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">Total Credited</small><h4 class="mb-0">₹<%= number_with_delimiter(number_with_precision(@total_amount, precision: 2)) %></h4></div><i class="bi bi-cash-coin"></i></div></div></div>
+    <div class="col-6 col-md-3"><div class="card cn-stat cn-g2"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">Credit Notes</small><h4 class="mb-0"><%= @total_count %></h4></div><i class="bi bi-receipt-cutoff"></i></div></div></div>
+    <div class="col-6 col-md-3"><div class="card cn-stat cn-g3"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">Units Returned to Stock</small><h4 class="mb-0"><%= number_with_precision(@total_units, precision: 2, strip_insignificant_zeros: true) %></h4></div><i class="bi bi-box-arrow-in-down"></i></div></div></div>
+    <div class="col-6 col-md-3"><div class="card cn-stat cn-g4"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">This Month (<%= @month_count %>)</small><h4 class="mb-0">₹<%= number_with_delimiter(number_with_precision(@month_amount, precision: 2)) %></h4></div><i class="bi bi-calendar-month"></i></div></div></div>
+  </div>
+
+  <%= form_with url: admin_credit_notes_path, method: :get, class: 'row g-2 mb-3', data: { turbo: false } do %>
+    <div class="col-md-5"><input type="text" name="search" value="<%= params[:search] %>" class="form-control" placeholder="Search credit note #, booking #, customer, phone"></div>
+    <div class="col-6 col-md-2"><input type="date" name="from" value="<%= params[:from] %>" class="form-control"></div>
+    <div class="col-6 col-md-2"><input type="date" name="to" value="<%= params[:to] %>" class="form-control"></div>
+    <div class="col-md-3 d-flex gap-2">
+      <button class="btn btn-primary flex-grow-1"><i class="bi bi-funnel me-1"></i>Filter</button>
+      <%= link_to 'Clear', admin_credit_notes_path, class: 'btn btn-outline-secondary' %>
+    </div>
+  <% end %>
+
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr><th>Credit Note</th><th>Date</th><th>Customer</th><th>Booking</th><th>Returned Items</th><th>Refund</th><th class="text-end">Amount</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% if @credit_notes.empty? %>
+            <tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No credit notes yet.</td></tr>
+          <% end %>
+          <% @credit_notes.each do |cn| %>
+            <tr>
+              <td><%= link_to cn.credit_note_number, admin_credit_note_path(cn), class: 'fw-semibold text-decoration-none' %></td>
+              <td><%= cn.credit_date.strftime('%d %b %Y') %></td>
+              <td><%= cn.customer_display_name %><div class="small text-muted"><%= cn.booking&.customer_phone %></div></td>
+              <td><%= link_to "##{cn.booking.booking_number}", admin_booking_path(cn.booking), class: 'text-decoration-none' if cn.booking %>
+                <% if cn.store %><div class="small text-muted"><i class="bi bi-shop"></i> <%= cn.store.name %></div><% end %></td>
+              <td><% cn.credit_note_items.each do |i| %><span class="cn-chip"><%= i.display_name %> × <%= number_with_precision(i.quantity, precision: 2, strip_insignificant_zeros: true) %></span><% end %></td>
+              <td><%= cn.refund_method.present? ? cn.refund_method_label : '—' %></td>
+              <td class="text-end fw-bold text-danger">₹<%= number_with_delimiter(number_with_precision(cn.total_amount, precision: 2)) %></td>
+              <td><%= link_to admin_credit_note_path(cn), class: 'btn btn-sm btn-outline-primary' do %><i class="bi bi-eye"></i><% end %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <% if @total_pages > 1 %>
+    <nav class="mt-3"><ul class="pagination justify-content-center">
+      <% (1..@total_pages).each do |p| %>
+        <li class="page-item <%= 'active' if p == @page %>"><%= link_to p, admin_credit_notes_path(request.query_parameters.merge(page: p)), class: 'page-link' %></li>
+      <% end %>
+    </ul></nav>
+  <% end %>
+</div>

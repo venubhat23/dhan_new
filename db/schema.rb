@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_06_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_22_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -229,6 +229,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_06_000001) do
     t.string "share_token"
     t.integer "booking_items_count", default: 0, null: false
     t.string "expected_delivery_time", limit: 5
+    t.string "gstin"
     t.index ["booked_by"], name: "index_bookings_on_booked_by"
     t.index ["booking_number"], name: "index_bookings_on_booking_number", unique: true
     t.index ["booking_number"], name: "index_bookings_on_booking_number_trgm", opclass: :gin_trgm_ops, using: :gin
@@ -324,6 +325,43 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_06_000001) do
     t.index ["code"], name: "index_coupons_on_code", unique: true
   end
 
+  create_table "credit_note_items", force: :cascade do |t|
+    t.bigint "credit_note_id", null: false
+    t.bigint "booking_item_id", null: false
+    t.bigint "product_id", null: false
+    t.bigint "product_variant_id"
+    t.decimal "quantity", precision: 8, scale: 2, null: false
+    t.decimal "unit_price", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_item_id"], name: "index_credit_note_items_on_booking_item_id"
+    t.index ["credit_note_id"], name: "index_credit_note_items_on_credit_note_id"
+    t.index ["product_id"], name: "index_credit_note_items_on_product_id"
+    t.index ["product_variant_id"], name: "index_credit_note_items_on_product_variant_id"
+  end
+
+  create_table "credit_notes", force: :cascade do |t|
+    t.string "credit_note_number", null: false
+    t.bigint "booking_id", null: false
+    t.bigint "customer_id"
+    t.bigint "store_id"
+    t.bigint "user_id"
+    t.date "credit_date", null: false
+    t.decimal "total_amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.string "refund_method"
+    t.string "reason"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_credit_notes_on_booking_id"
+    t.index ["credit_date"], name: "index_credit_notes_on_credit_date"
+    t.index ["credit_note_number"], name: "index_credit_notes_on_credit_note_number", unique: true
+    t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
+    t.index ["store_id"], name: "index_credit_notes_on_store_id"
+    t.index ["user_id"], name: "index_credit_notes_on_user_id"
+  end
+
   create_table "customer_addresses", force: :cascade do |t|
     t.bigint "customer_id", null: false
     t.string "name"
@@ -410,6 +448,43 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_06_000001) do
     t.index ["latitude", "longitude"], name: "index_customers_on_location"
     t.index ["mobile"], name: "index_customers_on_mobile"
     t.index ["whatsapp_number"], name: "index_customers_on_whatsapp_number"
+  end
+
+  create_table "debit_note_items", force: :cascade do |t|
+    t.bigint "debit_note_id", null: false
+    t.bigint "vendor_purchase_item_id", null: false
+    t.bigint "stock_batch_id"
+    t.bigint "product_id", null: false
+    t.bigint "product_variant_id"
+    t.decimal "quantity", precision: 10, scale: 2, null: false
+    t.decimal "unit_price", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["debit_note_id"], name: "index_debit_note_items_on_debit_note_id"
+    t.index ["product_id"], name: "index_debit_note_items_on_product_id"
+    t.index ["product_variant_id"], name: "index_debit_note_items_on_product_variant_id"
+    t.index ["stock_batch_id"], name: "index_debit_note_items_on_stock_batch_id"
+    t.index ["vendor_purchase_item_id"], name: "index_debit_note_items_on_vendor_purchase_item_id"
+  end
+
+  create_table "debit_notes", force: :cascade do |t|
+    t.string "debit_note_number", null: false
+    t.bigint "vendor_purchase_id", null: false
+    t.bigint "vendor_id", null: false
+    t.bigint "user_id"
+    t.date "debit_date", null: false
+    t.decimal "total_amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.string "settlement_method"
+    t.string "reason"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["debit_date"], name: "index_debit_notes_on_debit_date"
+    t.index ["debit_note_number"], name: "index_debit_notes_on_debit_note_number", unique: true
+    t.index ["user_id"], name: "index_debit_notes_on_user_id"
+    t.index ["vendor_id"], name: "index_debit_notes_on_vendor_id"
+    t.index ["vendor_purchase_id"], name: "index_debit_notes_on_vendor_purchase_id"
   end
 
   create_table "delivery_charges", force: :cascade do |t|
@@ -617,6 +692,53 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_06_000001) do
     t.string "business_job"
     t.index ["created_at"], name: "index_leads_on_created_at"
     t.index ["current_stage"], name: "index_leads_on_current_stage"
+  end
+
+  create_table "ledger_accounts", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "account_type", null: false
+    t.string "code"
+    t.text "description"
+    t.boolean "active", default: true, null: false
+    t.boolean "system", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "lower((name)::text)", name: "index_ledger_accounts_on_lower_name", unique: true
+    t.index ["account_type"], name: "index_ledger_accounts_on_account_type"
+  end
+
+  create_table "manual_journal_lines", force: :cascade do |t|
+    t.bigint "manual_journal_id", null: false
+    t.bigint "ledger_account_id", null: false
+    t.string "description"
+    t.string "contact_name"
+    t.decimal "debit", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "credit", precision: 14, scale: 2, default: "0.0", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ledger_account_id"], name: "index_manual_journal_lines_on_ledger_account_id"
+    t.index ["manual_journal_id"], name: "index_manual_journal_lines_on_manual_journal_id"
+  end
+
+  create_table "manual_journals", force: :cascade do |t|
+    t.integer "journal_number", null: false
+    t.date "journal_date", null: false
+    t.string "reference_number"
+    t.text "notes", null: false
+    t.string "reporting_method", default: "accrual_and_cash", null: false
+    t.string "currency", default: "INR", null: false
+    t.string "status", default: "draft", null: false
+    t.decimal "total_amount", precision: 14, scale: 2, default: "0.0", null: false
+    t.bigint "store_id"
+    t.bigint "created_by_id"
+    t.datetime "published_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_manual_journals_on_created_by_id"
+    t.index ["journal_number"], name: "index_manual_journals_on_journal_number", unique: true
+    t.index ["status", "journal_date"], name: "index_manual_journals_on_status_and_journal_date"
+    t.index ["store_id"], name: "index_manual_journals_on_store_id"
   end
 
   create_table "milk_delivery_tasks", force: :cascade do |t|
@@ -1576,11 +1698,27 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_06_000001) do
   add_foreign_key "bookings", "stores"
   add_foreign_key "client_requests", "customers"
   add_foreign_key "client_requests", "users", column: "assignee_id"
+  add_foreign_key "credit_note_items", "booking_items"
+  add_foreign_key "credit_note_items", "credit_notes"
+  add_foreign_key "credit_note_items", "product_variants"
+  add_foreign_key "credit_note_items", "products"
+  add_foreign_key "credit_notes", "bookings"
+  add_foreign_key "credit_notes", "customers"
+  add_foreign_key "credit_notes", "stores"
+  add_foreign_key "credit_notes", "users"
   add_foreign_key "customer_addresses", "customers"
   add_foreign_key "customer_formats", "customers"
   add_foreign_key "customer_formats", "delivery_people"
   add_foreign_key "customer_formats", "products"
   add_foreign_key "customer_wallets", "customers"
+  add_foreign_key "debit_note_items", "debit_notes"
+  add_foreign_key "debit_note_items", "product_variants"
+  add_foreign_key "debit_note_items", "products"
+  add_foreign_key "debit_note_items", "stock_batches"
+  add_foreign_key "debit_note_items", "vendor_purchase_items"
+  add_foreign_key "debit_notes", "users"
+  add_foreign_key "debit_notes", "vendor_purchases"
+  add_foreign_key "debit_notes", "vendors"
   add_foreign_key "delivery_rules", "products"
   add_foreign_key "device_tokens", "customers"
   add_foreign_key "device_tokens", "delivery_people"
@@ -1591,6 +1729,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_06_000001) do
   add_foreign_key "invoice_items", "milk_delivery_tasks"
   add_foreign_key "invoice_items", "product_variants"
   add_foreign_key "invoice_items", "products"
+  add_foreign_key "manual_journal_lines", "ledger_accounts"
+  add_foreign_key "manual_journal_lines", "manual_journals"
+  add_foreign_key "manual_journals", "stores"
+  add_foreign_key "manual_journals", "users", column: "created_by_id"
   add_foreign_key "milk_delivery_tasks", "customers"
   add_foreign_key "milk_delivery_tasks", "delivery_people"
   add_foreign_key "milk_delivery_tasks", "milk_subscriptions", column: "subscription_id"

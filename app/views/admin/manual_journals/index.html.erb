@@ -1,0 +1,87 @@
+<style>
+  .mj-stat { border-radius:16px; border:0; color:#fff; }
+  .mj-stat .bi { font-size:1.8rem; opacity:.8; }
+  .mj-g1 { background:linear-gradient(135deg,#4338ca,#6366f1); }
+  .mj-g2 { background:linear-gradient(135deg,#be123c,#f43f5e); }
+  .mj-g3 { background:linear-gradient(135deg,#0f766e,#14b8a6); }
+  .mj-g4 { background:linear-gradient(135deg,#b45309,#f59e0b); }
+  .mj-tabs .nav-link { border-radius:20px; padding:4px 14px; font-size:.9rem; }
+  .mj-acct { background:#eef2ff; color:#4338ca; border-radius:20px; padding:1px 8px; font-size:.75rem; display:inline-block; margin:1px; }
+</style>
+
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+      <h3 class="mb-0"><i class="bi bi-journal-text text-primary me-2"></i>Manual Journals</h3>
+      <small class="text-muted">Record manual charges and adjustments. Published journals show up in Profit &amp; Loss.</small>
+    </div>
+    <div class="d-flex gap-2">
+      <%= link_to admin_ledger_accounts_path, class: 'btn btn-outline-secondary' do %><i class="bi bi-diagram-3 me-1"></i>Chart of Accounts<% end %>
+      <%= link_to new_admin_manual_journal_path, class: 'btn btn-primary' do %><i class="bi bi-plus-lg me-1"></i>New Journal<% end %>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="card mj-stat mj-g1"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">Journals (filtered)</small><h4 class="mb-0"><%= @count %></h4></div><i class="bi bi-journals"></i></div></div></div>
+    <div class="col-6 col-md-3"><div class="card mj-stat mj-g3"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">Total Amount</small><h4 class="mb-0">₹<%= number_with_delimiter(number_with_precision(@total_amount, precision: 2)) %></h4></div><i class="bi bi-currency-rupee"></i></div></div></div>
+    <div class="col-6 col-md-3"><div class="card mj-stat mj-g2"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">Expenses This Month</small><h4 class="mb-0">₹<%= number_with_delimiter(number_with_precision(@month_expense, precision: 2)) %></h4></div><i class="bi bi-graph-down-arrow"></i></div></div></div>
+    <div class="col-6 col-md-3"><div class="card mj-stat mj-g4"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">Drafts</small><h4 class="mb-0"><%= @draft_count %></h4></div><i class="bi bi-pencil"></i></div></div></div>
+  </div>
+
+  <ul class="nav nav-pills mj-tabs mb-3">
+    <% [['all', 'All'], ['published', 'Published'], ['draft', 'Draft']].each do |key, label| %>
+      <li class="nav-item"><%= link_to label, admin_manual_journals_path(request.query_parameters.merge(status: key, page: nil)), class: "nav-link #{'active' if @status == key}" %></li>
+    <% end %>
+  </ul>
+
+  <%= form_with url: admin_manual_journals_path, method: :get, class: 'row g-2 mb-3', data: { turbo: false } do %>
+    <input type="hidden" name="status" value="<%= @status %>">
+    <div class="col-md-4"><input type="text" name="search" value="<%= params[:search] %>" class="form-control" placeholder="Search journal #, reference, notes, contact"></div>
+    <div class="col-md-3">
+      <select name="account_id" class="form-select">
+        <option value="">All accounts</option>
+        <% @accounts.each do |a| %><option value="<%= a.id %>" <%= 'selected' if params[:account_id].to_s == a.id.to_s %>><%= a.name %></option><% end %>
+      </select>
+    </div>
+    <div class="col-6 col-md-2"><input type="date" name="from" value="<%= params[:from] %>" class="form-control"></div>
+    <div class="col-6 col-md-2"><input type="date" name="to" value="<%= params[:to] %>" class="form-control"></div>
+    <div class="col-md-1 d-flex gap-1"><button class="btn btn-primary w-100"><i class="bi bi-funnel"></i></button></div>
+  <% end %>
+
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>Date</th><th>Journal#</th><th>Reference#</th><th>Status</th><th>Notes</th><th>Accounts</th><th class="text-end">Amount</th><th>Created By</th></tr></thead>
+        <tbody>
+          <% if @journals.empty? %>
+            <tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-journal-x fs-2 d-block mb-2"></i>No journals yet. <%= link_to 'Create your first journal', new_admin_manual_journal_path %>.</td></tr>
+          <% end %>
+          <% @journals.each do |j| %>
+            <tr style="cursor:pointer" onclick="if(!event.target.closest('a')) window.location='<%= admin_manual_journal_path(j) %>'">
+              <td><%= j.journal_date.strftime('%d/%m/%Y') %></td>
+              <td><%= link_to j.journal_number, admin_manual_journal_path(j), class: 'fw-semibold text-decoration-none' %></td>
+              <td><%= j.reference_number.presence || '—' %></td>
+              <td><span class="badge <%= j.published? ? 'bg-success' : 'bg-secondary' %>"><%= j.status.upcase %></span></td>
+              <td class="small text-truncate" style="max-width:260px;"><%= j.notes %></td>
+              <td><% j.manual_journal_lines.map(&:ledger_account).compact.uniq.first(3).each do |a| %><span class="mj-acct"><%= a.name %></span><% end %></td>
+              <td class="text-end fw-semibold">₹<%= number_with_delimiter(number_with_precision(j.total_amount, precision: 2)) %></td>
+              <td class="small text-muted"><%= j.created_by&.try(:name).presence || j.created_by&.email %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <% if @total_pages > 1 %>
+    <nav class="mt-3"><ul class="pagination justify-content-center">
+      <% (1..@total_pages).each do |p| %>
+        <li class="page-item <%= 'active' if p == @page %>"><%= link_to p, admin_manual_journals_path(request.query_parameters.merge(page: p)), class: 'page-link' %></li>
+      <% end %>
+    </ul></nav>
+  <% end %>
+</div>

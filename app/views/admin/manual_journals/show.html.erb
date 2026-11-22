@@ -1,0 +1,74 @@
+<% j = @journal %>
+<style>
+  @media print { .no-print, .modern-sidebar, header, nav { display:none !important; } }
+  .mj-doc { max-width:960px; margin:0 auto; border-radius:16px; }
+  .mj-head { background:linear-gradient(135deg,#4338ca,#6366f1); color:#fff; border-radius:16px 16px 0 0; padding:22px 26px; }
+  .mj-ribbon { font-size:.75rem; letter-spacing:.08em; padding:3px 10px; border-radius:20px; background:rgba(255,255,255,.2); }
+</style>
+
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between gap-2 mb-3 no-print" style="max-width:960px;margin:0 auto;">
+    <%= link_to admin_manual_journals_path, class: 'btn btn-outline-secondary' do %><i class="bi bi-arrow-left me-1"></i>Back<% end %>
+    <div class="d-flex flex-wrap gap-2">
+      <%= link_to edit_admin_manual_journal_path(j), class: 'btn btn-outline-primary' do %><i class="bi bi-pencil me-1"></i>Edit<% end %>
+      <% if j.draft? %>
+        <%= button_to publish_admin_manual_journal_path(j), method: :patch, class: 'btn btn-success', form: { data: { turbo: false } } do %><i class="bi bi-send-check me-1"></i>Publish<% end %>
+      <% else %>
+        <%= button_to mark_draft_admin_manual_journal_path(j), method: :patch, class: 'btn btn-outline-warning', form: { data: { turbo: false } } do %><i class="bi bi-arrow-counterclockwise me-1"></i>Move to Draft<% end %>
+      <% end %>
+      <%= link_to clone_admin_manual_journal_path(j), class: 'btn btn-outline-secondary' do %><i class="bi bi-files me-1"></i>Clone<% end %>
+      <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer"></i></button>
+      <%= button_to admin_manual_journal_path(j), method: :delete, class: 'btn btn-outline-danger', form: { data: { turbo: false }, onsubmit: "return confirm('Delete Journal ##{j.journal_number}? This cannot be undone.')" } do %><i class="bi bi-trash"></i><% end %>
+    </div>
+  </div>
+
+  <div class="card mj-doc shadow-sm border-0">
+    <div class="mj-head d-flex flex-wrap justify-content-between gap-3">
+      <div>
+        <div class="small opacity-75">JOURNAL</div>
+        <h3 class="mb-1">#<%= j.journal_number %></h3>
+        <span class="mj-ribbon"><%= j.status.upcase %></span>
+      </div>
+      <div class="text-end">
+        <div class="small opacity-75">Amount</div>
+        <h2 class="mb-0">₹<%= number_with_delimiter(number_with_precision(j.total_amount, precision: 2)) %></h2>
+        <div class="small opacity-75"><%= j.journal_date.strftime('%d %B %Y') %></div>
+      </div>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3 mb-4">
+        <div class="col-md-3"><small class="text-muted d-block">Reference#</small><strong><%= j.reference_number.presence || '—' %></strong></div>
+        <div class="col-md-3"><small class="text-muted d-block">Reporting Method</small><strong><%= j.reporting_method_label %></strong></div>
+        <div class="col-md-3"><small class="text-muted d-block">Store</small><strong><%= j.store&.name || 'All / Head Office' %></strong></div>
+        <div class="col-md-3"><small class="text-muted d-block">Currency</small><strong><%= j.currency %></strong></div>
+        <div class="col-12"><small class="text-muted d-block">Notes</small><%= simple_format(j.notes, class: 'mb-0') %></div>
+      </div>
+
+      <table class="table align-middle">
+        <thead class="table-light"><tr><th>Account</th><th>Description</th><th>Contact</th><th class="text-end">Debits</th><th class="text-end">Credits</th></tr></thead>
+        <tbody>
+          <% j.manual_journal_lines.each do |l| %>
+            <tr>
+              <td><%= link_to l.ledger_account.name, admin_ledger_account_path(l.ledger_account), class: 'text-decoration-none fw-semibold' %>
+                <div class="small text-muted"><%= l.ledger_account.type_label %></div></td>
+              <td class="small"><%= l.description %></td>
+              <td class="small"><%= l.contact_name %></td>
+              <td class="text-end"><%= l.debit.to_f.positive? ? "₹#{number_with_precision(l.debit, precision: 2, delimiter: ',')}" : '' %></td>
+              <td class="text-end"><%= l.credit.to_f.positive? ? "₹#{number_with_precision(l.credit, precision: 2, delimiter: ',')}" : '' %></td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot>
+          <tr class="fw-bold"><td colspan="3" class="text-end">Total</td>
+            <td class="text-end">₹<%= number_with_precision(j.total_debit, precision: 2, delimiter: ',') %></td>
+            <td class="text-end">₹<%= number_with_precision(j.total_credit, precision: 2, delimiter: ',') %></td></tr>
+        </tfoot>
+      </table>
+
+      <% if j.draft? %>
+        <div class="alert alert-warning small mb-3"><i class="bi bi-info-circle me-1"></i>This journal is a draft. It won't show in Profit &amp; Loss until you publish it.</div>
+      <% end %>
+      <div class="small text-muted">Created by <%= j.created_by&.try(:name).presence || j.created_by&.email || 'Admin' %> on <%= j.created_at.strftime('%d %b %Y, %I:%M %p') %><%= " · Published #{j.published_at.strftime('%d %b %Y, %I:%M %p')}" if j.published_at %></div>
+    </div>
+  </div>
+</div>

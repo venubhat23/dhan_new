@@ -403,6 +403,34 @@ Rails.application.routes.draw do
     end
 
     # Invoice System
+    # Accountant: Manual Journals + Chart of Accounts (feed Profit & Loss)
+    resources :manual_journals do
+      member do
+        patch :publish
+        patch :mark_draft
+        get :clone
+      end
+    end
+    resources :ledger_accounts, only: [:index, :show, :create, :update, :destroy] do
+      member do
+        patch :toggle_active
+      end
+    end
+
+    # Debit Notes (returns to vendor -> stock out + debit amount)
+    resources :debit_notes, only: [:index, :new, :create, :show] do
+      collection do
+        get :lookup_purchase
+      end
+    end
+
+    # Credit Notes (customer returns -> restock + credit amount)
+    resources :credit_notes, only: [:index, :new, :create, :show] do
+      collection do
+        get :lookup_booking
+      end
+    end
+
     resources :invoices do
       member do
         patch :mark_as_paid
@@ -839,6 +867,7 @@ Rails.application.routes.draw do
     get 'reports/performance', to: 'reports#performance'
     get 'reports/enhanced_sales', to: 'reports#enhanced_sales'
     get 'reports/profit_loss', to: 'reports#profit_loss'
+    get 'reports/profit_loss/account', to: 'reports#profit_loss_account', as: 'reports_profit_loss_account'
 
     # Import Section
     resources :imports, only: [:index] do

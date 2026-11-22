@@ -1,0 +1,104 @@
+<style>
+  .coa-group { font-size:.75rem; letter-spacing:.06em; text-transform:uppercase; color:#64748b; background:#f8fafc; }
+  .coa-type { background:#eef2ff; color:#4338ca; border-radius:20px; padding:2px 10px; font-size:.78rem; }
+  .coa-chip { border-radius:20px; }
+</style>
+
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+      <h3 class="mb-0"><i class="bi bi-diagram-3 me-2" style="color:#7c3aed;"></i>Chart of Accounts</h3>
+      <small class="text-muted">Accounts used in Manual Journals. Income and expense accounts flow into Profit &amp; Loss.</small>
+    </div>
+    <div class="d-flex gap-2">
+      <%= link_to admin_manual_journals_path, class: 'btn btn-outline-secondary' do %><i class="bi bi-journal-text me-1"></i>Manual Journals<% end %>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#coaModal" data-mode="new"><i class="bi bi-plus-lg me-1"></i>New Account</button>
+    </div>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <%= link_to 'All', admin_ledger_accounts_path, class: "btn btn-sm coa-chip #{@type ? 'btn-outline-secondary' : 'btn-dark'}" %>
+    <% LedgerAccount::TYPES.each do |key, label, _| %>
+      <%= link_to label, admin_ledger_accounts_path(type: key), class: "btn btn-sm coa-chip #{@type == key ? 'btn-dark' : 'btn-outline-secondary'}" %>
+    <% end %>
+    <%= form_with url: admin_ledger_accounts_path, method: :get, class: 'ms-auto d-flex gap-2', data: { turbo: false } do %>
+      <% if @type %><input type="hidden" name="type" value="<%= @type %>"><% end %>
+      <input type="text" name="search" value="<%= params[:search] %>" class="form-control form-control-sm" placeholder="Search accounts">
+    <% end %>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>Account Name</th><th>Code</th><th>Type</th><th class="text-end">Entries</th><th class="text-end">Balance</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+          <% LedgerAccount::TYPES.each do |key, label, _| %>
+            <% list = @accounts.select { |a| a.account_type == key } %>
+            <% next if list.empty? %>
+            <tr class="coa-group"><td colspan="7"><%= label %> (<%= list.size %>)</td></tr>
+            <% list.each do |a| %>
+              <% st = @stats[a.id] || { dr: 0, cr: 0, count: 0 } %>
+              <% bal = LedgerAccount::CREDIT_NATURE.include?(a.account_type) ? st[:cr] - st[:dr] : st[:dr] - st[:cr] %>
+              <tr class="<%= 'text-muted' unless a.active %>">
+                <td><%= link_to a.name, admin_ledger_account_path(a), class: 'fw-semibold text-decoration-none' %>
+                  <% if a.description.present? %><div class="small text-muted"><%= a.description %></div><% end %></td>
+                <td class="small"><%= a.code %></td>
+                <td><span class="coa-type"><%= a.type_label %></span></td>
+                <td class="text-end"><%= st[:count] %></td>
+                <td class="text-end fw-semibold">₹<%= number_with_delimiter(number_with_precision(bal, precision: 2)) %></td>
+                <td><span class="badge <%= a.active ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' %>"><%= a.active ? 'Active' : 'Inactive' %></span></td>
+                <td class="text-end text-nowrap">
+                  <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#coaModal" data-mode="edit"
+                          data-url="<%= admin_ledger_account_path(a) %>" data-name="<%= a.name %>" data-type="<%= a.account_type %>"
+                          data-code="<%= a.code %>" data-description="<%= a.description %>"><i class="bi bi-pencil"></i></button>
+                  <%= button_to toggle_active_admin_ledger_account_path(a), method: :patch, class: 'btn btn-sm btn-outline-secondary', form: { class: 'd-inline', data: { turbo: false } }, title: a.active ? 'Deactivate' : 'Activate' do %><i class="bi <%= a.active ? 'bi-pause-circle' : 'bi-play-circle' %>"></i><% end %>
+                  <% if st[:count].zero? %>
+                    <%= button_to admin_ledger_account_path(a), method: :delete, class: 'btn btn-sm btn-outline-danger', form: { class: 'd-inline', data: { turbo: false }, onsubmit: "return confirm('Delete account #{j(a.name)}?')" } do %><i class="bi bi-trash"></i><% end %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          <% end %>
+          <% if @accounts.empty? %><tr><td colspan="7" class="text-center text-muted py-4">No accounts found.</td></tr><% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="coaModal" tabindex="-1">
+  <div class="modal-dialog">
+    <%= form_with model: [:admin, @new_account], id: 'coaForm', class: 'modal-content', data: { turbo: false } do |f| %>
+      <input type="hidden" name="_method" value="post" id="coaMethod">
+      <input type="hidden" name="return_type" value="<%= @type %>">
+      <div class="modal-header"><h5 class="modal-title" id="coaTitle">New Account</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label">Account Type*</label>
+          <%= f.select :account_type, LedgerAccount::TYPES.group_by(&:last).map { |g, rows| [g, rows.map { |k, l, _| [l, k] }] }.then { |grp| grouped_options_for_select(grp, 'expense') }, {}, class: 'form-select', id: 'coaType' %></div>
+        <div class="mb-3"><label class="form-label">Account Name*</label><%= f.text_field :name, class: 'form-control', required: true, id: 'coaName', placeholder: 'e.g. Fuel Expenses' %></div>
+        <div class="mb-3"><label class="form-label">Account Code</label><%= f.text_field :code, class: 'form-control', id: 'coaCode' %></div>
+        <div class="mb-1"><label class="form-label">Description</label><%= f.text_area :description, class: 'form-control', rows: 2, id: 'coaDesc' %></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary">Save</button></div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+(function () {
+  const modal = document.getElementById('coaModal');
+  const form = document.getElementById('coaForm');
+  const createUrl = form.getAttribute('action');
+  modal.addEventListener('show.bs.modal', (e) => {
+    const b = e.relatedTarget || {};
+    const edit = b.dataset && b.dataset.mode === 'edit';
+    document.getElementById('coaTitle').textContent = edit ? 'Edit Account' : 'New Account';
+    form.setAttribute('action', edit ? b.dataset.url : createUrl);
+    document.getElementById('coaMethod').value = edit ? 'patch' : 'post';
+    document.getElementById('coaName').value = edit ? b.dataset.name : '';
+    document.getElementById('coaType').value = edit ? b.dataset.type : 'expense';
+    document.getElementById('coaCode').value = edit ? (b.dataset.code || '') : '';
+    document.getElementById('coaDesc').value = edit ? (b.dataset.description || '') : '';
+  });
+})();
+</script>

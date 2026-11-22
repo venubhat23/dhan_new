@@ -7,6 +7,7 @@ class Booking < ApplicationRecord
   belongs_to :delivery_person, optional: true
   belongs_to :franchise, optional: true
   has_many :booking_items, dependent: :destroy
+  has_many :credit_notes, dependent: :restrict_with_error
   # has_one :order, dependent: :nullify  # Temporarily disabled until booking_id column is added to orders table
   has_many :booking_invoices, dependent: :destroy
   has_many :sale_items, dependent: :destroy
@@ -148,6 +149,9 @@ class Booking < ApplicationRecord
   validates :total_amount, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
   before_validation :generate_booking_number, on: :create
+  before_validation :normalize_b2b_gstin
+  validate :b2b_gstin_valid
+  after_save :remember_customer_gstin, if: -> { is_b2b? && saved_change_to_gstin? }
   before_validation :link_or_create_customer, on: :create
   before_create     :generate_share_token
   before_validation :calculate_totals
@@ -747,6 +751,38 @@ class Booking < ApplicationRecord
 
   # A booking typed in with just a name/phone (no customer picked) still gets
   # a Customer record, so new customers appear in the customers list.
+  GSTIN_FORMAT = /\A\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]\z/
+
+  # GSTIN printed on a B2B invoice: the booking's own, else the customer's saved GST no.
+  def b2b_gstin
+    return nil unless is_b2b?
+    gstin.presence || customer&.gst_no.presence
+  end
+
+  def normalize_b2b_gstin
+    self.gstin = gstin.to_s.strip.upcase.gsub(/\s+/, '').presence
+    self.gstin ||= customer&.gst_no.to_s.strip.upcase.presence if is_b2b?
+  end
+
+  # A B2B booking needs a valid GSTIN. Only enforced when the booking is created
+  # or its B2B flag / GSTIN changes, so older B2B bookings without one still save.
+  def b2b_gstin_valid
+    return unless is_b2b?
+    return unless new_record? || will_save_change_to_is_b2b? || will_save_change_to_gstin?
+
+    if gstin.blank?
+      errors.add(:gstin, "is required for a B2B booking")
+    elsif !gstin.match?(GSTIN_FORMAT)
+      errors.add(:gstin, "is not a valid 15-character GSTIN (e.g. 29ABCDE1234F1Z5)")
+    end
+  end
+
+  # Save the GSTIN on the customer the first time, so the next B2B booking is prefilled.
+  def remember_customer_gstin
+    return if customer.nil? || customer.gst_no.present? || gstin.blank?
+    customer.update_column(:gst_no, gstin)
+  end
+
   def link_or_create_customer
     return if customer_id.present? || customer.present? || customer_phone.blank?
 

@@ -1,0 +1,68 @@
+<% dn = @debit_note; vp = dn.vendor_purchase %>
+<style>
+  @media print { .no-print, .modern-sidebar, header, nav { display:none !important; } }
+  .dn-doc { max-width:900px; margin:0 auto; border-radius:16px; }
+  .dn-head { background:linear-gradient(135deg,#c2410c,#f59e0b); color:#fff; border-radius:16px 16px 0 0; padding:22px 26px; }
+</style>
+
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between mb-3 no-print" style="max-width:900px;margin:0 auto;">
+    <%= link_to admin_debit_notes_path, class: 'btn btn-outline-secondary' do %><i class="bi bi-arrow-left me-1"></i>Back<% end %>
+    <div class="d-flex gap-2">
+      <button onclick="window.print()" class="btn btn-outline-primary"><i class="bi bi-printer me-1"></i>Print</button>
+      <%= link_to new_admin_debit_note_path, class: 'btn text-white', style: 'background:#ea580c;' do %><i class="bi bi-plus-lg me-1"></i>New Debit Note<% end %>
+    </div>
+  </div>
+
+  <div class="card dn-doc shadow-sm border-0">
+    <div class="dn-head d-flex flex-wrap justify-content-between gap-3">
+      <div>
+        <div class="small opacity-75">DEBIT NOTE</div>
+        <h3 class="mb-0"><%= dn.debit_note_number %></h3>
+        <div class="small opacity-75"><%= dn.debit_date.strftime('%d %B %Y') %></div>
+      </div>
+      <div class="text-end">
+        <div class="small opacity-75">Amount Debited to Vendor</div>
+        <h2 class="mb-0">₹<%= number_with_delimiter(number_with_precision(dn.total_amount, precision: 2)) %></h2>
+        <span class="badge bg-light" style="color:#c2410c;"><i class="bi bi-box-arrow-up me-1"></i>Removed from stock</span>
+      </div>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3 mb-4">
+        <div class="col-md-4"><small class="text-muted d-block">Vendor</small><strong><%= dn.vendor&.name %></strong>
+          <div class="small text-muted"><%= dn.vendor&.phone %></div>
+          <% if dn.vendor&.gst_no.present? %><div class="small text-muted">GST: <%= dn.vendor.gst_no %></div><% end %>
+        </div>
+        <div class="col-md-4"><small class="text-muted d-block">Against Purchase</small>
+          <%= link_to vp.purchase_number, admin_vendor_purchase_path(vp), class: 'fw-semibold text-decoration-none' %>
+          <div class="small text-muted"><%= vp.purchase_date&.strftime('%d %b %Y') %> · ₹<%= number_with_precision(vp.total_amount, precision: 2) %></div>
+          <div class="small text-muted">Total debited on this purchase: ₹<%= number_with_precision(vp.debit_notes_total, precision: 2) %></div>
+        </div>
+        <div class="col-md-4"><small class="text-muted d-block">Settlement / Reason</small>
+          <strong><%= dn.settlement_method.present? ? dn.settlement_method_label : '—' %></strong>
+          <div class="small text-muted"><%= dn.reason %></div>
+        </div>
+      </div>
+
+      <table class="table align-middle">
+        <thead class="table-light"><tr><th>#</th><th>Item</th><th class="text-end">Purchased</th><th class="text-end">Returned Qty</th><th class="text-end">Purchase Price</th><th class="text-end">Debit Amount</th></tr></thead>
+        <tbody>
+          <% dn.debit_note_items.each_with_index do |i, idx| %>
+            <tr>
+              <td><%= idx + 1 %></td>
+              <td><%= i.display_name %></td>
+              <td class="text-end text-muted"><%= number_with_precision(i.vendor_purchase_item&.quantity, precision: 2, strip_insignificant_zeros: true) %></td>
+              <td class="text-end fw-semibold"><%= number_with_precision(i.quantity, precision: 2, strip_insignificant_zeros: true) %></td>
+              <td class="text-end">₹<%= number_with_precision(i.unit_price, precision: 2) %></td>
+              <td class="text-end">₹<%= number_with_precision(i.amount, precision: 2) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot><tr class="fw-bold"><td colspan="5" class="text-end">Total Debit</td><td class="text-end" style="color:#c2410c;">₹<%= number_with_delimiter(number_with_precision(dn.total_amount, precision: 2)) %></td></tr></tfoot>
+      </table>
+
+      <% if dn.notes.present? %><div class="alert alert-light border"><strong>Notes:</strong> <%= dn.notes %></div><% end %>
+      <div class="small text-muted">Issued by <%= dn.user&.try(:name).presence || dn.user&.email || 'Admin' %> on <%= dn.created_at.strftime('%d %b %Y, %I:%M %p') %></div>
+    </div>
+  </div>
+</div>

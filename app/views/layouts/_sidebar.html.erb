@@ -528,6 +528,21 @@
             <% end %>
           </li>
         <% end %>
+
+        <!-- Credit Notes -->
+        <% if current_user.has_sidebar_permission?('bookings') || current_user.has_sidebar_permission?('invoices') %>
+          <li class="nav-item">
+            <%= link_to admin_credit_notes_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/credit_notes')}" do %>
+              <div class="nav-icon-modern">
+                <div class="icon-bg gradient-teal">
+                  <i class="bi bi-arrow-return-left"></i>
+                </div>
+              </div>
+              <span class="nav-text">Credit Note</span>
+              <div class="nav-indicator"></div>
+            <% end %>
+          </li>
+        <% end %>
       </ul>
     </div>
     <% end %>
@@ -583,6 +598,18 @@
                 <%= link_to batch_inventory_admin_vendor_purchases_path, class: "submenu-link #{'active' if current_page?(batch_inventory_admin_vendor_purchases_path)}" do %>
                   <span class="submenu-bullet">•</span>
                   <span>Batch Inventory</span>
+                <% end %>
+              </li>
+              <li>
+                <%= link_to new_admin_debit_note_path, class: "submenu-link #{'active' if current_page?(new_admin_debit_note_path)}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>Return to Vendor</span>
+                <% end %>
+              </li>
+              <li>
+                <%= link_to admin_debit_notes_path, class: "submenu-link #{'active' if current_page?(admin_debit_notes_path)}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>Debit Notes</span>
                 <% end %>
               </li>
             </ul>
@@ -985,6 +1012,37 @@
           <% end %>
         </li>
         <% end %>
+      </ul>
+    </div>
+    <% end %>
+
+    <!-- Accountant Section -->
+    <% if current_user.has_sidebar_permission?('reports') || current_user.has_sidebar_permission?('invoices') %>
+    <div class="nav-section">
+      <div class="nav-section-title">Accountant</div>
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <%= link_to admin_manual_journals_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/manual_journals')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-indigo">
+                <i class="bi bi-journal-text"></i>
+              </div>
+            </div>
+            <span class="nav-text">Manual Journals</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+        <li class="nav-item">
+          <%= link_to admin_ledger_accounts_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/ledger_accounts')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-violet">
+                <i class="bi bi-diagram-3"></i>
+              </div>
+            </div>
+            <span class="nav-text">Chart of Accounts</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
       </ul>
     </div>
     <% end %>

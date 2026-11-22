@@ -1147,7 +1147,7 @@ class Admin::BookingsController < Admin::ApplicationController
       :customer_id, :customer_name, :customer_email, :customer_phone,
       :payment_method, :payment_status, :discount_amount, :shipping_charges, :notes,
       :delivery_address, :cash_received, :change_amount, :status, :store_id,
-      :booking_date, :is_b2b, booking_items_attributes: [:id, :product_id, :product_variant_id, :quantity, :price, :discount_type, :discount_value, :_destroy]
+      :booking_date, :is_b2b, :gstin, booking_items_attributes: [:id, :product_id, :product_variant_id, :quantity, :price, :discount_type, :discount_value, :_destroy]
     )
   end
 

@@ -1,4 +1,88 @@
 module ApplicationHelper
+  # ---- B2B invoices: CGST/SGST split, GSTIN, B2B label ----------------------
+
+  # The B2B booking behind an invoice (matched by invoice number), or nil.
+  def b2b_booking_for_invoice(invoice)
+    number = invoice.try(:invoice_number)
+    return nil if number.blank?
+    @_b2b_booking_for_invoice ||= {}
+    return @_b2b_booking_for_invoice[number] if @_b2b_booking_for_invoice.key?(number)
+    @_b2b_booking_for_invoice[number] = Booking.includes(:customer).find_by(invoice_number: number, is_b2b: true)
+  end
+
+  # Per-line GST rates. Uses the product's own CGST/SGST/IGST when set,
+  # otherwise splits gst_percentage equally into CGST and SGST.
+  def gst_line_rates(product)
+    return { cgst: 0, sgst: 0, igst: 0, total: 0 } unless product&.gst_enabled
+    if product.cgst_percentage.present? || product.sgst_percentage.present?
+      c  = (product.cgst_percentage || 0).to_f
+      sg = (product.sgst_percentage || 0).to_f
+      ig = (product.igst_percentage || 0).to_f
+    else
+      c = sg = (product.gst_percentage || 0).to_f / 2.0
+      ig = 0.0
+    end
+    { cgst: c, sgst: sg, igst: ig, total: c + sg + ig }
+  end
+
+  # Split the TAX column only on a B2B invoice where some line is taxed.
+  def gst_split_columns?(items, b2b)
+    b2b.present? && Array(items).any? { |i| gst_line_rates(i.try(:product))[:total] > 0 }
+  end
+
+  def gst_igst_column?(items)
+    Array(items).any? { |i| gst_line_rates(i.try(:product))[:igst] > 0 }
+  end
+
+  def gst_rate_label(rate)
+    rate = rate.to_f
+    rate == rate.to_i ? rate.to_i : rate.round(2)
+  end
+
+  def gst_tax_header_cells(split:, igst: false, th_class: 'right-align')
+    return content_tag(:th, 'TAX', class: th_class) unless split
+    cells = [content_tag(:th, 'CGST', class: th_class), content_tag(:th, 'SGST', class: th_class)]
+    cells << content_tag(:th, 'IGST', class: th_class) if igst
+    safe_join(cells)
+  end
+
+  # TAX cell(s) for one line. tax_amount is the line's total tax and rate its
+  # total GST %; when split, the tax is divided by the CGST/SGST/IGST rates and
+  # any rounding goes into CGST so the cells add up to the line's tax.
+  def gst_tax_cells(product, tax_amount, rate:, split:, igst: false, td_class: 'right-align')
+    cell = lambda do |amount, pct|
+      content_tag(:td, class: td_class) do
+        safe_join(["₹#{number_with_precision(amount, precision: 2, delimiter: ',')}", tag.br,
+                   content_tag(:span, "(#{gst_rate_label(pct)}%)", class: 'tax-rate')])
+      end
+    end
+    return cell.call(tax_amount.to_f, rate.to_f) unless split
+
+    r = gst_line_rates(product)
+    total = r[:total]
+    line_tax = tax_amount.to_f.round(2)
+    sgst_amt = total > 0 ? (tax_amount.to_f * r[:sgst] / total).round(2) : 0
+    igst_amt = total > 0 ? (tax_amount.to_f * r[:igst] / total).round(2) : 0
+    cgst_amt = line_tax - sgst_amt - igst_amt
+    cells = [cell.call(cgst_amt, r[:cgst]), cell.call(sgst_amt, r[:sgst])]
+    cells << cell.call(igst_amt, r[:igst]) if igst
+    safe_join(cells)
+  end
+
+  # Small "B2B" tag shown next to TAX INVOICE.
+  def b2b_invoice_badge(b2b)
+    return ''.html_safe unless b2b.present?
+    content_tag(:span, 'B2B', style: 'display:inline-block;margin-left:8px;padding:1px 8px;border:1.5px solid #0d6efd;' \
+                                     'color:#0d6efd;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:1px;vertical-align:middle;')
+  end
+
+  # "GSTIN: ..." line for the BILL TO block of a B2B invoice.
+  def b2b_gstin_line(b2b, css_class: 'mobile')
+    gstin = b2b&.b2b_gstin
+    return ''.html_safe if gstin.blank?
+    content_tag(:div, safe_join([content_tag(:strong, 'GSTIN: '), gstin]), class: css_class)
+  end
+
   # Quantity text for an invoice/bill line. A variant line shows its pack size
   # ("1 × 250 Gram") instead of the product's base unit (which said "1 Kg" for a
   # 250 g pack). A Gram/Ml product with no weight set is a fixed pack, so "1 Gram"

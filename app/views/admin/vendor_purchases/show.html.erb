@@ -27,6 +27,13 @@
         Mark Complete
       <% end %>
     <% end %>
+    <% if vendor_area == :admin %>
+      <% debited = @vendor_purchase.debit_notes_total %>
+      <%= link_to new_admin_debit_note_path(purchase: @vendor_purchase.purchase_number), class: "btn text-white", style: "background:#ea580c;" do %>
+        <i class="bi bi-truck-flatbed me-1"></i>
+        Return to Vendor<% if debited > 0 %> <span class="badge bg-light text-dark ms-1">₹<%= number_with_precision(debited, precision: 2) %> debited</span><% end %>
+      <% end %>
+    <% end %>
   </div>
 </div>
 

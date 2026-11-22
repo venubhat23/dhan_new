@@ -1,0 +1,64 @@
+<% cn = @credit_note %>
+<style>
+  @media print { .no-print, .modern-sidebar, header, nav { display:none !important; } }
+  .cn-doc { max-width:900px; margin:0 auto; border-radius:16px; }
+  .cn-head { background:linear-gradient(135deg,#0f766e,#14b8a6); color:#fff; border-radius:16px 16px 0 0; padding:22px 26px; }
+</style>
+
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between mb-3 no-print" style="max-width:900px;margin:0 auto;">
+    <%= link_to admin_credit_notes_path, class: 'btn btn-outline-secondary' do %><i class="bi bi-arrow-left me-1"></i>Back<% end %>
+    <div class="d-flex gap-2">
+      <button onclick="window.print()" class="btn btn-outline-primary"><i class="bi bi-printer me-1"></i>Print</button>
+      <%= link_to new_admin_credit_note_path, class: 'btn btn-success' do %><i class="bi bi-plus-lg me-1"></i>New Credit Note<% end %>
+    </div>
+  </div>
+
+  <div class="card cn-doc shadow-sm border-0">
+    <div class="cn-head d-flex flex-wrap justify-content-between gap-3">
+      <div>
+        <div class="small opacity-75">CREDIT NOTE</div>
+        <h3 class="mb-0"><%= cn.credit_note_number %></h3>
+        <div class="small opacity-75"><%= cn.credit_date.strftime('%d %B %Y') %></div>
+      </div>
+      <div class="text-end">
+        <div class="small opacity-75">Amount Credited</div>
+        <h2 class="mb-0">₹<%= number_with_delimiter(number_with_precision(cn.total_amount, precision: 2)) %></h2>
+        <span class="badge bg-light text-success"><i class="bi bi-check2-circle me-1"></i>Stock returned</span>
+      </div>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3 mb-4">
+        <div class="col-md-4"><small class="text-muted d-block">Customer</small><strong><%= cn.customer_display_name %></strong><div class="small text-muted"><%= cn.booking&.customer_phone %></div></div>
+        <div class="col-md-4"><small class="text-muted d-block">Against Booking</small>
+          <%= link_to "##{cn.booking.booking_number}", admin_booking_path(cn.booking), class: 'fw-semibold text-decoration-none' %>
+          <div class="small text-muted"><%= (cn.booking.booking_date || cn.booking.created_at)&.strftime('%d %b %Y') %> · ₹<%= number_with_precision(cn.booking.total_amount, precision: 2) %></div>
+          <% if cn.store %><div class="small text-muted"><i class="bi bi-shop"></i> <%= cn.store.name %></div><% end %>
+        </div>
+        <div class="col-md-4"><small class="text-muted d-block">Refund / Reason</small>
+          <strong><%= cn.refund_method.present? ? cn.refund_method_label : '—' %></strong>
+          <div class="small text-muted"><%= cn.reason %></div>
+        </div>
+      </div>
+
+      <table class="table align-middle">
+        <thead class="table-light"><tr><th>#</th><th>Item</th><th class="text-end">Returned Qty</th><th class="text-end">Unit Price</th><th class="text-end">Credit Amount</th></tr></thead>
+        <tbody>
+          <% cn.credit_note_items.each_with_index do |i, idx| %>
+            <tr>
+              <td><%= idx + 1 %></td>
+              <td><%= i.display_name %></td>
+              <td class="text-end"><%= number_with_precision(i.quantity, precision: 2, strip_insignificant_zeros: true) %></td>
+              <td class="text-end">₹<%= number_with_precision(i.unit_price, precision: 2) %></td>
+              <td class="text-end">₹<%= number_with_precision(i.amount, precision: 2) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot><tr class="fw-bold"><td colspan="4" class="text-end">Total Credit</td><td class="text-end text-success">₹<%= number_with_delimiter(number_with_precision(cn.total_amount, precision: 2)) %></td></tr></tfoot>
+      </table>
+
+      <% if cn.notes.present? %><div class="alert alert-light border"><strong>Notes:</strong> <%= cn.notes %></div><% end %>
+      <div class="small text-muted">Issued by <%= cn.user&.try(:name).presence || cn.user&.email || 'Admin' %> on <%= cn.created_at.strftime('%d %b %Y, %I:%M %p') %></div>
+    </div>
+  </div>
+</div>

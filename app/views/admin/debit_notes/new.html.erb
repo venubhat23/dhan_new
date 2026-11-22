@@ -1,0 +1,236 @@
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<style>
+  .dn-hero { background: linear-gradient(135deg,#c2410c 0%,#f59e0b 100%); color:#fff; border-radius:16px; padding:22px 26px; }
+  .dn-search-wrap { position:relative; max-width:640px; }
+  .dn-search-wrap .form-control { height:54px; border-radius:14px; padding-left:48px; font-size:1.05rem; border:2px solid #e2e8f0; }
+  .dn-search-wrap .form-control:focus { border-color:#f59e0b; box-shadow:0 0 0 .2rem rgba(245,158,11,.15); }
+  .dn-search-wrap .bi-search { position:absolute; left:18px; top:17px; font-size:1.15rem; color:#94a3b8; }
+  .dn-suggest { position:absolute; z-index:20; left:0; right:0; top:60px; background:#fff; border-radius:12px; box-shadow:0 12px 30px rgba(15,23,42,.15); overflow:hidden; }
+  .dn-suggest button { display:flex; width:100%; justify-content:space-between; border:0; background:#fff; padding:10px 16px; text-align:left; }
+  .dn-suggest button:hover { background:#fff7ed; }
+  .dn-card { border-radius:16px; border:1px solid #e2e8f0; }
+  .dn-item { border:2px solid #e2e8f0; border-radius:14px; padding:14px 16px; transition:all .15s; cursor:pointer; }
+  .dn-item.selected { border-color:#f59e0b; background:#fff7ed; }
+  .dn-item.disabled { opacity:.55; cursor:not-allowed; background:#f8fafc; }
+  .dn-item .form-check-input { width:1.35em; height:1.35em; }
+  .dn-thumb { width:48px; height:48px; border-radius:10px; object-fit:cover; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:#94a3b8; }
+  .dn-variant { background:#ffedd5; color:#9a3412; border-radius:20px; padding:2px 10px; font-size:.8rem; font-weight:600; }
+  .dn-bar { height:6px; border-radius:6px; background:#e2e8f0; overflow:hidden; margin-top:6px; max-width:260px; }
+  .dn-bar span { display:block; height:100%; background:linear-gradient(90deg,#f59e0b,#ea580c); }
+  .dn-summary { position:sticky; top:80px; border-radius:16px; }
+  .dn-total { font-size:2rem; font-weight:700; color:#c2410c; }
+  .dn-qty, .dn-amt { max-width:130px; }
+</style>
+
+<div class="container-fluid py-3">
+  <div class="dn-hero d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <h3 class="mb-1"><i class="bi bi-truck-flatbed me-2"></i>Return to Vendor — New Debit Note</h3>
+      <div class="opacity-75">Find the purchase, tick what you're sending back, and save. The quantity comes out of stock automatically.</div>
+    </div>
+    <%= link_to admin_debit_notes_path, class: 'btn btn-light' do %><i class="bi bi-list-ul me-1"></i>All Debit Notes<% end %>
+  </div>
+
+  <div class="dn-search-wrap mb-4">
+    <i class="bi bi-search"></i>
+    <input type="text" id="dnSearch" class="form-control" autocomplete="off"
+           placeholder="Enter purchase no. (e.g. VP000012) or vendor name / phone" value="<%= @purchase_query %>">
+    <div id="dnSuggest" class="dn-suggest d-none"></div>
+  </div>
+
+  <div id="dnEmpty" class="text-center text-muted py-5">
+    <i class="bi bi-box-seam" style="font-size:3rem;"></i>
+    <p class="mt-2 mb-0">Search for a vendor purchase to see its items.</p>
+  </div>
+
+  <%= form_with url: admin_debit_notes_path, method: :post, id: 'dnForm', class: 'd-none', data: { turbo: false } do %>
+    <input type="hidden" name="vendor_purchase_id" id="dnPurchaseId">
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="card dn-card shadow-sm mb-3">
+          <div class="card-body d-flex flex-wrap gap-4 align-items-center">
+            <div><small class="text-muted d-block">Purchase</small><strong id="dnNumber" class="fs-5"></strong></div>
+            <div><small class="text-muted d-block">Vendor</small><strong id="dnVendor"></strong><div class="small text-muted" id="dnVendorMeta"></div></div>
+            <div><small class="text-muted d-block">Date</small><span id="dnDate"></span></div>
+            <div><small class="text-muted d-block">Status</small><span class="badge bg-secondary" id="dnStatus"></span></div>
+            <div><small class="text-muted d-block">Purchase Total</small><strong id="dnTotalAmt"></strong><div class="small text-muted" id="dnPaid"></div></div>
+            <div id="dnPrevWrap" class="d-none"><small class="text-muted d-block">Already Debited</small><strong class="text-danger" id="dnPrev"></strong></div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0">Select items to return</h6>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="dnSelectAll">Select all</button>
+        </div>
+        <div id="dnItems" class="d-grid gap-2"></div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card dn-summary shadow-sm border-0">
+          <div class="card-body">
+            <h6 class="text-muted mb-1">Total Debit Amount</h6>
+            <div class="dn-total mb-1">₹<span id="dnTotal">0.00</span></div>
+            <div class="small text-muted mb-3"><span id="dnSelCount">0</span> item(s) · <span id="dnSelUnits">0</span> unit(s) out of stock</div>
+
+            <div class="mb-2">
+              <label class="form-label small">Debit Note Date</label>
+              <input type="date" name="debit_date" class="form-control" value="<%= Date.current.iso8601 %>">
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Settlement</label>
+              <select name="settlement_method" class="form-select">
+                <% DebitNote::SETTLEMENT_METHODS.each do |val, label| %><option value="<%= val %>"><%= label %></option><% end %>
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Return Reason</label>
+              <select name="reason" class="form-select">
+                <% ['Damaged', 'Expired', 'Quality issue', 'Wrong item supplied', 'Excess quantity', 'Other'].each do |r| %><option><%= r %></option><% end %>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">Notes</label>
+              <textarea name="notes" class="form-control" rows="2" placeholder="Optional"></textarea>
+            </div>
+            <button type="submit" class="btn btn-warning w-100 btn-lg text-white" style="background:#ea580c;border-color:#ea580c;" id="dnSubmit" disabled>
+              <i class="bi bi-box-arrow-up me-1"></i>Return to Vendor &amp; Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<script>
+(function () {
+  const lookupUrl = "<%= lookup_purchase_admin_debit_notes_path %>";
+  const $ = (id) => document.getElementById(id);
+  const input = $('dnSearch'), suggest = $('dnSuggest');
+  const money = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const num = (n) => String(Math.round(Number(n) * 100) / 100);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let timer;
+
+  function lookup(q, exactOnly) {
+    if (!q) { suggest.classList.add('d-none'); return; }
+    fetch(lookupUrl + '?q=' + encodeURIComponent(q), { headers: { Accept: 'application/json' } })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.purchase) { suggest.classList.add('d-none'); render(data.purchase); return; }
+        if (exactOnly) return;
+        const list = data.suggestions || [];
+        suggest.innerHTML = list.length
+          ? list.map((s) => `<button type="button" data-p="${esc(s.purchase_number)}"><span><strong>${esc(s.purchase_number)}</strong><br><small class="text-muted">${esc(s.vendor)}</small></span><span class="text-end"><small class="text-muted">${esc(s.date || '')}</small><br>₹${money(s.total)}</span></button>`).join('')
+          : '<div class="p-3 text-muted small">No purchase found</div>';
+        suggest.classList.remove('d-none');
+      });
+  }
+
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => lookup(input.value.trim()), 250); });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); lookup(input.value.trim()); } });
+  suggest.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-p]');
+    if (b) { input.value = b.dataset.p; lookup(b.dataset.p); }
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.dn-search-wrap')) suggest.classList.add('d-none'); });
+
+  function render(p) {
+    $('dnEmpty').classList.add('d-none');
+    $('dnForm').classList.remove('d-none');
+    $('dnPurchaseId').value = p.id;
+    $('dnNumber').textContent = p.purchase_number;
+    $('dnVendor').textContent = p.vendor || '';
+    $('dnVendorMeta').textContent = [p.vendor_phone, p.vendor_gst ? 'GST ' + p.vendor_gst : null].filter(Boolean).join(' · ');
+    $('dnDate').textContent = p.date || '';
+    $('dnStatus').textContent = p.status || '';
+    $('dnTotalAmt').textContent = '₹' + money(p.total_amount);
+    $('dnPaid').textContent = 'Paid ₹' + money(p.paid_amount);
+    $('dnPrevWrap').classList.toggle('d-none', !(p.previous_debit_total > 0));
+    $('dnPrev').textContent = '₹' + money(p.previous_debit_total);
+
+    $('dnItems').innerHTML = p.items.map((it, i) => {
+      const off = it.returnable <= 0;
+      const pct = it.quantity > 0 ? Math.min(100, (it.in_stock / it.quantity) * 100) : 0;
+      const thumb = it.image ? `<img src="${esc(it.image)}" class="dn-thumb">` : `<div class="dn-thumb"><i class="bi bi-box-seam"></i></div>`;
+      const why = off ? (it.returned >= it.quantity ? 'Fully returned' : 'Nothing left in stock (sold)') : '';
+      return `
+      <div class="dn-item ${off ? 'disabled' : ''}" data-unit="${it.unit_price}" data-max="${it.returnable}">
+        <input type="hidden" name="items[${i}][vendor_purchase_item_id]" value="${it.id}">
+        <input type="hidden" name="items[${i}][selected]" value="0" class="dn-sel-hidden">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <input class="form-check-input dn-check" type="checkbox" ${off ? 'disabled' : ''}>
+          ${thumb}
+          <div class="flex-grow-1">
+            <div class="fw-semibold">${esc(it.name)} ${it.variant ? `<span class="dn-variant ms-1">${esc(it.variant)}</span>` : ''}</div>
+            <div class="small text-muted">Purchased: ${num(it.quantity)} × ₹${money(it.unit_price)} = ₹${money(it.line_total)}
+              · In stock: <strong>${num(it.in_stock)}</strong>
+              ${it.returned > 0 ? ` · <span class="text-danger">Returned: ${num(it.returned)}</span>` : ''}
+              ${off ? ` · <strong>${why}</strong>` : ` · Can return up to <strong>${num(it.returnable)}</strong>`}</div>
+            <div class="dn-bar"><span style="width:${pct}%"></span></div>
+          </div>
+          <div>
+            <label class="small text-muted d-block">Return qty</label>
+            <input type="number" class="form-control form-control-sm dn-qty" name="items[${i}][quantity]" min="0.01" step="any" max="${it.returnable}" value="${num(it.returnable)}" disabled>
+          </div>
+          <div>
+            <label class="small text-muted d-block">Debit ₹</label>
+            <input type="number" class="form-control form-control-sm dn-amt" name="items[${i}][amount]" min="0" step="0.01" value="${(it.returnable * it.unit_price).toFixed(2)}" disabled>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    recalc();
+  }
+
+  function setRow(row, on) {
+    if (row.classList.contains('disabled')) return;
+    row.classList.toggle('selected', on);
+    row.querySelector('.dn-check').checked = on;
+    row.querySelector('.dn-sel-hidden').value = on ? '1' : '0';
+    row.querySelectorAll('.dn-qty, .dn-amt').forEach((el) => { el.disabled = !on; });
+    recalc();
+  }
+
+  $('dnItems').addEventListener('click', (e) => {
+    const row = e.target.closest('.dn-item');
+    if (!row || e.target.matches('input[type=number]')) return;
+    setRow(row, !row.classList.contains('selected'));
+  });
+  $('dnItems').addEventListener('input', (e) => {
+    const row = e.target.closest('.dn-item');
+    if (!row) return;
+    if (e.target.classList.contains('dn-qty')) {
+      let q = parseFloat(e.target.value) || 0;
+      const max = parseFloat(row.dataset.max);
+      if (q > max) { q = max; e.target.value = num(max); }
+      row.querySelector('.dn-amt').value = (q * parseFloat(row.dataset.unit)).toFixed(2);
+    }
+    recalc();
+  });
+  $('dnSelectAll').addEventListener('click', () => {
+    const rows = [...document.querySelectorAll('.dn-item:not(.disabled)')];
+    const allOn = rows.every((r) => r.classList.contains('selected'));
+    rows.forEach((r) => setRow(r, !allOn));
+  });
+
+  function recalc() {
+    let total = 0, count = 0, units = 0;
+    document.querySelectorAll('.dn-item.selected').forEach((row) => {
+      count++;
+      units += parseFloat(row.querySelector('.dn-qty').value) || 0;
+      total += parseFloat(row.querySelector('.dn-amt').value) || 0;
+    });
+    $('dnTotal').textContent = money(total);
+    $('dnSelCount').textContent = count;
+    $('dnSelUnits').textContent = num(units);
+    $('dnSubmit').disabled = count === 0;
+  }
+
+  $('dnForm').addEventListener('submit', (e) => {
+    if (!confirm('Save this debit note and remove the returned quantity from stock?')) e.preventDefault();
+  });
+
+  if (input.value.trim()) lookup(input.value.trim(), true);
+})();
+</script>

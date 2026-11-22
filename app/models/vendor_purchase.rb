@@ -6,6 +6,7 @@ class VendorPurchase < ApplicationRecord
   has_many :stock_batches, dependent: :destroy
   has_many :vendor_payments, dependent: :destroy
   has_one :vendor_invoice, dependent: :destroy
+  has_many :debit_notes, dependent: :restrict_with_error
 
   validates :purchase_date, presence: true
   validates :paid_amount, numericality: { greater_than_or_equal_to: 0 }
@@ -80,6 +81,47 @@ class VendorPurchase < ApplicationRecord
 
   def outstanding_amount
     total_amount - paid_amount
+  end
+
+  def debit_notes_total
+    debit_notes.sum(:total_amount).to_f
+  end
+
+  # The stock batch this purchase created for a line (matched the same way
+  # sync_stock_batches does: product + variant).
+  def batch_for_item(item)
+    stock_batches.find_by(product_id: item.product_id, product_variant_id: item.product_variant_id)
+  end
+
+  # Take `qty` units of a purchase line back out of stock because they were
+  # returned to the vendor (Debit Note). Only the batch's unsold quantity is
+  # reduced; quantity_purchased stays, so later edits of the purchase still
+  # reconcile correctly.
+  def return_to_vendor!(item, qty, note: nil)
+    qty = qty.to_f
+    return if qty <= 0
+
+    batch = batch_for_item(item)
+    raise ArgumentError, "No stock batch found for #{item.display_name}" unless batch
+    raise ArgumentError, "Only #{batch.quantity_remaining.to_f} of #{item.display_name} left in stock" if qty > batch.quantity_remaining.to_f + 0.0001
+
+    product = item.product
+    variant = item.product_variant
+    current_stock = on_hand_stock(product, variant)
+
+    remaining = [batch.quantity_remaining.to_f - qty, 0].max
+    batch.update!(quantity_remaining: remaining, status: remaining <= 0 ? 'exhausted' : batch.status)
+
+    new_stock = apply_on_hand_change(product, variant, -qty)
+    product.stock_movements.create!(
+      reference_type: 'vendor_purchase',
+      reference_id: id,
+      movement_type: 'adjusted',
+      quantity: -qty,
+      stock_before: current_stock,
+      stock_after: new_stock,
+      notes: note.presence || "Returned to vendor: #{purchase_number} - #{item.display_name} (Qty: #{qty})"
+    )
   end
 
   def payment_status

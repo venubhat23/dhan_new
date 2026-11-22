@@ -1,0 +1,82 @@
+<style>
+  .dn-stat { border-radius:16px; border:0; color:#fff; }
+  .dn-stat .bi { font-size:1.8rem; opacity:.8; }
+  .dn-g1 { background:linear-gradient(135deg,#c2410c,#f59e0b); }
+  .dn-g2 { background:linear-gradient(135deg,#be123c,#f43f5e); }
+  .dn-g3 { background:linear-gradient(135deg,#1d4ed8,#3b82f6); }
+  .dn-g4 { background:linear-gradient(135deg,#7c3aed,#a78bfa); }
+  .dn-chip { background:#ffedd5; color:#9a3412; border-radius:20px; padding:2px 9px; font-size:.78rem; display:inline-block; margin:1px 2px; }
+</style>
+
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+      <h3 class="mb-0"><i class="bi bi-truck-flatbed me-2" style="color:#ea580c;"></i>Debit Notes</h3>
+      <small class="text-muted">Goods returned to vendors: stock taken out and amount debited to the vendor</small>
+    </div>
+    <%= link_to new_admin_debit_note_path, class: 'btn text-white', style: 'background:#ea580c;' do %><i class="bi bi-plus-lg me-1"></i>Return to Vendor<% end %>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="card dn-stat dn-g1"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">Total Debited</small><h4 class="mb-0">₹<%= number_with_delimiter(number_with_precision(@total_amount, precision: 2)) %></h4></div><i class="bi bi-cash-stack"></i></div></div></div>
+    <div class="col-6 col-md-3"><div class="card dn-stat dn-g2"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">Debit Notes · <%= @vendor_count %> vendor(s)</small><h4 class="mb-0"><%= @total_count %></h4></div><i class="bi bi-receipt"></i></div></div></div>
+    <div class="col-6 col-md-3"><div class="card dn-stat dn-g3"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">Units Returned to Vendors</small><h4 class="mb-0"><%= number_with_precision(@total_units, precision: 2, strip_insignificant_zeros: true) %></h4></div><i class="bi bi-box-arrow-up"></i></div></div></div>
+    <div class="col-6 col-md-3"><div class="card dn-stat dn-g4"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">This Month (<%= @month_count %>)</small><h4 class="mb-0">₹<%= number_with_delimiter(number_with_precision(@month_amount, precision: 2)) %></h4></div><i class="bi bi-calendar-month"></i></div></div></div>
+  </div>
+
+  <%= form_with url: admin_debit_notes_path, method: :get, class: 'row g-2 mb-3', data: { turbo: false } do %>
+    <div class="col-md-4"><input type="text" name="search" value="<%= params[:search] %>" class="form-control" placeholder="Search debit note #, purchase # (VP…), vendor"></div>
+    <div class="col-md-2">
+      <select name="vendor_id" class="form-select">
+        <option value="">All vendors</option>
+        <% @vendors.each do |v| %><option value="<%= v.id %>" <%= 'selected' if params[:vendor_id].to_s == v.id.to_s %>><%= v.name %></option><% end %>
+      </select>
+    </div>
+    <div class="col-6 col-md-2"><input type="date" name="from" value="<%= params[:from] %>" class="form-control"></div>
+    <div class="col-6 col-md-2"><input type="date" name="to" value="<%= params[:to] %>" class="form-control"></div>
+    <div class="col-md-2 d-flex gap-2">
+      <button class="btn btn-primary flex-grow-1"><i class="bi bi-funnel"></i></button>
+      <%= link_to 'Clear', admin_debit_notes_path, class: 'btn btn-outline-secondary' %>
+    </div>
+  <% end %>
+
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr><th>Debit Note</th><th>Date</th><th>Vendor</th><th>Purchase</th><th>Returned Items</th><th>Settlement</th><th class="text-end">Amount</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% if @debit_notes.empty? %>
+            <tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No debit notes yet.</td></tr>
+          <% end %>
+          <% @debit_notes.each do |dn| %>
+            <tr>
+              <td><%= link_to dn.debit_note_number, admin_debit_note_path(dn), class: 'fw-semibold text-decoration-none' %></td>
+              <td><%= dn.debit_date.strftime('%d %b %Y') %></td>
+              <td><%= dn.vendor&.name %><div class="small text-muted"><%= dn.vendor&.phone %></div></td>
+              <td><%= link_to dn.vendor_purchase.purchase_number, admin_vendor_purchase_path(dn.vendor_purchase), class: 'text-decoration-none' %>
+                <div class="small text-muted"><%= dn.vendor_purchase.purchase_date&.strftime('%d %b %Y') %></div></td>
+              <td><% dn.debit_note_items.each do |i| %><span class="dn-chip"><%= i.display_name %> × <%= number_with_precision(i.quantity, precision: 2, strip_insignificant_zeros: true) %></span><% end %></td>
+              <td class="small"><%= dn.settlement_method.present? ? dn.settlement_method_label : '—' %></td>
+              <td class="text-end fw-bold" style="color:#c2410c;">₹<%= number_with_delimiter(number_with_precision(dn.total_amount, precision: 2)) %></td>
+              <td><%= link_to admin_debit_note_path(dn), class: 'btn btn-sm btn-outline-primary' do %><i class="bi bi-eye"></i><% end %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <% if @total_pages > 1 %>
+    <nav class="mt-3"><ul class="pagination justify-content-center">
+      <% (1..@total_pages).each do |p| %>
+        <li class="page-item <%= 'active' if p == @page %>"><%= link_to p, admin_debit_notes_path(request.query_parameters.merge(page: p)), class: 'page-link' %></li>
+      <% end %>
+    </ul></nav>
+  <% end %>
+</div>

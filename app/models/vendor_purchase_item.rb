@@ -2,6 +2,7 @@ class VendorPurchaseItem < ApplicationRecord
   belongs_to :vendor_purchase
   belongs_to :product
   belongs_to :product_variant, optional: true
+  has_many :debit_note_items, dependent: :restrict_with_error
 
   validates :quantity, presence: true, numericality: { greater_than: 0 }
   validates :purchase_price, presence: true, numericality: { greater_than: 0 }

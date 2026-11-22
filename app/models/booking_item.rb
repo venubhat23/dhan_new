@@ -6,6 +6,11 @@ class BookingItem < ApplicationRecord
 
   DISCOUNT_TYPES = %w[percentage fixed].freeze
 
+  has_many :credit_note_items, dependent: :restrict_with_error
+
+  # Optional override for the stock-movement note written by restore_product_stock.
+  attr_accessor :restock_note
+
   validates :quantity, presence: true, numericality: { greater_than: 0 }
   validates :price, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :discount_type, inclusion: { in: DISCOUNT_TYPES }, allow_nil: true, allow_blank: true
@@ -43,6 +48,22 @@ class BookingItem < ApplicationRecord
     return price.to_f if quantity.to_f <= 0
 
     (price.to_f - line_discount_amount / quantity.to_f)
+  end
+
+  # Put `qty` units of this line back into stock because the customer returned
+  # them (Credit Note). Uses the same batch / store-inventory / variant logic as
+  # removing the line, without changing the booking line itself.
+  def restock_return!(qty, note: nil)
+    return if qty.to_f <= 0
+
+    returned = BookingItem.new(
+      booking: booking,
+      product_id: product_id,
+      product_variant_id: product_variant_id,
+      quantity: qty
+    )
+    returned.restock_note = note
+    returned.send(:restore_product_stock)
   end
 
   def calculate_total
@@ -236,7 +257,7 @@ class BookingItem < ApplicationRecord
       quantity: quantity.to_f,
       stock_before: current_stock,
       stock_after: new_stock,
-      notes: "Stock restored from cancelled booking item: #{product.name} (Qty: #{quantity})"
+      notes: restock_note.presence || "Stock restored from cancelled booking item: #{product.name} (Qty: #{quantity})"
     )
 
     Rails.logger.info "Restored stock for Product ##{product.id} by #{quantity}. New stock: #{new_stock}"

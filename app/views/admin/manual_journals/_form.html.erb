@@ -1,0 +1,197 @@
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<style>
+  .mj-wrap { max-width:1150px; }
+  .mj-field-row { display:flex; align-items:flex-start; gap:24px; margin-bottom:16px; }
+  .mj-field-row > label { width:170px; flex-shrink:0; padding-top:7px; font-size:.9rem; color:#334155; }
+  .mj-field-row > label.req { color:#dc2626; }
+  .mj-field-row .mj-input { width:100%; max-width:380px; }
+  .mj-lines { border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; }
+  .mj-lines table { margin:0; }
+  .mj-lines thead th { background:#f8fafc; font-size:.72rem; letter-spacing:.05em; text-transform:uppercase; color:#64748b; font-weight:600; border-bottom:1px solid #e2e8f0; padding:10px 12px; }
+  .mj-lines td { padding:6px 8px; vertical-align:middle; border-color:#f1f5f9; }
+  .mj-lines .form-control, .mj-lines .form-select { border-color:transparent; background:transparent; }
+  .mj-lines .form-control:hover, .mj-lines .form-select:hover { border-color:#e2e8f0; }
+  .mj-lines .form-control:focus, .mj-lines .form-select:focus { border-color:#6366f1; background:#fff; box-shadow:none; }
+  .mj-amt { text-align:right; }
+  .mj-remove { color:#ef4444; border:0; background:none; opacity:.5; }
+  .mj-line:hover .mj-remove { opacity:1; }
+  .mj-totals { width:100%; max-width:520px; margin-left:auto; background:#f8fafc; border-radius:12px; padding:14px 18px; }
+  .mj-totals .row-t { display:flex; justify-content:space-between; padding:4px 0; }
+  .mj-totals .row-t span:nth-child(2), .mj-totals .row-t span:nth-child(3) { width:120px; text-align:right; }
+  .mj-diff { color:#dc2626; font-weight:600; }
+  .mj-balanced { color:#16a34a; font-weight:600; }
+  .mj-footer { position:sticky; bottom:0; background:#fff; border-top:1px solid #e2e8f0; padding:12px 0; margin-top:24px; z-index:5; }
+  .mj-method .form-check { margin-right:18px; }
+  @media (max-width: 768px) { .mj-field-row { flex-direction:column; gap:4px; } .mj-field-row > label { width:auto; } }
+</style>
+
+<% if @journal.errors.any? %>
+  <div class="alert alert-danger">
+    <strong><i class="bi bi-exclamation-triangle me-1"></i>Please fix the following:</strong>
+    <ul class="mb-0 mt-1"><% @journal.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul>
+  </div>
+<% end %>
+
+<%= form_with model: [:admin, @journal], id: 'mjForm', data: { turbo: false } do |f| %>
+  <input type="hidden" name="commit_action" id="mjCommit" value="publish">
+
+  <div class="mj-field-row">
+    <label class="req">Date*</label>
+    <%= f.date_field :journal_date, class: 'form-control mj-input', required: true %>
+  </div>
+  <div class="mj-field-row">
+    <label class="req">Journal#*</label>
+    <%= f.number_field :journal_number, class: 'form-control mj-input', required: true, min: 1 %>
+  </div>
+  <div class="mj-field-row">
+    <label>Reference#</label>
+    <%= f.text_field :reference_number, class: 'form-control mj-input', placeholder: 'Bill no., voucher no., etc.' %>
+  </div>
+  <div class="mj-field-row">
+    <label class="req">Notes*</label>
+    <%= f.text_area :notes, class: 'form-control mj-input', rows: 3, maxlength: 500, placeholder: 'Max. 500 characters', required: true %>
+  </div>
+  <div class="mj-field-row">
+    <label>Reporting Method <i class="bi bi-info-circle text-muted" title="Which Profit & Loss basis this journal counts in"></i></label>
+    <div class="mj-method d-flex flex-wrap pt-2">
+      <% ManualJournal::REPORTING_METHODS.each do |val, label| %>
+        <div class="form-check"><%= f.radio_button :reporting_method, val, class: 'form-check-input' %><%= f.label "reporting_method_#{val}", label, class: 'form-check-label' %></div>
+      <% end %>
+    </div>
+  </div>
+  <div class="mj-field-row">
+    <label>Store</label>
+    <%= f.select :store_id, options_from_collection_for_select(@stores, :id, :name, @journal.store_id), { include_blank: 'All / Head Office' }, class: 'form-select mj-input' %>
+  </div>
+  <div class="mj-field-row">
+    <label>Currency</label>
+    <select class="form-select mj-input" disabled><option>INR- Indian Rupee</option></select>
+  </div>
+
+  <datalist id="mjContacts"><% @contacts.each do |c| %><option value="<%= c %>"><% end %></datalist>
+
+  <div class="mj-lines mt-4">
+    <table class="table">
+      <thead><tr><th style="width:26%">Account</th><th style="width:24%">Description</th><th style="width:20%">Contact (INR)</th><th class="text-end" style="width:13%">Debits</th><th class="text-end" style="width:13%">Credits</th><th></th></tr></thead>
+      <tbody id="mjBody">
+        <%= f.fields_for :manual_journal_lines, include_id: false do |lf| %>
+          <tr class="mj-line">
+            <td>
+              <%= lf.hidden_field :id if lf.object.persisted? %>
+              <%= lf.hidden_field :_destroy, value: '0', class: 'mj-destroy' %>
+              <%= lf.hidden_field :position, class: 'mj-pos' %>
+              <%= lf.select :ledger_account_id, grouped_options_for_select(@account_options, lf.object.ledger_account_id), { include_blank: 'Select an account' }, class: 'form-select form-select-sm' %>
+            </td>
+            <td><%= lf.text_field :description, class: 'form-control form-control-sm', placeholder: 'Description' %></td>
+            <td><%= lf.text_field :contact_name, class: 'form-control form-control-sm', list: 'mjContacts', placeholder: 'Select contact' %></td>
+            <td><%= lf.number_field :debit, value: (lf.object.debit.to_f.positive? ? format('%.2f', lf.object.debit) : ''), step: '0.01', min: 0, class: 'form-control form-control-sm mj-amt mj-dr', placeholder: '0.00' %></td>
+            <td><%= lf.number_field :credit, value: (lf.object.credit.to_f.positive? ? format('%.2f', lf.object.credit) : ''), step: '0.01', min: 0, class: 'form-control form-control-sm mj-amt mj-cr', placeholder: '0.00' %></td>
+            <td><button type="button" class="mj-remove" title="Remove row"><i class="bi bi-x-circle"></i></button></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <template id="mjRowTpl">
+    <tr class="mj-line">
+      <td>
+        <input type="hidden" name="manual_journal[manual_journal_lines_attributes][NEW][_destroy]" value="0" class="mj-destroy">
+        <input type="hidden" name="manual_journal[manual_journal_lines_attributes][NEW][position]" class="mj-pos">
+        <select name="manual_journal[manual_journal_lines_attributes][NEW][ledger_account_id]" class="form-select form-select-sm">
+          <option value="">Select an account</option><%= grouped_options_for_select(@account_options) %>
+        </select>
+      </td>
+      <td><input type="text" name="manual_journal[manual_journal_lines_attributes][NEW][description]" class="form-control form-control-sm" placeholder="Description"></td>
+      <td><input type="text" name="manual_journal[manual_journal_lines_attributes][NEW][contact_name]" class="form-control form-control-sm" list="mjContacts" placeholder="Select contact"></td>
+      <td><input type="number" step="0.01" min="0" name="manual_journal[manual_journal_lines_attributes][NEW][debit]" class="form-control form-control-sm mj-amt mj-dr" placeholder="0.00"></td>
+      <td><input type="number" step="0.01" min="0" name="manual_journal[manual_journal_lines_attributes][NEW][credit]" class="form-control form-control-sm mj-amt mj-cr" placeholder="0.00"></td>
+      <td><button type="button" class="mj-remove" title="Remove row"><i class="bi bi-x-circle"></i></button></td>
+    </tr>
+  </template>
+
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mt-3">
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-sm btn-outline-primary" id="mjAddRow"><i class="bi bi-plus-circle me-1"></i>Add New Row</button>
+      <%= link_to admin_ledger_accounts_path, class: 'btn btn-sm btn-link', target: '_blank' do %><i class="bi bi-diagram-3 me-1"></i>Manage accounts<% end %>
+    </div>
+    <div class="mj-totals">
+      <div class="row-t text-muted"><span>Sub Total</span><span id="mjSubDr">0.00</span><span id="mjSubCr">0.00</span></div>
+      <div class="row-t fw-bold fs-6"><span>Total (₹)</span><span id="mjTotDr">0.00</span><span id="mjTotCr">0.00</span></div>
+      <div class="row-t"><span>Difference</span><span></span><span id="mjDiff" class="mj-balanced">0.00</span></div>
+    </div>
+  </div>
+
+  <div class="mj-footer d-flex gap-2">
+    <button type="submit" class="btn btn-primary" data-action="publish"><i class="bi bi-send-check me-1"></i>Save and Publish</button>
+    <button type="submit" class="btn btn-outline-secondary" data-action="draft">Save as Draft</button>
+    <%= link_to 'Cancel', (@journal.persisted? ? admin_manual_journal_path(@journal) : admin_manual_journals_path), class: 'btn btn-light' %>
+  </div>
+<% end %>
+
+<script>
+(function () {
+  const body = document.getElementById('mjBody');
+  const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  let seq = Date.now();
+
+  function liveRows() { return [...body.querySelectorAll('.mj-line')].filter((r) => r.style.display !== 'none'); }
+
+  function recalc() {
+    let dr = 0, cr = 0;
+    liveRows().forEach((r, i) => {
+      dr += parseFloat(r.querySelector('.mj-dr').value) || 0;
+      cr += parseFloat(r.querySelector('.mj-cr').value) || 0;
+      r.querySelector('.mj-pos').value = i;
+    });
+    ['mjSubDr', 'mjTotDr'].forEach((id) => (document.getElementById(id).textContent = fmt(dr)));
+    ['mjSubCr', 'mjTotCr'].forEach((id) => (document.getElementById(id).textContent = fmt(cr)));
+    const diff = Math.round((dr - cr) * 100) / 100;
+    const el = document.getElementById('mjDiff');
+    el.textContent = fmt(Math.abs(diff));
+    el.className = diff === 0 ? 'mj-balanced' : 'mj-diff';
+  }
+
+  function addRow() {
+    const html = document.getElementById('mjRowTpl').innerHTML.replaceAll('NEW', String(seq++));
+    body.insertAdjacentHTML('beforeend', html);
+    recalc();
+  }
+
+  document.getElementById('mjAddRow').addEventListener('click', addRow);
+
+  body.addEventListener('input', (e) => {
+    // A line is either a debit or a credit: typing one clears the other.
+    const row = e.target.closest('.mj-line');
+    if (e.target.classList.contains('mj-dr') && e.target.value) row.querySelector('.mj-cr').value = '';
+    if (e.target.classList.contains('mj-cr') && e.target.value) row.querySelector('.mj-dr').value = '';
+    recalc();
+  });
+
+  body.addEventListener('click', (e) => {
+    const btn = e.target.closest('.mj-remove');
+    if (!btn) return;
+    const row = btn.closest('.mj-line');
+    if (row.querySelector('input[name$="[id]"]')) {
+      row.querySelector('.mj-destroy').value = '1';
+      row.style.display = 'none';
+    } else {
+      row.remove();
+    }
+    recalc();
+  });
+
+  // Tab out of the last amount box on the last row → add a fresh row (Zoho-like).
+  body.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab' || e.shiftKey) return;
+    const rows = liveRows();
+    if (e.target.classList.contains('mj-cr') && e.target.closest('.mj-line') === rows[rows.length - 1]) addRow();
+  });
+
+  document.getElementById('mjForm').addEventListener('submit', (e) => {
+    document.getElementById('mjCommit').value = (e.submitter && e.submitter.dataset.action) || 'publish';
+  });
+
+  recalc();
+})();
+</script>

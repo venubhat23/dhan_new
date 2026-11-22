@@ -584,6 +584,24 @@
                   <small class="text-muted fw-normal ms-1">(Business-to-Business order)</small>
                 <% end %>
               </div>
+              <div id="b2bGstinField" class="mt-2" style="<%= f.object.is_b2b? ? '' : 'display:none;' %>">
+                <%= f.label :gstin, for: 'booking_gstin', class: 'form-label fw-semibold mb-1' do %>
+                  Customer GSTIN <span class="text-danger">*</span>
+                <% end %>
+                <%= f.text_field :gstin, id: 'booking_gstin', class: 'form-control text-uppercase',
+                      maxlength: 15, placeholder: 'e.g. 29ABCDE1234F1Z5', autocomplete: 'off',
+                      pattern: '[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z][1-9A-Za-z][Zz][0-9A-Za-z]',
+                      title: '15-character GSTIN, e.g. 29ABCDE1234F1Z5' %>
+                <div class="form-text">Required for B2B. Leave blank to use the customer's saved GST number. Printed on the invoice.</div>
+              </div>
+              <script>
+                (function () {
+                  var t = document.getElementById('b2bBookingToggle');
+                  var box = document.getElementById('b2bGstinField');
+                  if (!t || !box) return;
+                  t.addEventListener('change', function () { box.style.display = t.checked ? '' : 'none'; });
+                })();
+              </script>
             </div>
 
             <%# Hidden Fields for Cart Items %>

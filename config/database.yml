@@ -3,19 +3,20 @@ default: &default
   encoding: unicode
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
 
+# Previous dev DB (Render): postgresql://dr_wise_db:LuJjGp3KAMz8jsBiE9PKVzwU8InrN00H@dpg-daammph5efls738seqm0-a.oregon-postgres.render.com/markettincer_db_k4v1
 development:
   primary:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://dr_wise_db:LuJjGp3KAMz8jsBiE9PKVzwU8InrN00H@dpg-daammph5efls738seqm0-a.oregon-postgres.render.com/markettincer_db_k4v1' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql:///dhanvatri_local?host=/var/run/postgresql&port=5432' %>
   cable:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://dr_wise_db:LuJjGp3KAMz8jsBiE9PKVzwU8InrN00H@dpg-daammph5efls738seqm0-a.oregon-postgres.render.com/markettincer_db_k4v1' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql:///dhanvatri_local?host=/var/run/postgresql&port=5432' %>
   queue:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://dr_wise_db:LuJjGp3KAMz8jsBiE9PKVzwU8InrN00H@dpg-daammph5efls738seqm0-a.oregon-postgres.render.com/markettincer_db_k4v1' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql:///dhanvatri_local?host=/var/run/postgresql&port=5432' %>
   cache:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://dr_wise_db:LuJjGp3KAMz8jsBiE9PKVzwU8InrN00H@dpg-daammph5efls738seqm0-a.oregon-postgres.render.com/markettincer_db_k4v1' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql:///dhanvatri_local?host=/var/run/postgresql&port=5432' %>
 
 test:
   primary:
@@ -34,14 +35,14 @@ test:
 production:
   primary:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://postgres:Dhan2026pg@localhost:5433/dhanvantari' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql:///dhanvatri_local?host=/var/run/postgresql&port=5432' %>
   cable:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://postgres:Dhan2026pg@localhost:5433/dhanvantari' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql:///dhanvatri_local?host=/var/run/postgresql&port=5432' %>
   queue:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://postgres:Dhan2026pg@localhost:5433/dhanvantari' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql:///dhanvatri_local?host=/var/run/postgresql&port=5432' %>
   cache:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] || 'postgresql://postgres:Dhan2026pg@localhost:5433/dhanvantari' %>
+    url: <%= ENV['DATABASE_URL'] || 'postgresql:///dhanvatri_local?host=/var/run/postgresql&port=5432' %>
 

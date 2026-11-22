@@ -645,6 +645,28 @@ class DashboardController < ApplicationController
     @month_revenue = revenue_row.month_rev.to_f
     @avg_order_value = @completed_bookings > 0 ? (@total_revenue / @completed_bookings).round(2) : 0
 
+    # Customer returns (Credit Notes): amount credited back + units restocked.
+    credit_row = CreditNote.select(Arel.sql(
+      "COUNT(*) AS cnt, COALESCE(SUM(total_amount), 0) AS amt,
+       COALESCE(SUM(CASE WHEN credit_date >= '#{Date.current.beginning_of_month}' THEN total_amount ELSE 0 END), 0) AS month_amt"
+    )).take
+    @credit_notes_count        = credit_row.cnt.to_i
+    @credit_notes_amount       = credit_row.amt.to_f
+    @credit_notes_month_amount = credit_row.month_amt.to_f
+    @credit_notes_units        = CreditNoteItem.sum(:quantity).to_f
+    @recent_credit_notes       = CreditNote.includes(:booking, :customer, credit_note_items: [:product, :product_variant]).recent.limit(5).to_a
+
+    # Returns to vendors (Debit Notes).
+    debit_row = DebitNote.select(Arel.sql(
+      "COUNT(*) AS cnt, COALESCE(SUM(total_amount), 0) AS amt,
+       COALESCE(SUM(CASE WHEN debit_date >= '#{Date.current.beginning_of_month}' THEN total_amount ELSE 0 END), 0) AS month_amt"
+    )).take
+    @debit_notes_count        = debit_row.cnt.to_i
+    @debit_notes_amount       = debit_row.amt.to_f
+    @debit_notes_month_amount = debit_row.month_amt.to_f
+    @debit_notes_units        = DebitNoteItem.sum(:quantity).to_f
+    @recent_debit_notes       = DebitNote.includes(:vendor, :vendor_purchase, debit_note_items: [:product, :product_variant]).recent.limit(5).to_a
+
     # Payment collection rate: share of real orders that are fully paid.
     # One grouped query also supplies the unpaid count/total used further down.
     booking_payment_rows = Booking.where.not(status: NON_ORDER_BOOKING_STATUSES)

@@ -585,11 +585,87 @@ class Admin::ReportsController < Admin::ApplicationController
   end
 
   # GET /admin/reports/profit_loss
+  # Zoho-style Profit & Loss statement (see ProfitLossReport). view=products
+  # shows the older product-wise margin table for the same period.
   def profit_loss
-    @from_date = params[:from_date].present? ? Date.parse(params[:from_date]) : Date.current.beginning_of_month
-    @to_date   = params[:to_date].present?   ? Date.parse(params[:to_date])   : Date.current
+    load_profit_loss_filters
+    @report = ProfitLossReport.new(from_date: @from_date, to_date: @to_date, basis: @basis, store_id: @store_id)
 
+    @compare_columns = []
+    if @compare != 'none'
+      from, to = @from_date, @to_date
+      @compare_count.times do
+        from, to = if @compare == 'previous_year'
+                     [from - 1.year, to - 1.year]
+                   else
+                     ProfitLossReport.previous_period(from, to)
+                   end
+        r = ProfitLossReport.new(from_date: from, to_date: to, basis: @basis, store_id: @store_id)
+        @compare_columns << { label: "#{from.strftime('%d/%m/%Y')} - #{to.strftime('%d/%m/%Y')}", amounts: r.amounts }
+      end
+    end
+
+    if @view == 'products'
+      build_product_profit_rows
+      if params[:download] == 'csv'
+        return send_data generate_profit_loss_csv(@product_rows, @totals, @from_date, @to_date),
+                         filename: "product_profit_#{@from_date.strftime('%Y%m%d')}_#{@to_date.strftime('%Y%m%d')}.csv",
+                         type: 'text/csv', disposition: 'attachment'
+      end
+    elsif params[:download] == 'csv'
+      send_data generate_pl_statement_csv,
+                filename: "profit_and_loss_#{@from_date.strftime('%Y%m%d')}_#{@to_date.strftime('%Y%m%d')}.csv",
+                type: 'text/csv', disposition: 'attachment'
+    end
+  end
+
+  # GET /admin/reports/profit_loss/account?account=sales&...
+  # Drill-down: the transactions behind one line of the statement.
+  def profit_loss_account
+    load_profit_loss_filters
+    @account = params[:account].to_s
+    @account_name = ProfitLossReport.account_name(@account)
+    @report = ProfitLossReport.new(from_date: @from_date, to_date: @to_date, basis: @basis, store_id: @store_id)
+    @transactions = @report.transactions_for(@account)
+    @total = @transactions.sum { |t| t[:amount].to_f }.round(2)
+  end
+
+  private
+
+  def load_profit_loss_filters
+    @date_range = params[:date_range].presence
+    @date_range = nil unless ProfitLossReport::DATE_RANGES.map(&:first).include?(@date_range)
+    preset = @date_range && @date_range != 'custom' ? ProfitLossReport.range_for(@date_range) : nil
+
+    if preset
+      @from_date, @to_date = preset
+    else
+      @from_date = (Date.parse(params[:from_date]) rescue nil) if params[:from_date].present?
+      @to_date   = (Date.parse(params[:to_date]) rescue nil) if params[:to_date].present?
+      @date_range ||= (@from_date || @to_date) ? 'custom' : 'this_month'
+      default_from, default_to = ProfitLossReport.range_for('this_month')
+      @from_date ||= default_from
+      @to_date   ||= default_to
+    end
+    @from_date, @to_date = @to_date, @from_date if @from_date > @to_date
+
+    @basis   = params[:basis] == 'cash' ? 'cash' : 'accrual'
+    @store_id = params[:store_id].presence
+    @stores  = Store.order(:name)
+    @compare = ProfitLossReport::COMPARE_OPTIONS.map(&:first).include?(params[:compare]) ? params[:compare] : 'none'
+    @compare_count = params[:compare_count].to_i.clamp(1, 5)
+    @view = params[:view] == 'products' ? 'products' : 'statement'
+  end
+
+  def profit_loss_params(extra = {})
+    { date_range: @date_range, from_date: @from_date, to_date: @to_date, basis: @basis,
+      store_id: @store_id, compare: @compare, compare_count: @compare_count, view: @view }.merge(extra).compact
+  end
+  helper_method :profit_loss_params
+
+  def build_product_profit_rows
     items = BookingItem.joins(:booking)
+                       .where.not(bookings: { status: ProfitLossReport::EXCLUDED_BOOKING_STATUSES })
                        .includes(:product)
                        .where(bookings: { booking_date: @from_date.beginning_of_day..@to_date.end_of_day })
 
@@ -634,19 +710,38 @@ class Admin::ReportsController < Admin::ApplicationController
       profit:   @product_rows.sum { |r| r[:profit] }
     }
 
-    if params[:download] == 'csv'
-      send_data generate_profit_loss_csv(@product_rows, @totals, @from_date, @to_date),
-                filename: "profit_loss_#{@from_date.strftime('%Y%m%d')}_#{@to_date.strftime('%Y%m%d')}.csv",
-                type: 'text/csv',
-                disposition: 'attachment'
-    end
-  rescue => e
-    Rails.logger.error "Error in profit_loss: #{e.message}"
-    @product_rows = []
-    @totals = { qty_sold: 0, revenue: 0, cost: 0, profit: 0 }
   end
 
-  private
+  def generate_pl_statement_csv
+    require 'csv'
+    r = @report
+    cmp = @compare_columns
+    CSV.generate do |csv|
+      csv << ['Profit and Loss']
+      csv << ["Basis: #{@basis.capitalize}"]
+      csv << ["From #{@from_date.strftime('%d/%m/%Y')} To #{@to_date.strftime('%d/%m/%Y')}"]
+      csv << []
+      head = ['Account', "#{@from_date.strftime('%d/%m/%Y')} - #{@to_date.strftime('%d/%m/%Y')}"]
+      csv << (cmp.any? ? head + cmp.map { |c| c[:label] } : ['Account', 'Total'])
+      row = lambda do |label, key, amount|
+        csv << [label, amount.to_f.round(2)] + cmp.map { |c| c[:amounts][key].to_f.round(2) }
+      end
+      section = lambda do |title, lines, total_key, total|
+        csv << [title]
+        lines.each { |l| row.call("  #{l.name}", l.key, l.amount) }
+        row.call("Total for #{title}", total_key, total)
+      end
+      section.call('Operating Income', r.operating_income, 'total_operating_income', r.total_operating_income)
+      section.call('Cost of Goods Sold', r.cost_of_goods_sold, 'total_cogs', r.total_cogs)
+      row.call('Gross Profit', 'gross_profit', r.gross_profit)
+      section.call('Operating Expense', r.operating_expense, 'total_operating_expense', r.total_operating_expense)
+      row.call('Operating Profit', 'operating_profit', r.operating_profit)
+      section.call('Non Operating Income', r.non_operating_income, 'total_non_operating_income', r.total_non_operating_income)
+      section.call('Non Operating Expense', r.non_operating_expense, 'total_non_operating_expense', r.total_non_operating_expense)
+      row.call('Net Profit/Loss', 'net_profit', r.net_profit)
+    end
+  end
+
 
   def build_enhanced_sales_data
     # Get all invoices in the date range (both regular and booking invoices)

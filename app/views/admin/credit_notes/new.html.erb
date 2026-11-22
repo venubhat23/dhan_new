@@ -1,0 +1,230 @@
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<style>
+  .cn-hero { background: linear-gradient(135deg,#0f766e 0%,#14b8a6 100%); color:#fff; border-radius:16px; padding:22px 26px; }
+  .cn-search-wrap { position:relative; max-width:640px; }
+  .cn-search-wrap .form-control { height:54px; border-radius:14px; padding-left:48px; font-size:1.05rem; border:2px solid #e2e8f0; }
+  .cn-search-wrap .form-control:focus { border-color:#14b8a6; box-shadow:0 0 0 .2rem rgba(20,184,166,.15); }
+  .cn-search-wrap .bi-search { position:absolute; left:18px; top:17px; font-size:1.15rem; color:#94a3b8; }
+  .cn-suggest { position:absolute; z-index:20; left:0; right:0; top:60px; background:#fff; border-radius:12px; box-shadow:0 12px 30px rgba(15,23,42,.15); overflow:hidden; }
+  .cn-suggest button { display:flex; width:100%; justify-content:space-between; border:0; background:#fff; padding:10px 16px; text-align:left; }
+  .cn-suggest button:hover { background:#f0fdfa; }
+  .cn-booking-card { border-radius:16px; border:1px solid #e2e8f0; }
+  .cn-item { border:2px solid #e2e8f0; border-radius:14px; padding:14px 16px; transition:all .15s; cursor:pointer; }
+  .cn-item.selected { border-color:#14b8a6; background:#f0fdfa; }
+  .cn-item.disabled { opacity:.55; cursor:not-allowed; background:#f8fafc; }
+  .cn-item .form-check-input { width:1.35em; height:1.35em; }
+  .cn-thumb { width:48px; height:48px; border-radius:10px; object-fit:cover; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:#94a3b8; }
+  .cn-variant { background:#e0f2fe; color:#0369a1; border-radius:20px; padding:2px 10px; font-size:.8rem; font-weight:600; }
+  .cn-summary { position:sticky; top:80px; border-radius:16px; }
+  .cn-total { font-size:2rem; font-weight:700; color:#0f766e; }
+  .cn-qty, .cn-amt { max-width:130px; }
+</style>
+
+<div class="container-fluid py-3">
+  <div class="cn-hero d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <h3 class="mb-1"><i class="bi bi-arrow-return-left me-2"></i>New Credit Note</h3>
+      <div class="opacity-75">Type a booking ID, tick the items the customer returned, and save. Stock is added back automatically.</div>
+    </div>
+    <%= link_to admin_credit_notes_path, class: 'btn btn-light' do %><i class="bi bi-list-ul me-1"></i>All Credit Notes<% end %>
+  </div>
+
+  <div class="cn-search-wrap mb-4">
+    <i class="bi bi-search"></i>
+    <input type="text" id="cnBookingSearch" class="form-control" autocomplete="off"
+           placeholder="Enter booking ID (e.g. BK20261122ABC123), customer name or phone" value="<%= @booking_query %>">
+    <div id="cnSuggest" class="cn-suggest d-none"></div>
+  </div>
+
+  <div id="cnEmpty" class="text-center text-muted py-5">
+    <i class="bi bi-receipt-cutoff" style="font-size:3rem;"></i>
+    <p class="mt-2 mb-0">Search for a booking to see its items.</p>
+  </div>
+
+  <%= form_with url: admin_credit_notes_path, method: :post, id: 'cnForm', class: 'd-none', data: { turbo: false } do %>
+    <input type="hidden" name="booking_id" id="cnBookingId">
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="card cn-booking-card shadow-sm mb-3">
+          <div class="card-body d-flex flex-wrap gap-4 align-items-center">
+            <div><small class="text-muted d-block">Booking</small><strong id="cnBkNumber" class="fs-5"></strong></div>
+            <div><small class="text-muted d-block">Customer</small><strong id="cnBkCustomer"></strong><div class="small text-muted" id="cnBkPhone"></div></div>
+            <div><small class="text-muted d-block">Date</small><span id="cnBkDate"></span></div>
+            <div><small class="text-muted d-block">Status</small><span class="badge bg-secondary" id="cnBkStatus"></span></div>
+            <div><small class="text-muted d-block">Booking Total</small><strong id="cnBkTotal"></strong></div>
+            <div id="cnBkPrevWrap" class="d-none"><small class="text-muted d-block">Already Credited</small><strong class="text-danger" id="cnBkPrev"></strong></div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0">Select returned items</h6>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="cnSelectAll">Select all</button>
+        </div>
+        <div id="cnItems" class="d-grid gap-2"></div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card cn-summary shadow-sm border-0">
+          <div class="card-body">
+            <h6 class="text-muted mb-1">Total Credit Amount</h6>
+            <div class="cn-total mb-1">₹<span id="cnTotal">0.00</span></div>
+            <div class="small text-muted mb-3"><span id="cnSelCount">0</span> item(s) · <span id="cnSelUnits">0</span> unit(s) back to stock</div>
+
+            <div class="mb-2">
+              <label class="form-label small">Credit Note Date</label>
+              <input type="date" name="credit_date" class="form-control" value="<%= Date.current.iso8601 %>">
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Refund Method</label>
+              <select name="refund_method" class="form-select">
+                <option value="">— Select —</option>
+                <% CreditNote::REFUND_METHODS.each do |val, label| %><option value="<%= val %>"><%= label %></option><% end %>
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Return Reason</label>
+              <select name="reason" class="form-select">
+                <% ['Damaged', 'Wrong item', 'Quality issue', 'Excess quantity', 'Customer changed mind', 'Other'].each do |r| %><option><%= r %></option><% end %>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">Notes</label>
+              <textarea name="notes" class="form-control" rows="2" placeholder="Optional"></textarea>
+            </div>
+            <button type="submit" class="btn btn-success w-100 btn-lg" id="cnSubmit" disabled>
+              <i class="bi bi-box-arrow-in-down me-1"></i>Add to Store &amp; Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<script>
+(function () {
+  const lookupUrl = "<%= lookup_booking_admin_credit_notes_path %>";
+  const $ = (id) => document.getElementById(id);
+  const input = $('cnBookingSearch'), suggest = $('cnSuggest');
+  const money = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const num = (n) => String(Math.round(Number(n) * 100) / 100);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let timer;
+
+  function lookup(q, exactOnly) {
+    if (q.length < 2) { suggest.classList.add('d-none'); return; }
+    fetch(lookupUrl + '?q=' + encodeURIComponent(q), { headers: { Accept: 'application/json' } })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.booking) { suggest.classList.add('d-none'); renderBooking(data.booking); return; }
+        if (exactOnly) return;
+        const list = data.suggestions || [];
+        suggest.innerHTML = list.length
+          ? list.map((s) => `<button type="button" data-bk="${esc(s.booking_number)}"><span><strong>${esc(s.booking_number)}</strong><br><small class="text-muted">${esc(s.customer_name)} ${esc(s.customer_phone || '')}</small></span><span class="text-end"><small class="text-muted">${esc(s.date || '')}</small><br>₹${money(s.total)}</span></button>`).join('')
+          : '<div class="p-3 text-muted small">No booking found</div>';
+        suggest.classList.remove('d-none');
+      });
+  }
+
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => lookup(input.value.trim()), 250); });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); lookup(input.value.trim()); } });
+  suggest.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-bk]');
+    if (b) { input.value = b.dataset.bk; lookup(b.dataset.bk); }
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.cn-search-wrap')) suggest.classList.add('d-none'); });
+
+  function renderBooking(b) {
+    $('cnEmpty').classList.add('d-none');
+    $('cnForm').classList.remove('d-none');
+    $('cnBookingId').value = b.id;
+    $('cnBkNumber').textContent = '#' + b.booking_number;
+    $('cnBkCustomer').textContent = b.customer_name || 'Walk-in';
+    $('cnBkPhone').textContent = b.customer_phone || '';
+    $('cnBkDate').textContent = b.date || '';
+    $('cnBkStatus').textContent = b.status || '';
+    $('cnBkTotal').textContent = '₹' + money(b.total_amount);
+    $('cnBkPrevWrap').classList.toggle('d-none', !(b.previous_credit_total > 0));
+    $('cnBkPrev').textContent = '₹' + money(b.previous_credit_total);
+
+    $('cnItems').innerHTML = b.items.map((it, i) => {
+      const off = it.returnable <= 0;
+      const thumb = it.image ? `<img src="${esc(it.image)}" class="cn-thumb">` : `<div class="cn-thumb"><i class="bi bi-box-seam"></i></div>`;
+      return `
+      <div class="cn-item ${off ? 'disabled' : ''}" data-row="${i}" data-unit="${it.unit_price}" data-max="${it.returnable}">
+        <input type="hidden" name="items[${i}][booking_item_id]" value="${it.id}">
+        <input type="hidden" name="items[${i}][selected]" value="0" class="cn-sel-hidden">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <input class="form-check-input cn-check" type="checkbox" ${off ? 'disabled' : ''}>
+          ${thumb}
+          <div class="flex-grow-1">
+            <div class="fw-semibold">${esc(it.name)} ${it.variant ? `<span class="cn-variant ms-1">${esc(it.variant)}</span>` : ''}</div>
+            <div class="small text-muted">Sold: ${num(it.quantity)} × ₹${money(it.unit_price)} = ₹${money(it.line_total)}
+              ${it.returned > 0 ? ` · <span class="text-danger">Returned already: ${num(it.returned)}</span>` : ''}
+              ${off ? ' · <strong>Fully returned</strong>' : ''}</div>
+          </div>
+          <div>
+            <label class="small text-muted d-block">Return qty</label>
+            <input type="number" class="form-control form-control-sm cn-qty" name="items[${i}][quantity]" min="0.01" step="any" max="${it.returnable}" value="${num(it.returnable)}" disabled>
+          </div>
+          <div>
+            <label class="small text-muted d-block">Credit ₹</label>
+            <input type="number" class="form-control form-control-sm cn-amt" name="items[${i}][amount]" min="0" step="0.01" value="${(it.returnable * it.unit_price).toFixed(2)}" disabled>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    recalc();
+  }
+
+  function setRow(row, on) {
+    if (row.classList.contains('disabled')) return;
+    row.classList.toggle('selected', on);
+    row.querySelector('.cn-check').checked = on;
+    row.querySelector('.cn-sel-hidden').value = on ? '1' : '0';
+    row.querySelectorAll('.cn-qty, .cn-amt').forEach((el) => { el.disabled = !on; });
+    recalc();
+  }
+
+  $('cnItems').addEventListener('click', (e) => {
+    const row = e.target.closest('.cn-item');
+    if (!row || e.target.matches('input[type=number]')) return;
+    setRow(row, !row.classList.contains('selected'));
+  });
+  $('cnItems').addEventListener('input', (e) => {
+    const row = e.target.closest('.cn-item');
+    if (!row) return;
+    if (e.target.classList.contains('cn-qty')) {
+      let q = parseFloat(e.target.value) || 0;
+      const max = parseFloat(row.dataset.max);
+      if (q > max) { q = max; e.target.value = num(max); }
+      row.querySelector('.cn-amt').value = (q * parseFloat(row.dataset.unit)).toFixed(2);
+    }
+    recalc();
+  });
+  $('cnSelectAll').addEventListener('click', () => {
+    const rows = [...document.querySelectorAll('.cn-item:not(.disabled)')];
+    const allOn = rows.every((r) => r.classList.contains('selected'));
+    rows.forEach((r) => setRow(r, !allOn));
+  });
+
+  function recalc() {
+    let total = 0, count = 0, units = 0;
+    document.querySelectorAll('.cn-item.selected').forEach((row) => {
+      count++;
+      units += parseFloat(row.querySelector('.cn-qty').value) || 0;
+      total += parseFloat(row.querySelector('.cn-amt').value) || 0;
+    });
+    $('cnTotal').textContent = money(total);
+    $('cnSelCount').textContent = count;
+    $('cnSelUnits').textContent = num(units);
+    $('cnSubmit').disabled = count === 0;
+  }
+
+  $('cnForm').addEventListener('submit', (e) => {
+    if (!confirm('Save this credit note and add the returned quantity back to stock?')) e.preventDefault();
+  });
+
+  if (input.value.trim()) lookup(input.value.trim(), true);
+})();
+</script>

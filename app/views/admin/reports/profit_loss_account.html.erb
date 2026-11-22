@@ -1,0 +1,66 @@
+<%= render 'admin/reports/pl_styles' %>
+<% range_text = "From #{@from_date.strftime('%d/%m/%Y')} To #{@to_date.strftime('%d/%m/%Y')}" %>
+
+<div class="pl-wrap">
+  <div class="pl-topbar">
+    <div>
+      <div class="crumb">
+        <%= link_to 'Profit and Loss', admin_reports_profit_loss_path(profit_loss_params), class: 'text-decoration-none' %> &rsaquo; Account Transactions
+      </div>
+      <div class="title"><%= @account_name %> <small>&bull; <%= range_text %> &bull; <%= @basis.capitalize %> basis</small></div>
+    </div>
+    <div class="actions d-flex gap-2">
+      <%= link_to admin_reports_profit_loss_path(profit_loss_params), class: 'btn btn-outline-secondary btn-sm' do %>
+        <i class="bi bi-arrow-left me-1"></i> Back to Report
+      <% end %>
+      <a href="#" class="btn btn-outline-secondary btn-sm" onclick="window.print(); return false;"><i class="bi bi-printer"></i></a>
+    </div>
+  </div>
+
+  <div class="pl-sheet">
+    <div class="table-responsive">
+      <table class="pl-table" style="max-width:none">
+        <thead>
+          <tr>
+            <th class="text-start">Date</th>
+            <th class="text-start">Reference</th>
+            <th class="text-start"><%= @account == 'cogs' ? 'Item' : 'Party' %></th>
+            <th class="text-start">Details</th>
+            <th class="num">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if @transactions.empty? %>
+            <tr class="empty"><td colspan="5" class="text-center">No transactions for this account in the selected period.</td></tr>
+          <% end %>
+          <% @transactions.each do |t| %>
+            <tr style="border-bottom:1px solid #f1f2f5">
+              <td><%= t[:date]&.strftime('%d/%m/%Y') %></td>
+              <td>
+                <% type, record = t[:link] %>
+                <% if type == :booking && record %>
+                  <%= link_to t[:reference], admin_booking_path(record), class: 'text-decoration-none' %>
+                <% elsif type == :credit_note && record %>
+                  <%= link_to t[:reference], admin_credit_note_path(record), class: 'text-decoration-none' %>
+                <% elsif type == :manual_journal && record %>
+                  <%= link_to t[:reference], admin_manual_journal_path(record), class: 'text-decoration-none' %>
+                <% else %>
+                  <%= t[:reference] %>
+                <% end %>
+              </td>
+              <td><%= t[:party] %></td>
+              <td class="text-muted small"><%= t[:description] %></td>
+              <%= pl_amount_cell(t[:amount]) %>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot>
+          <tr class="net">
+            <td colspan="4">Total (<%= @transactions.size %> transactions)</td>
+            <%= pl_amount_cell(@total) %>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>

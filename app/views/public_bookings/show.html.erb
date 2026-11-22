@@ -272,8 +272,14 @@
       <% end %>
 
       <!-- Type label -->
+      <%
+        # B2B invoices split TAX into CGST / SGST (and IGST when used).
+        b2b_booking = (@booking if @booking.is_b2b?)
+        split_gst   = gst_split_columns?(@booking.booking_items, b2b_booking)
+        igst_col    = split_gst && gst_igst_column?(@booking.booking_items)
+      %>
       <div class="inv-type-row">
-        <span class="inv-type"><%= has_gst ? 'TAX INVOICE' : 'BILL OF SUPPLY' %></span>
+        <span class="inv-type"><%= has_gst ? 'TAX INVOICE' : 'BILL OF SUPPLY' %></span><%= b2b_invoice_badge(b2b_booking) %>
         <span class="inv-type-badge">ORIGINAL FOR RECIPIENT</span>
       </div>
 
@@ -316,6 +322,7 @@
           <div class="inv-addr-text"><%= bill_address %></div>
           <% ph = @booking.customer_phone || @booking.customer&.mobile %>
           <% if ph.present? %><div class="inv-addr-text">Mobile: <%= ph %></div><% end %>
+          <%= b2b_gstin_line(b2b_booking, css_class: 'inv-addr-text') %>
         </div>
         <div class="inv-addr">
           <div class="inv-addr-title">SHIP TO</div>
@@ -338,7 +345,7 @@
             <th class="c col-hsn">HSN</th>
             <th class="c">QTY.</th>
             <th class="r">RATE</th>
-            <th class="r col-tax">TAX</th>
+            <%= gst_tax_header_cells(split: split_gst, igst: igst_col, th_class: 'r col-tax') %>
             <th class="r">AMOUNT</th>
           </tr>
         </thead>
@@ -375,10 +382,7 @@
                 <br/><span class="tax-rate" style="color:#1a7f37;"><%= line_discount_text(item) %></span>
               <% end %>
             </td>
-            <td class="r col-tax">
-              ₹<%= number_with_precision(row_tax, precision: 2, delimiter: ',') %><br/>
-              <span class="tax-rate">(<%= row_gst_rate.to_i == row_gst_rate ? row_gst_rate.to_i : row_gst_rate %>%)</span>
-            </td>
+            <%= gst_tax_cells(item.product, row_tax, rate: row_gst_rate, split: split_gst, igst: igst_col, td_class: 'r col-tax') %>
             <td class="r">₹<%= number_with_precision(row_total, precision: 2, delimiter: ',') %></td>
           </tr>
           <% end %>

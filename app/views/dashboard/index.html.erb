@@ -196,6 +196,94 @@
   </div>
 </div>
 
+<!-- Credit Notes / Returns -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm" style="border-radius:16px;overflow:hidden;">
+      <div class="card-header border-0 d-flex flex-wrap justify-content-between align-items-center gap-2" style="background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;">
+        <h5 class="mb-0"><i class="bi bi-arrow-return-left me-2"></i>Credit Notes — Returned</h5>
+        <div class="d-flex gap-2">
+          <%= link_to new_admin_credit_note_path, class: 'btn btn-sm btn-light' do %><i class="bi bi-plus-lg me-1"></i>New<% end %>
+          <%= link_to 'View all', admin_credit_notes_path, class: 'btn btn-sm btn-outline-light' %>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 mb-3 text-center">
+          <div class="col-6 col-md-3"><div class="p-2 rounded bg-success-subtle"><div class="small text-muted">Total Credited</div><div class="fs-5 fw-bold text-success">₹<%= number_with_delimiter(number_with_precision(@credit_notes_amount.to_f, precision: 2)) %></div></div></div>
+          <div class="col-6 col-md-3"><div class="p-2 rounded bg-info-subtle"><div class="small text-muted">This Month</div><div class="fs-5 fw-bold text-info">₹<%= number_with_delimiter(number_with_precision(@credit_notes_month_amount.to_f, precision: 2)) %></div></div></div>
+          <div class="col-6 col-md-3"><div class="p-2 rounded bg-danger-subtle"><div class="small text-muted">Credit Notes</div><div class="fs-5 fw-bold text-danger"><%= @credit_notes_count.to_i %></div></div></div>
+          <div class="col-6 col-md-3"><div class="p-2 rounded bg-primary-subtle"><div class="small text-muted">Units Back in Stock</div><div class="fs-5 fw-bold text-primary"><%= number_with_precision(@credit_notes_units.to_f, precision: 2, strip_insignificant_zeros: true) %></div></div></div>
+        </div>
+        <% if @recent_credit_notes.present? %>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light"><tr><th>Credit Note</th><th>Date</th><th>Customer</th><th>Booking</th><th>Returned Items</th><th class="text-end">Amount</th></tr></thead>
+              <tbody>
+                <% @recent_credit_notes.each do |cn| %>
+                  <tr>
+                    <td><%= link_to cn.credit_note_number, admin_credit_note_path(cn), class: 'fw-semibold text-decoration-none' %></td>
+                    <td><%= cn.credit_date.strftime('%d %b %Y') %></td>
+                    <td><%= cn.customer_display_name %></td>
+                    <td><%= link_to "##{cn.booking.booking_number}", admin_booking_path(cn.booking), class: 'text-decoration-none' if cn.booking %></td>
+                    <td class="small"><%= cn.credit_note_items.map { |i| "#{i.display_name} × #{number_with_precision(i.quantity, precision: 2, strip_insignificant_zeros: true)}" }.join(', ') %></td>
+                    <td class="text-end fw-bold text-danger">₹<%= number_with_precision(cn.total_amount, precision: 2) %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <div class="text-center text-muted small py-2">No returns recorded yet.</div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Debit Notes / Returned to Vendor -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm" style="border-radius:16px;overflow:hidden;">
+      <div class="card-header border-0 d-flex flex-wrap justify-content-between align-items-center gap-2" style="background:linear-gradient(135deg,#c2410c,#f59e0b);color:#fff;">
+        <h5 class="mb-0"><i class="bi bi-truck-flatbed me-2"></i>Debit Notes — Returned to Vendor</h5>
+        <div class="d-flex gap-2">
+          <%= link_to new_admin_debit_note_path, class: 'btn btn-sm btn-light' do %><i class="bi bi-plus-lg me-1"></i>New<% end %>
+          <%= link_to 'View all', admin_debit_notes_path, class: 'btn btn-sm btn-outline-light' %>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 mb-3 text-center">
+          <div class="col-6 col-md-3"><div class="p-2 rounded bg-warning-subtle"><div class="small text-muted">Total Debited</div><div class="fs-5 fw-bold" style="color:#c2410c;">₹<%= number_with_delimiter(number_with_precision(@debit_notes_amount.to_f, precision: 2)) %></div></div></div>
+          <div class="col-6 col-md-3"><div class="p-2 rounded bg-info-subtle"><div class="small text-muted">This Month</div><div class="fs-5 fw-bold text-info">₹<%= number_with_delimiter(number_with_precision(@debit_notes_month_amount.to_f, precision: 2)) %></div></div></div>
+          <div class="col-6 col-md-3"><div class="p-2 rounded bg-danger-subtle"><div class="small text-muted">Debit Notes</div><div class="fs-5 fw-bold text-danger"><%= @debit_notes_count.to_i %></div></div></div>
+          <div class="col-6 col-md-3"><div class="p-2 rounded bg-primary-subtle"><div class="small text-muted">Units Sent Back</div><div class="fs-5 fw-bold text-primary"><%= number_with_precision(@debit_notes_units.to_f, precision: 2, strip_insignificant_zeros: true) %></div></div></div>
+        </div>
+        <% if @recent_debit_notes.present? %>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light"><tr><th>Debit Note</th><th>Date</th><th>Vendor</th><th>Purchase</th><th>Returned Items</th><th class="text-end">Amount</th></tr></thead>
+              <tbody>
+                <% @recent_debit_notes.each do |dn| %>
+                  <tr>
+                    <td><%= link_to dn.debit_note_number, admin_debit_note_path(dn), class: 'fw-semibold text-decoration-none' %></td>
+                    <td><%= dn.debit_date.strftime('%d %b %Y') %></td>
+                    <td><%= dn.vendor&.name %></td>
+                    <td><%= link_to dn.vendor_purchase.purchase_number, admin_vendor_purchase_path(dn.vendor_purchase), class: 'text-decoration-none' %></td>
+                    <td class="small"><%= dn.debit_note_items.map { |i| "#{i.display_name} × #{number_with_precision(i.quantity, precision: 2, strip_insignificant_zeros: true)}" }.join(', ') %></td>
+                    <td class="text-end fw-bold" style="color:#c2410c;">₹<%= number_with_precision(dn.total_amount, precision: 2) %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <div class="text-center text-muted small py-2">No returns to vendors recorded yet.</div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Main Charts Section -->
 <div class="row mb-4">
   <!-- Sales Revenue Trend -->

@@ -1,143 +1,180 @@
-<%# Profit & Loss Report %>
-<div class="page-header d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h1><i class="bi bi-graph-up-arrow me-2"></i>Profit & Loss Report</h1>
-    <p class="text-muted mb-0">Products sold and profit/loss per date range</p>
-  </div>
-  <%= link_to admin_reports_profit_loss_path(from_date: @from_date, to_date: @to_date, download: 'csv'),
-              class: "btn btn-success" do %>
-    <i class="bi bi-file-earmark-arrow-down me-1"></i> Download CSV
-  <% end %>
-</div>
+<%# Profit & Loss — Zoho Books style statement %>
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<%= render 'admin/reports/pl_styles' %>
+<% r = @report %>
+<% org = (business_settings.business_name.presence rescue nil) || 'Dhanvantari Naturals' %>
+<% range_text = "From #{@from_date.strftime('%d/%m/%Y')} To #{@to_date.strftime('%d/%m/%Y')}" %>
 
-<!-- Date Range Filter -->
-<div class="card mb-4">
-  <div class="card-header">
-    <h5 class="mb-0"><i class="bi bi-calendar-range me-2"></i>Date Range</h5>
+<div class="pl-wrap">
+  <div class="pl-topbar">
+    <div>
+      <div class="crumb">Business Overview</div>
+      <div class="title">Profit and Loss <small>&bull; <%= range_text %></small></div>
+    </div>
+    <div class="actions d-flex gap-2">
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+          Export
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><%= link_to admin_reports_profit_loss_path(profit_loss_params(download: 'csv')), class: 'dropdown-item', data: { turbo: false } do %>
+            <i class="bi bi-filetype-csv me-1"></i> CSV
+          <% end %></li>
+          <li><a href="#" class="dropdown-item" onclick="window.print(); return false;"><i class="bi bi-printer me-1"></i> Print / PDF</a></li>
+        </ul>
+      </div>
+    </div>
   </div>
-  <div class="card-body">
-    <%= form_with url: admin_reports_profit_loss_path, method: :get, local: true, class: "row g-3 align-items-end" do |f| %>
-      <div class="col-md-4">
-        <%= f.label :from_date, "From Date", class: "form-label fw-semibold" %>
-        <%= f.date_field :from_date, value: @from_date, class: "form-control", required: true %>
-      </div>
-      <div class="col-md-4">
-        <%= f.label :to_date, "To Date", class: "form-label fw-semibold" %>
-        <%= f.date_field :to_date, value: @to_date, class: "form-control", required: true %>
-      </div>
-      <div class="col-md-4">
-        <%= f.submit "Generate Report", class: "btn btn-primary w-100" %>
-      </div>
-    <% end %>
-  </div>
-</div>
 
-<!-- Summary Cards -->
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm">
-      <div class="card-body py-3">
-        <div class="text-muted small">Total Products</div>
-        <div class="fs-4 fw-bold"><%= @product_rows.size %></div>
+  <%= form_with url: admin_reports_profit_loss_path, method: :get, local: true, class: 'pl-filters', data: { turbo: false }, id: 'pl-filter-form' do %>
+    <%= hidden_field_tag :view, @view %>
+    <div class="row g-2 align-items-end">
+      <div class="col-6 col-md-2">
+        <label><i class="bi bi-funnel me-1"></i>Date Range</label>
+        <%= select_tag :date_range, options_for_select(ProfitLossReport::DATE_RANGES.map { |k, l| [l, k] }, @date_range),
+                       class: 'form-select form-select-sm', id: 'pl-date-range' %>
       </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm">
-      <div class="card-body py-3">
-        <div class="text-muted small">Total Revenue</div>
-        <div class="fs-4 fw-bold text-primary">₹<%= number_with_delimiter(@totals[:revenue].round(2)) %></div>
+      <div class="col-6 col-md-2 pl-custom">
+        <label>From</label>
+        <%= date_field_tag :from_date, @from_date, class: 'form-control form-control-sm' %>
       </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm">
-      <div class="card-body py-3">
-        <div class="text-muted small">Total Cost</div>
-        <div class="fs-4 fw-bold text-warning">₹<%= number_with_delimiter(@totals[:cost].round(2)) %></div>
+      <div class="col-6 col-md-2 pl-custom">
+        <label>To</label>
+        <%= date_field_tag :to_date, @to_date, class: 'form-control form-control-sm' %>
       </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <% net = @totals[:profit] %>
-    <div class="card text-center border-0 shadow-sm">
-      <div class="card-body py-3">
-        <div class="text-muted small">Net <%= net >= 0 ? 'Profit' : 'Loss' %></div>
-        <div class="fs-4 fw-bold <%= net >= 0 ? 'text-success' : 'text-danger' %>">
-          ₹<%= number_with_delimiter(net.abs.round(2)) %>
-          <small class="fs-6"><%= net >= 0 ? '▲' : '▼' %></small>
+      <div class="col-6 col-md-2">
+        <label>Report Basis</label>
+        <%= select_tag :basis, options_for_select([%w[Accrual accrual], %w[Cash cash]], @basis), class: 'form-select form-select-sm' %>
+      </div>
+      <div class="col-6 col-md-2">
+        <label>Store</label>
+        <%= select_tag :store_id, options_for_select(@stores.map { |s| [s.name, s.id] }, @store_id),
+                       include_blank: 'All Stores', class: 'form-select form-select-sm' %>
+      </div>
+      <div class="col-6 col-md-2">
+        <label>Compare With</label>
+        <div class="d-flex gap-1">
+          <%= select_tag :compare, options_for_select(ProfitLossReport::COMPARE_OPTIONS.map { |k, l| [l, k] }, @compare),
+                         class: 'form-select form-select-sm', id: 'pl-compare' %>
+          <%= select_tag :compare_count, options_for_select((1..5).to_a, @compare_count),
+                         class: 'form-select form-select-sm', style: 'max-width:62px', id: 'pl-compare-count',
+                         title: 'Number of periods' %>
         </div>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- Products Table -->
-<div class="card shadow-sm">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <h5 class="mb-0">Product-wise Breakdown</h5>
-    <span class="badge bg-secondary"><%= @from_date.strftime('%d %b %Y') %> – <%= @to_date.strftime('%d %b %Y') %></span>
-  </div>
-  <div class="card-body p-0">
-    <% if @product_rows.empty? %>
-      <div class="text-center text-muted py-5">
-        <i class="bi bi-inbox fs-1"></i>
-        <p class="mt-2">No sales data found for the selected date range.</p>
+      <div class="col-12 col-md-auto">
+        <%= submit_tag 'Run Report', class: 'btn btn-primary btn-sm w-100', name: nil %>
       </div>
-    <% else %>
+    </div>
+  <% end %>
+
+  <ul class="nav nav-tabs pl-tabs mb-0">
+    <li class="nav-item">
+      <%= link_to 'Statement', admin_reports_profit_loss_path(profit_loss_params(view: 'statement')),
+                  class: "nav-link #{'active' if @view == 'statement'}" %>
+    </li>
+    <li class="nav-item">
+      <%= link_to 'Product-wise Margin', admin_reports_profit_loss_path(profit_loss_params(view: 'products')),
+                  class: "nav-link #{'active' if @view == 'products'}" %>
+    </li>
+  </ul>
+
+  <% if @view == 'products' %>
+    <div class="pt-3">
+      <div class="d-flex justify-content-end mb-2">
+        <%= link_to admin_reports_profit_loss_path(profit_loss_params(download: 'csv')), class: 'btn btn-success btn-sm', data: { turbo: false } do %>
+          <i class="bi bi-file-earmark-arrow-down me-1"></i> Download CSV
+        <% end %>
+      </div>
+      <%= render 'admin/reports/profit_loss_products' %>
+    </div>
+  <% else %>
+    <% cmp = @compare_columns %>
+    <% acct_link = ->(line) { link_to line.name, admin_reports_profit_loss_account_path(profit_loss_params(account: line.key)) } %>
+    <% row = lambda do |label, key, amount, css, link_line = nil| %>
+      <tr class="<%= css %>">
+        <td><%= link_line ? acct_link.(link_line) : label %></td>
+        <%= pl_amount_cell(amount) %>
+        <% cmp.each do |c| %><%= pl_amount_cell(c[:amounts][key]) %><% end %>
+      </tr>
+    <% end %>
+    <% section = lambda do |title, lines, total_key, total| %>
+      <tr class="section"><td colspan="<%= 2 + cmp.size %>"><%= title %></td></tr>
+      <% if lines.empty? %>
+        <tr class="empty"><td colspan="<%= 2 + cmp.size %>">No transactions</td></tr>
+      <% end %>
+      <% lines.each { |l| row.("  #{l.name}", l.key, l.amount, 'acct', l) } %>
+      <% row.("Total for #{title}", total_key, total, 'total') %>
+    <% end %>
+
+    <div class="pl-sheet" style="border-top-left-radius:0">
+      <div class="pl-head">
+        <div class="org"><%= org %></div>
+        <h2>Profit and Loss</h2>
+        <div class="meta"><span>Basis :</span> <%= @basis.capitalize %></div>
+        <div class="meta mt-1"><%= range_text %></div>
+        <% if @store_id && (store = @stores.detect { |s| s.id.to_s == @store_id.to_s }) %>
+          <div class="meta mt-1"><span>Store :</span> <%= store.name %></div>
+        <% end %>
+      </div>
+
       <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-          <thead class="table-dark">
+        <table class="pl-table">
+          <thead>
             <tr>
-              <th>#</th>
-              <th>Product</th>
-              <th class="text-center">Qty Sold</th>
-              <th class="text-end">Selling Price</th>
-              <th class="text-end">Cost Price</th>
-              <th class="text-end">Purchase Price</th>
-              <th class="text-end">Revenue</th>
-              <th class="text-end">Cost</th>
-              <th class="text-end">Profit / Loss</th>
+              <th class="text-start">Account</th>
+              <% if cmp.any? %>
+                <th class="num"><%= @from_date.strftime('%d/%m/%Y') %> - <%= @to_date.strftime('%d/%m/%Y') %></th>
+                <% cmp.each do |c| %><th class="num"><%= c[:label] %></th><% end %>
+              <% else %>
+                <th class="num">Total</th>
+              <% end %>
             </tr>
           </thead>
           <tbody>
-            <% @product_rows.each_with_index do |row, i| %>
-              <% profit = row[:profit] %>
-              <tr>
-                <td class="text-muted small"><%= i + 1 %></td>
-                <td>
-                  <strong><%= row[:name] %></strong>
-                  <span class="badge bg-light text-dark ms-1"><%= row[:unit_type] %></span>
-                </td>
-                <td class="text-center fw-semibold"><%= row[:qty_sold].to_s.sub(/\.0$/, '') %></td>
-                <td class="text-end">₹<%= number_with_delimiter(row[:selling_price].round(2)) %></td>
-                <td class="text-end">₹<%= number_with_delimiter(row[:cost_price].round(2)) %></td>
-                <td class="text-end">₹<%= number_with_delimiter(row[:purchase_price].round(2)) %></td>
-                <td class="text-end text-primary fw-semibold">₹<%= number_with_delimiter(row[:revenue].round(2)) %></td>
-                <td class="text-end text-warning fw-semibold">₹<%= number_with_delimiter(row[:cost].round(2)) %></td>
-                <td class="text-end fw-bold <%= profit >= 0 ? 'text-success' : 'text-danger' %>">
-                  <%= profit >= 0 ? '+' : '-' %>₹<%= number_with_delimiter(profit.abs.round(2)) %>
-                </td>
-              </tr>
-            <% end %>
+            <% section.('Operating Income', r.operating_income, 'total_operating_income', r.total_operating_income) %>
+            <% section.('Cost of Goods Sold', r.cost_of_goods_sold, 'total_cogs', r.total_cogs) %>
+            <% row.('Gross Profit', 'gross_profit', r.gross_profit, 'result') %>
+            <% section.('Operating Expense', r.operating_expense, 'total_operating_expense', r.total_operating_expense) %>
+            <% row.('Operating Profit', 'operating_profit', r.operating_profit, 'result') %>
+            <% section.('Non Operating Income', r.non_operating_income, 'total_non_operating_income', r.total_non_operating_income) %>
+            <% section.('Non Operating Expense', r.non_operating_expense, 'total_non_operating_expense', r.total_non_operating_expense) %>
+            <% row.('Net Profit/Loss', 'net_profit', r.net_profit, 'net') %>
           </tbody>
-          <tfoot class="table-secondary fw-bold">
-            <tr>
-              <td colspan="2">TOTAL</td>
-              <td class="text-center"><%= @totals[:qty_sold].to_s.sub(/\.0$/, '') %></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td class="text-end text-primary">₹<%= number_with_delimiter(@totals[:revenue].round(2)) %></td>
-              <td class="text-end text-warning">₹<%= number_with_delimiter(@totals[:cost].round(2)) %></td>
-              <% net = @totals[:profit] %>
-              <td class="text-end <%= net >= 0 ? 'text-success' : 'text-danger' %>">
-                <%= net >= 0 ? '+' : '-' %>₹<%= number_with_delimiter(net.abs.round(2)) %>
-              </td>
-            </tr>
-          </tfoot>
         </table>
       </div>
-    <% end %>
-  </div>
+
+      <p class="text-muted small text-center mt-4 mb-0 no-print">
+        Amounts are in ₹ and exclude GST. Sales come from bookings (cancelled / returned / refund excluded);
+        COGS uses each product's buying price. Expenses come from store expenses and staff payments
+        (“Inventory Purchase” and “Withdrawal for Self” are not counted as expenses). Click an account to see its transactions.
+      </p>
+    </div>
+  <% end %>
 </div>
+
+<script>
+  (function () {
+    var range = document.getElementById('pl-date-range');
+    var customs = document.querySelectorAll('.pl-custom');
+    var compare = document.getElementById('pl-compare');
+    var count = document.getElementById('pl-compare-count');
+    function sync() {
+      var custom = range.value === 'custom';
+      customs.forEach(function (el) { el.style.opacity = custom ? 1 : 0.55; });
+      count.style.display = compare.value === 'none' ? 'none' : '';
+    }
+    range.addEventListener('change', sync);
+    compare.addEventListener('change', sync);
+    // Editing a date switches the range to Custom.
+    customs.forEach(function (el) {
+      el.querySelectorAll('input').forEach(function (i) {
+        ['focus', 'change'].forEach(function (ev) {
+          i.addEventListener(ev, function () {
+            if (range.value !== 'custom') { range.value = 'custom'; sync(); }
+          });
+        });
+      });
+    });
+    sync();
+  })();
+</script>

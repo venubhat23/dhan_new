@@ -645,9 +645,15 @@
     %>
 
     <div class="invoice-container">
+      <%
+        # B2B invoices split TAX into CGST / SGST (and IGST when used).
+        b2b_booking = (@booking if @booking.is_b2b?)
+        split_gst   = gst_split_columns?(@booking.booking_items, b2b_booking)
+        igst_col    = split_gst && gst_igst_column?(@booking.booking_items)
+      %>
       <!-- Tax label and original recipient -->
       <div class="tax-label-container">
-        <span class="tax-label"><%= has_gst ? 'TAX INVOICE' : 'BILL OF SUPPLY' %></span>
+        <span class="tax-label"><%= has_gst ? 'TAX INVOICE' : 'BILL OF SUPPLY' %></span><%= b2b_invoice_badge(b2b_booking) %>
         <span class="original-recipient">ORIGINAL FOR RECIPIENT</span>
       </div>
 
@@ -697,6 +703,7 @@
             <% if @booking.customer_phone.present? || @booking.customer&.mobile.present? %>
               <div class="mobile">Mobile: <%= @booking.customer_phone || @booking.customer&.mobile %></div>
             <% end %>
+            <%= b2b_gstin_line(b2b_booking, css_class: 'mobile') %>
           </td>
           <td>
             <div class="ship-title">SHIP TO</div>
@@ -714,7 +721,7 @@
             <th class="center-align">HSN</th>
             <th class="center-align">QTY.</th>
             <th class="right-align">RATE</th>
-            <th class="right-align">TAX</th>
+            <%= gst_tax_header_cells(split: split_gst, igst: igst_col, th_class: 'right-align') %>
             <th class="right-align">AMOUNT</th>
           </tr>
         </thead>
@@ -738,7 +745,6 @@
                 %>
                 ₹<%= number_with_precision(unit_price, precision: 2, delimiter: ',') %>
               </td>
-              <td class="right-align">
                 <%
                   base_amount = item.quantity * (item.price || 0)
                   if item.product&.gst_enabled
@@ -755,9 +761,7 @@
                     tax_amount = 0
                   end
                 %>
-                ₹<%= number_with_precision(tax_amount, precision: 2, delimiter: ',') %><br />
-                <span class="tax-rate">(<%= total_gst_rate.to_i == total_gst_rate ? total_gst_rate.to_i : total_gst_rate %>%)</span>
-              </td>
+              <%= gst_tax_cells(item.try(:product), tax_amount, rate: total_gst_rate, split: split_gst, igst: igst_col, td_class: 'right-align') %>
               <td class="right-align">
                 <%
                   # Calculate final amount: base amount + tax amount
