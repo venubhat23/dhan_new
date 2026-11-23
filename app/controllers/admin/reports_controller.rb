@@ -630,6 +630,47 @@ class Admin::ReportsController < Admin::ApplicationController
     @total = @transactions.sum { |t| t[:amount].to_f }.round(2)
   end
 
+  # GET /admin/reports/gstr1
+  # GSTR-1 return in the accountant's workbook layout. Download as the full
+  # Excel workbook (?download=xlsx) or one sheet as CSV (?download=csv&sheet=b2b).
+  def gstr1
+    @period = params[:period].presence || 'this_month'
+    today = Date.current
+    @from_date, @to_date =
+      case @period
+      when 'last_month' then [today.prev_month.beginning_of_month, today.prev_month.end_of_month]
+      when 'this_quarter' then [today.beginning_of_quarter, today.end_of_quarter]
+      when 'last_quarter' then [(today - 3.months).beginning_of_quarter, (today - 3.months).end_of_quarter]
+      when 'this_fy' then [ProfitLossReport.fy_start(today), ProfitLossReport.fy_start(today) + 1.year - 1.day]
+      when 'month'
+        m = (Date.strptime(params[:month].to_s, '%Y-%m') rescue today)
+        [m.beginning_of_month, m.end_of_month]
+      when 'custom'
+        f = (Date.parse(params[:from_date].to_s) rescue today.beginning_of_month)
+        t = (Date.parse(params[:to_date].to_s) rescue today)
+        [f, [t, f].max]
+      else [today.beginning_of_month, today.end_of_month]
+      end
+    @month = params[:month].presence || @from_date.strftime('%Y-%m')
+    @sheet = Gstr1Export::SHEETS.include?(params[:sheet]) ? params[:sheet] : 'gstr1'
+
+    @report = Gstr1Report.new(from_date: @from_date, to_date: @to_date)
+    @export = Gstr1Export.new(@report)
+    stamp = "#{@from_date.strftime('%d%m%Y')}_#{@to_date.strftime('%d%m%Y')}"
+
+    case params[:download]
+    when 'xlsx'
+      send_data @export.to_xlsx, filename: "GSTR1_#{stamp}.xlsx", disposition: 'attachment',
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    when 'csv'
+      send_data @export.to_csv(@sheet), filename: "GSTR1_#{@sheet.tr('()', '_')}_#{stamp}.csv".sub('_.csv', '.csv'),
+                type: 'text/csv', disposition: 'attachment'
+    else
+      @rows = @export.rows_for(@sheet)
+      @styles = @export.bold_rows[@sheet]
+    end
+  end
+
   private
 
   def load_profit_loss_filters

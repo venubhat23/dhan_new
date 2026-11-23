@@ -1,3 +1,4 @@
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
 <style>
   .coa-group { font-size:.75rem; letter-spacing:.06em; text-transform:uppercase; color:#64748b; background:#f8fafc; }
   .coa-type { background:#eef2ff; color:#4338ca; border-radius:20px; padding:2px 10px; font-size:.78rem; }
@@ -66,8 +67,8 @@
   </div>
 </div>
 
-<div class="modal fade" id="coaModal" tabindex="-1">
-  <div class="modal-dialog">
+<div class="modal fade" id="coaModal" tabindex="-1" style="z-index:2000">
+  <div class="modal-dialog modal-dialog-scrollable" style="margin-top:90px; max-height:calc(100vh - 110px)">
     <%= form_with model: [:admin, @new_account], id: 'coaForm', class: 'modal-content', data: { turbo: false } do |f| %>
       <input type="hidden" name="_method" value="post" id="coaMethod">
       <input type="hidden" name="return_type" value="<%= @type %>">
@@ -89,6 +90,10 @@
   const modal = document.getElementById('coaModal');
   const form = document.getElementById('coaForm');
   const createUrl = form.getAttribute('action');
+  // Move the modal to <body> so the page wrapper's stacking context
+  // (z-index/transform) can't put it under the backdrop.
+  document.querySelectorAll('body > #coaModal').forEach((m) => { if (m !== modal) m.remove(); });
+  if (modal.parentElement !== document.body) document.body.appendChild(modal);
   modal.addEventListener('show.bs.modal', (e) => {
     const b = e.relatedTarget || {};
     const edit = b.dataset && b.dataset.mode === 'edit';

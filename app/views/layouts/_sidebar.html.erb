@@ -1076,6 +1076,17 @@
             <div class="nav-indicator"></div>
           <% end %>
         </li>
+        <li class="nav-item">
+          <%= link_to admin_reports_gstr1_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/reports/gstr1')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-orange">
+                <i class="bi bi-receipt-cutoff"></i>
+              </div>
+            </div>
+            <span class="nav-text">GSTR-1 Report</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
         <% end %>
       </ul>
     </div>

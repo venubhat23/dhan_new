@@ -1,0 +1,136 @@
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<% s = @report.summary %>
+<% q = { period: @period, month: @month, from_date: @from_date, to_date: @to_date } %>
+<% money = ->(v) { number_with_precision(v.to_f, precision: 2, delimiter: ',') } %>
+<style>
+  .g1-wrap { max-width: 1400px; margin: 0 auto; }
+  .g1-hero { background: linear-gradient(135deg,#7c2d12,#ea580c); color:#fff; border-radius:14px; padding:18px 22px; margin-bottom:14px;
+             display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+  .g1-hero h3 { margin:0; font-weight:700; }
+  .g1-hero small { opacity:.85; }
+  .g1-hero .btn { font-weight:600; }
+  .g1-filters { background:#fff; border:1px solid #e6e8ee; border-radius:12px; padding:12px 16px; margin-bottom:14px; }
+  .g1-filters label { font-size:12px; color:#6b7280; margin-bottom:2px; }
+  .g1-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-bottom:14px; }
+  .g1-card { background:#fff; border:1px solid #e6e8ee; border-radius:12px; padding:12px 14px; }
+  .g1-card .k { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; }
+  .g1-card .v { font-size:19px; font-weight:700; color:#111827; }
+  .g1-card .v small { font-size:12px; font-weight:500; color:#6b7280; }
+  .g1-tabs { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:0; }
+  .g1-tabs a { padding:7px 14px; border:1px solid #e6e8ee; border-bottom:none; border-radius:8px 8px 0 0; background:#f7f8fa;
+               color:#374151; text-decoration:none; font-size:13px; font-weight:600; }
+  .g1-tabs a.active { background:#fff; color:#c2410c; box-shadow: inset 0 3px 0 #ea580c; }
+  .g1-sheet { background:#fff; border:1px solid #e6e8ee; border-radius:0 12px 12px 12px; padding:12px; }
+  .g1-table { border-collapse:collapse; font-size:12.5px; min-width:100%; }
+  .g1-table td { border:1px solid #edf0f3; padding:5px 8px; white-space:nowrap; }
+  .g1-table td.n { text-align:right; font-variant-numeric:tabular-nums; }
+  .g1-table tr.head td { background:#fde4d8; font-weight:600; color:#7c2d12; }
+  .g1-table tr.bold td { font-weight:700; background:#fafafa; }
+  .g1-table tr.blank td { border:none; height:10px; }
+</style>
+
+<div class="g1-wrap">
+  <div class="g1-hero">
+    <div>
+      <h3><i class="bi bi-receipt-cutoff me-2"></i>GSTR-1 Report</h3>
+      <small><%= @report.business[:name] %><%= " · GSTIN #{@report.business[:gstin]}" if @report.business[:gstin] %>
+        · <%= @from_date.strftime('%d/%m/%Y') %> – <%= @to_date.strftime('%d/%m/%Y') %></small>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <%= link_to admin_reports_gstr1_path(q.merge(download: 'xlsx')), class: 'btn btn-light', data: { turbo: false } do %>
+        <i class="bi bi-file-earmark-excel me-1 text-success"></i>Download Excel (all sheets)
+      <% end %>
+      <%= link_to admin_reports_gstr1_path(q.merge(download: 'csv', sheet: @sheet)), class: 'btn btn-outline-light', data: { turbo: false } do %>
+        <i class="bi bi-filetype-csv me-1"></i>CSV — <%= @sheet %>
+      <% end %>
+    </div>
+  </div>
+
+  <%= form_with url: admin_reports_gstr1_path, method: :get, local: true, class: 'g1-filters', data: { turbo: false } do %>
+    <%= hidden_field_tag :sheet, @sheet %>
+    <div class="row g-2 align-items-end">
+      <div class="col-6 col-md-3">
+        <label><i class="bi bi-funnel me-1"></i>Period</label>
+        <%= select_tag :period, options_for_select([['This Month', 'this_month'], ['Last Month', 'last_month'],
+              ['Select Month', 'month'], ['This Quarter', 'this_quarter'], ['Last Quarter', 'last_quarter'],
+              ['This Financial Year', 'this_fy'], ['Custom Range', 'custom']], @period),
+              class: 'form-select form-select-sm', id: 'g1-period' %>
+      </div>
+      <div class="col-6 col-md-2 g1-opt" data-for="month">
+        <label>Month</label>
+        <%= month_field_tag :month, @month, class: 'form-control form-control-sm' %>
+      </div>
+      <div class="col-6 col-md-2 g1-opt" data-for="custom">
+        <label>From</label>
+        <%= date_field_tag :from_date, @from_date, class: 'form-control form-control-sm' %>
+      </div>
+      <div class="col-6 col-md-2 g1-opt" data-for="custom">
+        <label>To</label>
+        <%= date_field_tag :to_date, @to_date, class: 'form-control form-control-sm' %>
+      </div>
+      <div class="col-12 col-md-auto">
+        <%= submit_tag 'Run Report', class: 'btn btn-warning btn-sm w-100 fw-semibold', name: nil %>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="g1-cards">
+    <div class="g1-card"><div class="k">Invoices</div><div class="v"><%= s[:invoices] %> <small>(<%= s[:b2b] %> B2B · <%= s[:b2c] %> B2C)</small></div></div>
+    <div class="g1-card"><div class="k">Cancelled</div><div class="v"><%= s[:cancelled] %></div></div>
+    <div class="g1-card"><div class="k">Invoice Value</div><div class="v">₹<%= money.(s[:sales][:value]) %></div></div>
+    <div class="g1-card"><div class="k">Taxable Value</div><div class="v">₹<%= money.(s[:sales][:taxable]) %></div></div>
+    <div class="g1-card"><div class="k">CGST + SGST</div><div class="v">₹<%= money.(s[:sales][:cgst] + s[:sales][:sgst]) %></div></div>
+    <div class="g1-card"><div class="k">IGST</div><div class="v">₹<%= money.(s[:sales][:igst]) %></div></div>
+    <div class="g1-card"><div class="k">Sales Returns</div><div class="v">₹<%= money.(s[:returns][:value]) %></div></div>
+    <div class="g1-card"><div class="k">Purchase Returns</div><div class="v">₹<%= money.(s[:purchase_returns][:value]) %></div></div>
+  </div>
+
+  <div class="g1-tabs">
+    <% Gstr1Export::SHEETS.each do |name| %>
+      <%= link_to name, admin_reports_gstr1_path(q.merge(sheet: name)), class: (name == @sheet ? 'active' : nil) %>
+    <% end %>
+  </div>
+  <div class="g1-sheet">
+    <div class="table-responsive">
+      <table class="g1-table">
+        <% @rows.each_with_index do |row, i| %>
+          <% css = if @styles.include?([:head, i]) then 'head' elsif @styles.include?([:bold, i]) then 'bold' elsif row.empty? then 'blank' end %>
+          <tr class="<%= css %>">
+            <% if row.empty? %>
+              <td colspan="15"></td>
+            <% else %>
+              <% row.each do |v| %>
+                <% if v.is_a?(Float) %>
+                  <td class="n"><%= money.(v) %></td>
+                <% elsif v.is_a?(Integer) %>
+                  <td class="n"><%= v %></td>
+                <% else %>
+                  <td><%= v %></td>
+                <% end %>
+              <% end %>
+            <% end %>
+          </tr>
+        <% end %>
+      </table>
+    </div>
+    <p class="text-muted small mt-3 mb-0">
+      Built from invoices dated in the period (draft and payout invoices excluded; an invoice is cancelled when the invoice
+      or its booking is cancelled). Taxable value = qty × unit price; GST at the product's rate — CGST/SGST within
+      <%= Gstr1Report::STATES[@report.home_state] %>, IGST for other states (from the customer GSTIN). 0% items are nil-rated;
+      delivery charges are non-GST supplies. Sales Return = Credit Notes, Purchase Return = Debit Notes.
+    </p>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var p = document.getElementById('g1-period');
+    function sync() {
+      document.querySelectorAll('.g1-opt').forEach(function (el) {
+        el.style.display = el.dataset.for === p.value ? '' : 'none';
+      });
+    }
+    p.addEventListener('change', sync);
+    sync();
+  })();
+</script>
