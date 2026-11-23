@@ -1,0 +1,306 @@
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<% base = { period: @period, from_date: @from_date, to_date: @to_date, store_id: @store_id, category_id: @category_id } %>
+<% money = ->(v) { "₹#{number_with_delimiter(number_with_precision(v.to_f, precision: 2))}" } %>
+<% qty = ->(v) { number_with_precision(v.to_f, precision: 2, strip_insignificant_zeros: true, delimiter: ',') } %>
+<style>
+  .ps-wrap { max-width: 1400px; margin: 0 auto; }
+  .ps-hero { background: linear-gradient(135deg,#1e3a8a,#7c3aed); color:#fff; border-radius:16px; padding:18px 22px; margin-bottom:14px;
+             display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+  .ps-hero h3 { margin:0; font-weight:700; }
+  .ps-hero small { opacity:.85; }
+  .ps-card { background:#fff; border:1px solid #e6e8ee; border-radius:14px; padding:14px 16px; }
+  .ps-filters label { font-size:12px; color:#6b7280; margin-bottom:2px; }
+  .ps-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin:14px 0; }
+  .ps-kpi .k { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; }
+  .ps-kpi .v { font-size:20px; font-weight:700; color:#111827; }
+  .ps-kpi .s { font-size:12px; color:#6b7280; }
+  .ps-table th { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#6b7280; background:#f8fafc; white-space:nowrap; }
+  .ps-table td { vertical-align:middle; }
+  .ps-rank { width:30px; height:30px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; background:#eef2ff; color:#4338ca; }
+  .ps-rank.r1 { background:#fef3c7; color:#b45309; } .ps-rank.r2 { background:#e5e7eb; color:#374151; } .ps-rank.r3 { background:#fde3cf; color:#9a3412; }
+  .ps-bar { height:6px; background:#eef2ff; border-radius:4px; overflow:hidden; min-width:80px; }
+  .ps-bar span { display:block; height:100%; background:linear-gradient(90deg,#6366f1,#a855f7); }
+  .ps-sort a { text-decoration:none; color:inherit; } .ps-sort a.active { color:#4338ca; }
+  .ps-pname a { font-weight:600; text-decoration:none; color:#1e3a8a; }
+  .ps-pname a:hover { text-decoration:underline; }
+  .ps-print-head { display:none; }
+  @media print {
+    @page { size: A4 landscape; margin: 10mm; }
+    .sidebar, .sidebar-modern, nav, header, .header, .ps-hero, .ps-filters, .ps-noprint, .btn, form, footer { display:none !important; }
+    body, .main-content, .content-wrapper, main { margin:0 !important; padding:0 !important; background:#fff !important; }
+    .ps-wrap { max-width:none; }
+    .ps-print-head { display:block; text-align:center; margin-bottom:10px; }
+    .ps-print-head .org { font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:.05em; }
+    .ps-print-head h2 { font-size:18px; margin:4px 0; }
+    .ps-print-head .meta { font-size:11px; color:#374151; }
+    .ps-card { border:1px solid #d1d5db; box-shadow:none; break-inside:avoid; padding:8px 10px; }
+    .ps-kpis { grid-template-columns:repeat(6,1fr); gap:6px; margin:8px 0; }
+    .ps-kpi .v { font-size:14px; }
+    .ps-table { font-size:10.5px; }
+    .ps-table td, .ps-table th { padding:3px 5px !important; }
+    .ps-pname a, .ps-table a { color:#111827 !important; text-decoration:none; }
+    .ps-bar { border:1px solid #c7d2fe; }
+    .ps-bar span, .ps-rank { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    canvas { max-width:100% !important; }
+    .table-responsive { overflow:visible !important; }
+  }
+</style>
+
+<div class="ps-wrap">
+  <div class="ps-hero">
+    <div>
+      <h3><i class="bi bi-trophy me-2"></i><%= @product ? @product.name : 'Product Sales Report' %></h3>
+      <small>
+        <%= @product ? 'Item sales detail' : 'Product-wise sales & top sellers' %> ·
+        <%= @from_date.strftime('%d %b %Y') %> – <%= @to_date.strftime('%d %b %Y') %>
+      </small>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <% if @product %>
+        <%= link_to admin_reports_product_sales_path(base), class: 'btn btn-outline-light' do %><i class="bi bi-arrow-left me-1"></i>All Products<% end %>
+        <%= link_to admin_reports_product_sales_path(base.merge(product_id: @product.id, download: 'csv')), class: 'btn btn-light', data: { turbo: false } do %>
+          <i class="bi bi-filetype-csv me-1"></i>Download Orders CSV
+        <% end %>
+        <button type="button" class="btn btn-light" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print</button>
+      <% else %>
+        <%= link_to admin_reports_product_sales_path(base.merge(sort: @sort, search: @search, download: 'csv')), class: 'btn btn-light', data: { turbo: false } do %>
+          <i class="bi bi-filetype-csv me-1"></i>Download CSV
+        <% end %>
+        <button type="button" class="btn btn-light" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print</button>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="ps-print-head">
+    <div class="org"><%= (business_settings.business_name.presence rescue nil) || 'Dhanvantari Naturals' %></div>
+    <h2><%= @product ? "Product Sales — #{@product.name}" : 'Product Sales Report' %></h2>
+    <div class="meta">
+      Period: <%= @from_date.strftime('%d/%m/%Y') %> – <%= @to_date.strftime('%d/%m/%Y') %>
+      · Store: <%= @stores.detect { |x| x.id.to_s == @store_id.to_s }&.name || 'All' %>
+      · Category: <%= @categories.detect { |x| x.id.to_s == @category_id.to_s }&.name || 'All' %>
+      <% if !@product && @search.present? %> · Search: "<%= @search %>"<% end %>
+      <% unless @product %> · Sorted by: <%= ProductSalesReport::SORTS[@sort] %><% end %>
+    </div>
+    <div class="meta">Printed <%= Time.current.strftime('%d/%m/%Y %I:%M %p') %></div>
+  </div>
+
+  <%= form_with url: admin_reports_product_sales_path, method: :get, local: true, class: 'ps-card ps-filters', data: { turbo: false } do %>
+    <%= hidden_field_tag :sort, @sort %>
+    <div class="row g-2 align-items-end">
+      <div class="col-12 col-lg-3">
+        <label><i class="bi bi-search me-1"></i>Pick a Product (see its sales)</label>
+        <%= select_tag :product_id, options_for_select(@product_options, @product&.id),
+                       include_blank: '— All products (ranking) —', class: 'form-select form-select-sm', id: 'ps-product' %>
+      </div>
+      <div class="col-6 col-lg-2">
+        <label>Period</label>
+        <%= select_tag :period, options_for_select(Admin::ReportsController::PRODUCT_SALES_PERIODS.map(&:reverse), @period),
+                       class: 'form-select form-select-sm', id: 'ps-period' %>
+      </div>
+      <div class="col-6 col-lg-2 ps-custom">
+        <label>From</label><%= date_field_tag :from_date, @from_date, class: 'form-control form-control-sm' %>
+      </div>
+      <div class="col-6 col-lg-2 ps-custom">
+        <label>To</label><%= date_field_tag :to_date, @to_date, class: 'form-control form-control-sm' %>
+      </div>
+      <div class="col-6 col-lg-1">
+        <label>Store</label>
+        <%= select_tag :store_id, options_for_select(@stores.map { |s| [s.name, s.id] }, @store_id), include_blank: 'All', class: 'form-select form-select-sm' %>
+      </div>
+      <div class="col-6 col-lg-1">
+        <label>Category</label>
+        <%= select_tag :category_id, options_for_select(@categories.map { |c| [c.name, c.id] }, @category_id), include_blank: 'All', class: 'form-select form-select-sm' %>
+      </div>
+      <div class="col-6 col-lg-1">
+        <%= submit_tag 'Run', class: 'btn btn-primary btn-sm w-100', name: nil %>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @product %>
+    <% s = @summary %>
+    <div class="ps-kpis">
+      <div class="ps-card ps-kpi"><div class="k">Quantity Sold</div><div class="v"><%= qty.(s[:qty]) %> <small class="fs-6 text-muted"><%= @product.unit_type %></small></div><div class="s">in <%= s[:orders] %> orders</div></div>
+      <div class="ps-card ps-kpi"><div class="k">Sales Amount</div><div class="v"><%= money.(s[:revenue]) %></div><div class="s">avg <%= money.(s[:avg_price]) %> / unit</div></div>
+      <div class="ps-card ps-kpi"><div class="k">Rank</div><div class="v"><%= s[:rank] ? "##{s[:rank]}" : '—' %> <small class="fs-6 text-muted">of <%= s[:ranked_of] %></small></div><div class="s"><%= s[:share] %>% of all sales</div></div>
+      <div class="ps-card ps-kpi"><div class="k">Customers</div><div class="v"><%= s[:customers] %></div><div class="s">bought this item</div></div>
+      <div class="ps-card ps-kpi"><div class="k">Returned</div><div class="v text-danger"><%= qty.(s[:returned_qty]) %></div><div class="s"><%= money.(s[:returned_amount]) %> credited · net <%= money.(s[:net_revenue]) %></div></div>
+      <div class="ps-card ps-kpi"><div class="k">Last Sold</div><div class="v fs-6 pt-1"><%= s[:last_sold]&.strftime('%d %b %Y') || '—' %></div><div class="s">first: <%= s[:first_sold]&.strftime('%d %b %Y') || '—' %></div></div>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-lg-8">
+        <div class="ps-card h-100">
+          <h6 class="fw-bold mb-2"><i class="bi bi-graph-up me-1"></i>Sales Trend</h6>
+          <div style="height:280px"><canvas id="ps-trend"></canvas></div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="ps-card h-100">
+          <h6 class="fw-bold mb-2"><i class="bi bi-box-seam me-1"></i>By Pack Size</h6>
+          <% if @variants.empty? %>
+            <div class="text-muted small">No sales in this period.</div>
+          <% end %>
+          <% @variants.each do |v| %>
+            <div class="mb-2">
+              <div class="d-flex justify-content-between small"><strong><%= v[:label] %></strong><span><%= qty.(v[:qty]) %> sold · <%= money.(v[:revenue]) %></span></div>
+              <div class="ps-bar"><span style="width:<%= v[:share] %>%"></span></div>
+            </div>
+          <% end %>
+          <h6 class="fw-bold mt-3 mb-2"><i class="bi bi-people me-1"></i>Top Customers</h6>
+          <% if @top_customers.empty? %><div class="text-muted small">—</div><% end %>
+          <% @top_customers.each do |c| %>
+            <div class="d-flex justify-content-between small border-bottom py-1">
+              <span><%= c[:name] %><% if c[:phone].present? %> <span class="text-muted">· <%= c[:phone] %></span><% end %></span>
+              <span class="text-nowrap"><%= qty.(c[:qty]) %> · <strong><%= money.(c[:revenue]) %></strong></span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <div class="ps-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="fw-bold mb-0"><i class="bi bi-receipt me-1"></i>Orders with this item <small class="text-muted fw-normal">(latest <%= @orders.size %>; CSV has all)</small></h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover ps-table mb-0">
+          <thead><tr><th>Date</th><th>Booking</th><th>Customer</th><th>Store</th><th>Pack</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Discount</th><th class="text-end">Amount</th><th>Status</th></tr></thead>
+          <tbody>
+            <% if @orders.empty? %><tr><td colspan="10" class="text-center text-muted py-4">No sales of this item in the selected period.</td></tr><% end %>
+            <% @orders.each do |o| %>
+              <tr>
+                <td class="text-nowrap"><%= o[:date]&.strftime('%d %b %Y') %></td>
+                <td><%= link_to "##{o[:number]}", admin_booking_path(o[:booking]), class: 'text-decoration-none' %></td>
+                <td><%= o[:customer] %><% if o[:phone].present? %><div class="small text-muted"><%= o[:phone] %></div><% end %></td>
+                <td class="small"><%= o[:store] || '—' %></td>
+                <td class="small"><%= o[:variant] || '—' %></td>
+                <td class="text-end"><%= qty.(o[:qty]) %></td>
+                <td class="text-end"><%= money.(o[:unit_price]) %></td>
+                <td class="text-end text-danger small"><%= o[:discount].positive? ? money.(o[:discount]) : '—' %></td>
+                <td class="text-end fw-semibold"><%= money.(o[:total]) %></td>
+                <td class="small"><%= o[:status] %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+      (function () {
+        var pts = <%= raw @trend.to_json %>;
+        var el = document.getElementById('ps-trend');
+        if (!el || !window.Chart) return;
+        new Chart(el, {
+          data: {
+            labels: pts.map(function (p) { return p.label; }),
+            datasets: [
+              { type: 'bar', label: 'Qty sold', data: pts.map(function (p) { return p.qty; }), backgroundColor: 'rgba(99,102,241,.55)', borderRadius: 4, yAxisID: 'q' },
+              { type: 'line', label: 'Sales ₹', data: pts.map(function (p) { return p.revenue; }), borderColor: '#a855f7', backgroundColor: '#a855f7', tension: .3, pointRadius: 2, yAxisID: 'r' }
+            ]
+          },
+          options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+            scales: { q: { position: 'left', beginAtZero: true, title: { display: true, text: 'Qty' } },
+                      r: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: '₹' } } } }
+        });
+      })();
+    </script>
+  <% else %>
+    <% t = @totals %>
+    <div class="ps-kpis">
+      <div class="ps-card ps-kpi"><div class="k">Total Sales</div><div class="v"><%= money.(t[:revenue]) %></div><div class="s"><%= t[:orders] %> orders</div></div>
+      <div class="ps-card ps-kpi"><div class="k">Units Sold</div><div class="v"><%= qty.(t[:qty]) %></div><div class="s">across <%= t[:products] %> products</div></div>
+      <div class="ps-card ps-kpi"><div class="k">Top Seller</div><div class="v fs-6 pt-1"><%= @report.rows(sort: 'qty').first&.dig(:name) || '—' %></div><div class="s">by quantity</div></div>
+      <div class="ps-card ps-kpi"><div class="k">Highest Revenue</div><div class="v fs-6 pt-1"><%= @report.rows(sort: 'revenue').first&.dig(:name) || '—' %></div><div class="s">by sales amount</div></div>
+      <div class="ps-card ps-kpi"><div class="k">Returns</div><div class="v text-danger"><%= money.(t[:returned_amount]) %></div><div class="s">credit notes in period</div></div>
+    </div>
+
+    <% top = @rows.first(10) %>
+    <% if top.any? %>
+      <div class="ps-card mb-3">
+        <h6 class="fw-bold mb-2"><i class="bi bi-bar-chart me-1"></i>Top 10 by <%= ProductSalesReport::SORTS[@sort] %></h6>
+        <div style="height:<%= [top.size * 30 + 40, 160].max %>px"><canvas id="ps-top"></canvas></div>
+      </div>
+    <% end %>
+
+    <div class="ps-card">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <h6 class="fw-bold mb-0"><i class="bi bi-list-ol me-1"></i>All Products <small class="text-muted fw-normal">(<%= @rows.size %>)</small></h6>
+        <%= form_with url: admin_reports_product_sales_path, method: :get, local: true, class: 'd-flex gap-2', data: { turbo: false } do %>
+          <% base.merge(sort: @sort).each do |k, v| %><%= hidden_field_tag k, v %><% end %>
+          <%= search_field_tag :search, @search, placeholder: 'Search product / SKU', class: 'form-control form-control-sm', style: 'min-width:220px' %>
+          <button class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
+        <% end %>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover ps-table mb-0">
+          <thead>
+            <tr class="ps-sort">
+              <th>#</th><th>Product</th><th>Category</th>
+              <% { 'qty' => 'Qty Sold', 'orders' => 'Orders', 'customers' => 'Customers', 'revenue' => 'Sales Amount' }.each do |k, l| %>
+                <th class="text-end"><%= link_to admin_reports_product_sales_path(base.merge(sort: k, search: @search)), class: (@sort == k ? 'active' : nil) do %><%= l %><%= ' ▼' if @sort == k %><% end %></th>
+              <% end %>
+              <th class="text-end">Avg Price</th><th>Share</th><th class="text-end">Returned</th><th>Last Sold</th><th class="ps-noprint"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if @rows.empty? %><tr><td colspan="12" class="text-center text-muted py-4">No sales in the selected period.</td></tr><% end %>
+            <% @rows.each_with_index do |r, i| %>
+              <tr>
+                <td><span class="ps-rank <%= "r#{i + 1}" if i < 3 %>"><%= i + 1 %></span></td>
+                <td class="ps-pname"><%= link_to r[:name], admin_reports_product_sales_path(base.merge(product_id: r[:product_id])) %><% if r[:sku].present? %><div class="small text-muted"><%= r[:sku] %></div><% end %></td>
+                <td class="small"><%= r[:category] %></td>
+                <td class="text-end fw-semibold"><%= qty.(r[:qty]) %> <small class="text-muted"><%= r[:unit] %></small></td>
+                <td class="text-end"><%= r[:orders] %></td>
+                <td class="text-end"><%= r[:customers] %></td>
+                <td class="text-end fw-semibold"><%= money.(r[:revenue]) %></td>
+                <td class="text-end small"><%= money.(r[:avg_price]) %></td>
+                <td style="min-width:110px"><div class="small"><%= r[:share] %>%</div><div class="ps-bar"><span style="width:<%= r[:share] %>%"></span></div></td>
+                <td class="text-end small <%= 'text-danger' if r[:returned_qty].positive? %>"><%= r[:returned_qty].positive? ? "#{qty.(r[:returned_qty])} (#{money.(r[:returned_amount])})" : '—' %></td>
+                <td class="small text-nowrap"><%= r[:last_sold]&.strftime('%d %b %Y') %></td>
+                <td class="ps-noprint"><%= link_to admin_reports_product_sales_path(base.merge(product_id: r[:product_id])), class: 'btn btn-sm btn-outline-primary', title: 'View item sales' do %><i class="bi bi-eye"></i><% end %></td>
+              </tr>
+            <% end %>
+          </tbody>
+          <% if @rows.any? %>
+            <tfoot><tr class="fw-bold"><td></td><td>Total</td><td></td><td class="text-end"><%= qty.(@rows.sum { |r| r[:qty] }) %></td><td></td><td></td><td class="text-end"><%= money.(@rows.sum { |r| r[:revenue] }) %></td><td colspan="4"></td><td class="ps-noprint"></td></tr></tfoot>
+          <% end %>
+        </table>
+      </div>
+      <p class="text-muted small mt-2 mb-0">Sales amount = what customers were charged for the line (incl. GST, after item discount). Cancelled, returned, refunded and draft bookings are excluded. Click a product to see its full sales detail.</p>
+    </div>
+
+    <% if top.any? %>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+      <script>
+        (function () {
+          var rows = <%= raw top.map { |r| { name: r[:name], v: (@sort == 'revenue' ? r[:revenue] : r[@sort.to_sym]), id: r[:product_id] } }.to_json %>;
+          var el = document.getElementById('ps-top');
+          if (!el || !window.Chart) return;
+          var base = <%= raw admin_reports_product_sales_path(base).to_json %>;
+          new Chart(el, {
+            type: 'bar',
+            data: { labels: rows.map(function (r) { return r.name; }),
+                    datasets: [{ label: <%= raw ProductSalesReport::SORTS[@sort].to_json %>, data: rows.map(function (r) { return r.v; }),
+                                 backgroundColor: 'rgba(124,58,237,.6)', borderRadius: 5 }] },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                       onClick: function (_e, els) { if (els.length) { window.location = base + (base.indexOf('?') >= 0 ? '&' : '?') + 'product_id=' + rows[els[0].index].id; } } }
+          });
+        })();
+      </script>
+    <% end %>
+  <% end %>
+</div>
+
+<script>
+  (function () {
+    var period = document.getElementById('ps-period');
+    var customs = document.querySelectorAll('.ps-custom');
+    function sync() { customs.forEach(function (el) { el.style.display = period.value === 'custom' ? '' : 'none'; }); }
+    period.addEventListener('change', sync); sync();
+    // Picking a product opens its detail straight away.
+    document.getElementById('ps-product').addEventListener('change', function () { this.form.submit(); });
+  })();
+</script>

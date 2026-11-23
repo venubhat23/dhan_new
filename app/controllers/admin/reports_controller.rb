@@ -630,6 +630,114 @@ class Admin::ReportsController < Admin::ApplicationController
     @total = @transactions.sum { |t| t[:amount].to_f }.round(2)
   end
 
+  PRODUCT_SALES_PERIODS = [
+    ['today', 'Today'], ['last_7', 'Last 7 Days'], ['this_month', 'This Month'], ['last_month', 'Last Month'],
+    ['last_30', 'Last 30 Days'], ['this_quarter', 'This Quarter'], ['this_fy', 'This Financial Year'],
+    ['last_12_months', 'Last 12 Months'], ['custom', 'Custom Range']
+  ].freeze
+
+  # GET /admin/reports/product_sales
+  # Product-wise sales: ranked best sellers, and (with product_id) one item's
+  # full sales picture. ?download=csv exports the list or the item's orders.
+  def product_sales
+    today = Date.current
+    @period = PRODUCT_SALES_PERIODS.map(&:first).include?(params[:period]) ? params[:period] : 'this_month'
+    fy_start = Date.new(today.month >= 4 ? today.year : today.year - 1, 4, 1)
+    @from_date, @to_date =
+      case @period
+      when 'today' then [today, today]
+      when 'last_7' then [today - 6, today]
+      when 'last_month' then [today.prev_month.beginning_of_month, today.prev_month.end_of_month]
+      when 'last_30' then [today - 29, today]
+      when 'this_quarter' then [today.beginning_of_quarter, today]
+      when 'this_fy' then [fy_start, today]
+      when 'last_12_months' then [(today - 11.months).beginning_of_month, today]
+      when 'custom'
+        f = (Date.parse(params[:from_date].to_s) rescue today.beginning_of_month)
+        t = (Date.parse(params[:to_date].to_s) rescue today)
+        [f, [t, f].max]
+      else [today.beginning_of_month, today]
+      end
+    @sort = ProductSalesReport::SORTS.key?(params[:sort]) ? params[:sort] : 'qty'
+    @search = params[:search].to_s.strip
+    @stores = Store.order(:name)
+    @categories = Category.order(:name)
+    @store_id = params[:store_id].presence
+    @category_id = params[:category_id].presence
+
+    @report = ProductSalesReport.new(from_date: @from_date, to_date: @to_date, store_id: @store_id, category_id: @category_id)
+    @product = Product.find_by(id: params[:product_id]) if params[:product_id].present?
+    stamp = "#{@from_date.strftime('%Y%m%d')}_#{@to_date.strftime('%Y%m%d')}"
+
+    if @product
+      @summary = @report.product_summary(@product.id)
+      if params[:download] == 'csv'
+        return send_data product_sales_orders_csv(@report.order_lines(@product.id)),
+                         filename: "product_sales_#{@product.name.parameterize}_#{stamp}.csv", type: 'text/csv', disposition: 'attachment'
+      end
+      @variants = @report.variant_rows(@product.id)
+      @trend = @report.trend(@product.id)
+      @top_customers = @report.top_customers(@product.id)
+      @orders = @report.order_lines(@product.id, limit: 100)
+    else
+      @rows = @report.rows(sort: @sort, search: @search)
+      if params[:download] == 'csv'
+        return send_data product_sales_csv(@rows), filename: "product_sales_#{stamp}.csv", type: 'text/csv', disposition: 'attachment'
+      end
+    end
+    @totals = @report.totals
+    @product_options = @report.product_options
+  end
+
+  # GET /admin/reports/customer_bookings
+  # Customer booking / delivery report: bookings with items, qty, customer and
+  # delivery address. Filters: period (on booking or delivery date), statuses,
+  # customer, delivery person, store, product, payment status, address.
+  # ?download=csv exports the current view (bookings / items / customers).
+  def customer_bookings
+    today = Date.current
+    @period = PRODUCT_SALES_PERIODS.map(&:first).include?(params[:period]) ? params[:period] : 'this_month'
+    @from_date, @to_date = report_period_range(@period, today)
+    @date_basis = CustomerBookingReport::DATE_BASES.key?(params[:date_basis]) ? params[:date_basis] : 'booking'
+    @view = CustomerBookingReport::VIEWS.key?(params[:view]) ? params[:view] : 'bookings'
+    @statuses = Array(params[:statuses]).reject(&:blank?) & Booking::STATUS_LABELS.keys
+    @filters = {
+      from_date: @from_date, to_date: @to_date, date_basis: @date_basis, statuses: @statuses,
+      customer: params[:customer].to_s.strip.presence, customer_id: params[:customer_id].presence,
+      delivery_person_id: params[:delivery_person_id].presence, store_id: params[:store_id].presence,
+      product_id: params[:product_id].presence, payment_status: params[:payment_status].presence,
+      address: params[:address].to_s.strip.presence
+    }
+    @report = CustomerBookingReport.new(**@filters)
+    @stores = Store.order(:name)
+    @delivery_persons = DeliveryPerson.order(:first_name, :last_name)
+    @products = Product.order(:name).pluck(:name, :id)
+    stamp = "#{@from_date.strftime('%Y%m%d')}_#{@to_date.strftime('%Y%m%d')}"
+
+    if params[:download] == 'csv'
+      return send_data customer_bookings_csv(@report, @view),
+                       filename: "customer_bookings_#{@view}_#{stamp}.csv", type: 'text/csv', disposition: 'attachment'
+    end
+
+    @totals = @report.totals
+    if params[:print].present?
+      case @view
+      when 'items' then @items = @report.items
+      when 'customers' then @customer_rows = @report.customer_rows
+      else @bookings = @report.bookings
+      end
+      @product_qty = @report.product_qty_rows
+      return render :customer_bookings_print, layout: false
+    end
+    @status_counts = @report.status_counts
+    @product_qty = @report.product_qty_rows.first(15)
+    case @view
+    when 'items' then @items = @report.items.page(params[:page]).per(100)
+    when 'customers' then @customer_rows = @report.customer_rows
+    else @bookings = @report.bookings.page(params[:page]).per(50)
+    end
+  end
+
   # GET /admin/reports/gstr1
   # GSTR-1 return in the accountant's workbook layout. Download as the full
   # Excel workbook (?download=xlsx) or one sheet as CSV (?download=csv&sheet=b2b).
@@ -672,6 +780,83 @@ class Admin::ReportsController < Admin::ApplicationController
   end
 
   private
+
+  def report_period_range(period, today)
+    fy_start = Date.new(today.month >= 4 ? today.year : today.year - 1, 4, 1)
+    case period
+    when 'today' then [today, today]
+    when 'last_7' then [today - 6, today]
+    when 'last_month' then [today.prev_month.beginning_of_month, today.prev_month.end_of_month]
+    when 'last_30' then [today - 29, today]
+    when 'this_quarter' then [today.beginning_of_quarter, today]
+    when 'this_fy' then [fy_start, today]
+    when 'last_12_months' then [(today - 11.months).beginning_of_month, today]
+    when 'custom'
+      f = (Date.parse(params[:from_date].to_s) rescue today.beginning_of_month)
+      t = (Date.parse(params[:to_date].to_s) rescue today)
+      [f, [t, f].max]
+    else [today.beginning_of_month, today.end_of_month]
+    end
+  end
+
+  def customer_bookings_csv(report, view)
+    require 'csv'
+    CSV.generate do |csv|
+      case view
+      when 'items'
+        csv << ['Booking Date', 'Delivery Date', 'Booking', 'Customer', 'Phone', 'Delivery Address', 'Product', 'Qty', 'Unit Price (Rs)',
+                'Discount (Rs)', 'Amount (Rs)', 'Status', 'Delivery Person', 'Store']
+        report.items.each do |i|
+          b = i.booking
+          csv << [report.booking_date(b)&.strftime('%d/%m/%Y'), b.expected_delivery_date&.strftime('%d/%m/%Y'), b.booking_number,
+                  report.customer_name(b), report.customer_phone(b), report.address_for(b), CustomerBookingReport.item_label(i),
+                  i.quantity.to_f, i.price.to_f, i.discount_amount.to_f, i.total.to_f, b.status_label,
+                  report.delivery_person_name(b), b.store&.name]
+        end
+      when 'customers'
+        csv << ['Customer', 'Phone', 'Address', 'Bookings', 'Delivered', 'Total Qty', 'Amount (Rs)', 'Last Booking']
+        report.customer_rows.each do |r|
+          csv << [r[:name], r[:phone], r[:address], r[:bookings], r[:delivered], r[:qty].round(2), r[:amount].round(2),
+                  r[:last_date]&.strftime('%d/%m/%Y')]
+        end
+      else
+        csv << ['Booking Date', 'Delivery Date', 'Booking', 'Customer', 'Phone', 'Delivery Address', 'Items', 'Total Qty',
+                'Amount (Rs)', 'Payment', 'Status', 'Delivery Person', 'Store']
+        report.bookings.each do |b|
+          items = b.booking_items.map { |i| "#{CustomerBookingReport.item_label(i)} x #{i.quantity.to_f.to_s.sub(/\.0$/, '')}" }.join('; ')
+          csv << [report.booking_date(b)&.strftime('%d/%m/%Y'), b.expected_delivery_date&.strftime('%d/%m/%Y'), b.booking_number,
+                  report.customer_name(b), report.customer_phone(b), report.address_for(b), items,
+                  b.booking_items.sum { |i| i.quantity.to_f }, b.total_amount.to_f, b.payment_status.to_s.humanize,
+                  b.status_label, report.delivery_person_name(b), b.store&.name]
+        end
+      end
+    end
+  end
+
+  def product_sales_csv(rows)
+    require 'csv'
+    CSV.generate do |csv|
+      csv << ['Rank', 'Product', 'SKU', 'Category', 'Qty Sold', 'Unit', 'Orders', 'Customers', 'Revenue (Rs)', 'Avg Price (Rs)',
+              'Share %', 'Returned Qty', 'Returned (Rs)', 'Last Sold']
+      rows.each_with_index do |r, i|
+        csv << [i + 1, r[:name], r[:sku], r[:category], r[:qty], r[:unit], r[:orders], r[:customers], r[:revenue], r[:avg_price],
+                r[:share], r[:returned_qty], r[:returned_amount], r[:last_sold]&.strftime('%d/%m/%Y')]
+      end
+      csv << ['', 'TOTAL', '', '', rows.sum { |r| r[:qty] }.round(2), '', '', '', rows.sum { |r| r[:revenue] }.round(2)]
+    end
+  end
+
+  def product_sales_orders_csv(lines)
+    require 'csv'
+    CSV.generate do |csv|
+      csv << ['Date', 'Booking', 'Customer', 'Phone', 'Store', 'Pack Size', 'Qty', 'Unit Price (Rs)', 'Discount (Rs)', 'Amount (Rs)', 'Status']
+      lines.each do |l|
+        csv << [l[:date]&.strftime('%d/%m/%Y'), l[:number], l[:customer], l[:phone], l[:store], l[:variant], l[:qty], l[:unit_price],
+                l[:discount], l[:total], l[:status]]
+      end
+      csv << ['', '', 'TOTAL', '', '', '', lines.sum { |l| l[:qty] }.round(2), '', '', lines.sum { |l| l[:total] }.round(2)]
+    end
+  end
 
   def load_profit_loss_filters
     @date_range = params[:date_range].presence

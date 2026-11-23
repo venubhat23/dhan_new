@@ -868,6 +868,8 @@ Rails.application.routes.draw do
     get 'reports/enhanced_sales', to: 'reports#enhanced_sales'
     get 'reports/profit_loss', to: 'reports#profit_loss'
     get 'reports/gstr1', to: 'reports#gstr1', as: 'reports_gstr1'
+    get 'reports/product_sales', to: 'reports#product_sales', as: 'reports_product_sales'
+    get 'reports/customer_bookings', to: 'reports#customer_bookings', as: 'reports_customer_bookings'
     get 'reports/profit_loss/account', to: 'reports#profit_loss_account', as: 'reports_profit_loss_account'
 
     # Import Section

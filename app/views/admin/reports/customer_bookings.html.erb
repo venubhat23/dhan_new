@@ -1,0 +1,250 @@
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<% base = { period: @period, from_date: @from_date, to_date: @to_date, date_basis: @date_basis, view: @view, statuses: @statuses,
+            customer: @filters[:customer], customer_id: @filters[:customer_id], delivery_person_id: @filters[:delivery_person_id],
+            store_id: @filters[:store_id], product_id: @filters[:product_id], payment_status: @filters[:payment_status],
+            address: @filters[:address] }.compact_blank %>
+<% money = ->(v) { "₹#{number_with_delimiter(number_with_precision(v.to_f, precision: 2))}" } %>
+<% qty = ->(v) { number_with_precision(v.to_f, precision: 2, strip_insignificant_zeros: true, delimiter: ',') } %>
+<style>
+  .cb-wrap { max-width: 1500px; margin: 0 auto; }
+  .cb-hero { background: linear-gradient(135deg,#0f766e,#1e3a8a); color:#fff; border-radius:16px; padding:18px 22px; margin-bottom:14px;
+             display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+  .cb-hero h3 { margin:0; font-weight:700; }
+  .cb-hero small { opacity:.85; }
+  .cb-card { background:#fff; border:1px solid #e6e8ee; border-radius:14px; padding:14px 16px; }
+  .cb-filters label { font-size:12px; color:#6b7280; margin-bottom:2px; }
+  .cb-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin:14px 0; }
+  .cb-kpi .k { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; }
+  .cb-kpi .v { font-size:20px; font-weight:700; color:#111827; }
+  .cb-table th { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#6b7280; background:#f8fafc; white-space:nowrap; }
+  .cb-table td { vertical-align:top; font-size:13px; }
+  .cb-items { margin:0; padding-left:0; list-style:none; }
+  .cb-items li { white-space:nowrap; }
+  .cb-items .q { font-weight:600; color:#0f766e; }
+  .cb-addr { max-width:260px; white-space:normal; color:#374151; }
+  .cb-status { display:flex; flex-wrap:wrap; gap:6px; }
+  .cb-status label { border:1px solid #d1d5db; border-radius:999px; padding:3px 10px; font-size:12px; cursor:pointer; user-select:none; margin:0; }
+  .cb-status input { display:none; }
+  .cb-status input:checked + span { font-weight:700; }
+  .cb-status label:has(input:checked) { background:#0f766e; color:#fff; border-color:#0f766e; }
+  .cb-tabs a { text-decoration:none; padding:6px 14px; border-radius:8px; color:#374151; font-weight:600; font-size:14px; }
+  .cb-tabs a.active { background:#0f766e; color:#fff; }
+</style>
+
+<div class="cb-wrap">
+  <div class="cb-hero">
+    <div>
+      <h3><i class="bi bi-truck me-2"></i>Customer Booking Report</h3>
+      <small>
+        Bookings, items, quantity & delivery address · by <%= CustomerBookingReport::DATE_BASES[@date_basis].downcase %> ·
+        <%= @from_date.strftime('%d %b %Y') %> – <%= @to_date.strftime('%d %b %Y') %>
+      </small>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <%= link_to admin_reports_customer_bookings_path(base.merge(download: 'csv')), class: 'btn btn-light', data: { turbo: false } do %>
+        <i class="bi bi-filetype-csv me-1"></i>Download CSV (<%= CustomerBookingReport::VIEWS[@view] %>)
+      <% end %>
+      <%= link_to admin_reports_customer_bookings_path(base.merge(print: 1)), class: 'btn btn-outline-light', target: '_blank', data: { turbo: false } do %>
+        <i class="bi bi-printer me-1"></i>Print (<%= CustomerBookingReport::VIEWS[@view] %>)
+      <% end %>
+    </div>
+  </div>
+
+  <%= form_with url: admin_reports_customer_bookings_path, method: :get, local: true, class: 'cb-card cb-filters', data: { turbo: false } do %>
+    <%= hidden_field_tag :view, @view %>
+    <div class="row g-2 align-items-end">
+      <div class="col-6 col-lg-2">
+        <label>Date Based On</label>
+        <%= select_tag :date_basis, options_for_select(CustomerBookingReport::DATE_BASES.map(&:reverse), @date_basis), class: 'form-select form-select-sm' %>
+      </div>
+      <div class="col-6 col-lg-2">
+        <label>Period</label>
+        <%= select_tag :period, options_for_select(Admin::ReportsController::PRODUCT_SALES_PERIODS.map(&:reverse), @period),
+                       class: 'form-select form-select-sm', id: 'cb-period' %>
+      </div>
+      <div class="col-6 col-lg-2 cb-custom">
+        <label>From</label><%= date_field_tag :from_date, @from_date, class: 'form-control form-control-sm' %>
+      </div>
+      <div class="col-6 col-lg-2 cb-custom">
+        <label>To</label><%= date_field_tag :to_date, @to_date, class: 'form-control form-control-sm' %>
+      </div>
+      <div class="col-12 col-lg-4">
+        <label><i class="bi bi-person me-1"></i>Customer Name / Phone</label>
+        <%= text_field_tag :customer, @filters[:customer], class: 'form-control form-control-sm', placeholder: 'Type name or mobile number' %>
+      </div>
+
+      <div class="col-6 col-lg-3">
+        <label>Product</label>
+        <%= select_tag :product_id, options_for_select(@products, @filters[:product_id]), include_blank: 'All products', class: 'form-select form-select-sm' %>
+      </div>
+      <div class="col-6 col-lg-2">
+        <label>Delivery Person</label>
+        <%= select_tag :delivery_person_id, options_for_select(@delivery_persons.map { |d| [d.display_name, d.id] }, @filters[:delivery_person_id]),
+                       include_blank: 'All', class: 'form-select form-select-sm' %>
+      </div>
+      <div class="col-6 col-lg-2">
+        <label>Store</label>
+        <%= select_tag :store_id, options_for_select(@stores.map { |s| [s.name, s.id] }, @filters[:store_id]), include_blank: 'All', class: 'form-select form-select-sm' %>
+      </div>
+      <div class="col-6 col-lg-1">
+        <label>Payment</label>
+        <%= select_tag :payment_status, options_for_select(Booking.payment_statuses.keys.map { |k| [k.humanize, k] }, @filters[:payment_status]),
+                       include_blank: 'All', class: 'form-select form-select-sm' %>
+      </div>
+      <div class="col-12 col-lg-3">
+        <label><i class="bi bi-geo-alt me-1"></i>Delivery Address (area / pincode)</label>
+        <%= text_field_tag :address, @filters[:address], class: 'form-control form-control-sm', placeholder: 'e.g. Jayanagar or 560041' %>
+      </div>
+      <div class="col-6 col-lg-1">
+        <%= submit_tag 'Run', class: 'btn btn-primary btn-sm w-100', name: nil %>
+      </div>
+
+      <div class="col-12">
+        <label>Status <small class="text-muted">(pick one or more; none = all)</small></label>
+        <div class="cb-status">
+          <% Booking::STATUS_LABELS.each do |value, label| %>
+            <label>
+              <%= check_box_tag 'statuses[]', value, @statuses.include?(value), id: "st-#{value}" %>
+              <span><%= label %> <small>(<%= @status_counts[value].to_i %>)</small></span>
+            </label>
+          <% end %>
+          <%= link_to 'Clear filters', admin_reports_customer_bookings_path(view: @view), class: 'small ms-2 align-self-center' %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="cb-kpis">
+    <div class="cb-card cb-kpi"><div class="k">Bookings</div><div class="v"><%= number_with_delimiter(@totals[:bookings]) %></div></div>
+    <div class="cb-card cb-kpi"><div class="k">Customers</div><div class="v"><%= number_with_delimiter(@totals[:customers]) %></div></div>
+    <div class="cb-card cb-kpi"><div class="k">Booking Items</div><div class="v"><%= number_with_delimiter(@totals[:lines]) %></div></div>
+    <div class="cb-card cb-kpi"><div class="k">Total Quantity</div><div class="v"><%= qty.(@totals[:qty]) %></div></div>
+    <div class="cb-card cb-kpi"><div class="k">Amount</div><div class="v"><%= money.(@totals[:amount]) %></div></div>
+    <div class="cb-card cb-kpi"><div class="k">Delivered / Open</div><div class="v"><span class="text-success"><%= @totals[:delivered] %></span> / <span class="text-warning"><%= @totals[:pending] %></span></div></div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-xl-9">
+      <div class="cb-card">
+        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+          <div class="cb-tabs d-flex gap-1">
+            <% CustomerBookingReport::VIEWS.each do |key, label| %>
+              <%= link_to label, admin_reports_customer_bookings_path(base.merge(view: key)), class: (key == @view ? 'active' : nil) %>
+            <% end %>
+          </div>
+          <div class="d-flex gap-1">
+            <%= link_to admin_reports_customer_bookings_path(base.merge(download: 'csv')), class: 'btn btn-outline-success btn-sm', data: { turbo: false } do %>
+              <i class="bi bi-filetype-csv me-1"></i>CSV
+            <% end %>
+            <%= link_to admin_reports_customer_bookings_path(base.merge(print: 1)), class: 'btn btn-outline-secondary btn-sm', target: '_blank', data: { turbo: false } do %>
+              <i class="bi bi-printer me-1"></i>Print
+            <% end %>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <% if @view == 'items' %>
+            <table class="table table-sm table-hover cb-table mb-0">
+              <thead><tr><th>Date</th><th>Delivery</th><th>Booking</th><th>Customer</th><th>Delivery Address</th><th>Product</th><th class="text-end">Qty</th><th class="text-end">Amount</th><th>Status</th></tr></thead>
+              <tbody>
+                <% if @items.empty? %><tr><td colspan="9" class="text-center text-muted py-4">No booking items match these filters.</td></tr><% end %>
+                <% @items.each do |i| b = i.booking %>
+                  <tr>
+                    <td class="text-nowrap"><%= @report.booking_date(b)&.strftime('%d %b %Y') %></td>
+                    <td class="text-nowrap"><%= b.expected_delivery_date&.strftime('%d %b %Y') || '—' %></td>
+                    <td><%= link_to "##{b.booking_number}", admin_booking_path(b), class: 'text-decoration-none' %></td>
+                    <td><%= @report.customer_name(b) %><% if (ph = @report.customer_phone(b)).present? %><div class="small text-muted"><%= ph %></div><% end %></td>
+                    <td class="cb-addr small"><%= @report.address_for(b) || '—' %></td>
+                    <td><%= CustomerBookingReport.item_label(i) %></td>
+                    <td class="text-end fw-semibold"><%= qty.(i.quantity) %></td>
+                    <td class="text-end"><%= money.(i.total) %></td>
+                    <td><span class="badge bg-<%= b.status_color %>"><%= b.status_label %></span></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+            <div class="mt-2"><%= paginate @items %></div>
+
+          <% elsif @view == 'customers' %>
+            <table class="table table-sm table-hover cb-table mb-0">
+              <thead><tr><th>Customer</th><th>Address</th><th class="text-end">Bookings</th><th class="text-end">Delivered</th><th class="text-end">Total Qty</th><th class="text-end">Amount</th><th>Statuses</th><th>Last Booking</th><th></th></tr></thead>
+              <tbody>
+                <% if @customer_rows.empty? %><tr><td colspan="9" class="text-center text-muted py-4">No customers match these filters.</td></tr><% end %>
+                <% @customer_rows.each do |r| %>
+                  <tr>
+                    <td><strong><%= r[:name] %></strong><% if r[:phone].present? %><div class="small text-muted"><%= r[:phone] %></div><% end %></td>
+                    <td class="cb-addr small"><%= r[:address] || '—' %></td>
+                    <td class="text-end"><%= r[:bookings] %></td>
+                    <td class="text-end text-success"><%= r[:delivered] %></td>
+                    <td class="text-end fw-semibold"><%= qty.(r[:qty]) %></td>
+                    <td class="text-end"><%= money.(r[:amount]) %></td>
+                    <td class="small"><% r[:statuses].each do |st, n| %><span class="badge bg-light text-dark border me-1"><%= Booking.status_label(st) %> <%= n %></span><% end %></td>
+                    <td class="text-nowrap small"><%= r[:last_date]&.strftime('%d %b %Y') %></td>
+                    <td>
+                      <% link_params = r[:customer_id] ? { customer_id: r[:customer_id] } : { customer: r[:phone].presence || r[:name] } %>
+                      <%= link_to 'Bookings', admin_reports_customer_bookings_path(base.except(:customer, :customer_id).merge(view: 'bookings').merge(link_params)), class: 'btn btn-outline-secondary btn-sm py-0' %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+
+          <% else %>
+            <table class="table table-sm table-hover cb-table mb-0">
+              <thead><tr><th>Date</th><th>Delivery</th><th>Booking</th><th>Customer</th><th>Delivery Address</th><th>Items × Qty</th><th class="text-end">Qty</th><th class="text-end">Amount</th><th>Payment</th><th>Status</th><th>Delivery By</th></tr></thead>
+              <tbody>
+                <% if @bookings.empty? %><tr><td colspan="11" class="text-center text-muted py-4">No bookings match these filters.</td></tr><% end %>
+                <% @bookings.each do |b| %>
+                  <tr>
+                    <td class="text-nowrap"><%= @report.booking_date(b)&.strftime('%d %b %Y') %></td>
+                    <td class="text-nowrap"><%= b.expected_delivery_date&.strftime('%d %b %Y') || '—' %><% if b.expected_delivery_time.present? %><div class="small text-muted"><%= b.expected_delivery_time %></div><% end %></td>
+                    <td><%= link_to "##{b.booking_number}", admin_booking_path(b), class: 'text-decoration-none' %><% if b.store %><div class="small text-muted"><%= b.store.name %></div><% end %></td>
+                    <td><%= @report.customer_name(b) %><% if (ph = @report.customer_phone(b)).present? %><div class="small text-muted"><%= ph %></div><% end %></td>
+                    <td class="cb-addr small"><%= @report.address_for(b) || '—' %></td>
+                    <td>
+                      <ul class="cb-items">
+                        <% b.booking_items.each do |i| %>
+                          <li><%= CustomerBookingReport.item_label(i) %> × <span class="q"><%= qty.(i.quantity) %></span></li>
+                        <% end %>
+                      </ul>
+                    </td>
+                    <td class="text-end fw-semibold"><%= qty.(b.booking_items.sum { |i| i.quantity.to_f }) %></td>
+                    <td class="text-end"><%= money.(b.total_amount) %></td>
+                    <td class="small"><%= b.payment_status.to_s.humanize.presence || '—' %></td>
+                    <td><span class="badge bg-<%= b.status_color %>"><%= b.status_label %></span></td>
+                    <td class="small"><%= @report.delivery_person_name(b) || '—' %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+            <div class="mt-2"><%= paginate @bookings %></div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3">
+      <div class="cb-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0"><i class="bi bi-box-seam me-1"></i>Quantity by Product</h6>
+          <%= link_to admin_reports_customer_bookings_path(base.merge(view: 'products', print: 1)), class: 'btn btn-outline-secondary btn-sm py-0', target: '_blank', title: 'Print packing list', data: { turbo: false } do %><i class="bi bi-printer"></i><% end %>
+        </div>
+        <% if @product_qty.empty? %><div class="text-muted small">Nothing booked.</div><% end %>
+        <% @product_qty.each do |p| %>
+          <div class="d-flex justify-content-between small border-bottom py-1">
+            <span><%= p[:name] %><% if p[:pack] %> <span class="text-muted">(<%= p[:pack] %>)</span><% end %></span>
+            <span class="text-nowrap"><strong><%= qty.(p[:qty]) %></strong> · <%= p[:bookings] %> bk</span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var sel = document.getElementById('cb-period');
+    function toggle() { document.querySelectorAll('.cb-custom').forEach(function (el) { el.style.display = sel.value === 'custom' ? '' : 'none'; }); }
+    sel.addEventListener('change', toggle); toggle();
+  })();
+</script>
