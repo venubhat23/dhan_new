@@ -189,6 +189,25 @@
               </tbody>
             </table>
 
+          <% elsif @view == 'products' %>
+            <table class="table table-sm table-hover cb-table mb-0">
+              <thead><tr><th>#</th><th>Product</th><th>Pack Size</th><th class="text-end">Total Qty</th><th>Unit</th><th class="text-end">Bookings</th><th class="text-end">Amount</th></tr></thead>
+              <tbody>
+                <% if @all_product_qty.empty? %><tr><td colspan="7" class="text-center text-muted py-4">Nothing booked for these filters.</td></tr><% end %>
+                <% @all_product_qty.each_with_index do |p, idx| %>
+                  <tr>
+                    <td class="text-muted"><%= idx + 1 %></td>
+                    <td class="fw-semibold"><%= p[:name] %></td>
+                    <td><%= p[:pack] || '—' %></td>
+                    <td class="text-end fw-bold text-success"><%= qty.(p[:qty]) %></td>
+                    <td class="small text-muted"><%= p[:unit] %></td>
+                    <td class="text-end"><%= p[:bookings] %></td>
+                    <td class="text-end"><%= money.(p[:amount]) %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+
           <% else %>
             <table class="table table-sm table-hover cb-table mb-0">
               <thead><tr><th>Date</th><th>Delivery</th><th>Booking</th><th>Customer</th><th>Delivery Address</th><th>Items × Qty</th><th class="text-end">Qty</th><th class="text-end">Amount</th><th>Payment</th><th>Status</th><th>Delivery By</th></tr></thead>

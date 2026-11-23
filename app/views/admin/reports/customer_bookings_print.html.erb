@@ -1,0 +1,158 @@
+<% money = ->(v) { "₹#{number_with_delimiter(number_with_precision(v.to_f, precision: 2))}" } %>
+<% qty = ->(v) { number_with_precision(v.to_f, precision: 2, strip_insignificant_zeros: true, delimiter: ',') } %>
+<%
+  applied = []
+  applied << "Status: #{@statuses.map { |s| Booking.status_label(s) }.join(', ')}" if @statuses.any?
+  applied << "Customer: #{@filters[:customer]}" if @filters[:customer]
+  applied << "Customer: #{Customer.find_by(id: @filters[:customer_id])&.display_name}" if @filters[:customer_id]
+  applied << "Product: #{Product.find_by(id: @filters[:product_id])&.name}" if @filters[:product_id]
+  applied << "Delivery Person: #{DeliveryPerson.find_by(id: @filters[:delivery_person_id])&.display_name}" if @filters[:delivery_person_id]
+  applied << "Store: #{Store.find_by(id: @filters[:store_id])&.name}" if @filters[:store_id]
+  applied << "Payment: #{@filters[:payment_status].humanize}" if @filters[:payment_status]
+  applied << "Address: #{@filters[:address]}" if @filters[:address]
+%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Customer Booking Report – <%= CustomerBookingReport::VIEWS[@view] %></title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; margin: 16px; background: #fff; }
+    h1 { font-size: 18px; margin: 0 0 2px; }
+    .meta { color: #444; margin-bottom: 4px; }
+    .filters { color: #444; margin-bottom: 8px; }
+    .kpis { display: flex; flex-wrap: wrap; gap: 6px 18px; border: 1px solid #ccc; padding: 6px 10px; margin-bottom: 10px; }
+    .kpis b { font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #bbb; padding: 4px 5px; vertical-align: top; text-align: left; }
+    th { background: #eee; font-size: 10px; text-transform: uppercase; }
+    .r { text-align: right; white-space: nowrap; }
+    .nw { white-space: nowrap; }
+    .addr { max-width: 220px; }
+    tfoot td { font-weight: bold; background: #f5f5f5; }
+    ul { margin: 0; padding-left: 14px; }
+    .tick { width: 22px; }
+    .toolbar { margin-bottom: 10px; }
+    .toolbar button { padding: 6px 14px; font-size: 13px; cursor: pointer; }
+    tr { page-break-inside: avoid; }
+    thead { display: table-header-group; }
+    @media print { .toolbar { display: none; } body { margin: 0; } @page { size: A4 landscape; margin: 10mm; } }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button onclick="window.print()">🖨 Print</button>
+    <button onclick="window.close()">Close</button>
+  </div>
+
+  <h1>Customer Booking Report — <%= CustomerBookingReport::VIEWS[@view] %></h1>
+  <div class="meta">
+    <%= CustomerBookingReport::DATE_BASES[@date_basis] %>: <%= @from_date.strftime('%d %b %Y') %> – <%= @to_date.strftime('%d %b %Y') %>
+    · Printed <%= Time.current.strftime('%d %b %Y %I:%M %p') %>
+  </div>
+  <% if applied.any? %><div class="filters">Filters: <%= applied.join(' · ') %></div><% end %>
+  <div class="kpis">
+    <span>Bookings: <b><%= @totals[:bookings] %></b></span>
+    <span>Customers: <b><%= @totals[:customers] %></b></span>
+    <span>Items: <b><%= @totals[:lines] %></b></span>
+    <span>Total Qty: <b><%= qty.(@totals[:qty]) %></b></span>
+    <span>Amount: <b><%= money.(@totals[:amount]) %></b></span>
+    <span>Delivered / Open: <b><%= @totals[:delivered] %> / <%= @totals[:pending] %></b></span>
+  </div>
+
+  <% case @view %>
+  <% when 'items' %>
+    <table>
+      <thead><tr><th>#</th><th>Date</th><th>Delivery</th><th>Booking</th><th>Customer</th><th>Phone</th><th>Delivery Address</th><th>Product</th><th class="r">Qty</th><th class="r">Amount</th><th>Status</th></tr></thead>
+      <tbody>
+        <% @items.each_with_index do |i, idx| b = i.booking %>
+          <tr>
+            <td><%= idx + 1 %></td>
+            <td class="nw"><%= @report.booking_date(b)&.strftime('%d/%m/%Y') %></td>
+            <td class="nw"><%= b.expected_delivery_date&.strftime('%d/%m/%Y') %></td>
+            <td class="nw"><%= b.booking_number %></td>
+            <td><%= @report.customer_name(b) %></td>
+            <td class="nw"><%= @report.customer_phone(b) %></td>
+            <td class="addr"><%= @report.address_for(b) %></td>
+            <td><%= CustomerBookingReport.item_label(i) %></td>
+            <td class="r"><%= qty.(i.quantity) %></td>
+            <td class="r"><%= money.(i.total) %></td>
+            <td class="nw"><%= b.status_label %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot><tr><td colspan="8">TOTAL</td><td class="r"><%= qty.(@items.sum { |i| i.quantity.to_f }) %></td><td class="r"><%= money.(@items.sum { |i| i.total.to_f }) %></td><td></td></tr></tfoot>
+    </table>
+
+  <% when 'customers' %>
+    <table>
+      <thead><tr><th>#</th><th>Customer</th><th>Phone</th><th>Address</th><th class="r">Bookings</th><th class="r">Delivered</th><th class="r">Total Qty</th><th class="r">Amount</th><th>Last Booking</th></tr></thead>
+      <tbody>
+        <% @customer_rows.each_with_index do |r, idx| %>
+          <tr>
+            <td><%= idx + 1 %></td>
+            <td><%= r[:name] %></td>
+            <td class="nw"><%= r[:phone] %></td>
+            <td class="addr"><%= r[:address] %></td>
+            <td class="r"><%= r[:bookings] %></td>
+            <td class="r"><%= r[:delivered] %></td>
+            <td class="r"><%= qty.(r[:qty]) %></td>
+            <td class="r"><%= money.(r[:amount]) %></td>
+            <td class="nw"><%= r[:last_date]&.strftime('%d/%m/%Y') %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot><tr><td colspan="4">TOTAL</td><td class="r"><%= @customer_rows.sum { |r| r[:bookings] } %></td><td class="r"><%= @customer_rows.sum { |r| r[:delivered] } %></td><td class="r"><%= qty.(@customer_rows.sum { |r| r[:qty] }) %></td><td class="r"><%= money.(@customer_rows.sum { |r| r[:amount] }) %></td><td></td></tr></tfoot>
+    </table>
+
+  <% when 'products' %>
+    <table>
+      <thead><tr><th class="tick">✓</th><th>#</th><th>Product</th><th>Pack Size</th><th class="r">Total Qty</th><th>Unit</th><th class="r">Bookings</th><th class="r">Amount</th></tr></thead>
+      <tbody>
+        <% @product_qty.each_with_index do |p, idx| %>
+          <tr>
+            <td class="tick"></td>
+            <td><%= idx + 1 %></td>
+            <td><%= p[:name] %></td>
+            <td><%= p[:pack] %></td>
+            <td class="r"><b><%= qty.(p[:qty]) %></b></td>
+            <td><%= p[:unit] %></td>
+            <td class="r"><%= p[:bookings] %></td>
+            <td class="r"><%= money.(p[:amount]) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot><tr><td colspan="4">TOTAL</td><td class="r"><%= qty.(@product_qty.sum { |p| p[:qty] }) %></td><td></td><td></td><td class="r"><%= money.(@product_qty.sum { |p| p[:amount] }) %></td></tr></tfoot>
+    </table>
+
+  <% else %>
+    <table>
+      <thead><tr><th class="tick">✓</th><th>#</th><th>Date</th><th>Delivery</th><th>Booking</th><th>Customer</th><th>Phone</th><th>Delivery Address</th><th>Items × Qty</th><th class="r">Qty</th><th class="r">Amount</th><th>Payment</th><th>Status</th><th>Delivery By</th></tr></thead>
+      <tbody>
+        <% @bookings.each_with_index do |b, idx| %>
+          <tr>
+            <td class="tick"></td>
+            <td><%= idx + 1 %></td>
+            <td class="nw"><%= @report.booking_date(b)&.strftime('%d/%m/%Y') %></td>
+            <td class="nw"><%= b.expected_delivery_date&.strftime('%d/%m/%Y') %> <%= b.expected_delivery_time %></td>
+            <td class="nw"><%= b.booking_number %></td>
+            <td><%= @report.customer_name(b) %></td>
+            <td class="nw"><%= @report.customer_phone(b) %></td>
+            <td class="addr"><%= @report.address_for(b) %></td>
+            <td><ul><% b.booking_items.each do |i| %><li><%= CustomerBookingReport.item_label(i) %> × <b><%= qty.(i.quantity) %></b></li><% end %></ul></td>
+            <td class="r"><%= qty.(b.booking_items.sum { |i| i.quantity.to_f }) %></td>
+            <td class="r"><%= money.(b.total_amount) %></td>
+            <td class="nw"><%= b.payment_status.to_s.humanize %></td>
+            <td class="nw"><%= b.status_label %></td>
+            <td><%= @report.delivery_person_name(b) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot><tr><td colspan="9">TOTAL (<%= @bookings.size %> bookings)</td><td class="r"><%= qty.(@totals[:qty]) %></td><td class="r"><%= money.(@totals[:amount]) %></td><td colspan="3"></td></tr></tfoot>
+    </table>
+  <% end %>
+
+  <script>window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 300); });</script>
+</body>
+</html>

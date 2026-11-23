@@ -8,7 +8,7 @@
 class CustomerBookingReport
   BOOKING_DATE = 'COALESCE(bookings.booking_date, bookings.created_at)'.freeze
   DATE_BASES = { 'booking' => 'Booking Date', 'delivery' => 'Expected Delivery Date' }.freeze
-  VIEWS = { 'bookings' => 'Bookings', 'items' => 'Booking Items', 'customers' => 'Customer Summary' }.freeze
+  VIEWS = { 'bookings' => 'Bookings', 'items' => 'Booking Items', 'customers' => 'Customer Summary', 'products' => 'Product Quantity' }.freeze
 
   attr_reader :filters
 

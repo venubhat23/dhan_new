@@ -724,6 +724,7 @@ class Admin::ReportsController < Admin::ApplicationController
       case @view
       when 'items' then @items = @report.items
       when 'customers' then @customer_rows = @report.customer_rows
+      when 'products' then nil
       else @bookings = @report.bookings
       end
       @product_qty = @report.product_qty_rows
@@ -734,6 +735,7 @@ class Admin::ReportsController < Admin::ApplicationController
     case @view
     when 'items' then @items = @report.items.page(params[:page]).per(100)
     when 'customers' then @customer_rows = @report.customer_rows
+    when 'products' then @all_product_qty = @report.product_qty_rows
     else @bookings = @report.bookings.page(params[:page]).per(50)
     end
   end
@@ -813,6 +815,11 @@ class Admin::ReportsController < Admin::ApplicationController
                   i.quantity.to_f, i.price.to_f, i.discount_amount.to_f, i.total.to_f, b.status_label,
                   report.delivery_person_name(b), b.store&.name]
         end
+      when 'products'
+        csv << ['Product', 'Pack Size', 'Unit', 'Total Qty', 'Bookings', 'Amount (Rs)']
+        rows = report.product_qty_rows
+        rows.each { |r| csv << [r[:name], r[:pack], r[:unit], r[:qty].round(2), r[:bookings], r[:amount]] }
+        csv << ['TOTAL', '', '', rows.sum { |r| r[:qty] }.round(2), '', rows.sum { |r| r[:amount] }.round(2)]
       when 'customers'
         csv << ['Customer', 'Phone', 'Address', 'Bookings', 'Delivered', 'Total Qty', 'Amount (Rs)', 'Last Booking']
         report.customer_rows.each do |r|
