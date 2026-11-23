@@ -528,21 +528,6 @@
             <% end %>
           </li>
         <% end %>
-
-        <!-- Credit Notes -->
-        <% if current_user.has_sidebar_permission?('bookings') || current_user.has_sidebar_permission?('invoices') %>
-          <li class="nav-item">
-            <%= link_to admin_credit_notes_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/credit_notes')}" do %>
-              <div class="nav-icon-modern">
-                <div class="icon-bg gradient-teal">
-                  <i class="bi bi-arrow-return-left"></i>
-                </div>
-              </div>
-              <span class="nav-text">Credit Note</span>
-              <div class="nav-indicator"></div>
-            <% end %>
-          </li>
-        <% end %>
       </ul>
     </div>
     <% end %>
@@ -598,18 +583,6 @@
                 <%= link_to batch_inventory_admin_vendor_purchases_path, class: "submenu-link #{'active' if current_page?(batch_inventory_admin_vendor_purchases_path)}" do %>
                   <span class="submenu-bullet">•</span>
                   <span>Batch Inventory</span>
-                <% end %>
-              </li>
-              <li>
-                <%= link_to new_admin_debit_note_path, class: "submenu-link #{'active' if current_page?(new_admin_debit_note_path)}" do %>
-                  <span class="submenu-bullet">•</span>
-                  <span>Return to Vendor</span>
-                <% end %>
-              </li>
-              <li>
-                <%= link_to admin_debit_notes_path, class: "submenu-link #{'active' if current_page?(admin_debit_notes_path)}" do %>
-                  <span class="submenu-bullet">•</span>
-                  <span>Debit Notes</span>
                 <% end %>
               </li>
             </ul>
@@ -1016,32 +989,80 @@
     </div>
     <% end %>
 
-    <!-- Accountant Section -->
-    <% if current_user.has_sidebar_permission?('reports') || current_user.has_sidebar_permission?('invoices') %>
+    <!-- Accounts & Returns Section (one main menu + submenu) -->
+    <% if current_user.has_sidebar_permission?('reports') || current_user.has_sidebar_permission?('bookings') || current_user.has_sidebar_permission?('invoices') %>
+    <% acc_menu_open = %w[/admin/credit_notes /admin/debit_notes /admin/manual_journals /admin/ledger_accounts /admin/reports/gstr1].any? { |p| request.path.start_with?(p) } %>
     <div class="nav-section">
-      <div class="nav-section-title">Accountant</div>
+      <div class="nav-section-title">Accounts</div>
       <ul class="nav-menu">
-        <li class="nav-item">
-          <%= link_to admin_manual_journals_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/manual_journals')}" do %>
+        <li class="nav-item dropdown-menu-item">
+          <a href="#" class="nav-link-modern dropdown-toggle <%= 'active' if acc_menu_open %>" data-bs-toggle="collapse" data-bs-target="#accountsReturnsSubmenu" aria-expanded="<%= acc_menu_open %>">
             <div class="nav-icon-modern">
-              <div class="icon-bg gradient-indigo">
-                <i class="bi bi-journal-text"></i>
+              <div class="icon-bg gradient-teal">
+                <i class="bi bi-journal-bookmark"></i>
               </div>
             </div>
-            <span class="nav-text">Manual Journals</span>
-            <div class="nav-indicator"></div>
-          <% end %>
-        </li>
-        <li class="nav-item">
-          <%= link_to admin_ledger_accounts_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/ledger_accounts')}" do %>
-            <div class="nav-icon-modern">
-              <div class="icon-bg gradient-violet">
-                <i class="bi bi-diagram-3"></i>
-              </div>
-            </div>
-            <span class="nav-text">Chart of Accounts</span>
-            <div class="nav-indicator"></div>
-          <% end %>
+            <span class="nav-text">Accounts &amp; Returns</span>
+            <span class="dropdown-arrow ms-auto">
+              <i class="bi bi-chevron-down"></i>
+            </span>
+          </a>
+          <div class="submenu collapse <%= 'show' if acc_menu_open %>" id="accountsReturnsSubmenu">
+            <ul class="submenu-list">
+              <li class="px-3 pt-2 pb-1 small text-uppercase fw-semibold" style="opacity:.6;letter-spacing:.04em;font-size:10.5px">Customer Returns</li>
+              <li>
+                <%= link_to new_admin_credit_note_path, class: "submenu-link #{'active' if current_page?(new_admin_credit_note_path)}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>New Credit Note</span>
+                <% end %>
+              </li>
+              <li>
+                <%= link_to admin_credit_notes_path, class: "submenu-link #{'active' if request.path.start_with?('/admin/credit_notes') && !current_page?(new_admin_credit_note_path)}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>Credit Notes</span>
+                <% end %>
+              </li>
+              <li class="px-3 pt-2 pb-1 small text-uppercase fw-semibold" style="opacity:.6;letter-spacing:.04em;font-size:10.5px">Vendor Returns</li>
+              <li>
+                <%= link_to new_admin_debit_note_path, class: "submenu-link #{'active' if current_page?(new_admin_debit_note_path)}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>Return to Vendor</span>
+                <% end %>
+              </li>
+              <li>
+                <%= link_to admin_debit_notes_path, class: "submenu-link #{'active' if request.path.start_with?('/admin/debit_notes') && !current_page?(new_admin_debit_note_path)}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>Debit Notes</span>
+                <% end %>
+              </li>
+              <li class="px-3 pt-2 pb-1 small text-uppercase fw-semibold" style="opacity:.6;letter-spacing:.04em;font-size:10.5px">Accountant</li>
+              <li>
+                <%= link_to new_admin_manual_journal_path, class: "submenu-link #{'active' if current_page?(new_admin_manual_journal_path)}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>New Journal</span>
+                <% end %>
+              </li>
+              <li>
+                <%= link_to admin_manual_journals_path, class: "submenu-link #{'active' if request.path.start_with?('/admin/manual_journals') && !current_page?(new_admin_manual_journal_path)}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>Manual Journals</span>
+                <% end %>
+              </li>
+              <li>
+                <%= link_to admin_ledger_accounts_path, class: "submenu-link #{'active' if request.path.start_with?('/admin/ledger_accounts')}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>Chart of Accounts</span>
+                <% end %>
+              </li>
+              <li class="px-3 pt-2 pb-1 small text-uppercase fw-semibold" style="opacity:.6;letter-spacing:.04em;font-size:10.5px">GST</li>
+              <li>
+                <%= link_to admin_reports_gstr1_path, class: "submenu-link #{'active' if request.path.start_with?('/admin/reports/gstr1')}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>GSTR-1 Report</span>
+                <% end %>
+              </li>
+            </ul>
+          </div>
         </li>
       </ul>
     </div>
@@ -1073,17 +1094,6 @@
               </div>
             </div>
             <span class="nav-text">Profit & Loss Report</span>
-            <div class="nav-indicator"></div>
-          <% end %>
-        </li>
-        <li class="nav-item">
-          <%= link_to admin_reports_gstr1_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/reports/gstr1')}" do %>
-            <div class="nav-icon-modern">
-              <div class="icon-bg gradient-orange">
-                <i class="bi bi-receipt-cutoff"></i>
-              </div>
-            </div>
-            <span class="nav-text">GSTR-1 Report</span>
             <div class="nav-indicator"></div>
           <% end %>
         </li>
