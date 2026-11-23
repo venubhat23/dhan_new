@@ -2,7 +2,7 @@
 <% qty = ->(v) { number_with_precision(v.to_f, precision: 2, strip_insignificant_zeros: true, delimiter: ',') } %>
 <%
   applied = []
-  applied << "Status: #{@statuses.map { |s| Booking.status_label(s) }.join(', ')}" if @statuses.any?
+  applied << "Status: #{@statuses.map { |s| CustomerBookingReport.status_label(s) }.join(', ')}" if @statuses.any?
   applied << "Customer: #{@filters[:customer]}" if @filters[:customer]
   applied << "Customer: #{Customer.find_by(id: @filters[:customer_id])&.display_name}" if @filters[:customer_id]
   applied << "Product: #{Product.find_by(id: @filters[:product_id])&.name}" if @filters[:product_id]
@@ -64,7 +64,7 @@
   <% case @view %>
   <% when 'items' %>
     <table>
-      <thead><tr><th>#</th><th>Date</th><th>Delivery</th><th>Booking</th><th>Customer</th><th>Phone</th><th>Delivery Address</th><th>Product</th><th class="r">Qty</th><th class="r">Amount</th><th>Status</th></tr></thead>
+      <thead><tr><th>#</th><th>Date</th><th>Delivery</th><th>Booking</th><th>Customer</th><th>Phone</th><th>Delivery Address</th><th>Product</th><th class="r">Qty</th><th>Unit</th><th class="r">Amount</th><th>Status</th></tr></thead>
       <tbody>
         <% @items.each_with_index do |i, idx| b = i.booking %>
           <tr>
@@ -77,12 +77,13 @@
             <td class="addr"><%= @report.address_for(b) %></td>
             <td><%= CustomerBookingReport.item_label(i) %></td>
             <td class="r"><%= qty.(i.quantity) %></td>
+            <td><%= CustomerBookingReport.item_unit(i) %></td>
             <td class="r"><%= money.(i.total) %></td>
-            <td class="nw"><%= b.status_label %></td>
+            <td class="nw"><%= CustomerBookingReport.status_label(b.status) %></td>
           </tr>
         <% end %>
       </tbody>
-      <tfoot><tr><td colspan="8">TOTAL</td><td class="r"><%= qty.(@items.sum { |i| i.quantity.to_f }) %></td><td class="r"><%= money.(@items.sum { |i| i.total.to_f }) %></td><td></td></tr></tfoot>
+      <tfoot><tr><td colspan="8">TOTAL</td><td class="r"><%= qty.(@items.sum { |i| i.quantity.to_f }) %></td><td></td><td class="r"><%= money.(@items.sum { |i| i.total.to_f }) %></td><td></td></tr></tfoot>
     </table>
 
   <% when 'customers' %>
@@ -135,16 +136,16 @@
             <td class="tick"></td>
             <td><%= idx + 1 %></td>
             <td class="nw"><%= @report.booking_date(b)&.strftime('%d/%m/%Y') %></td>
-            <td class="nw"><%= b.expected_delivery_date&.strftime('%d/%m/%Y') %> <%= b.expected_delivery_time %></td>
+            <td class="nw"><%= b.expected_delivery_date&.strftime('%d/%m/%Y') %> <%= b.try(:expected_delivery_time) %></td>
             <td class="nw"><%= b.booking_number %></td>
             <td><%= @report.customer_name(b) %></td>
             <td class="nw"><%= @report.customer_phone(b) %></td>
             <td class="addr"><%= @report.address_for(b) %></td>
-            <td><ul><% b.booking_items.each do |i| %><li><%= CustomerBookingReport.item_label(i) %> × <b><%= qty.(i.quantity) %></b></li><% end %></ul></td>
+            <td><ul><% b.booking_items.each do |i| %><li><%= CustomerBookingReport.item_label(i) %> × <b><%= qty.(i.quantity) %> <%= CustomerBookingReport.item_unit(i) %></b></li><% end %></ul></td>
             <td class="r"><%= qty.(b.booking_items.sum { |i| i.quantity.to_f }) %></td>
             <td class="r"><%= money.(b.total_amount) %></td>
             <td class="nw"><%= b.payment_status.to_s.humanize %></td>
-            <td class="nw"><%= b.status_label %></td>
+            <td class="nw"><%= CustomerBookingReport.status_label(b.status) %></td>
             <td><%= @report.delivery_person_name(b) %></td>
           </tr>
         <% end %>

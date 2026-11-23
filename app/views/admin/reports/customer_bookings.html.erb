@@ -102,7 +102,7 @@
       <div class="col-12">
         <label>Status <small class="text-muted">(pick one or more; none = all)</small></label>
         <div class="cb-status">
-          <% Booking::STATUS_LABELS.each do |value, label| %>
+          <% CustomerBookingReport.status_labels.each do |value, label| %>
             <label>
               <%= check_box_tag 'statuses[]', value, @statuses.include?(value), id: "st-#{value}" %>
               <span><%= label %> <small>(<%= @status_counts[value].to_i %>)</small></span>
@@ -145,9 +145,9 @@
         <div class="table-responsive">
           <% if @view == 'items' %>
             <table class="table table-sm table-hover cb-table mb-0">
-              <thead><tr><th>Date</th><th>Delivery</th><th>Booking</th><th>Customer</th><th>Delivery Address</th><th>Product</th><th class="text-end">Qty</th><th class="text-end">Amount</th><th>Status</th></tr></thead>
+              <thead><tr><th>Date</th><th>Delivery</th><th>Booking</th><th>Customer</th><th>Delivery Address</th><th>Product</th><th class="text-end">Qty</th><th>Unit</th><th class="text-end">Amount</th><th>Status</th></tr></thead>
               <tbody>
-                <% if @items.empty? %><tr><td colspan="9" class="text-center text-muted py-4">No booking items match these filters.</td></tr><% end %>
+                <% if @items.empty? %><tr><td colspan="10" class="text-center text-muted py-4">No booking items match these filters.</td></tr><% end %>
                 <% @items.each do |i| b = i.booking %>
                   <tr>
                     <td class="text-nowrap"><%= @report.booking_date(b)&.strftime('%d %b %Y') %></td>
@@ -157,8 +157,9 @@
                     <td class="cb-addr small"><%= @report.address_for(b) || '—' %></td>
                     <td><%= CustomerBookingReport.item_label(i) %></td>
                     <td class="text-end fw-semibold"><%= qty.(i.quantity) %></td>
+                    <td class="small text-muted"><%= CustomerBookingReport.item_unit(i) %></td>
                     <td class="text-end"><%= money.(i.total) %></td>
-                    <td><span class="badge bg-<%= b.status_color %>"><%= b.status_label %></span></td>
+                    <td><span class="badge bg-<%= b.status_color %>"><%= CustomerBookingReport.status_label(b.status) %></span></td>
                   </tr>
                 <% end %>
               </tbody>
@@ -178,7 +179,7 @@
                     <td class="text-end text-success"><%= r[:delivered] %></td>
                     <td class="text-end fw-semibold"><%= qty.(r[:qty]) %></td>
                     <td class="text-end"><%= money.(r[:amount]) %></td>
-                    <td class="small"><% r[:statuses].each do |st, n| %><span class="badge bg-light text-dark border me-1"><%= Booking.status_label(st) %> <%= n %></span><% end %></td>
+                    <td class="small"><% r[:statuses].each do |st, n| %><span class="badge bg-light text-dark border me-1"><%= CustomerBookingReport.status_label(st) %> <%= n %></span><% end %></td>
                     <td class="text-nowrap small"><%= r[:last_date]&.strftime('%d %b %Y') %></td>
                     <td>
                       <% link_params = r[:customer_id] ? { customer_id: r[:customer_id] } : { customer: r[:phone].presence || r[:name] } %>
@@ -216,21 +217,21 @@
                 <% @bookings.each do |b| %>
                   <tr>
                     <td class="text-nowrap"><%= @report.booking_date(b)&.strftime('%d %b %Y') %></td>
-                    <td class="text-nowrap"><%= b.expected_delivery_date&.strftime('%d %b %Y') || '—' %><% if b.expected_delivery_time.present? %><div class="small text-muted"><%= b.expected_delivery_time %></div><% end %></td>
+                    <td class="text-nowrap"><%= b.expected_delivery_date&.strftime('%d %b %Y') || '—' %><% if b.try(:expected_delivery_time).present? %><div class="small text-muted"><%= b.expected_delivery_time %></div><% end %></td>
                     <td><%= link_to "##{b.booking_number}", admin_booking_path(b), class: 'text-decoration-none' %><% if b.store %><div class="small text-muted"><%= b.store.name %></div><% end %></td>
                     <td><%= @report.customer_name(b) %><% if (ph = @report.customer_phone(b)).present? %><div class="small text-muted"><%= ph %></div><% end %></td>
                     <td class="cb-addr small"><%= @report.address_for(b) || '—' %></td>
                     <td>
                       <ul class="cb-items">
                         <% b.booking_items.each do |i| %>
-                          <li><%= CustomerBookingReport.item_label(i) %> × <span class="q"><%= qty.(i.quantity) %></span></li>
+                          <li><%= CustomerBookingReport.item_label(i) %> × <span class="q"><%= qty.(i.quantity) %> <%= CustomerBookingReport.item_unit(i) %></span></li>
                         <% end %>
                       </ul>
                     </td>
                     <td class="text-end fw-semibold"><%= qty.(b.booking_items.sum { |i| i.quantity.to_f }) %></td>
                     <td class="text-end"><%= money.(b.total_amount) %></td>
                     <td class="small"><%= b.payment_status.to_s.humanize.presence || '—' %></td>
-                    <td><span class="badge bg-<%= b.status_color %>"><%= b.status_label %></span></td>
+                    <td><span class="badge bg-<%= b.status_color %>"><%= CustomerBookingReport.status_label(b.status) %></span></td>
                     <td class="small"><%= @report.delivery_person_name(b) || '—' %></td>
                   </tr>
                 <% end %>
@@ -252,7 +253,7 @@
         <% @product_qty.each do |p| %>
           <div class="d-flex justify-content-between small border-bottom py-1">
             <span><%= p[:name] %><% if p[:pack] %> <span class="text-muted">(<%= p[:pack] %>)</span><% end %></span>
-            <span class="text-nowrap"><strong><%= qty.(p[:qty]) %></strong> · <%= p[:bookings] %> bk</span>
+            <span class="text-nowrap"><strong><%= qty.(p[:qty]) %> <%= p[:unit] %></strong> · <%= p[:bookings] %> bk</span>
           </div>
         <% end %>
       </div>
