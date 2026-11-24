@@ -80,7 +80,7 @@ class Gstr1Export
 
   def d(date) = date&.strftime('%d/%m/%Y').to_s
   def dmy(date) = date&.strftime('%d-%b-%Y').to_s
-  def rate_cell(rate) = rate.positive? ? clean(rate) : ''
+  def rate_cell(rate) = clean(rate.to_f) # 0% (nil-rated) lines show 0, not blank
   def clean(n) = n.to_f == n.to_i ? n.to_i : n.to_f.round(2)
 
   def mark(sheet, rows, kind)
