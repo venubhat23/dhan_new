@@ -761,7 +761,9 @@ class Booking < ApplicationRecord
 
   def normalize_b2b_gstin
     self.gstin = gstin.to_s.strip.upcase.gsub(/\s+/, '').presence
-    self.gstin ||= customer&.gst_no.to_s.strip.upcase.presence if is_b2b?
+    # A new B2B booking must carry the GSTIN entered on the form (the booking
+    # page prefills it from the customer); only older bookings fall back.
+    self.gstin ||= customer&.gst_no.to_s.strip.upcase.presence if is_b2b? && persisted?
   end
 
   # A B2B booking needs a valid GSTIN. Only enforced when the booking is created
