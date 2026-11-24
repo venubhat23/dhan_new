@@ -1056,8 +1056,8 @@ class Admin::ReportsController < Admin::ApplicationController
       booking = invoice.booking
       if booking&.booking_items
         booking.booking_items.each do |item|
-          if item.product&.gst_enabled && item.product.gst_percentage > 0
-            base_amount = (item.quantity || 0) * (item.price || 0)
+          if item.gst_charged? && item.product.gst_percentage > 0
+            base_amount = (item.quantity || 0) * item.charged_unit_price
             gst_rate = item.product.gst_percentage
             item_gst = (base_amount * gst_rate / 100).round(2)
 
@@ -1071,7 +1071,7 @@ class Admin::ReportsController < Admin::ApplicationController
       # For regular invoices, get GST from invoice items
       if invoice.invoice_items
         invoice.invoice_items.each do |item|
-          if item.product&.gst_enabled && item.product.gst_percentage > 0
+          if item.gst_charged? && item.product.gst_percentage > 0
             base_amount = (item.quantity || 0) * (item.unit_price || 0)
             gst_rate = item.product.gst_percentage
             item_gst = (base_amount * gst_rate / 100).round(2)

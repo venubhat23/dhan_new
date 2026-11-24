@@ -65,12 +65,12 @@ class BookingInvoice < ApplicationRecord
         product_id: item.product_id,
         product_name: item.product&.name || 'Unknown Product',
         quantity: item.quantity,
-        price: item.price,
+        price: item.charged_unit_price,
         discount_type: item.discount_type,
         discount_value: item.discount_value,
         discount_amount: item.line_discount_amount,
         discounted_unit_price: item.discounted_unit_price.round(2),
-        total: (item.quantity * item.price - item.line_discount_amount).round(2)
+        total: (item.quantity * item.charged_unit_price - item.line_discount_amount).round(2)
       }
     end
 

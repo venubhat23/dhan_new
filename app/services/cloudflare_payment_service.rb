@@ -21,7 +21,7 @@ class CloudflarePaymentService
         {
           product_id: item.product_id,
           quantity: item.quantity,
-          price: item.price,
+          price: item.charged_unit_price,
           product_name: item.product.name
         }
       end

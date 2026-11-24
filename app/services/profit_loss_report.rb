@@ -175,7 +175,7 @@ class ProfitLossReport
     when 'shipping'
       booking_rows { |b, f| f[:shipping] }
     when 'sales_returns'
-      credit_note_scope.includes(:booking, credit_note_items: :product).order(:credit_date).map do |cn|
+      credit_note_scope.includes(:booking, credit_note_items: [:product, { booking_item: [:product, :product_variant] }]).order(:credit_date).map do |cn|
         { date: cn.credit_date, reference: cn.credit_note_number, party: cn.customer_display_name,
           description: "Return against Booking ##{cn.booking&.booking_number}",
           amount: -credit_note_ex_gst(cn), link: [:credit_note, cn] }
@@ -329,13 +329,13 @@ class ProfitLossReport
 
   def credit_note_ex_gst(cn)
     cn.credit_note_items.sum do |i|
-      rate = gst_rate(i.product)
+      rate = i.booking_item&.bulk_gst_exempt? ? 0.0 : gst_rate(i.product)
       i.amount.to_f * 100 / (100 + rate)
     end.round(2)
   end
 
   def returns_total
-    @returns_total ||= credit_note_scope.includes(credit_note_items: :product).sum { |cn| credit_note_ex_gst(cn) }.round(2)
+    @returns_total ||= credit_note_scope.includes(credit_note_items: [:product, { booking_item: [:product, :product_variant] }]).sum { |cn| credit_note_ex_gst(cn) }.round(2)
   end
 
   # -- Cost of goods sold --

@@ -198,7 +198,7 @@
   </head>
   <body>
     <%
-      has_gst = @booking.booking_items&.any? { |item| item.product&.gst_enabled }
+      has_gst = @booking.booking_items&.any? { |item| line_gst_charged?(item) }
 
       # item.price is GST-inclusive: extract tax the same way as the admin booking
       # page and the invoice so every screen shows identical figures.
@@ -215,7 +215,7 @@
         total_product_discount += item.line_discount_amount
         product    = item.product
         gst_rate   =
-          if !product&.gst_enabled
+          if !line_gst_charged?(item)
             0
           elsif product.cgst_percentage.present? && product.sgst_percentage.present?
             product.cgst_percentage.to_f + product.sgst_percentage.to_f + product.igst_percentage.to_f
@@ -375,14 +375,14 @@
             <td class="c"><%= qty_label %></td>
             <td class="r">
               <% if item.line_discount_amount > 0 %>
-                <span style="text-decoration:line-through;color:#888;">₹<%= number_with_precision(item.price || 0, precision: 2, delimiter: ',') %></span><br/>
+                <span style="text-decoration:line-through;color:#888;">₹<%= number_with_precision(item.charged_unit_price, precision: 2, delimiter: ',') %></span><br/>
               <% end %>
               ₹<%= number_with_precision(unit_price, precision: 2, delimiter: ',') %>
               <% if item.line_discount_amount > 0 %>
                 <br/><span class="tax-rate" style="color:#1a7f37;"><%= line_discount_text(item) %></span>
               <% end %>
             </td>
-            <%= gst_tax_cells(item.product, row_tax, rate: row_gst_rate, split: split_gst, igst: igst_col, td_class: 'r col-tax') %>
+            <%= gst_tax_cells(item, row_tax, rate: row_gst_rate, split: split_gst, igst: igst_col, td_class: 'r col-tax') %>
             <td class="r">₹<%= number_with_precision(row_total, precision: 2, delimiter: ',') %></td>
           </tr>
           <% end %>

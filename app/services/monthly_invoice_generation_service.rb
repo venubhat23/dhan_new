@@ -87,7 +87,9 @@ class MonthlyInvoiceGenerationService
     pending_bookings.includes(:booking_items).each do |booking|
       booking.booking_items.each do |item|
         # Calculate proper unit price (base price excluding GST for GST products)
-        unit_price = if item.product.gst_enabled? && item.product.gst_percentage.present?
+        unit_price = if item.bulk_gst_exempt?
+          item.charged_unit_price # > 25 kg: billed without GST
+        elsif item.product.gst_enabled? && item.product.gst_percentage.present?
           item.product.calculate_base_price
         else
           item.price

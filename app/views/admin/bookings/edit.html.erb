@@ -584,10 +584,29 @@ function updateItemPrice(select) {
   }
 }
 
+// Bulk GST exemption: a GST line over 25 kg is billed without GST — the GST
+// part is dropped from the unit price (₹25 @ 5% → ₹23.75). Mirrors the server
+// (BulkGstExemption); the Unit Price field still holds the normal price.
+const BULK_GST_THRESHOLD_KG = <%= BulkGstExemption::THRESHOLD_KG %>;
+const bulkGstUnitKg = <%= raw bulk_gst_unit_kg_map.to_json %>;
+const bulkGstRates = <%= raw Product.where(gst_enabled: true).where('gst_percentage > 0').pluck(:id, :gst_percentage).to_h { |id, r| [id.to_s, r.to_f] }.to_json %>;
+function rowUnitPrice(row) {
+  const price = parseFloat(row.querySelector('input[name*="[price]"]')?.value) || 0;
+  const qty = parseFloat(row.querySelector('input[name*="[quantity]"]')?.value) || 0;
+  const pid = row.querySelector('input[name*="[product_id]"]')?.value || '';
+  const vid = row.querySelector('input[name*="[product_variant_id]"]')?.value || '';
+  const rate = bulkGstRates[pid] || 0;
+  const kg = bulkGstUnitKg[vid ? `${pid}_v${vid}` : pid];
+  if (rate > 0 && kg && Math.round(kg * qty * 1000) / 1000 > BULK_GST_THRESHOLD_KG) {
+    return Math.round(price * (100 - rate)) / 100;
+  }
+  return price;
+}
+
 // Rupee value of a row's per-product discount, capped at the line gross.
 function rowLineDiscount(row) {
   const quantity = parseFloat(row.querySelector('input[name*="[quantity]"]')?.value) || 0;
-  const price = parseFloat(row.querySelector('input[name*="[price]"]')?.value) || 0;
+  const price = rowUnitPrice(row);
   const type = row.querySelector('[name*="[discount_type]"]')?.value || '';
   const val = parseFloat(row.querySelector('input[name*="[discount_value]"]')?.value) || 0;
   const gross = quantity * price;
@@ -606,7 +625,7 @@ function calculateItemTotal(input) {
 
   if (quantityInput && priceInput && totalDiv) {
     const quantity = parseFloat(quantityInput.value) || 0;
-    const price = parseFloat(priceInput.value) || 0;
+    const price = rowUnitPrice(row);
     const total = quantity * price - rowLineDiscount(row);
 
     totalDiv.innerHTML = `₹${total.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
@@ -625,7 +644,7 @@ function calculateTotals() {
 
     if (quantityInput && priceInput) {
       const quantity = parseFloat(quantityInput.value) || 0;
-      const price = parseFloat(priceInput.value) || 0;
+      const price = rowUnitPrice(row);
       subtotal += quantity * price - rowLineDiscount(row);
     }
   });

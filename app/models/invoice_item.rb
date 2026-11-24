@@ -1,4 +1,5 @@
 class InvoiceItem < ApplicationRecord
+  include BulkGstExemption
   belongs_to :invoice
   belongs_to :milk_delivery_task, optional: true
   belongs_to :product, optional: true
@@ -17,6 +18,18 @@ class InvoiceItem < ApplicationRecord
   before_validation :calculate_total_amount
   # Line changes alter the invoice's tax split, so re-post its sales journal.
   after_commit -> { AutoJournal.sync_invoice(invoice) if invoice_id && Invoice.exists?(invoice_id) }
+
+  # GST % added on top of this line's net unit_price (0 for non-GST products
+  # and bulk-exempt lines over 25 kg).
+  def gst_rate
+    return 0.0 unless gst_charged?
+
+    if product.cgst_percentage.present? || product.sgst_percentage.present?
+      (product.cgst_percentage || 0).to_f + (product.sgst_percentage || 0).to_f + (product.igst_percentage || 0).to_f
+    else
+      product.gst_percentage.to_f
+    end
+  end
 
   # Pre-discount base unit price for display ("was ₹X"); falls back to the net price.
   def list_unit_price

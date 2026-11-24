@@ -636,7 +636,7 @@
       end
 
       # Calculate if any product has GST
-      has_gst = invoice_items.any? { |item| item.product&.gst_enabled }
+      has_gst = invoice_items.any? { |item| line_gst_charged?(item) }
 
       # Calculate totals with proper GST breakdown
       subtotal_amount = 0
@@ -652,7 +652,7 @@
         # Add to subtotal
         subtotal_amount += base_amount
 
-        if item.product&.gst_enabled
+        if line_gst_charged?(item)
           # For GST applicable items, add to taxable amount and calculate GST
           taxable_amount += base_amount
 
@@ -807,7 +807,7 @@
                 </td>
                   <%
                     base_amount = item.quantity * (item.unit_price || 0)
-                    if item.product&.gst_enabled
+                    if line_gst_charged?(item)
                       # Get total GST rate - prioritize combined CGST+SGST+IGST, fallback to main gst_percentage
                       total_gst_rate = (item.product.cgst_percentage || 0) + (item.product.sgst_percentage || 0) + (item.product.igst_percentage || 0)
                       total_gst_rate = item.product.gst_percentage || 0 if total_gst_rate == 0
@@ -817,7 +817,7 @@
                       tax_amount = 0
                     end
                   %>
-                <%= gst_tax_cells(item.try(:product), tax_amount, rate: total_gst_rate, split: split_gst, igst: igst_col, td_class: 'right-align') %>
+                <%= gst_tax_cells(item, tax_amount, rate: total_gst_rate, split: split_gst, igst: igst_col, td_class: 'right-align') %>
                 <td class="right-align">
                   <%
                     # The item.unit_price already includes GST, so this is the gross amount
@@ -924,7 +924,7 @@
                 sgst_groups = {}
 
                 invoice_items.each do |item|
-                  if item.product&.gst_enabled
+                  if line_gst_charged?(item)
                     base_amount = (item.quantity * (item.unit_price || 0)).round(2)
 
                     cgst_rate = item.product.cgst_percentage || 0
@@ -973,7 +973,7 @@
                 end
               %>
               <% if total_igst > 0 %>
-                <% igst_rate = invoice_items.sum { |item| item.product&.gst_enabled ? (item.product.igst_percentage || 0) : 0 } / invoice_items.select { |item| item.product&.gst_enabled }.count rescue 0 %>
+                <% igst_rate = invoice_items.sum { |item| line_gst_charged?(item) ? (item.product.igst_percentage || 0) : 0 } / invoice_items.select { |item| line_gst_charged?(item) }.count rescue 0 %>
                 <div class="tax-line">
                   <span class="tax-label">IGST @<%= igst_rate %>%</span>
                   <span class="tax-amount">₹ <%= number_with_precision(total_igst, precision: 2, delimiter: ',') %></span>

@@ -106,7 +106,7 @@
 
           <%
             summary_subtotal = @invoice_items.sum { |item| item.quantity.to_f * item.unit_price.to_f }
-            summary_tax = @invoice_items.sum { |item| (item.quantity.to_f * item.unit_price.to_f) * invoice_gst_rate_for(item.product).to_f / 100 }
+            summary_tax = @invoice_items.sum { |item| (item.quantity.to_f * item.unit_price.to_f) * invoice_gst_rate_for(item).to_f / 100 }
             summary_delivery = @invoice.delivery_charge.to_f
             summary_total = summary_subtotal + summary_tax + summary_delivery
             summary_product_discount = @invoice_items.sum { |item| item.discount_amount.to_f }
@@ -282,7 +282,7 @@
                 </div>
                 <input type="hidden" name="invoice[invoice_items_attributes][<%= index %>][unit_price]" value="<%= item.unit_price %>" class="unit-price-input">
                 <input type="hidden" name="invoice[invoice_items_attributes][<%= index %>][id]" value="<%= item.id %>">
-                <input type="hidden" class="gst-rate-field" value="<%= invoice_gst_rate_for(item.product) %>">
+                <input type="hidden" class="gst-rate-field" value="<%= invoice_gst_rate_for(item) %>">
               </div>
               <% unless index == @invoice_items.length - 1 %>
                 <hr class="my-3">

@@ -12,7 +12,13 @@ module ApplicationHelper
 
   # Per-line GST rates. Uses the product's own CGST/SGST/IGST when set,
   # otherwise splits gst_percentage equally into CGST and SGST.
+  # Accepts a product, or a booking/invoice line — a line over 25 kg is
+  # bulk GST-exempt (BulkGstExemption) and gets 0 rates.
   def gst_line_rates(product)
+    if product.respond_to?(:bulk_gst_exempt?)
+      return { cgst: 0, sgst: 0, igst: 0, total: 0 } if product.bulk_gst_exempt?
+      product = product.product
+    end
     return { cgst: 0, sgst: 0, igst: 0, total: 0 } unless product&.gst_enabled
     if product.cgst_percentage.present? || product.sgst_percentage.present?
       c  = (product.cgst_percentage || 0).to_f
@@ -25,13 +31,35 @@ module ApplicationHelper
     { cgst: c, sgst: sg, igst: ig, total: c + sg + ig }
   end
 
+  # { "productId" | "productId_vVariantId" => kg per unit } for GST products sold
+  # by weight, so the booking cart can drop GST on lines over 25 kg
+  # (BulkGstExemption) exactly like the server does.
+  def bulk_gst_unit_kg_map
+    Product.where(gst_enabled: true).includes(:product_variants).each_with_object({}) do |product, map|
+      kg = BookingItem.new(product: product).unit_weight_kg
+      map[product.id.to_s] = kg if kg
+      product.product_variants.each do |variant|
+        kg = BookingItem.new(product: product, product_variant: variant).unit_weight_kg
+        map["#{product.id}_v#{variant.id}"] = kg if kg
+      end
+    end
+  end
+
+  # Whether GST is charged on a line: GST product and not bulk-exempt (> 25 kg).
+  # Falls back to the product flag for legacy struct rows.
+  def line_gst_charged?(item)
+    return item.gst_charged? if item.respond_to?(:gst_charged?)
+
+    !!item.try(:product)&.gst_enabled
+  end
+
   # Split the TAX column only on a B2B invoice where some line is taxed.
   def gst_split_columns?(items, b2b)
-    b2b.present? && Array(items).any? { |i| gst_line_rates(i.try(:product))[:total] > 0 }
+    b2b.present? && Array(items).any? { |i| gst_line_rates(i)[:total] > 0 }
   end
 
   def gst_igst_column?(items)
-    Array(items).any? { |i| gst_line_rates(i.try(:product))[:igst] > 0 }
+    Array(items).any? { |i| gst_line_rates(i)[:igst] > 0 }
   end
 
   def gst_rate_label(rate)

@@ -325,10 +325,10 @@
                     </td>
                     <td class="align-middle text-end">
                       <% if item.line_discount_amount > 0 %>
-                        <span class="text-muted"><s>₹<%= number_with_delimiter(item.price&.to_f || 0) %></s></span><br>
+                        <span class="text-muted"><s>₹<%= number_with_delimiter(item.charged_unit_price) %></s></span><br>
                         <span class="fw-medium text-success">₹<%= number_with_delimiter(item.discounted_unit_price.round(2)) %></span>
                       <% else %>
-                        <span class="fw-medium">₹<%= number_with_delimiter(item.price&.to_f || 0) %></span>
+                        <span class="fw-medium">₹<%= number_with_delimiter(item.charged_unit_price) %></span>
                       <% end %>
                     </td>
                     <td class="align-middle text-center">
@@ -341,9 +341,9 @@
                     </td>
                     <td class="align-middle text-end">
                       <% if item.line_discount_amount > 0 %>
-                        <span class="text-muted small"><s>₹<%= number_with_delimiter((item.quantity * item.price).to_f.round(2)) %></s></span><br>
+                        <span class="text-muted small"><s>₹<%= number_with_delimiter((item.quantity * item.charged_unit_price).to_f.round(2)) %></s></span><br>
                       <% end %>
-                      <span class="fw-bold text-success">₹<%= number_with_delimiter((item.quantity * item.price - item.line_discount_amount).to_f.round(2)) %></span>
+                      <span class="fw-bold text-success">₹<%= number_with_delimiter((item.quantity * item.charged_unit_price - item.line_discount_amount).to_f.round(2)) %></span>
                     </td>
                   </tr>
                 <% end %>
@@ -388,7 +388,7 @@
           total_item_discount = 0
           @booking_items.each do |item|
             total_item_discount += item.line_discount_amount
-            if item.product&.gst_enabled && item.product.gst_percentage.to_f > 0
+            if line_gst_charged?(item) && item.product.gst_percentage.to_f > 0
               gst_rate = item.product.gst_percentage.to_f
               # Per-product discount is baked into the unit price first.
               final_price_per_unit = item.discounted_unit_price
@@ -408,8 +408,8 @@
             end
           end
           # Calculate weighted average tax rate
-          avg_tax_rate = @booking_items.any? { |item| item.product&.gst_enabled } ?
-            (total_tax_rate / @booking_items.select { |item| item.product&.gst_enabled }.count rescue 0) : 0
+          avg_tax_rate = @booking_items.any? { |item| line_gst_charged?(item) } ?
+            (total_tax_rate / @booking_items.select { |item| line_gst_charged?(item) }.count rescue 0) : 0
           tax_display = avg_tax_rate.to_i == avg_tax_rate ? avg_tax_rate.to_i : avg_tax_rate.round(2)
         %>
 

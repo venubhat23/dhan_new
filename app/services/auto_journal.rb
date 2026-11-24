@@ -137,17 +137,10 @@ class AutoJournal
         ] }
     end
 
-    # GST on a line, matching Invoice#line_amount_with_tax (tax added on top of the net unit price).
+    # GST on a line, matching Invoice#calculate_total_from_items (tax added on top
+    # of the net unit price; 0 for bulk-exempt lines over 25 kg).
     def item_tax(item)
-      product = item.product
-      return 0.0 unless product&.gst_enabled
-
-      rate = if product.cgst_percentage.present? || product.sgst_percentage.present?
-               product.cgst_percentage.to_f + product.sgst_percentage.to_f + product.igst_percentage.to_f
-             else
-               product.gst_percentage.to_f
-             end
-      item.quantity.to_f * item.unit_price.to_f * rate / 100.0
+      item.quantity.to_f * item.unit_price.to_f * item.gst_rate / 100.0
     end
 
     # Creates/updates/removes one journal so it matches `lines`; zero lines are dropped.

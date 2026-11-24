@@ -1,5 +1,6 @@
 class BookingItem < ApplicationRecord
   include DashboardCacheBust
+  include BulkGstExemption
   belongs_to :booking, counter_cache: true
   belongs_to :product
   belongs_to :product_variant, optional: true
@@ -24,9 +25,25 @@ class BookingItem < ApplicationRecord
   after_update :handle_line_target_change, if: :line_target_changed_on_save?
   after_destroy :restore_product_stock
 
+  # GST % billed on this line (0 for non-GST products and bulk-exempt lines).
+  def gst_rate
+    return 0.0 unless gst_charged?
+
+    product.gst_percentage.to_f
+  end
+
+  # Unit price actually charged before the line discount. `price` stays the
+  # normal tax-inclusive list price; a bulk-exempt line (> 25 kg) drops the GST
+  # part from it (₹25 @ 5% → ₹23.75) and is billed with no tax.
+  def charged_unit_price
+    return price.to_f unless bulk_gst_exempt?
+
+    (price.to_f * (100 - product.gst_percentage.to_f) / 100).round(2)
+  end
+
   # Gross (pre-line-discount) tax-inclusive total for this line.
   def gross_line_total
-    (price.to_f * quantity.to_f).round(2)
+    (charged_unit_price * quantity.to_f).round(2)
   end
 
   # Rupee value taken off this line by its per-product discount (percentage or
@@ -45,9 +62,9 @@ class BookingItem < ApplicationRecord
 
   # Tax-inclusive unit price after the per-product discount is applied.
   def discounted_unit_price
-    return price.to_f if quantity.to_f <= 0
+    return charged_unit_price if quantity.to_f <= 0
 
-    (price.to_f - line_discount_amount / quantity.to_f)
+    (charged_unit_price - line_discount_amount / quantity.to_f)
   end
 
   # Put `qty` units of this line back into stock because the customer returned

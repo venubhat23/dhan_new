@@ -108,7 +108,7 @@ class Gstr1Report
 
   def sales_returns
     @sales_returns ||= CreditNote.where(credit_date: from_date..to_date)
-                                 .includes(:customer, :booking, credit_note_items: :product)
+                                 .includes(:customer, :booking, credit_note_items: [:product, { booking_item: [:product, :product_variant] }])
                                  .order(:credit_date, :id).map { |cn| build_credit_doc(cn) }
   end
 
@@ -170,7 +170,7 @@ class Gstr1Report
       doc.record.invoice_items.each do |item|
         hsn = item.product&.hsn_code.to_s.strip
         uqc, qty = uqc_and_quantity(item)
-        rate = gst_rate(item.product)
+        rate = item.gst_rate.round(2)
         taxable = item.quantity.to_f * item.unit_price.to_f
         tax = (taxable * rate / 100).round(2)
         g = (groups[[hsn, uqc, rate]] ||= { hsn: hsn, description: '', uqc: uqc, quantity: 0.0, value: 0.0, rate: rate,
@@ -219,7 +219,7 @@ class Gstr1Report
     booking = bookings_by_number[invoice.invoice_number]
     gstin = registered_gstin(booking, invoice.customer)
     state = gstin ? gstin[0, 2] : home_state
-    slabs = slabs_for(invoice.invoice_items.map { |i| [gst_rate(i.product), i.quantity.to_f * i.unit_price.to_f] },
+    slabs = slabs_for(invoice.invoice_items.map { |i| [i.gst_rate.round(2), i.quantity.to_f * i.unit_price.to_f] },
                       inter: state != home_state, tax_inclusive: false)
     value = slabs.sum { |s| s.taxable + s.tax } + invoice.delivery_charge.to_f - invoice.discount_amount.to_f
     Doc.new(number: invoice.invoice_number, date: invoice.invoice_date, gstin: gstin,
@@ -232,7 +232,7 @@ class Gstr1Report
     booking = cn.booking
     gstin = registered_gstin(booking, cn.customer)
     state = gstin ? gstin[0, 2] : home_state
-    slabs = slabs_for(cn.credit_note_items.map { |i| [gst_rate(i.product), i.amount.to_f] },
+    slabs = slabs_for(cn.credit_note_items.map { |i| [i.booking_item&.bulk_gst_exempt? ? 0.0 : gst_rate(i.product), i.amount.to_f] },
                       inter: state != home_state, tax_inclusive: true)
     Doc.new(number: cn.credit_note_number, date: cn.credit_date, gstin: gstin,
             name: cn.customer_display_name, state_code: state, value: cn.total_amount.to_f.round(2),

@@ -64,7 +64,9 @@ module Admin::InvoicesHelper
     (price / (1 + gst_rate.to_f / 100)).round(2)
   end
 
+  # Accepts a product, or an invoice line (0 when bulk GST-exempt, > 25 kg).
   def invoice_gst_rate_for(product)
+    return product.gst_rate if product.is_a?(InvoiceItem)
     return 0 unless product&.gst_enabled
 
     if product.cgst_percentage.present? || product.sgst_percentage.present?

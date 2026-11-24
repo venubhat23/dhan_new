@@ -234,7 +234,7 @@ class Booking < ApplicationRecord
         {
           product: ii.product,
           quantity: ii.quantity,
-          price: final_price_for(ii.product, invoice_item_list_price(ii)),
+          price: final_price_for_invoice_item(ii),
           discount_type: ii.discount_type.presence,
           discount_value: ii.discount_type.present? ? ii.discount_value : nil
         }
@@ -284,7 +284,7 @@ class Booking < ApplicationRecord
     end.sort_by { |row| row.map(&:to_s) }
     target = invoice.invoice_items.filter_map do |ii|
       next unless ii.product_id
-      [ii.product_id, ii.quantity.to_f.round(3), final_price_for(ii.product, invoice_item_list_price(ii)).round(2),
+      [ii.product_id, ii.quantity.to_f.round(3), final_price_for_invoice_item(ii).round(2),
        ii.discount_type.presence, (ii.discount_type.present? ? ii.discount_value.to_f : 0.0)]
     end.sort_by { |row| row.map(&:to_s) }
 
@@ -305,6 +305,27 @@ class Booking < ApplicationRecord
     base_unit_price.to_f * (1 + product.gst_percentage.to_f / 100)
   end
 
+  # booking_item.price (normal tax-inclusive list price) for an invoice line.
+  # A bulk-exempt invoice line (> 25 kg) carries the price with the GST part
+  # dropped and no tax, so the list price is rebuilt by adding that part back.
+  def final_price_for_invoice_item(invoice_item)
+    list = invoice_item_list_price(invoice_item)
+    product = invoice_item.product
+    if invoice_item.bulk_gst_exempt? && product.gst_percentage.to_f.between?(0.01, 99.99)
+      return list.to_f * 100 / (100 - product.gst_percentage.to_f)
+    end
+
+    final_price_for(product, list)
+  end
+
+  # Pre-discount base unit price recorded on the invoice line for a booking_item
+  # (original_unit_price). A bulk-exempt line has no GST to strip.
+  def invoice_list_unit_price_for(booking_item)
+    return booking_item.charged_unit_price if booking_item.bulk_gst_exempt?
+
+    base_unit_price_for(booking_item.product, booking_item.price)
+  end
+
   # Base (pre-GST) price extracted from an actually-charged, tax-inclusive price.
   def base_unit_price_for(product, charged_price)
     return charged_price.to_f unless product&.gst_enabled? && product.gst_percentage.present?
@@ -320,7 +341,12 @@ class Booking < ApplicationRecord
   # price), so later product price changes don't retroactively alter old invoices.
   def invoice_unit_price_for(booking_item)
     # Start from the per-product-discounted, tax-inclusive unit price, then strip GST.
-    unit_price = base_unit_price_for(booking_item.product, booking_item.discounted_unit_price)
+    # Bulk-exempt lines (> 25 kg) are already billed without GST.
+    unit_price = if booking_item.bulk_gst_exempt?
+                   booking_item.discounted_unit_price
+                 else
+                   base_unit_price_for(booking_item.product, booking_item.discounted_unit_price)
+                 end
 
     if discount_amount.to_f > 0 && total_amount.to_f > 0
       unit_price = unit_price * (1 - discount_amount.to_f / total_amount.to_f)
@@ -404,11 +430,11 @@ class Booking < ApplicationRecord
         # first; GST is then re-extracted from the reduced amount below.
         price = item.discounted_unit_price
 
-        # Check if product has GST enabled
-        if item.product && item.product.gst_enabled && item.product.gst_percentage.to_f > 0
+        # Check if GST applies (GST product, not a bulk-exempt line over 25 kg)
+        if item.product && item.gst_rate > 0
           # Price is inclusive of GST: tax is extracted (rate/(100+rate)), base = price - tax.
           # Matches the invoice, whose base unit_price is price / (1 + rate).
-          gst_rate = item.product.gst_percentage.to_f
+          gst_rate = item.gst_rate
           total_price = price * quantity
           item_gst = (total_price * gst_rate / (100 + gst_rate)).round(2)
           item_base = total_price - item_gst
@@ -454,8 +480,8 @@ class Booking < ApplicationRecord
     # Calculate GST based on individual products
     total_gst = 0
     booking_items.each do |item|
-      if item.product && item.product.gst_enabled && item.product.gst_percentage.to_f > 0
-        gst_rate = item.product.gst_percentage.to_f
+      if item.product && item.gst_rate > 0
+        gst_rate = item.gst_rate
         item_incl = item.discounted_unit_price * (item.quantity || 0)
         item_gst = (item_incl * gst_rate / (100 + gst_rate)).round(2)
         total_gst += item_gst
@@ -1073,7 +1099,7 @@ class Booking < ApplicationRecord
         total_amount: item_total,
         product: product,
         product_variant: item.product_variant,
-        original_unit_price: base_unit_price_for(product, item.price),
+        original_unit_price: invoice_list_unit_price_for(item),
         discount_type: item.discount_type.presence,
         discount_value: item.discount_type.present? ? item.discount_value : nil,
         discount_amount: item.discount_amount

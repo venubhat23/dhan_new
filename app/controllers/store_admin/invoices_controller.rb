@@ -342,7 +342,9 @@ class StoreAdmin::InvoicesController < StoreAdmin::ApplicationController
       booking.booking_items.each do |item|
         product = item.product
         next unless product
-        unit_price = if product.gst_enabled? && product.gst_percentage.present?
+        unit_price = if item.bulk_gst_exempt?
+                       item.charged_unit_price # > 25 kg: billed without GST
+                     elsif product.gst_enabled? && product.gst_percentage.present?
                        product.try(:calculate_base_price) || item.price
                      else
                        item.price || product.selling_price

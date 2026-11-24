@@ -593,7 +593,7 @@
 
     <%
       # Calculate if any product has GST (adapting for booking structure)
-      has_gst = @booking.booking_items&.any? { |item| item.product&.gst_enabled }
+      has_gst = @booking.booking_items&.any? { |item| line_gst_charged?(item) }
 
       # Calculate totals with corrected GST breakdown
       subtotal_amount = 0  # This will be the total amount INCLUDING taxes (what customer pays)
@@ -611,7 +611,7 @@
         total_product_discount += item.line_discount_amount
         base_amount = item.quantity * item.discounted_unit_price
 
-        if item.product&.gst_enabled
+        if line_gst_charged?(item)
           # Calculate total GST first, then split to avoid rounding issues
           if item.product.cgst_percentage.present? && item.product.sgst_percentage.present?
             cgst_rate = item.product.cgst_percentage
@@ -798,7 +798,7 @@
                   unit_price = item.discounted_unit_price
                 %>
                 <% if item.line_discount_amount > 0 %>
-                  <span style="text-decoration:line-through;color:#888;">₹<%= number_with_precision(item.price || 0, precision: 2, delimiter: ',') %></span><br />
+                  <span style="text-decoration:line-through;color:#888;">₹<%= number_with_precision(item.charged_unit_price, precision: 2, delimiter: ',') %></span><br />
                 <% end %>
                 ₹<%= number_with_precision(unit_price, precision: 2, delimiter: ',') %>
                 <% if item.line_discount_amount > 0 %>
@@ -807,7 +807,7 @@
               </td>
                 <%
                   base_amount = item.quantity * item.discounted_unit_price
-                  if item.product&.gst_enabled
+                  if line_gst_charged?(item)
                     # Use individual tax percentages if available, otherwise split the total GST rate
                     if item.product.cgst_percentage.present? || item.product.sgst_percentage.present?
                       total_gst_rate = (item.product.cgst_percentage || 0) + (item.product.sgst_percentage || 0) + (item.product.igst_percentage || 0)
@@ -821,7 +821,7 @@
                     tax_amount = 0
                   end
                 %>
-              <%= gst_tax_cells(item.try(:product), tax_amount, rate: total_gst_rate, split: split_gst, igst: igst_col, td_class: 'right-align') %>
+              <%= gst_tax_cells(item, tax_amount, rate: total_gst_rate, split: split_gst, igst: igst_col, td_class: 'right-align') %>
               <td class="right-align">
                 <%
                   # Price is stored inclusive of GST, so the item's final amount
@@ -921,7 +921,7 @@
                 sgst_groups = {}
 
                 (@booking.booking_items || []).each do |item|
-                  if item.product&.gst_enabled
+                  if line_gst_charged?(item)
                     base_amount = item.quantity * item.discounted_unit_price
 
                     # Handle CGST/SGST calculation
@@ -974,7 +974,7 @@
                 end
               %>
               <% if total_igst > 0 %>
-                <% igst_rate = (@booking.booking_items || []).sum { |item| item.product&.gst_enabled ? (item.product.igst_percentage || 0) : 0 } / (@booking.booking_items || []).select { |item| item.product&.gst_enabled }.count rescue 0 %>
+                <% igst_rate = (@booking.booking_items || []).sum { |item| line_gst_charged?(item) ? (item.product.igst_percentage || 0) : 0 } / (@booking.booking_items || []).select { |item| line_gst_charged?(item) }.count rescue 0 %>
                 <div class="tax-line">
                   <span class="tax-label">IGST @<%= igst_rate %>%</span>
                   <span class="tax-amount">₹ <%= number_with_precision(total_igst, precision: 2, delimiter: ',') %></span>

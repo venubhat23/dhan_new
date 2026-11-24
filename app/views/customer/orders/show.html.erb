@@ -154,10 +154,10 @@
                       <small class="text-muted d-block">pcs</small>
                     </td>
                     <td class="align-middle text-end">
-                      <span class="fw-medium">₹<%= number_with_delimiter(item.price&.to_f || 0) %></span>
+                      <span class="fw-medium">₹<%= number_with_delimiter(item.charged_unit_price) %></span>
                     </td>
                     <td class="align-middle text-end">
-                      <span class="fw-bold text-success">₹<%= number_with_delimiter((item.quantity * item.price)&.to_f || 0) %></span>
+                      <span class="fw-bold text-success">₹<%= number_with_delimiter((item.quantity * item.charged_unit_price)&.to_f || 0) %></span>
                     </td>
                   </tr>
                 <% end %>
@@ -231,15 +231,15 @@
             total_tax_rate = 0
             total_base_amount = 0
             @booking.booking_items.each do |item|
-              if item.product&.gst_enabled && item.product.gst_percentage.to_f > 0
-                base_amount = item.quantity * (item.price || 0)
+              if line_gst_charged?(item) && item.product.gst_percentage.to_f > 0
+                base_amount = item.quantity * item.charged_unit_price
                 total_base_amount += base_amount
                 total_tax_rate += item.product.gst_percentage.to_f
               end
             end
             # Calculate weighted average tax rate
-            avg_tax_rate = @booking.booking_items.any? { |item| item.product&.gst_enabled } ?
-              (total_tax_rate / @booking.booking_items.select { |item| item.product&.gst_enabled }.count rescue 0) : 0
+            avg_tax_rate = @booking.booking_items.any? { |item| line_gst_charged?(item) } ?
+              (total_tax_rate / @booking.booking_items.select { |item| line_gst_charged?(item) }.count rescue 0) : 0
             tax_display = avg_tax_rate.to_i == avg_tax_rate ? avg_tax_rate.to_i : avg_tax_rate.round(2)
           %>
           <span class="text-muted">Tax (<%= tax_display %>%):</span>
