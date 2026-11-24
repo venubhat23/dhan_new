@@ -15,6 +15,8 @@ class InvoiceItem < ApplicationRecord
 
   before_validation :normalize_discount
   before_validation :calculate_total_amount
+  # Line changes alter the invoice's tax split, so re-post its sales journal.
+  after_commit -> { AutoJournal.sync_invoice(invoice) if invoice_id && Invoice.exists?(invoice_id) }
 
   # Pre-discount base unit price for display ("was ₹X"); falls back to the net price.
   def list_unit_price

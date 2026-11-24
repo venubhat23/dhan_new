@@ -10,15 +10,23 @@
   <div class="d-flex flex-wrap justify-content-between gap-2 mb-3 no-print" style="max-width:960px;margin:0 auto;">
     <%= link_to admin_manual_journals_path, class: 'btn btn-outline-secondary' do %><i class="bi bi-arrow-left me-1"></i>Back<% end %>
     <div class="d-flex flex-wrap gap-2">
+      <% if j.automatic? %>
+        <% if (src = journal_source_path(j)) %>
+          <%= link_to src, class: 'btn btn-outline-primary' do %><i class="bi bi-box-arrow-up-right me-1"></i>View <%= j.entry_kind_label.sub('Payment Made', 'Purchase').sub('Payment Received', 'Invoice') %><% end %>
+        <% end %>
+      <% else %>
       <%= link_to edit_admin_manual_journal_path(j), class: 'btn btn-outline-primary' do %><i class="bi bi-pencil me-1"></i>Edit<% end %>
       <% if j.draft? %>
         <%= button_to publish_admin_manual_journal_path(j), method: :patch, class: 'btn btn-success', form: { data: { turbo: false } } do %><i class="bi bi-send-check me-1"></i>Publish<% end %>
       <% else %>
         <%= button_to mark_draft_admin_manual_journal_path(j), method: :patch, class: 'btn btn-outline-warning', form: { data: { turbo: false } } do %><i class="bi bi-arrow-counterclockwise me-1"></i>Move to Draft<% end %>
       <% end %>
+      <% end %>
       <%= link_to clone_admin_manual_journal_path(j), class: 'btn btn-outline-secondary' do %><i class="bi bi-files me-1"></i>Clone<% end %>
       <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer"></i></button>
+      <% unless j.automatic? %>
       <%= button_to admin_manual_journal_path(j), method: :delete, class: 'btn btn-outline-danger', form: { data: { turbo: false }, onsubmit: "return confirm('Delete Journal ##{j.journal_number}? This cannot be undone.')" } do %><i class="bi bi-trash"></i><% end %>
+      <% end %>
     </div>
   </div>
 
@@ -28,6 +36,7 @@
         <div class="small opacity-75">JOURNAL</div>
         <h3 class="mb-1">#<%= j.journal_number %></h3>
         <span class="mj-ribbon"><%= j.status.upcase %></span>
+        <% if j.automatic? %><span class="mj-ribbon ms-1"><i class="bi bi-lightning-charge-fill me-1"></i>AUTO · <%= j.entry_kind_label.upcase %></span><% end %>
       </div>
       <div class="text-end">
         <div class="small opacity-75">Amount</div>
@@ -41,6 +50,9 @@
         <div class="col-md-3"><small class="text-muted d-block">Reporting Method</small><strong><%= j.reporting_method_label %></strong></div>
         <div class="col-md-3"><small class="text-muted d-block">Store</small><strong><%= j.store&.name || 'All / Head Office' %></strong></div>
         <div class="col-md-3"><small class="text-muted d-block">Currency</small><strong><%= j.currency %></strong></div>
+        <% if j.automatic? %>
+          <div class="col-12"><div class="alert alert-info small mb-0"><i class="bi bi-info-circle me-1"></i>Posted automatically and kept in sync with its source document. It updates the Chart of Accounts balances but is <strong>not</strong> added to Profit &amp; Loss again (P&amp;L already reads invoices and purchases directly).</div></div>
+        <% end %>
         <div class="col-12"><small class="text-muted d-block">Notes</small><%= simple_format(j.notes, class: 'mb-0') %></div>
       </div>
 

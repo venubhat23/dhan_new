@@ -1,11 +1,16 @@
 class Admin::ManualJournalsController < Admin::ApplicationController
   before_action :set_journal, only: [:show, :edit, :update, :destroy, :publish, :mark_draft, :clone]
   before_action :load_form_data, only: [:new, :create, :edit, :update, :clone]
+  before_action :protect_auto_journal, only: [:edit, :update, :destroy, :publish, :mark_draft]
 
   def index
     scope = ManualJournal.includes(:created_by, :store, manual_journal_lines: :ledger_account)
     @status = %w[draft published].include?(params[:status]) ? params[:status] : 'all'
     scope = scope.where(status: @status) unless @status == 'all'
+    @origin = %w[manual auto].include?(params[:origin]) ? params[:origin] : 'all'
+    scope = scope.manual_only if @origin == 'manual'
+    scope = scope.automatic if @origin == 'auto'
+    scope = scope.where(entry_kind: params[:kind]) if AutoJournal::KINDS.key?(params[:kind])
     scope = scope.where('manual_journals.journal_date >= ?', params[:from]) if params[:from].present?
     scope = scope.where('manual_journals.journal_date <= ?', params[:to]) if params[:to].present?
     if params[:account_id].present?
@@ -21,8 +26,9 @@ class Admin::ManualJournalsController < Admin::ApplicationController
     @count        = scope.count
     @total_amount = scope.sum(:total_amount).to_f
     @draft_count  = ManualJournal.drafts.count
+    @auto_count   = ManualJournal.automatic.count
     month         = Date.current.beginning_of_month..Date.current.end_of_month
-    @month_expense = ManualJournalLine.joins(:manual_journal, :ledger_account).merge(ManualJournal.published)
+    @month_expense = ManualJournalLine.joins(:manual_journal, :ledger_account).merge(ManualJournal.published.manual_only)
                                       .where(manual_journals: { journal_date: month })
                                       .where(ledger_accounts: { account_type: %w[expense cost_of_goods_sold other_expense] })
                                       .sum('manual_journal_lines.debit - manual_journal_lines.credit').to_f
@@ -93,6 +99,14 @@ class Admin::ManualJournalsController < Admin::ApplicationController
 
   def set_journal
     @journal = ManualJournal.includes(manual_journal_lines: :ledger_account).find(params[:id])
+  end
+
+  # Auto journals mirror an invoice/purchase/payment; change the source document instead.
+  def protect_auto_journal
+    return unless @journal.automatic?
+
+    redirect_to admin_manual_journal_path(@journal),
+                alert: "This journal was posted automatically from a #{@journal.entry_kind_label.to_s.downcase}. Edit or cancel the source document and the journal updates itself."
   end
 
   def load_form_data

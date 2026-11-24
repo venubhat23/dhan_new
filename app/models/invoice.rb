@@ -19,6 +19,9 @@ class Invoice < ApplicationRecord
   after_update :sync_booking_payment_status, if: :saved_change_to_payment_status?
   after_update :sync_booking_delivery_charge, if: :saved_change_to_delivery_charge?
   after_save :sync_booking_items_from_invoice
+  # Sales + payment-received journals (see AutoJournal).
+  after_commit -> { AutoJournal.sync_invoice(self) }, on: [:create, :update]
+  after_commit -> { AutoJournal.remove_for('Invoice', id) }, on: :destroy
 
   scope :for_month, ->(month, year) { where(invoice_date: Date.new(year, month).beginning_of_month..Date.new(year, month).end_of_month) }
 

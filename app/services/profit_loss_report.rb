@@ -215,7 +215,7 @@ class ProfitLossReport
 
   def journal_line_scope
     scope = ManualJournalLine.joins(:manual_journal, :ledger_account)
-                             .merge(ManualJournal.published.for_basis(basis))
+                             .merge(ManualJournal.published.manual_only.for_basis(basis))
                              .where(manual_journals: { journal_date: from_date..to_date })
                              .where(ledger_accounts: { account_type: LedgerAccount::PL_TYPES })
     scope = scope.where(manual_journals: { store_id: store_id }) if store_id

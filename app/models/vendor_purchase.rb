@@ -22,6 +22,9 @@ class VendorPurchase < ApplicationRecord
   scope :recent, -> { order(created_at: :desc) }
 
   before_save :calculate_totals
+  # Purchase journal: Dr Inventory Asset / Cr Accounts Payable (see AutoJournal).
+  after_commit -> { AutoJournal.sync_vendor_purchase(self) }, on: [:create, :update]
+  after_commit -> { AutoJournal.remove_for('VendorPurchase', id) }, on: :destroy
   after_save :create_stock_batches, if: :saved_change_to_id?
   # Runs after the nested items have been saved (the autosave callbacks are
   # declared first), so dirty tracking on the items is already cleared here —

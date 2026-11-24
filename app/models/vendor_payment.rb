@@ -9,9 +9,12 @@ class VendorPayment < ApplicationRecord
 
   after_create :update_vendor_purchase_paid_amount
   after_destroy :update_vendor_purchase_paid_amount
+  # Payment-made journal: Dr Accounts Payable / Cr Cash or Bank (see AutoJournal).
+  after_commit -> { AutoJournal.sync_vendor_payment(self) }, on: [:create, :update]
+  after_commit -> { AutoJournal.remove_for('VendorPayment', id) }, on: :destroy
 
   def payment_number
-    "PAY#{id.to_s.padded(6, '0')}"
+    "PAY#{id.to_s.rjust(6, '0')}"
   end
 
   def payment_mode_badge_class

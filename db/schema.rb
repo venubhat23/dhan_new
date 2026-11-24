@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_23_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_24_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -737,8 +737,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_000001) do
     t.datetime "published_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "source_type"
+    t.bigint "source_id"
+    t.string "entry_kind"
     t.index ["created_by_id"], name: "index_manual_journals_on_created_by_id"
     t.index ["journal_number"], name: "index_manual_journals_on_journal_number", unique: true
+    t.index ["source_type", "source_id", "entry_kind"], name: "index_manual_journals_on_source", unique: true, where: "(source_type IS NOT NULL)"
     t.index ["status", "journal_date"], name: "index_manual_journals_on_status_and_journal_date"
     t.index ["store_id"], name: "index_manual_journals_on_store_id"
   end

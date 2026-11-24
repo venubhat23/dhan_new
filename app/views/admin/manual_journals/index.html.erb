@@ -13,7 +13,7 @@
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
       <h3 class="mb-0"><i class="bi bi-journal-text text-primary me-2"></i>Manual Journals</h3>
-      <small class="text-muted">Record manual charges and adjustments. Published journals show up in Profit &amp; Loss.</small>
+      <small class="text-muted">Record manual charges and adjustments. Published manual journals show up in Profit &amp; Loss. Sales invoices, customer payments, vendor purchases and vendor payments post <strong>auto journals</strong> here as well.</small>
     </div>
     <div class="d-flex gap-2">
       <%= link_to admin_ledger_accounts_path, class: 'btn btn-outline-secondary' do %><i class="bi bi-diagram-3 me-1"></i>Chart of Accounts<% end %>
@@ -29,17 +29,29 @@
     <div class="col-6 col-md-3"><div class="card mj-stat mj-g2"><div class="card-body d-flex justify-content-between align-items-center">
       <div><small class="opacity-75">Expenses This Month</small><h4 class="mb-0">₹<%= number_with_delimiter(number_with_precision(@month_expense, precision: 2)) %></h4></div><i class="bi bi-graph-down-arrow"></i></div></div></div>
     <div class="col-6 col-md-3"><div class="card mj-stat mj-g4"><div class="card-body d-flex justify-content-between align-items-center">
-      <div><small class="opacity-75">Drafts</small><h4 class="mb-0"><%= @draft_count %></h4></div><i class="bi bi-pencil"></i></div></div></div>
+      <div><small class="opacity-75">Drafts · Auto</small><h4 class="mb-0"><%= @draft_count %> · <%= @auto_count %></h4></div><i class="bi bi-pencil"></i></div></div></div>
   </div>
 
-  <ul class="nav nav-pills mj-tabs mb-3">
-    <% [['all', 'All'], ['published', 'Published'], ['draft', 'Draft']].each do |key, label| %>
-      <li class="nav-item"><%= link_to label, admin_manual_journals_path(request.query_parameters.merge(status: key, page: nil)), class: "nav-link #{'active' if @status == key}" %></li>
-    <% end %>
-  </ul>
+  <div class="d-flex flex-wrap gap-3 mb-3">
+    <ul class="nav nav-pills mj-tabs">
+      <% [['all', 'All'], ['published', 'Published'], ['draft', 'Draft']].each do |key, label| %>
+        <li class="nav-item"><%= link_to label, admin_manual_journals_path(request.query_parameters.merge(status: key, page: nil)), class: "nav-link #{'active' if @status == key}" %></li>
+      <% end %>
+    </ul>
+    <ul class="nav nav-pills mj-tabs">
+      <% [['all', 'All sources'], ['manual', 'Manual'], ['auto', 'Auto']].each do |key, label| %>
+        <li class="nav-item"><%= link_to label, admin_manual_journals_path(request.query_parameters.merge(origin: key, kind: nil, page: nil)), class: "nav-link #{'active' if @origin == key && params[:kind].blank?}" %></li>
+      <% end %>
+      <% AutoJournal::KINDS.each do |key, label| %>
+        <li class="nav-item"><%= link_to label, admin_manual_journals_path(request.query_parameters.merge(origin: 'auto', kind: key, page: nil)), class: "nav-link #{'active' if params[:kind] == key}" %></li>
+      <% end %>
+    </ul>
+  </div>
 
   <%= form_with url: admin_manual_journals_path, method: :get, class: 'row g-2 mb-3', data: { turbo: false } do %>
     <input type="hidden" name="status" value="<%= @status %>">
+    <input type="hidden" name="origin" value="<%= @origin %>">
+    <% if params[:kind].present? %><input type="hidden" name="kind" value="<%= params[:kind] %>"><% end %>
     <div class="col-md-4"><input type="text" name="search" value="<%= params[:search] %>" class="form-control" placeholder="Search journal #, reference, notes, contact"></div>
     <div class="col-md-3">
       <select name="account_id" class="form-select">
@@ -65,11 +77,11 @@
               <td><%= j.journal_date.strftime('%d/%m/%Y') %></td>
               <td><%= link_to j.journal_number, admin_manual_journal_path(j), class: 'fw-semibold text-decoration-none' %></td>
               <td><%= j.reference_number.presence || '—' %></td>
-              <td><span class="badge <%= j.published? ? 'bg-success' : 'bg-secondary' %>"><%= j.status.upcase %></span></td>
+              <td><span class="badge <%= j.published? ? 'bg-success' : 'bg-secondary' %>"><%= j.status.upcase %></span><%= journal_kind_badge(j) %></td>
               <td class="small text-truncate" style="max-width:260px;"><%= j.notes %></td>
               <td><% j.manual_journal_lines.map(&:ledger_account).compact.uniq.first(3).each do |a| %><span class="mj-acct"><%= a.name %></span><% end %></td>
               <td class="text-end fw-semibold">₹<%= number_with_delimiter(number_with_precision(j.total_amount, precision: 2)) %></td>
-              <td class="small text-muted"><%= j.created_by&.try(:name).presence || j.created_by&.email %></td>
+              <td class="small text-muted"><%= j.automatic? ? 'System' : (j.created_by&.try(:name).presence || j.created_by&.email) %></td>
             </tr>
           <% end %>
         </tbody>

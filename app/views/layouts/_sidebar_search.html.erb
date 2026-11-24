@@ -1,0 +1,312 @@
+<%# Sidebar menu search + "move section to top". Behaviour in app/javascript/sidebar_search.js.
+  Render inside a .modern-sidebar, just above the menu. `scope` keeps each portal's pinned section separate. %>
+<style>
+.sidebar-search {
+  position: relative !important;
+  padding: 14px 12px 6px !important;
+  flex-shrink: 0 !important;
+}
+.sidebar-search-box {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  border-radius: 14px !important;
+  padding: 1.5px !important;
+  background: linear-gradient(135deg, #e2e8f0, #e2e8f0) !important;
+  transition: background 0.3s ease, box-shadow 0.3s ease !important;
+}
+.sidebar-search-box:focus-within {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899) !important;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.25) !important;
+}
+.sidebar-search-box > .bi-search {
+  position: absolute !important;
+  left: 13px !important;
+  color: #94a3b8 !important;
+  font-size: 14px !important;
+  pointer-events: none !important;
+  transition: color 0.2s ease, transform 0.3s ease !important;
+  z-index: 1 !important;
+}
+.sidebar-search-box:focus-within > .bi-search {
+  color: #6366f1 !important;
+  transform: scale(1.1) rotate(-8deg) !important;
+}
+.sidebar-search input {
+  width: 100% !important;
+  padding: 9px 58px 9px 36px !important;
+  border: none !important;
+  border-radius: 12.5px !important;
+  background: #ffffff !important;
+  color: #1e293b !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  outline: none !important;
+}
+.sidebar-search input::-webkit-search-cancel-button { display: none !important; }
+.sidebar-search input::placeholder { color: #94a3b8 !important; font-weight: 400 !important; }
+.sidebar-search-meta {
+  position: absolute !important;
+  right: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+.sidebar-search-clear {
+  display: none !important;
+  border: none !important;
+  background: #e2e8f0 !important;
+  color: #475569 !important;
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 50% !important;
+  font-size: 10px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+}
+.sidebar-search-clear:hover { background: #cbd5e1 !important; }
+.modern-sidebar.searching .sidebar-search-clear { display: inline-flex !important; }
+
+/* Suggestions float over the menu as a dropdown */
+.sidebar-search-results { display: none !important; }
+.modern-sidebar.searching .sidebar-search-results {
+  display: block !important;
+  position: absolute !important;
+  top: calc(100% + 4px) !important;
+  left: 10px !important;
+  right: 10px !important;
+  max-height: min(60vh, 460px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 6px !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(99, 102, 241, 0.12) !important;
+  z-index: 50 !important;
+  animation: ssDrop 0.18s ease-out !important;
+}
+@keyframes ssDrop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+.sidebar-search { z-index: 50 !important; }
+.ss-item { cursor: pointer !important; }
+
+/* "<Section> on top" bar with the Reset button */
+.sidebar-pin-bar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin: 8px 12px 0 !important;
+  padding: 6px 6px 6px 10px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1)) !important;
+  border: 1px dashed rgba(139, 92, 246, 0.35) !important;
+  font-size: 12px !important;
+  color: #4f46e5 !important;
+  flex-shrink: 0 !important;
+  animation: ssDrop 0.25s ease-out !important;
+}
+.sidebar-pin-bar[hidden] { display: none !important; }
+.sidebar-pin-label {
+  flex: 1 !important;
+  min-width: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.sidebar-pin-name { font-weight: 700 !important; }
+.sidebar-pin-reset {
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 4px 9px !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important;
+  cursor: pointer !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+.sidebar-pin-reset:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 14px rgba(99, 102, 241, 0.35) !important;
+}
+.sidebar-pin-reset:hover .bi { display: inline-block; animation: ssSpin 0.5s ease !important; }
+@keyframes ssSpin { to { transform: rotate(-360deg); } }
+
+/* Section moved to the top, and the picked item flashing */
+.modern-sidebar .is-pinned {
+  margin: 6px 8px 1.5rem !important;
+  padding-bottom: 6px !important;
+  border-radius: 16px !important;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.07), transparent) !important;
+  animation: ssDrop 0.35s ease-out !important;
+}
+.modern-sidebar a.ss-flash {
+  animation: ssFlash 0.8s ease-in-out 3 !important;
+}
+@keyframes ssFlash {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+  50%      { box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.45); background: rgba(139, 92, 246, 0.12); }
+}
+
+.ss-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 8px 10px !important;
+  margin-bottom: 4px !important;
+  border-radius: 12px !important;
+  border: 1px solid transparent !important;
+  text-decoration: none !important;
+  color: #334155 !important;
+  position: relative !important;
+  transition: background 0.15s ease, border-color 0.15s ease !important;
+}
+.ss-group {
+  margin-bottom: 6px !important;
+  opacity: 0;
+  animation: ssIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
+}
+.ss-children {
+  margin: 2px 0 6px 14px !important;
+  padding-left: 6px !important;
+  border-left: 2px solid rgba(139, 92, 246, 0.25) !important;
+}
+.ss-item.ss-child {
+  padding: 6px 10px !important;
+  margin-bottom: 2px !important;
+  color: #475569 !important;
+}
+.ss-child .ss-label { font-size: 13px !important; font-weight: 500 !important; flex: 1 !important; }
+.ss-child-icon { font-size: 13px !important; color: #8b5cf6 !important; }
+@keyframes ssIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.ss-item.is-selected {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1)) !important;
+  border-color: rgba(99, 102, 241, 0.25) !important;
+}
+.ss-item.ss-top {
+  padding: 12px !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(236, 72, 153, 0.08)) !important;
+  border-color: rgba(139, 92, 246, 0.2) !important;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.12) !important;
+}
+.ss-item.ss-top.is-selected {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 10px 26px rgba(99, 102, 241, 0.35) !important;
+}
+.ss-icon {
+  width: 32px !important;
+  height: 32px !important;
+  flex-shrink: 0 !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  background: linear-gradient(135deg, #64748b, #94a3b8);
+}
+.ss-top .ss-icon { width: 38px !important; height: 38px !important; font-size: 16px !important; }
+.ss-body { display: flex !important; flex-direction: column !important; min-width: 0 !important; flex: 1 !important; }
+.ss-label {
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.ss-label mark {
+  background: linear-gradient(120deg, rgba(250, 204, 21, 0.55), rgba(251, 146, 60, 0.45)) !important;
+  color: inherit !important;
+  padding: 0 1px !important;
+  border-radius: 4px !important;
+}
+.ss-top.is-selected .ss-label mark { background: rgba(255, 255, 255, 0.3) !important; }
+.ss-crumbs {
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+.ss-top.is-selected .ss-crumbs { color: rgba(255, 255, 255, 0.8) !important; }
+.ss-badge {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  background: #fbbf24 !important;
+  color: #1e293b !important;
+  border-radius: 999px !important;
+  padding: 2px 7px !important;
+}
+.ss-enter { position: absolute !important; right: 8px !important; font-size: 12px !important; opacity: 0 !important; transition: opacity 0.15s ease !important; }
+.ss-item.is-selected .ss-enter { opacity: 0.7 !important; }
+.ss-item.is-selected .ss-badge { margin-right: 14px !important; }
+.ss-item.is-current .ss-label::after {
+  content: 'current' !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  margin-left: 6px !important;
+  padding: 1px 5px !important;
+  border-radius: 4px !important;
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #059669 !important;
+  vertical-align: middle !important;
+}
+.ss-empty { text-align: center !important; padding: 36px 12px !important; animation: ssIn 0.3s ease forwards !important; }
+.ss-empty-icon {
+  width: 52px !important;
+  height: 52px !important;
+  margin: 0 auto 12px !important;
+  border-radius: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 22px !important;
+  color: #8b5cf6 !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(139, 92, 246, 0.12)) !important;
+}
+.ss-empty-title { font-weight: 600 !important; color: #334155 !important; font-size: 13.5px !important; }
+.ss-empty-sub { color: #94a3b8 !important; font-size: 12px !important; margin-top: 4px !important; }
+
+.modern-sidebar.collapsed .sidebar-search,
+.modern-sidebar.collapsed .sidebar-pin-bar {
+  display: none !important;
+}
+
+[data-theme="dark"] .sidebar-search-box { background: rgba(255, 255, 255, 0.12) !important; }
+[data-theme="dark"] .sidebar-search-box:focus-within { background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899) !important; }
+[data-theme="dark"] .sidebar-search input { background: #1e293b !important; color: #e2e8f0 !important; }
+[data-theme="dark"] .ss-item, [data-theme="dark"] .ss-item.ss-child { color: #e2e8f0 !important; }
+[data-theme="dark"] .ss-item.is-selected { background: rgba(99, 102, 241, 0.18) !important; }
+[data-theme="dark"] .ss-item.ss-top.is-selected { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important; }
+[data-theme="dark"] .ss-empty-title { color: #e2e8f0 !important; }
+[data-theme="dark"] .modern-sidebar.searching .sidebar-search-results { background: #1e293b !important; border-color: rgba(139, 92, 246, 0.35) !important; }
+[data-theme="dark"] .sidebar-pin-bar { color: #c4b5fd !important; }
+</style>
+
+<div class="sidebar-search" data-scope="<%= local_assigns[:scope] %>">
+  <div class="sidebar-search-box">
+    <i class="bi bi-search"></i>
+    <input type="search" id="sidebar-search-input" placeholder="Search menu..." autocomplete="off" spellcheck="false" aria-label="Search menu">
+    <span class="sidebar-search-meta">
+      <button type="button" class="sidebar-search-clear" aria-label="Clear search"><i class="bi bi-x-lg"></i></button>
+    </span>
+  </div>
+  <div class="sidebar-search-results" role="listbox" aria-label="Menu suggestions"></div>
+</div>
+<div class="sidebar-pin-bar" hidden>
+  <i class="bi bi-pin-angle-fill"></i>
+  <span class="sidebar-pin-label"><span class="sidebar-pin-name"></span> on top</span>
+  <button type="button" class="sidebar-pin-reset" title="Restore default menu order"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+</div>

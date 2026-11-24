@@ -30,6 +30,9 @@ class ManualJournal < ApplicationRecord
   before_save :compute_total
 
   scope :published, -> { where(status: 'published') }
+  # System journals posted by AutoJournal (invoices, payments, purchases) vs. ones typed in by hand.
+  scope :automatic, -> { where.not(source_type: nil) }
+  scope :manual_only, -> { where(source_type: nil) }
   scope :drafts, -> { where(status: 'draft') }
   scope :recent, -> { order(journal_date: :desc, journal_number: :desc) }
   # Journals that count for a given P&L basis.
@@ -39,6 +42,15 @@ class ManualJournal < ApplicationRecord
 
   def published? = status == 'published'
   def draft? = status == 'draft'
+  def automatic? = source_type.present?
+  def entry_kind_label = AutoJournal::KINDS[entry_kind]
+
+  # The invoice / purchase / payment an auto journal was posted from.
+  def source_record
+    return unless automatic?
+    @source_record ||= source_type.safe_constantize&.find_by(id: source_id)
+  end
+
   def reporting_method_label = REPORTING_METHODS.to_h[reporting_method]
 
   def live_lines = manual_journal_lines.reject(&:marked_for_destruction?)
