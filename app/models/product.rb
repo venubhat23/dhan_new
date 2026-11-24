@@ -464,6 +464,8 @@ class Product < ApplicationRecord
   # Whole product list as CSV: one row per product, plus one row per variant for
   # multi-quantity products. stock_for.(product, variant_or_nil) supplies the
   # stock figure so admin (central stock) and store admin (store stock) share this.
+  # Rows whose Low Stock Threshold is 0 (or blank) are left out: 0 means "no
+  # low-stock tracking", so those products/variants aren't wanted in the export.
   def self.export_csv(products, stock_for:)
     require 'csv'
     CSV.generate(headers: true) do |csv|
@@ -472,16 +474,18 @@ class Product < ApplicationRecord
         gst = product.gst_enabled ? product.gst_percentage.to_f : 0
         base = [product.id, product.name]
         common = [product.category&.name, product.unit_type]
-        status = product.status ? 'Active' : 'Inactive'
+        status = product.status.to_s.humanize.presence || 'Unknown'
         variants = product.has_multiple_quantities? ? product.sorted_variants : []
 
         if variants.any?
           variants.each do |v|
+            next if v.low_stock_threshold.to_i <= 0
+
             csv << base + [v.label, v.try(:sku).presence || product.sku, product.barcode] + common +
                    [v.effective_price.to_f, v.buying_price.to_f, v.b2b_price.to_f, gst, product.hsn_code,
                     stock_for.(product, v).to_f, v.low_stock_threshold, status]
           end
-        else
+        elsif product.low_stock_threshold.to_i > 0
           csv << base + ['', product.sku, product.barcode] + common +
                  [product.price.to_f, product.buying_price.to_f, product.b2b_price.to_f, gst, product.hsn_code,
                   stock_for.(product, nil).to_f, product.low_stock_threshold, status]

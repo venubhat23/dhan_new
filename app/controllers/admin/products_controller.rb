@@ -185,11 +185,16 @@ class Admin::ProductsController < Admin::ApplicationController
                    'active'
                  end
 
-    @product.update(status: new_status)
+    ok = @product.update(status: new_status)
+    if ok
+      message = @product.active? ? "\"#{@product.name}\" activated" : "\"#{@product.name}\" paused (inactive)"
+    else
+      message = "Could not change status: #{@product.errors.full_messages.to_sentence}"
+    end
 
     respond_to do |format|
-      format.json { render json: { status: @product.status, message: "Product #{@product.status} successfully" } }
-      format.html { redirect_back fallback_location: admin_products_path, notice: "Product #{@product.status} successfully" }
+      format.json { render json: { status: @product.status, message: message } }
+      format.html { redirect_back fallback_location: admin_products_path, (ok ? :notice : :alert) => message }
     end
   end
 

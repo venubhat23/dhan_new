@@ -454,6 +454,21 @@ document.addEventListener('DOMContentLoaded', function() {
                       <%= link_to manage_images_admin_product_path(product), class: "btn btn-outline-secondary", title: "Change Image" do %>
                         <i class="bi bi-image"></i>
                       <% end %>
+                      <% if product.active? %>
+                        <%= button_to toggle_status_admin_product_path(product), method: :patch,
+                              form: { class: 'd-inline', data: { turbo: false } },
+                              class: "btn btn-outline-warning rounded-0", title: "Pause Product",
+                              onclick: "return confirm('#{j("Pause \"#{product.name}\"? It will be hidden from the website, billing and low-stock reports until you activate it again.")}')" do %>
+                          <i class="bi bi-pause-circle"></i>
+                        <% end %>
+                      <% elsif product.inactive? %>
+                        <%= button_to toggle_status_admin_product_path(product), method: :patch,
+                              form: { class: 'd-inline', data: { turbo: false } },
+                              class: "btn btn-outline-success rounded-0", title: "Activate Product",
+                              onclick: "return confirm('#{j("Activate \"#{product.name}\"? It will show on the website and in billing again.")}')" do %>
+                          <i class="bi bi-play-circle"></i>
+                        <% end %>
+                      <% end %>
                       <button type="button" class="btn btn-outline-danger" title="Delete Product"
                               onclick="confirmDeleteProduct('<%= j(product.name) %>', '<%= admin_product_path(product) %>', this)">
                         <i class="bi bi-trash"></i>
