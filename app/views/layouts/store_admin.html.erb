@@ -9,7 +9,7 @@
 
     <%= javascript_importmap_tags %>
 
-    <script type="module">import "sidebar_search"</script>
+    <script type="module" src="<%= asset_path("sidebar_search.js") %>"></script>
     <%= yield :head %>
 
     <link rel="icon" href="/icon.png" type="image/png">

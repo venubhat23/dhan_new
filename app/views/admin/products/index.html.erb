@@ -1,4 +1,22 @@
 <% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<style>
+  /* Paused (inactive) products stand out from active ones */
+  tr.product-row--inactive > td { background-color: #fff1f2 !important; }
+  tr.product-row--inactive > td:first-child { box-shadow: inset 4px 0 0 #e11d48; }
+  tr.product-row--inactive img { filter: grayscale(100%); opacity: .6; }
+  tr.product-row--inactive h6 a { color: #9f1239 !important; }
+  tr.product-row--draft > td { background-color: #fffbeb !important; }
+  tr.product-row--draft > td:first-child { box-shadow: inset 4px 0 0 #f59e0b; }
+
+  .product-status-pill { font-size: .7rem; font-weight: 600; padding: .3em .65em; border-radius: 999px; margin: 3px 0 2px; }
+  .product-status-pill--active   { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+  .product-status-pill--inactive { background: #ffe4e6; color: #be123c; border: 1px solid #fda4af; }
+  .product-status-pill--draft    { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+
+  .btn-activate-product { background: linear-gradient(135deg, #16a34a, #22c55e) !important; border-color: #16a34a !important;
+                          color: #fff !important; font-weight: 600; box-shadow: 0 2px 8px rgba(22,163,74,.35); }
+  .btn-activate-product:hover { background: linear-gradient(135deg, #15803d, #16a34a) !important; }
+</style>
 <!-- Hidden delete form — reused for all product deletes -->
 <form id="deleteProductForm" method="post" style="display:none">
   <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
@@ -292,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
                   # accidentally submit a stale stock number as a "change".
                   display_stock = product.respond_to?(:current_stock) ? product.current_stock.to_i : product.stock.to_i
                 %>
-                <tr data-product-id="<%= product.id %>"
+                <tr data-product-id="<%= product.id %>" class="product-row product-row--<%= product.status.presence || 'unknown' %>"
                     data-product='<%= {
                       id: product.id, name: product.name, price: product.price.to_f,
                       buying_price: product.buying_price.to_f, purchase_price: product.purchase_price.to_f,
@@ -342,7 +360,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             </span>
                           <% end %>
                         </h6>
-                        <small class="text-muted">SKU: <%= product.sku || 'N/A' %></small>
+                        <% case product.status %>
+                        <% when 'active' %>
+                          <span class="badge product-status-pill product-status-pill--active"><i class="bi bi-check-circle-fill me-1"></i>Active</span>
+                        <% when 'inactive' %>
+                          <span class="badge product-status-pill product-status-pill--inactive"><i class="bi bi-pause-circle-fill me-1"></i>Inactive</span>
+                        <% when 'draft' %>
+                          <span class="badge product-status-pill product-status-pill--draft"><i class="bi bi-clock-fill me-1"></i>Draft</span>
+                        <% end %>
+                        <small class="text-muted d-block">SKU: <%= product.sku || 'N/A' %></small>
                         <% if product.image_url.present? %>
                           <small class="text-success d-block">
                             <i class="bi bi-cloud-check me-1"></i>Cloudinary
@@ -464,9 +490,9 @@ document.addEventListener('DOMContentLoaded', function() {
                       <% elsif product.inactive? %>
                         <%= button_to toggle_status_admin_product_path(product), method: :patch,
                               form: { class: 'd-inline', data: { turbo: false } },
-                              class: "btn btn-outline-success rounded-0", title: "Activate Product",
+                              class: "btn btn-success rounded-0 btn-activate-product", title: "Activate Product",
                               onclick: "return confirm('#{j("Activate \"#{product.name}\"? It will show on the website and in billing again.")}')" do %>
-                          <i class="bi bi-play-circle"></i>
+                          <i class="bi bi-play-circle-fill me-1"></i>Activate
                         <% end %>
                       <% end %>
                       <button type="button" class="btn btn-outline-danger" title="Delete Product"
