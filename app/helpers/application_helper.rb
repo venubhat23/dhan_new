@@ -1,4 +1,14 @@
 module ApplicationHelper
+  # Sidebar menu search script. Loaded by its asset URL (not the import map) and
+  # never fatal: if the server's precompiled assets are stale and don't include
+  # it yet, the page still renders — only the sidebar search is missing.
+  def sidebar_search_script_tag
+    tag.script(type: 'module', src: asset_path('sidebar_search.js'))
+  rescue StandardError => e
+    Rails.logger.warn("[sidebar_search] #{e.class}: #{e.message} — run assets:precompile")
+    ''
+  end
+
   # ---- B2B invoices: CGST/SGST split, GSTIN, B2B label ----------------------
 
   # The B2B booking behind an invoice (matched by invoice number), or nil.
