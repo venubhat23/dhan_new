@@ -95,13 +95,17 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
       @booking.customer_name = @preselected_customer.display_name
       @booking.customer_phone = @preselected_customer.mobile
       @booking.customer_email = @preselected_customer.email
+      if @preselected_customer.is_b2b?
+        @booking.is_b2b = true
+        @booking.gstin  = @preselected_customer.gst_no
+      end
     end
     @selected_store = @current_store
     @products = products_for_picker
     @variant_stock = variant_store_stock_map(@products)
     @categories = Category.where(status: true).order(:name)
     # No cap: the picker searches this list client-side, so a limit hid newer customers
-    @customers = Customer.select(:id, :full_name, :email, :mobile).order(:full_name)
+    @customers = Customer.select(:id, :full_name, :email, :mobile, :is_b2b, :gst_no).order(:full_name)
     @store_products = @current_store.store_products_with_inventory.includes(:product_variants).by_stock_availability rescue @products
   end
 
@@ -590,7 +594,7 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
   end
 
   def validate_stock_availability(booking, is_update: false)
-    active_items = booking.booking_items.reject(&:marked_for_destruction?).select { |i| i.product_id.present? && i.quantity.to_i > 0 }
+    active_items = booking.booking_items.reject(&:marked_for_destruction?).select { |i| i.product_id.present? && i.quantity.to_f > 0 }
     return true if active_items.empty?
 
     products_by_id = Product.where(id: active_items.map(&:product_id).uniq).index_by(&:id)

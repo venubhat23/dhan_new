@@ -40,6 +40,15 @@ class ProductVariant < ApplicationRecord
     end
   end
 
+  # Unit price charged to a B2B customer (same GST-inclusive basis as
+  # effective_price): explicit B2B price wins, else B2B % off the regular
+  # price. nil when no B2B rate is configured (bill at the regular price).
+  def b2b_rate
+    return b2b_price.to_f.round(2) if b2b_price.to_f > 0
+    return (effective_price.to_f * (1 - b2b_percentage.to_f / 100)).round(2) if b2b_percentage.to_f > 0
+    nil
+  end
+
   def effective_gst_percentage
     gst_percentage.presence || product&.gst_percentage || 0
   end

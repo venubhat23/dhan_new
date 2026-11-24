@@ -285,6 +285,7 @@ Rails.application.routes.draw do
         get :search_customers
         get :product_picker
         get :realtime_data
+        get :due_deliveries
         get :store_booking
         post :bulk_mark_paid
         # Status filters

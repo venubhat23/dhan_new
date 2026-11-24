@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_22_000004) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_23_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -440,11 +440,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_22_000004) do
     t.string "landmark"
     t.text "shipping_address"
     t.string "full_name"
+    t.boolean "is_b2b", default: false, null: false
     t.index "(((to_tsvector('simple'::regconfig, COALESCE((full_name)::text, ''::text)) || to_tsvector('simple'::regconfig, COALESCE((email)::text, ''::text))) || to_tsvector('simple'::regconfig, COALESCE((mobile)::text, ''::text))))", name: "index_customers_on_pg_search_tsvector", using: :gin
     t.index ["created_at"], name: "index_customers_on_created_at"
     t.index ["email"], name: "index_customers_on_email", unique: true
     t.index ["full_name"], name: "index_customers_on_full_name"
     t.index ["full_name"], name: "index_customers_on_full_name_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["is_b2b"], name: "index_customers_on_is_b2b"
     t.index ["latitude", "longitude"], name: "index_customers_on_location"
     t.index ["mobile"], name: "index_customers_on_mobile"
     t.index ["whatsapp_number"], name: "index_customers_on_whatsapp_number"

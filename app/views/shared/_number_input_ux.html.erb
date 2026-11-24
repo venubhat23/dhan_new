@@ -1,0 +1,48 @@
+<%#
+  App-wide number-box behaviour for the admin / store-admin panels:
+  1. No up/down spinner arrows on any <input type="number"> (they kept
+     reappearing on boxes that per-page CSS had missed).
+  2. Clicking into a box that holds 0 empties it, so you can type straight
+     away instead of deleting the 0 first. If you leave it empty, the 0 comes
+     back, so forms never submit a blank amount.
+  Opt out on a specific box with data-keep-zero.
+%>
+<style>
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+</style>
+<script>
+  (function () {
+    if (window.__numberInputUxBound) return;
+    window.__numberInputUxBound = true;
+
+    function isZero(v) {
+      return v !== '' && !isNaN(v) && parseFloat(v) === 0;
+    }
+
+    document.addEventListener('focusin', function (e) {
+      var el = e.target;
+      if (!el || el.tagName !== 'INPUT' || el.type !== 'number') return;
+      if (el.readOnly || el.disabled || el.hasAttribute('data-keep-zero')) return;
+      if (isZero(el.value)) {
+        el.dataset.zeroCleared = el.value;
+        el.value = '';
+      }
+    });
+
+    document.addEventListener('focusout', function (e) {
+      var el = e.target;
+      if (!el || el.tagName !== 'INPUT' || el.type !== 'number') return;
+      if (el.dataset.zeroCleared === undefined) return;
+      if (el.value === '') el.value = el.dataset.zeroCleared;
+      delete el.dataset.zeroCleared;
+    });
+
+    // Mouse-wheel over a focused number box silently changed the value.
+    document.addEventListener('wheel', function (e) {
+      var el = e.target;
+      if (el && el.tagName === 'INPUT' && el.type === 'number' && document.activeElement === el) el.blur();
+    }, { passive: true });
+  })();
+</script>

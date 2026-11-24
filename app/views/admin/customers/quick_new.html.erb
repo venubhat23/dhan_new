@@ -141,6 +141,24 @@
           </div>
 
           <div class="mb-4">
+            <div class="form-check form-switch mb-2">
+              <input type="hidden" name="customer[is_b2b]" value="0">
+              <input class="form-check-input" type="checkbox" role="switch" id="quickCustomerB2b" name="customer[is_b2b]" value="1"
+                     <%= 'checked' if @customer.is_b2b? %>
+                     onchange="document.getElementById('quickCustomerGstWrap').style.display = this.checked ? '' : 'none';">
+              <label class="form-check-label fw-semibold" for="quickCustomerB2b">
+                <i class="bi bi-building me-1"></i>B2B Customer
+              </label>
+            </div>
+            <div id="quickCustomerGstWrap" style="<%= 'display:none;' unless @customer.is_b2b? %>">
+              <label class="form-label fw-semibold" for="quickCustomerGst">GST Number <span class="text-danger">*</span></label>
+              <input type="text" id="quickCustomerGst" name="customer[gst_no]" class="form-control text-uppercase"
+                     maxlength="15" placeholder="22ABCDE1234F1Z5" value="<%= @customer.gst_no %>" autocomplete="off">
+              <div class="form-text">B2B rates apply automatically when billing this customer.</div>
+            </div>
+          </div>
+
+          <div class="mb-4">
             <label class="form-label fw-semibold">
               Notes <span class="text-muted fw-normal">(Optional)</span>
             </label>

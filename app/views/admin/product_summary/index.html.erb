@@ -164,7 +164,7 @@
                       value: main_stock,
                       name: "main_products[#{product.id}][stock]",
                       editable: true,
-                      danger: (main_thr && main_stock <= main_thr.to_f) %>
+                      danger: (product.active? && main_thr.to_f > 0 && main_stock <= main_thr.to_f) %>
                 <%= render "num_cell",
                       value: main_thr,
                       name: "main_products[#{product.id}][threshold]",
@@ -177,7 +177,7 @@
                         value: s_qty,
                         name: "store_products[#{store.id}][#{product.id}][qty]",
                         editable: true,
-                        danger: (s_qty && s_thr && s_qty <= s_thr.to_f) %>
+                        danger: (product.active? && s_qty && s_thr.to_f > 0 && s_qty <= s_thr.to_f) %>
                   <%= render "num_cell",
                         value: s_thr,
                         name: "store_products[#{store.id}][#{product.id}][threshold]",
@@ -201,7 +201,7 @@
                         value: v_stock,
                         name: "main_variants[#{variant.id}][stock]",
                         editable: true,
-                        danger: (v_thr && v_stock <= v_thr.to_f) %>
+                        danger: (product.active? && v_thr.to_f > 0 && v_stock <= v_thr.to_f) %>
                   <%= render "num_cell",
                         value: v_thr,
                         name: "main_variants[#{variant.id}][threshold]",
@@ -214,7 +214,7 @@
                           value: sv_qty,
                           name: "store_variants[#{store.id}][#{variant.id}][qty]",
                           editable: true,
-                          danger: (sv_qty && sv_thr && sv_qty.to_f <= sv_thr.to_f) %>
+                          danger: (product.active? && sv_qty && sv_thr.to_f > 0 && sv_qty.to_f <= sv_thr.to_f) %>
                     <%= render "num_cell",
                           value: sv_thr,
                           name: "store_variants[#{store.id}][#{variant.id}][threshold]",

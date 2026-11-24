@@ -189,7 +189,7 @@ class Admin::ProductsController < Admin::ApplicationController
 
     respond_to do |format|
       format.json { render json: { status: @product.status, message: "Product #{@product.status} successfully" } }
-      format.html { redirect_to admin_products_path, notice: "Product #{@product.status} successfully" }
+      format.html { redirect_back fallback_location: admin_products_path, notice: "Product #{@product.status} successfully" }
     end
   end
 
@@ -553,7 +553,7 @@ class Admin::ProductsController < Admin::ApplicationController
 
   # Shared by the list and its search dropdown so both honour the same filters.
   # "Low Stock" uses at-or-below-threshold, the same rule as the Low Stock Alert
-  # page and Product Summary, so a product at 0 with a threshold of 0 still lists.
+  # page and Product Summary — active products with a threshold above 0 only.
   def filtered_products
     products = Product.all
     products = products.search(params[:search]) if params[:search].present?

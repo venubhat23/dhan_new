@@ -423,10 +423,18 @@ document.addEventListener('DOMContentLoaded', function() {
                       </div>
                       <div>
                         <% case product.status %>
-                        <% when 'active' %>
-                          <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Active</span>
-                        <% when 'inactive' %>
-                          <span class="badge bg-danger-subtle text-danger"><i class="bi bi-x-circle me-1"></i>Inactive</span>
+                        <% when 'active', 'inactive' %>
+                          <%= button_to toggle_status_admin_product_path(product), method: :patch,
+                                form: { class: 'd-inline', data: { turbo: false } },
+                                class: "badge border-0 #{product.status == 'active' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}",
+                                title: (product.status == 'active' ? 'Click to make Inactive' : 'Click to make Active'),
+                                onclick: "return confirm('#{j(product.status == 'active' ? "Make \"#{product.name}\" inactive? It will be hidden from the website, billing and low-stock reports." : "Make \"#{product.name}\" active again?")}')" do %>
+                            <% if product.status == 'active' %>
+                              <i class="bi bi-check-circle me-1"></i>Active <i class="bi bi-toggle-on ms-1"></i>
+                            <% else %>
+                              <i class="bi bi-x-circle me-1"></i>Inactive <i class="bi bi-toggle-off ms-1"></i>
+                            <% end %>
+                          <% end %>
                         <% when 'draft' %>
                           <span class="badge bg-warning-subtle text-warning"><i class="bi bi-clock me-1"></i>Draft</span>
                         <% else %>

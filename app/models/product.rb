@@ -167,11 +167,13 @@ class Product < ApplicationRecord
   SQL
   scope :real_in_stock, -> { where(Arel.sql("(#{REAL_STOCK_SQL}) > 0")) }
   scope :real_out_of_stock, -> { where(Arel.sql("(#{REAL_STOCK_SQL}) <= 0")) }
+  # Low-stock lists only cover ACTIVE products with a threshold above 0 — a
+  # threshold of 0 means "don't alert me", and inactive products are retired.
   scope :real_low_stock, -> {
-    where(Arel.sql("(#{REAL_STOCK_SQL}) > 0 AND (#{REAL_STOCK_SQL}) <= (#{REAL_THRESHOLD_SQL})"))
+    active.where(Arel.sql("(#{REAL_THRESHOLD_SQL}) > 0 AND (#{REAL_STOCK_SQL}) > 0 AND (#{REAL_STOCK_SQL}) <= (#{REAL_THRESHOLD_SQL})"))
   }
   scope :real_at_or_below_threshold, -> {
-    where(Arel.sql("(#{REAL_STOCK_SQL}) <= (#{REAL_THRESHOLD_SQL})"))
+    active.where(Arel.sql("(#{REAL_THRESHOLD_SQL}) > 0 AND (#{REAL_STOCK_SQL}) <= (#{REAL_THRESHOLD_SQL})"))
   }
   scope :with_real_stock_amount, -> { select(Arel.sql("products.*, (#{REAL_STOCK_SQL}) AS current_stock")) }
 
@@ -1174,6 +1176,15 @@ class Product < ApplicationRecord
     cached_total_batch_stock <= 0
   end
 
+  # Unit price charged to a B2B customer for a simple (non-variant) product,
+  # given the regular GST-inclusive unit price: explicit B2B price wins, else
+  # B2B % off the regular price. nil when no B2B rate is configured.
+  def b2b_rate(regular_price = price)
+    return b2b_price.to_f.round(2) if b2b_price.to_f > 0
+    return (regular_price.to_f * (1 - b2b_percentage.to_f / 100)).round(2) if b2b_percentage.to_f > 0
+    nil
+  end
+
   def effective_low_stock_threshold
     if has_multiple_quantities? && product_variants.any?
       product_variants.sum { |v| v.low_stock_threshold.to_i }
@@ -1184,6 +1195,7 @@ class Product < ApplicationRecord
 
   def low_stock?
     threshold = effective_low_stock_threshold
+    return false if threshold.to_f <= 0
     stock_amount = cached_total_batch_stock
     stock_amount > 0 && stock_amount <= threshold
   end

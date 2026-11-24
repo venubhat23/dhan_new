@@ -154,6 +154,7 @@
     <% end %>
     <%= stylesheet_link_tag "auth", "data-turbo-track": "reload" if !user_signed_in? %>
 
+    <%= render "shared/number_input_ux" %>
   </head>
 
   <body class="insurance-app">
@@ -413,6 +414,11 @@
 
     <!-- Modals rendered outside main-content to avoid stacking context issues -->
     <%= yield :modals %>
+
+    <%# Scheduled-delivery reminder pop-up (admins only) %>
+    <% if user_signed_in? && (current_user.admin? || current_user.user_type == 'admin') %>
+      <%= render 'shared/delivery_reminders' %>
+    <% end %>
 
     <!-- Global Form Enhancement Script -->
     <script>

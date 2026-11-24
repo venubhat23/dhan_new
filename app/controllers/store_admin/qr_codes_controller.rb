@@ -10,6 +10,7 @@ class StoreAdmin::QrCodesController < StoreAdmin::ApplicationController
   def lookup
     product = Product.find_by(barcode: params[:barcode].to_s.strip)
     return render(json: { found: false, message: "No product found for barcode: #{params[:barcode]}" }) unless product
+    return render(json: { found: false, message: "#{product.name} is inactive and cannot be billed" }) unless product.active?
 
     gst_rate = (product.gst_enabled? && product.gst_percentage.present?) ? product.gst_percentage.to_f : 0.0
     response = {
@@ -25,7 +26,7 @@ class StoreAdmin::QrCodesController < StoreAdmin::ApplicationController
         # active batch total is the fallback — was falling back to
         # v.available_stock (the CENTRAL column) instead when there was no
         # inventory row, which could report far more than this store has.
-        { id: v.id, label: v.label, price: v.effective_price.to_f,
+        { id: v.id, label: v.label, price: v.effective_price.to_f, b2b_price: v.b2b_rate,
           stock: @current_store.available_stock_for(product.id, v.id).to_i,
           is_default: v.is_default }
       end
@@ -33,6 +34,7 @@ class StoreAdmin::QrCodesController < StoreAdmin::ApplicationController
       response[:price] = default_v.effective_price.to_f
     else
       response[:price] = product.price.to_f
+      response[:b2b_price] = product.b2b_rate(product.price)
       response[:available_stock] = @current_store.available_stock_for(product.id).to_i
     end
 

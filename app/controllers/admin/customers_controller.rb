@@ -72,6 +72,12 @@ class Admin::CustomersController < Admin::ApplicationController
         @customers = @customers.where(status: false)
         stats_scope = stats_scope.where(status: false)
       end
+    when 'b2b'
+      @customers = @customers.where(is_b2b: true)
+      stats_scope = stats_scope.where(is_b2b: true)
+    when 'b2c'
+      @customers = @customers.where(is_b2b: false)
+      stats_scope = stats_scope.where(is_b2b: false)
     end
 
     # Delivery person filtering - check subscriptions and delivery tasks
@@ -851,6 +857,8 @@ class Admin::CustomersController < Admin::ApplicationController
     @customer.mobile = params[:customer][:mobile].to_s.strip
     @customer.email = params[:customer][:email].to_s.strip.presence
     @customer.notes = params[:customer][:notes].to_s.strip.presence
+    @customer.is_b2b = ActiveModel::Type::Boolean.new.cast(params[:customer][:is_b2b]) || false
+    @customer.gst_no = params[:customer][:gst_no].to_s.strip.upcase.presence
 
     # Generate password: first 4 digits of mobile + @123
     mobile_digits = @customer.mobile.gsub(/\D/, '')
@@ -1061,7 +1069,7 @@ class Admin::CustomersController < Admin::ApplicationController
       :full_name, :email, :mobile,
       :longitude, :latitude, :whatsapp_number, :auto_generated_password,
       :location_obtained_at, :location_accuracy, :password, :password_confirmation,
-      :birth_date, :gender, :marital_status, :pan_no, :gst_no,
+      :birth_date, :gender, :marital_status, :pan_no, :gst_no, :is_b2b,
       :company_name, :occupation, :annual_income,
       :emergency_contact_name, :emergency_contact_number, :blood_group,
       :nationality, :preferred_language, :notes, :address, :landmark,

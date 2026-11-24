@@ -114,6 +114,8 @@
           <option value="">All Status</option>
           <option value="active" <%= 'selected' if params[:status] == 'active' %>>Active</option>
           <option value="inactive" <%= 'selected' if params[:status] == 'inactive' %>>Inactive</option>
+          <option value="b2b" <%= 'selected' if params[:status] == 'b2b' %>>B2B Customers</option>
+          <option value="b2c" <%= 'selected' if params[:status] == 'b2c' %>>Regular (B2C) Customers</option>
         </select>
       </div>
     </div>
@@ -191,7 +193,12 @@
                       <i class="bi bi-person text-primary"></i>
                     </div>
                     <div>
-                      <h6 class="mb-0"><%= customer.display_name %></h6>
+                      <h6 class="mb-0">
+                        <%= customer.display_name %>
+                        <% if customer.is_b2b? %>
+                          <span class="badge bg-info-subtle text-info ms-1" style="font-size:0.7rem;"><i class="bi bi-building me-1"></i>B2B</span>
+                        <% end %>
+                      </h6>
                       <small class="text-muted">ID: #<%= customer.id %></small>
                     </div>
                   </div>

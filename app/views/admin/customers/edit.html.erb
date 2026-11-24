@@ -57,6 +57,16 @@
               <%= form.label :gst_no, "GST Number", class: "form-label" %>
               <%= form.text_field :gst_no, class: "form-control text-uppercase", placeholder: "22ABCDE1234F1Z5", maxlength: 15 %>
             </div>
+
+            <div class="col-md-6 d-flex align-items-center">
+              <div class="form-check form-switch mt-md-4">
+                <%= form.check_box :is_b2b, class: "form-check-input", role: "switch", id: "customer_is_b2b" %>
+                <label class="form-check-label fw-semibold" for="customer_is_b2b">
+                  <i class="bi bi-building me-1"></i>B2B Customer
+                </label>
+                <div class="form-text">B2B rates (product B2B price / B2B %) apply automatically when billing this customer. GST Number is required.</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

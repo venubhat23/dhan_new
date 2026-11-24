@@ -72,6 +72,10 @@ has_many :pending_amounts, dependent: :destroy
   validates :full_name, presence: true
   validates :email, uniqueness: { allow_blank: true }, format: { with: URI::MailTo::EMAIL_REGEXP, allow_blank: true }
   validates :mobile, presence: true, uniqueness: true
+  # A B2B customer is billed on B2B invoices, which must carry their GSTIN.
+  validates :gst_no, presence: { message: "is required for a B2B customer" }, if: -> { is_b2b? && (new_record? || will_save_change_to_is_b2b? || will_save_change_to_gst_no?) }
+
+  scope :b2b, -> { where(is_b2b: true) }
   validate :valid_mobile_format
   validates :whatsapp_number, format: { with: /\A[+]?[\d\s\-\(\)]{7,15}\z/ }, allow_blank: true
   validates :longitude, numericality: { greater_than_or_equal_to: -180, less_than_or_equal_to: 180 }, allow_blank: true

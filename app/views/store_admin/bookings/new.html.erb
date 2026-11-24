@@ -214,6 +214,7 @@
                         <% product.sorted_variants.each do |v| %>
                           <option value="<%= v.id %>"
                                   data-price="<%= v.effective_price %>"
+                                  data-b2b-price="<%= v.b2b_rate %>"
                                   data-stock="<%= variant_stock_for_store.call(v) %>"
                                   data-label="<%= v.label %>"
                                   <%= 'selected' if v.id == default_v.id %>>
@@ -233,6 +234,11 @@
                     <% else %>
                       <span class="h6 text-primary mb-0">₹<%= number_with_delimiter(final_price.round(2)) %></span>
                     <% end %>
+
+                    <% card_b2b = (product.has_multiple_quantities? && default_v) ? default_v.b2b_rate : product.b2b_rate(rounded_final) %>
+                    <small class="text-info fw-semibold d-block booking-b2b-rate" id="booking-b2b-rate-<%= product.id %>" style="<%= 'display:none;' unless card_b2b %>">
+                      B2B: ₹<span><%= card_b2b ? number_with_delimiter(card_b2b) : '' %></span>
+                    </small>
 
                     <% if product.gst_enabled && gst_rate > 0 %>
                       <small class="text-muted d-block">
@@ -262,7 +268,7 @@
                           <button class="btn btn-outline-primary btn-sm px-2" type="button" onclick="decreaseQuantity(<%= product.id %>)">
                             <i class="bi bi-dash"></i>
                           </button>
-                          <input type="number" id="qty-<%= product.id %>" value="1" min="0.1" step="0.1" max="<%= effective_stock %>" class="form-control form-control-sm text-center fw-bold" onchange="validateQuantity(<%= product.id %>, <%= effective_stock %>)">
+                          <input type="number" id="qty-<%= product.id %>" value="1" min="0.01" step="0.01" max="<%= effective_stock %>" class="form-control form-control-sm text-center fw-bold" onchange="validateQuantity(<%= product.id %>, <%= effective_stock %>)">
                           <button class="btn btn-outline-primary btn-sm px-2" type="button" onclick="increaseQuantity(<%= product.id %>)">
                             <i class="bi bi-plus"></i>
                           </button>
@@ -289,6 +295,7 @@
                               data-base-price="<%= cart_base_price %>"
                               data-gst-rate="<%= cart_gst_rate %>"
                               data-final-price="<%= cart_final_price %>"
+                              data-b2b-price="<%= card_b2b %>"
                               data-stock="<%= effective_stock %>"
                               data-has-variants="<%= product.has_multiple_quantities? ? 'true' : 'false' %>"
                               <%= 'disabled' if effective_stock <= 0 %>>
@@ -593,13 +600,17 @@
                       pattern: '[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z][1-9A-Za-z][Zz][0-9A-Za-z]',
                       title: '15-character GSTIN, e.g. 29ABCDE1234F1Z5' %>
                 <div class="form-text">Required for B2B. Leave blank to use the customer's saved GST number. Printed on the invoice.</div>
+                <div class="form-text text-info"><i class="bi bi-tag me-1"></i>B2B rates (product B2B price / B2B %) are applied to cart items.</div>
               </div>
               <script>
                 (function () {
                   var t = document.getElementById('b2bBookingToggle');
                   var box = document.getElementById('b2bGstinField');
                   if (!t || !box) return;
-                  t.addEventListener('change', function () { box.style.display = t.checked ? '' : 'none'; });
+                  t.addEventListener('change', function () {
+                    box.style.display = t.checked ? '' : 'none';
+                    if (typeof applyB2bPricing === 'function') applyB2bPricing(true);
+                  });
                 })();
               </script>
             </div>
@@ -689,25 +700,25 @@
 </div>
 
 <%# Floating Cart - Enhanced and Larger %>
-<div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1000;">
-  <div class="card border-0 shadow-lg" id="floatingCart" style="min-width: 500px; max-width: 550px; display: none;">
-    <div class="card-header py-3" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-bottom: 3px solid #667eea;">
-      <div class="d-flex justify-content-between align-items-center">
-        <h3 class="mb-0 d-flex align-items-center fw-bold text-black">
-          <i class="bi bi-cart3 me-2 fs-2 text-primary"></i>
-          <span style="font-size: 1.75rem; letter-spacing: 1px; color: black; font-weight: 900;">SHOPPING CART</span>
+<div class="position-fixed bottom-0 end-0 p-3" id="floatingCartDock" style="z-index: 1000;">
+  <div class="card border-0 shadow-lg" id="floatingCart" style="display: none;">
+    <div class="card-header py-2" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-bottom: 3px solid #667eea;">
+      <div class="d-flex justify-content-between align-items-center gap-2">
+        <h3 class="mb-0 d-flex align-items-center fw-bold text-black text-nowrap overflow-hidden">
+          <i class="bi bi-cart3 me-2 fs-4 text-primary"></i>
+          <span style="font-size: 1.25rem; letter-spacing: 1px; color: black; font-weight: 900;">SHOPPING CART</span>
         </h3>
-        <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-primary text-white px-3 py-2" style="font-size: 0.9rem; border: 2px solid #667eea;">
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+          <span class="badge bg-primary text-white px-3 py-2" style="font-size: 0.85rem; border: 2px solid #667eea;">
             <span id="cartCount">0</span> items
           </span>
-          <button type="button" class="btn btn-sm btn-link text-dark p-0" onclick="minimizeCart()" title="Minimize">
+          <button type="button" class="btn btn-sm btn-outline-secondary cart-minimize-btn" onclick="minimizeCart()" title="Minimize cart" aria-label="Minimize cart">
             <i class="bi bi-dash-lg"></i>
           </button>
         </div>
       </div>
     </div>
-    <div class="card-body p-3" style="max-height: 420px; overflow-y: auto;">
+    <div class="card-body p-3" id="floatingCartBody" style="overflow-y: auto;">
       <div id="cartItems">
         <p class="text-muted text-center mb-0">Your cart is empty</p>
       </div>
@@ -827,7 +838,33 @@ function updateCheckoutTotalsOnly() {
 
 // Add item to cart
 // qty param is optional — used by barcode scan to bypass the DOM qty input
-function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate, variantId, qty) {
+// ---- B2B pricing -------------------------------------------------------------
+// Each cart line remembers its regular price and (optional) B2B rate; the
+// "B2B Booking" switch decides which one is billed.
+function isB2bBooking() {
+  const t = document.getElementById('b2bBookingToggle');
+  return !!(t && t.checked);
+}
+
+function applyB2bPricing(notify) {
+  const b2b = isB2bBooking();
+  let changed = 0;
+  Object.values(cart).forEach(item => {
+    const target = (b2b && item.b2bPrice > 0) ? item.b2bPrice : item.regularPrice;
+    if (target !== undefined && target !== item.price) {
+      item.price = target;
+      item.basePrice = item.gstRate > 0 ? target / (1 + item.gstRate / 100) : target;
+      changed++;
+    }
+  });
+  if (changed) {
+    updateCartDisplay();
+    if (typeof updateCheckoutDisplay === 'function' && currentView === 'checkout') updateCheckoutDisplay();
+    if (notify) showNotification(b2b ? 'B2B rates applied to cart' : 'Regular rates applied to cart', 'info');
+  }
+}
+
+function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate, variantId, qty, b2bPrice) {
   const qtyEl = document.getElementById(`qty-${productId}`);
   const quantity = qty !== undefined ? parseFloat(qty) : (parseFloat(qtyEl?.value) || 1);
 
@@ -851,6 +888,8 @@ function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate
       name: productName,
       price: finalPrice,
       basePrice: basePrice || finalPrice,
+      regularPrice: finalPrice,
+      b2bPrice: parseFloat(b2bPrice) || 0,
       gstRate: gstRate || 0,
       quantity: quantity,
       stock: stock,
@@ -862,6 +901,7 @@ function addToCart(productId, productName, finalPrice, stock, basePrice, gstRate
   // Reset quantity input if present
   if (qtyEl) qtyEl.value = 1;
 
+  applyB2bPricing(false);
   updateCartDisplay();
 
   // Add pulse animation to cart
@@ -884,6 +924,12 @@ function bookingUpdateVariant(selectEl, productId) {
   const price = parseFloat(opt.dataset.price);
   const stock = parseInt(opt.dataset.stock);
   const variantId = selectEl.value;
+  const b2bRate = parseFloat(opt.dataset.b2bPrice) || 0;
+  const b2bEl = document.getElementById(`booking-b2b-rate-${productId}`);
+  if (b2bEl) {
+    b2bEl.style.display = b2bRate > 0 ? '' : 'none';
+    b2bEl.querySelector('span').textContent = b2bRate > 0 ? b2bRate.toLocaleString('en-IN') : '';
+  }
 
   // Update price display
   const priceEl = document.getElementById(`booking-variant-price-${productId}`);
@@ -914,7 +960,7 @@ function bookingUpdateVariant(selectEl, productId) {
 }
 
 // Wrapper for variant-aware add-to-cart on booking page
-function bookingAddToCart(productId, productName, finalPrice, stock, basePrice, gstRate) {
+function bookingAddToCart(productId, productName, finalPrice, stock, basePrice, gstRate, b2bPrice) {
   // Pick up variant info if available
   const variantInput = document.getElementById(`booking-selected-variant-${productId}`);
   const variantId = variantInput ? variantInput.value : null;
@@ -925,11 +971,12 @@ function bookingAddToCart(productId, productName, finalPrice, stock, basePrice, 
     const opt = variantSelect.options[variantSelect.selectedIndex];
     finalPrice = parseFloat(opt.dataset.price);
     stock = parseInt(opt.dataset.stock);
+    b2bPrice = parseFloat(opt.dataset.b2bPrice) || 0;
     // finalPrice is GST-inclusive — deflate it to get the base (pre-GST) price
     basePrice = gstRate > 0 ? finalPrice / (1 + gstRate / 100) : finalPrice;
   }
 
-  addToCart(productId, productName, finalPrice, stock, basePrice, gstRate, variantId);
+  addToCart(productId, productName, finalPrice, stock, basePrice, gstRate, variantId, undefined, b2bPrice);
 }
 
 // Wire up "Add to Cart" buttons via data attributes instead of inline onclick,
@@ -942,7 +989,8 @@ document.querySelectorAll('.booking-add-to-cart-btn').forEach(btn => {
       parseFloat(btn.dataset.finalPrice) || 0,
       parseFloat(btn.dataset.stock) || 0,
       parseFloat(btn.dataset.basePrice) || 0,
-      parseFloat(btn.dataset.gstRate) || 0
+      parseFloat(btn.dataset.gstRate) || 0,
+      parseFloat(btn.dataset.b2bPrice) || 0
     );
   };
 });
@@ -1025,7 +1073,7 @@ function updateCartDisplay() {
         </div>
         <div class="d-flex justify-content-between align-items-center">
           <div class="input-group input-group-sm flex-nowrap" style="width: 170px;">
-            <button class="btn btn-outline-secondary px-2" type="button" onclick="decreaseCartQuantity('${productId}')" ${item.quantity <= 0.1 ? 'disabled' : ''}>
+            <button class="btn btn-outline-secondary px-2" type="button" onclick="decreaseCartQuantity('${productId}')" ${item.quantity <= 0.01 ? 'disabled' : ''}>
               <i class="bi bi-dash"></i>
             </button>
             <input type="text" class="form-control text-center fw-bold" value="${item.quantity}" readonly style="background: white;">
@@ -1122,7 +1170,7 @@ function increaseCartQuantity(productId) {
   if (cart[productId]) {
     if (cart[productId].quantity < cart[productId].stock) {
       cart[productId].quantity += 1;
-      cart[productId].quantity = parseFloat(cart[productId].quantity.toFixed(1));
+      cart[productId].quantity = parseFloat(cart[productId].quantity.toFixed(2));
       updateCartDisplay();
       updateCheckoutDisplay();
       showNotification(`Quantity increased for ${cart[productId].name}`, 'success');
@@ -1137,7 +1185,7 @@ function decreaseCartQuantity(productId) {
   if (cart[productId]) {
     if (cart[productId].quantity > 1) {
       cart[productId].quantity -= 1;
-      cart[productId].quantity = parseFloat(cart[productId].quantity.toFixed(1));
+      cart[productId].quantity = parseFloat(cart[productId].quantity.toFixed(2));
       updateCartDisplay();
       updateCheckoutDisplay();
       showNotification(`Quantity decreased for ${cart[productId].name}`, 'success');
@@ -1487,7 +1535,9 @@ let customers = <%= raw @customers.map { |c| {
   name: c.display_name,
   mobile: c.mobile,
   email: c.email,
-  address: c.respond_to?(:address) ? c.address : ''
+  address: c.respond_to?(:address) ? c.address : '',
+  is_b2b: c.is_b2b,
+  gst_no: c.gst_no
 }}.to_json %>;
 
 let searchTimeout;
@@ -1610,6 +1660,7 @@ function displayCustomerResults(customerList, searchQuery = '') {
       html += '<span class="customer-detail-item"><i class="bi bi-envelope"></i>' + highlightedEmail + '</span>';
     }
     html += '<span class="customer-detail-badge">ID: ' + customer.id + '</span>';
+    if (customer.is_b2b) html += '<span class="badge bg-info-subtle text-info ms-1"><i class="bi bi-building me-1"></i>B2B</span>';
     html += '</div>';
     html += '</div>';
     html += '</div>';
@@ -1621,7 +1672,10 @@ function displayCustomerResults(customerList, searchQuery = '') {
 
 function selectCustomerAt(index) {
   const c = (window.customerSearchResultList || [])[index];
-  if (c) selectCustomer(c.id, c.name || '', c.mobile || '', c.email || '', c.address || '');
+  if (c) {
+    selectCustomer(c.id, c.name || '', c.mobile || '', c.email || '', c.address || '');
+    setB2bFromCustomer(c);
+  }
 }
 
 function highlightSearchTerm(text, searchTerm) {
@@ -1672,6 +1726,24 @@ function selectCustomer(customerId, customerName, customerMobile, customerEmail,
   showNotification('Selected customer: ' + customerName, 'success');
 }
 
+// A customer flagged B2B switches the booking to B2B (GSTIN prefilled from the
+// customer's GST number, B2B rates applied); a regular customer switches it off.
+function setB2bFromCustomer(c) {
+  const t = document.getElementById('b2bBookingToggle');
+  if (!t) return;
+  const gst = document.getElementById('booking_gstin');
+  if (c.is_b2b) {
+    if (gst && !gst.value && c.gst_no) gst.value = c.gst_no;
+  } else if (gst && t.checked) {
+    gst.value = '';
+  }
+  if (t.checked !== !!c.is_b2b) {
+    t.checked = !!c.is_b2b;
+    t.dispatchEvent(new Event('change'));
+  }
+  if (c.is_b2b) showNotification('B2B customer — B2B rates will be applied', 'info');
+}
+
 function clearSelectedCustomer() {
   document.getElementById('selected_customer_id').value = '';
   document.getElementById('customerSearchInput').style.display = 'block';
@@ -1711,7 +1783,7 @@ function increaseQuantity(productId) {
   const max = parseFloat(input.max);
   const current = parseFloat(input.value) || 1;
   if (current < max) {
-    input.value = (current + 1).toFixed(1);
+    input.value = +(current + 1).toFixed(2);
   }
 }
 
@@ -1719,9 +1791,9 @@ function decreaseQuantity(productId) {
   const input = document.getElementById(`qty-${productId}`);
   const current = parseFloat(input.value) || 1;
   if (current > 1) {
-    input.value = (current - 1).toFixed(1);
-  } else if (current > 0.1) {
-    input.value = 0.1;
+    input.value = +(current - 1).toFixed(2);
+  } else if (current > 0.01) {
+    input.value = 0.01;
   }
 }
 
@@ -1733,11 +1805,11 @@ function validateQuantity(productId, maxStock) {
   if (value > maxStock) {
     input.value = maxStock;
     showNotification(`Maximum ${maxStock} items available for this product`, 'warning');
-  } else if (value < 0.1) {
-    input.value = 0.1;
-  } else if (value % 0.1 !== 0) {
-    // Round to nearest 0.1 increment
-    input.value = (Math.round(value * 10) / 10).toFixed(1);
+  } else if (value < 0.01) {
+    input.value = 0.01;
+  } else if (Math.round(value * 100) !== value * 100) {
+    // Round to 2 decimal places (e.g. 0.98)
+    input.value = +(Math.round(value * 100) / 100).toFixed(2);
   }
 }
 
@@ -2217,16 +2289,18 @@ function lookupBarcode(code) {
 // Scan → instantly add 1 to cart (or increment if already there).
 // For variant products the default variant is used automatically.
 function barcodeAddToCart(data) {
-  let price, stock, variantId, displayName;
+  let price, stock, variantId, displayName, b2bPrice;
 
   if (data.has_multiple_quantities && data.variants && data.variants.length > 0) {
     const v = data.variants.find(v => v.is_default) || data.variants[0];
     price       = v.price;
+    b2bPrice    = v.b2b_price;
     stock       = v.stock;
     variantId   = v.id;
     displayName = data.variants.length > 1 ? `${data.name} (${v.label})` : data.name;
   } else {
     price       = data.price;
+    b2bPrice    = data.b2b_price;
     stock       = data.available_stock;
     variantId   = null;
     displayName = data.name;
@@ -2239,7 +2313,7 @@ function barcodeAddToCart(data) {
   }
 
   const basePrice = data.gst_rate > 0 ? price / (1 + data.gst_rate / 100) : price;
-  addToCart(data.id, displayName, price, stock, basePrice, data.gst_rate, variantId, 1);
+  addToCart(data.id, displayName, price, stock, basePrice, data.gst_rate, variantId, 1, b2bPrice);
 
   const cartKey  = variantId ? `${data.id}_v${variantId}` : String(data.id);
   const newQty   = cart[cartKey]?.quantity || 1;
@@ -2715,16 +2789,37 @@ function stopCamera() {
 }
 
 /* Enhanced Floating Cart Styles */
+/* Sized to the viewport so the cart never climbs into the top corner (over
+   the page header / minimize control) on shorter laptop screens. */
 #floatingCart {
+  width: 520px;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 6rem);
+  flex-direction: column;
   border-radius: 16px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.25) !important;
   transition: all 0.3s ease;
   border: 2px solid #667eea;
 }
 
+#floatingCart[style*="display: block"] { display: flex !important; }
+#floatingCart #floatingCartBody { flex: 1 1 auto; min-height: 80px; }
+#floatingCart .card-header,
+#floatingCart .card-footer { flex-shrink: 0; }
+
 #floatingCart .card-header {
   border-radius: 14px 14px 0 0;
-  padding: 1rem 1.25rem;
+  padding: 0.6rem 1rem;
+}
+
+#floatingCart .cart-minimize-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
 }
 
 #floatingCart .card-header h3 {

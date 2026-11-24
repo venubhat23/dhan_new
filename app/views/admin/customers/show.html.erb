@@ -53,6 +53,14 @@
               <%= @customer.gst_no || '-' %>
             </div>
             <div class="col-md-6">
+              <strong class="text-muted d-block">Customer Type</strong>
+              <% if @customer.is_b2b? %>
+                <span class="badge bg-info-subtle text-info"><i class="bi bi-building me-1"></i>B2B</span>
+              <% else %>
+                <span class="badge bg-secondary-subtle text-secondary">Regular (B2C)</span>
+              <% end %>
+            </div>
+            <div class="col-md-6">
               <strong class="text-muted d-block">Nationality</strong>
               <%= @customer.nationality || '-' %>
             </div>

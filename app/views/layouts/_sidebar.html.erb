@@ -593,6 +593,62 @@
     </div>
     <% end %>
 
+    <!-- Reports Section -->
+    <% if current_user.has_sidebar_permission?('reports') %>
+    <div class="nav-section">
+      <div class="nav-section-title">Reports</div>
+      <ul class="nav-menu">
+        <!-- Enhanced Sales Report -->
+        <% if current_user.has_sidebar_permission?('reports') %>
+        <li class="nav-item">
+          <%= link_to admin_reports_enhanced_sales_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/reports/enhanced_sales')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-lime">
+                <i class="bi bi-graph-up"></i>
+              </div>
+            </div>
+            <span class="nav-text">Enhanced Sales Report</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+        <li class="nav-item">
+          <%= link_to admin_reports_product_sales_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/reports/product_sales')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-purple">
+                <i class="bi bi-trophy"></i>
+              </div>
+            </div>
+            <span class="nav-text">Product Sales Report</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+        <li class="nav-item">
+          <%= link_to admin_reports_customer_bookings_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/reports/customer_bookings')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-purple">
+                <i class="bi bi-truck"></i>
+              </div>
+            </div>
+            <span class="nav-text">Customer Booking Report</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+        <li class="nav-item">
+          <%= link_to admin_reports_profit_loss_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/reports/profit_loss')}" do %>
+            <div class="nav-icon-modern">
+              <div class="icon-bg gradient-green">
+                <i class="bi bi-graph-up-arrow"></i>
+              </div>
+            </div>
+            <span class="nav-text">Profit & Loss Report</span>
+            <div class="nav-indicator"></div>
+          <% end %>
+        </li>
+        <% end %>
+      </ul>
+    </div>
+    <% end %>
+
     <!-- Master Data Section -->
     <% if current_user.has_sidebar_permission?('categories') || current_user.has_sidebar_permission?('coupons') || current_user.has_sidebar_permission?('customer_wallets') || current_user.has_sidebar_permission?('franchises') || current_user.has_sidebar_permission?('affiliates') %>
     <div class="nav-section">
@@ -1064,62 +1120,6 @@
             </ul>
           </div>
         </li>
-      </ul>
-    </div>
-    <% end %>
-
-    <!-- Reports Section -->
-    <% if current_user.has_sidebar_permission?('reports') %>
-    <div class="nav-section">
-      <div class="nav-section-title">Reports</div>
-      <ul class="nav-menu">
-        <!-- Enhanced Sales Report -->
-        <% if current_user.has_sidebar_permission?('reports') %>
-        <li class="nav-item">
-          <%= link_to admin_reports_enhanced_sales_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/reports/enhanced_sales')}" do %>
-            <div class="nav-icon-modern">
-              <div class="icon-bg gradient-lime">
-                <i class="bi bi-graph-up"></i>
-              </div>
-            </div>
-            <span class="nav-text">Enhanced Sales Report</span>
-            <div class="nav-indicator"></div>
-          <% end %>
-        </li>
-        <li class="nav-item">
-          <%= link_to admin_reports_product_sales_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/reports/product_sales')}" do %>
-            <div class="nav-icon-modern">
-              <div class="icon-bg gradient-purple">
-                <i class="bi bi-trophy"></i>
-              </div>
-            </div>
-            <span class="nav-text">Product Sales Report</span>
-            <div class="nav-indicator"></div>
-          <% end %>
-        </li>
-        <li class="nav-item">
-          <%= link_to admin_reports_customer_bookings_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/reports/customer_bookings')}" do %>
-            <div class="nav-icon-modern">
-              <div class="icon-bg gradient-purple">
-                <i class="bi bi-truck"></i>
-              </div>
-            </div>
-            <span class="nav-text">Customer Booking Report</span>
-            <div class="nav-indicator"></div>
-          <% end %>
-        </li>
-        <li class="nav-item">
-          <%= link_to admin_reports_profit_loss_path, class: "nav-link-modern #{'active' if request.path.include?('/admin/reports/profit_loss')}" do %>
-            <div class="nav-icon-modern">
-              <div class="icon-bg gradient-green">
-                <i class="bi bi-graph-up-arrow"></i>
-              </div>
-            </div>
-            <span class="nav-text">Profit & Loss Report</span>
-            <div class="nav-indicator"></div>
-          <% end %>
-        </li>
-        <% end %>
       </ul>
     </div>
     <% end %>

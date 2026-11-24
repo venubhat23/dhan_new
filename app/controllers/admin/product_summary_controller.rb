@@ -9,27 +9,38 @@ class Admin::ProductSummaryController < Admin::ApplicationController
     load_summary
   end
 
-  # Main Store low-stock report: any product (or variant) whose Main Store
-  # stock is at or below its own Low Threshold — same "danger" rule the
-  # index table highlights rows with. Per-store figures are not considered.
+  # Main Store low-stock report: any ACTIVE product (or variant) whose Main
+  # Store stock is at or below its own Low Threshold. Per-store figures are not
+  # considered.
+  #
+  # - A threshold of 0 means "no alert" — those lines are skipped.
+  # - Inactive products are skipped entirely.
+  # - Variant products are listed per variant with that variant's own threshold
+  #   (exactly what Product Summary / the product form show). The product-level
+  #   roll-up row (sum of all variant thresholds) used to be emitted as well,
+  #   which is why the CSV sometimes showed a threshold nobody had entered.
   def low_stock
     require 'csv'
     load_summary
     csv = CSV.generate do |rows|
       rows << ['Product', 'Variant', 'SKU', 'Category', 'Main Store Stock', 'Low Threshold']
       @products.each do |product|
-        main_stock = @main_stock[product.id].to_f
-        main_thr   = @main_threshold[product.id]
-        if main_thr && main_stock <= main_thr.to_f
+        next unless product.active?
+
+        if product.has_multiple_quantities? && product.product_variants.any?
+          product.sorted_variants.each do |variant|
+            v_stock = variant.available_stock.to_f
+            v_thr   = variant.low_stock_threshold.to_i
+            next unless v_thr > 0 && v_stock <= v_thr
+
+            rows << [product.name, variant.label, product.sku, product.category&.name, fmt(v_stock), v_thr]
+          end
+        else
+          main_stock = @main_stock[product.id].to_f
+          main_thr   = product.low_stock_threshold.to_i
+          next unless main_thr > 0 && main_stock <= main_thr
+
           rows << [product.name, '', product.sku, product.category&.name, fmt(main_stock), main_thr]
-        end
-
-        product.sorted_variants.each do |variant|
-          v_stock = variant.available_stock.to_f
-          v_thr   = variant.low_stock_threshold
-          next unless v_thr && v_stock <= v_thr.to_f
-
-          rows << [product.name, variant.label, product.sku, product.category&.name, fmt(v_stock), v_thr]
         end
       end
     end

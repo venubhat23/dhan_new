@@ -76,7 +76,7 @@ class StoreAdmin::StoreInventoryController < StoreAdmin::ApplicationController
         product.sorted_variants.each do |variant|
           row = inv_by_key[[product.id, variant.id]]
           qty = row ? row.quantity.to_f : batch_stock[[product.id, variant.id]].to_f
-          threshold = row&.low_stock_threshold || product.low_stock_threshold || default_threshold
+          threshold = row&.low_stock_threshold || variant.low_stock_threshold || default_threshold
           rows << build_row(product, variant, qty, threshold)
         end
       else
@@ -90,8 +90,8 @@ class StoreAdmin::StoreInventoryController < StoreAdmin::ApplicationController
   end
 
   def build_row(product, variant, qty, threshold)
-    { product: product, variant: variant, quantity: qty,
-      threshold: threshold.to_f, low_stock: qty <= threshold.to_f }
+    { product: product, variant: variant, quantity: qty, threshold: threshold.to_f,
+      low_stock: product.active? && threshold.to_f > 0 && qty <= threshold.to_f }
   end
 
   def ensure_can_manage_inventory!

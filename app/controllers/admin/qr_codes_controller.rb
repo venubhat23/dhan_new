@@ -14,6 +14,10 @@ class Admin::QrCodesController < Admin::ApplicationController
       render json: { found: false, message: "No product found for barcode: #{params[:barcode]}" }
       return
     end
+    unless product.active?
+      render json: { found: false, message: "#{product.name} is inactive and cannot be billed" }
+      return
+    end
 
     gst_rate = (product.gst_enabled? && product.gst_percentage.present?) ? product.gst_percentage.to_f : 0.0
 
@@ -36,6 +40,7 @@ class Admin::QrCodesController < Admin::ApplicationController
           id: v.id,
           label: v.label,
           price: v.effective_price.to_f,
+          b2b_price: v.b2b_rate,
           stock: v.available_stock.to_i,
           is_default: v.is_default
         }
@@ -45,6 +50,7 @@ class Admin::QrCodesController < Admin::ApplicationController
     else
       avail = product.total_batch_stock.to_i
       response[:price] = product.price.to_f
+      response[:b2b_price] = product.b2b_rate(product.price)
       response[:available_stock] = avail
     end
 

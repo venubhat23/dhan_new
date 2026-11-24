@@ -185,6 +185,10 @@ class Admin::BookingsController < Admin::ApplicationController
       @booking.customer_name = @preselected_customer.display_name
       @booking.customer_phone = @preselected_customer.mobile
       @booking.customer_email = @preselected_customer.email
+      if @preselected_customer.is_b2b?
+        @booking.is_b2b = true
+        @booking.gstin  = @preselected_customer.gst_no
+      end
     end
 
     # When a store is chosen, the sale draws down that store's stock — so the
@@ -861,6 +865,45 @@ class Admin::BookingsController < Admin::ApplicationController
            locals: { products: @products, store_id: store_id, variant_stock: variant_stock }, layout: false
   end
 
+  # Polled by the scheduled-delivery reminder pop-up (shared/_delivery_reminders,
+  # rendered in the admin layout). Returns today's still-open bookings that
+  # have a delivery date set: timed ones from 60 min overdue up to 30 min
+  # ahead are "due", the rest of today's are listed as "today".
+  DELIVERY_REMINDER_CLOSED = %w[delivered cancelled returned refund].freeze
+  def due_deliveries
+    now   = Time.zone.now
+    today = Time.zone.today
+    bookings = Booking.where(expected_delivery_date: today)
+                      .where.not(status: DELIVERY_REMINDER_CLOSED)
+                      .order(:expected_delivery_time, :id)
+                      .limit(100)
+                      .select(:id, :booking_number, :customer_name, :customer_phone, :delivery_address,
+                              :expected_delivery_date, :expected_delivery_time, :status)
+
+    rows = bookings.map do |b|
+      due_at = (Time.zone.parse("#{today} #{b.expected_delivery_time}") if b.expected_delivery_time.present?)
+      minutes = due_at ? ((due_at - now) / 60).round : nil
+      {
+        id: b.id,
+        booking_number: b.booking_number,
+        customer_name: b.customer_name,
+        customer_phone: b.customer_phone,
+        address: b.delivery_address.to_s.truncate(80),
+        time: b.expected_delivery_time.presence,
+        time_label: b.expected_delivery_time_label,
+        minutes_until: minutes,
+        due: minutes && minutes.between?(-60, 30),
+        status: Booking.status_label(b.status),
+        url: admin_booking_path(b)
+      }
+    end
+
+    render json: { date: today.iso8601, now: now.iso8601, bookings: rows }
+  rescue => e
+    Rails.logger.error "due_deliveries failed: #{e.message}"
+    render json: { bookings: [] }
+  end
+
   def search_customers
     q = params[:q].to_s.strip
     # Blank q (dropdown opened with nothing typed yet) lists customers
@@ -883,7 +926,9 @@ class Admin::BookingsController < Admin::ApplicationController
         name: c.display_name,
         email: c.email,
         phone: c.mobile,
-        address: c.address
+        address: c.address,
+        is_b2b: c.is_b2b,
+        gst_no: c.gst_no
       }
     }
   end
@@ -1265,7 +1310,7 @@ class Admin::BookingsController < Admin::ApplicationController
 
   def validate_stock_availability(booking, is_update: false)
     stock_errors = []
-    active_items = booking.booking_items.reject(&:marked_for_destruction?).select { |i| i.product_id.present? && i.quantity.to_i > 0 }
+    active_items = booking.booking_items.reject(&:marked_for_destruction?).select { |i| i.product_id.present? && i.quantity.to_f > 0 }
     return true if active_items.empty?
 
     # Preload products and variants to avoid N+1
