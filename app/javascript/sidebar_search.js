@@ -4,7 +4,8 @@
 // exact > prefix > word prefix > substring > fuzzy), with matching sub-pages
 // listed under their menu. Picking a suggestion moves that menu's whole
 // section to the top of the sidebar, expands its dropdown and opens the
-// picked page (picking a dropdown heading just expands it). The section stays
+// picked page (picking a dropdown heading just expands it; picking a whole
+// section such as "Reports" opens its first page). The section stays
 // on top across page loads until the Reset button restores the default order.
 //
 // Keys: ↑/↓ move, Enter picks, Esc closes.
@@ -143,8 +144,43 @@ function collectGroups(sidebar) {
 
 // Groups ordered best match first. A matching menu lists all its pages;
 // otherwise only the pages that match are listed under it.
+// Sidebar sections whose title matches (e.g. "report" -> Reports), listed
+// as one result with the section's menus underneath.
+function sectionResults(groups, query) {
+  const bySection = new Map()
+  groups.forEach(g => {
+    if (!bySection.has(g.section)) bySection.set(g.section, [])
+    bySection.get(g.section).push(g)
+  })
+  const results = []
+  bySection.forEach((members, section) => {
+    const label = members[0].sectionLabel
+    const m = match(label, query)
+    if (m.score < 55) return // only real (non-fuzzy) matches on the section name
+    results.push({
+      isSection: true,
+      section,
+      item: null,
+      head: section.querySelector(SECTION_TITLE) || section,
+      label,
+      sectionLabel: label,
+      iconStyle: members[0].iconStyle,
+      icon: 'bi bi-folder2-open',
+      ranges: m.ranges,
+      ownScore: m.score,
+      // Ranked just above same-scoring menus so the section heads the list
+      score: m.score + 1,
+      children: members.map(g => ({ label: g.label, link: g.head, icon: g.icon, item: g.item, ranges: match(g.label, query).ranges }))
+    })
+  })
+  return results
+}
+
 function rank(groups, query) {
+  const sectionHits = sectionResults(groups, query)
+  const covered = new Set(sectionHits.map(r => r.section))
   return groups
+    .filter(group => !covered.has(group.section))
     .map(group => {
       const own = match(group.label, query)
       const section = match(group.sectionLabel, query).score * 0.5
@@ -159,6 +195,7 @@ function rank(groups, query) {
       }
     })
     .filter(g => g.score > 0)
+    .concat(sectionHits)
     .sort((a, b) => b.score - a.score || words(a.label) - words(b.label) || a.label.localeCompare(b.label))
     .slice(0, MAX_RESULTS)
 }
@@ -201,12 +238,12 @@ function render(sidebar, query) {
       <span class="ss-icon" style="${escapeHtml(g.iconStyle)}"><i class="${g.icon}"></i></span>
       <span class="ss-body">
         <span class="ss-label">${g.ranges.length ? highlight(g.label, g.ranges) : escapeHtml(g.label)}</span>
-        <span class="ss-crumbs">${escapeHtml(g.sectionLabel)}${g.children.length ? ` · ${g.children.length} page${g.children.length > 1 ? 's' : ''}` : ''}</span>
+        <span class="ss-crumbs">${g.isSection ? 'Sidebar section' : escapeHtml(g.sectionLabel)}${g.children.length ? ` · ${g.children.length} page${g.children.length > 1 ? 's' : ''}` : ''}</span>
       </span>
       ${badgeHtml(g.head)}
       <i class="bi bi-pin-angle ss-enter"></i>`)
 
-    const children = g.children.map(c => row({ group: g, el: c.link }, 'ss-child', `
+    const children = g.children.map(c => row({ group: g.isSection ? { ...g, item: c.item } : g, el: c.link }, 'ss-child', `
       <i class="${c.icon} ss-child-icon"></i>
       <span class="ss-label">${c.ranges?.length ? highlight(c.label, c.ranges) : escapeHtml(c.label)}</span>
       ${badgeHtml(c.link)}
@@ -306,8 +343,19 @@ function flash(el) {
 }
 
 function pick(sidebar, index) {
-  const target = sidebar._searchTargets?.[index]
+  let target = sidebar._searchTargets?.[index]
   if (!target) return
+
+  // Picking a whole section (e.g. "Reports") opens its first page, so a pick
+  // always lands on a page with the section pinned on top of the sidebar
+  if (target.group.isSection && target.el === target.group.head) {
+    const first = target.group.children.find(c => {
+      const href = c.link.getAttribute('href')
+      return href && href !== '#' && !href.startsWith('javascript:')
+    }) || target.group.children[0]
+    if (!first) return
+    target = { group: { ...target.group, item: first.item }, el: first.link }
+  }
   const { section, item, sectionLabel } = target.group
 
   // With a single section there is nothing to reorder
@@ -315,7 +363,7 @@ function pick(sidebar, index) {
     moveToTop(sidebar, section)
     storage(sidebar, 'set', sectionLabel)
   }
-  expand(item)
+  if (item) expand(item)
 
   const input = sidebar.querySelector('#sidebar-search-input')
   if (input) { input.value = ''; input.blur() }
