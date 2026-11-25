@@ -10,6 +10,7 @@ class ManualJournal < ApplicationRecord
     ['cash_only',        'Cash Only']
   ].freeze
   STATUSES = %w[draft published].freeze
+  PAYMENT_MODES = [%w[cash Cash], %w[bank Bank], %w[upi UPI]].freeze
 
   belongs_to :store, optional: true
   belongs_to :created_by, class_name: 'User', optional: true
@@ -24,6 +25,8 @@ class ManualJournal < ApplicationRecord
   validates :notes, presence: true, length: { maximum: 500 }
   validates :reporting_method, inclusion: { in: REPORTING_METHODS.map(&:first) }
   validates :status, inclusion: { in: STATUSES }
+  validates :payment_mode, inclusion: { in: PAYMENT_MODES.map(&:first) }, allow_blank: true
+  validates :bank_narration, length: { maximum: 255 }
   validate :lines_are_valid
 
   before_validation :assign_journal_number, on: :create
@@ -52,6 +55,8 @@ class ManualJournal < ApplicationRecord
   end
 
   def reporting_method_label = REPORTING_METHODS.to_h[reporting_method]
+  def payment_mode_label = PAYMENT_MODES.to_h[payment_mode]
+  def bank_mode? = %w[bank upi].include?(payment_mode)
 
   def live_lines = manual_journal_lines.reject(&:marked_for_destruction?)
   def total_debit  = live_lines.sum { |l| l.debit.to_f }.round(2)

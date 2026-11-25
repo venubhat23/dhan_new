@@ -64,6 +64,35 @@
     <%= f.select :store_id, options_from_collection_for_select(@stores, :id, :name, @journal.store_id), { include_blank: 'All / Head Office' }, class: 'form-select mj-input' %>
   </div>
   <div class="mj-field-row">
+    <label>Payment Mode</label>
+    <div class="mj-method d-flex flex-wrap pt-2" id="mjPayMode">
+      <div class="form-check"><%= f.radio_button :payment_mode, '', class: 'form-check-input', checked: @journal.payment_mode.blank? %><%= f.label :payment_mode_, 'None', class: 'form-check-label' %></div>
+      <% ManualJournal::PAYMENT_MODES.each do |val, label| %>
+        <div class="form-check"><%= f.radio_button :payment_mode, val, class: 'form-check-input' %><%= f.label "payment_mode_#{val}", label, class: 'form-check-label' %></div>
+      <% end %>
+    </div>
+  </div>
+  <div id="mjBankFields" style="<%= 'display:none' unless @journal.bank_mode? %>">
+    <div class="mj-field-row">
+      <label>Bank Date</label>
+      <%= f.date_field :bank_date, class: 'form-control mj-input' %>
+    </div>
+    <div class="mj-field-row">
+      <label>Bank Narration</label>
+      <%= f.text_field :bank_narration, class: 'form-control mj-input', maxlength: 255, placeholder: 'As shown on the bank statement' %>
+    </div>
+  </div>
+  <div id="mjBalFields" style="<%= 'display:none' if @journal.payment_mode.blank? %>">
+    <div class="mj-field-row">
+      <label>Opening Balance (₹)</label>
+      <%= f.number_field :opening_balance, step: '0.01', class: 'form-control mj-input', placeholder: '0.00' %>
+    </div>
+    <div class="mj-field-row">
+      <label>Closing Balance (₹)</label>
+      <%= f.number_field :closing_balance, step: '0.01', class: 'form-control mj-input', placeholder: '0.00' %>
+    </div>
+  </div>
+  <div class="mj-field-row">
     <label>Currency</label>
     <select class="form-select mj-input" disabled><option>INR- Indian Rupee</option></select>
   </div>
@@ -159,6 +188,13 @@
   }
 
   document.getElementById('mjAddRow').addEventListener('click', addRow);
+
+  // Bank date / narration only apply to bank & UPI; balances to any chosen mode.
+  document.getElementById('mjPayMode').addEventListener('change', () => {
+    const mode = (document.querySelector('#mjPayMode input:checked') || {}).value || '';
+    document.getElementById('mjBankFields').style.display = ['bank', 'upi'].includes(mode) ? '' : 'none';
+    document.getElementById('mjBalFields').style.display = mode ? '' : 'none';
+  });
 
   body.addEventListener('input', (e) => {
     // A line is either a debit or a credit: typing one clears the other.

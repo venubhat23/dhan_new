@@ -1,0 +1,135 @@
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<% pr = @purchase_receipt %>
+<div class="container-fluid py-3" style="max-width:960px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="mb-0"><i class="bi bi-receipt-cutoff text-warning me-2"></i>New Purchase Receipt</h3>
+      <small class="text-muted">Pick a vendor purchase to fill it in, or enter the details manually</small>
+    </div>
+    <%= link_to admin_purchase_receipts_path, class: 'btn btn-outline-secondary' do %><i class="bi bi-arrow-left me-1"></i>Back<% end %>
+  </div>
+
+  <%= form_with model: pr, url: admin_purchase_receipts_path, local: true, data: { turbo: false } do |f| %>
+    <% if pr.errors.any? %>
+      <div class="alert alert-danger"><ul class="mb-0 small"><% pr.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul></div>
+    <% end %>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent fw-semibold"><i class="bi bi-cart me-1 text-primary"></i>Vendor Purchase <small class="text-muted fw-normal">(optional)</small></div>
+      <div class="card-body">
+        <select name="vendor_purchase_id" id="prPurchaseSelect" class="form-select">
+          <option value="">— Manual receipt (no linked purchase) —</option>
+          <% if pr.vendor_purchase && !@open_purchases.include?(pr.vendor_purchase) %>
+            <option value="<%= pr.vendor_purchase_id %>" selected><%= pr.purchase_number %> · <%= pr.vendor_name %></option>
+          <% end %>
+          <% @open_purchases.each do |vp| %>
+            <option value="<%= vp.id %>" <%= 'selected' if pr.vendor_purchase_id == vp.id %>>
+              <%= vp.purchase_number %> · <%= vp.vendor&.name %> · <%= vp.purchase_date&.strftime('%d %b %Y') %> · ₹<%= number_with_precision(vp.total_amount, precision: 2) %>
+            </option>
+          <% end %>
+        </select>
+        <div class="form-text">Only purchases without a receipt are listed. Choosing one fills in the vendor, items and amount.</div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent fw-semibold"><i class="bi bi-info-circle me-1 text-primary"></i>Receipt Details</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <%= f.label :receipt_date, 'Receipt Date', class: 'form-label' %> <span class="text-danger">*</span>
+            <%= f.date_field :receipt_date, class: 'form-control', required: true %>
+          </div>
+          <div class="col-md-4">
+            <%= f.label :vendor_id, 'Vendor', class: 'form-label' %>
+            <%= f.select :vendor_id, options_from_collection_for_select(@vendors, :id, :name, pr.vendor_id), { include_blank: '— Select vendor —' }, class: 'form-select', id: 'prVendorSelect' %>
+          </div>
+          <div class="col-md-4">
+            <%= f.label :vendor_name, 'Vendor Name', class: 'form-label' %> <span class="text-danger">*</span>
+            <%= f.text_field :vendor_name, class: 'form-control', id: 'prVendorName' %>
+          </div>
+          <div class="col-md-4">
+            <%= f.label :vendor_phone, 'Vendor Phone', class: 'form-label' %>
+            <%= f.text_field :vendor_phone, class: 'form-control' %>
+          </div>
+          <div class="col-md-4">
+            <%= f.label :amount, 'Amount (₹)', class: 'form-label' %> <span class="text-danger">*</span>
+            <%= f.number_field :amount, step: '0.01', min: '0.01', class: 'form-control', required: true %>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Payment Mode</label>
+            <div class="d-flex gap-3 pt-1">
+              <% PurchaseReceipt::PAYMENT_MODES.each do |value, label| %>
+                <div class="form-check">
+                  <%= f.radio_button :payment_mode, value, class: 'form-check-input', id: "pr_mode_#{value}", checked: (pr.payment_mode.presence || 'cash') == value %>
+                  <label class="form-check-label" for="pr_mode_<%= value %>"><%= label %></label>
+                </div>
+              <% end %>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <%= f.label :reference_number, 'Reference #', class: 'form-label' %>
+            <%= f.text_field :reference_number, class: 'form-control', placeholder: 'Vendor bill / UTR no.' %>
+          </div>
+          <div class="col-md-8">
+            <%= f.label :notes, class: 'form-label' %>
+            <%= f.text_area :notes, rows: 1, class: 'form-control' %>
+          </div>
+        </div>
+
+        <% if pr.items.present? %>
+          <div class="table-responsive mt-4">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light"><tr><th>Product</th><th class="text-end">Qty</th><th class="text-end">Price</th><th class="text-end">Total</th></tr></thead>
+              <tbody>
+                <% pr.items.each do |it| %>
+                  <tr><td><%= it['name'] || it[:name] %></td>
+                    <td class="text-end"><%= number_with_precision(it['quantity'] || it[:quantity], precision: 2, strip_insignificant_zeros: true) %></td>
+                    <td class="text-end">₹<%= number_with_precision(it['price'] || it[:price], precision: 2) %></td>
+                    <td class="text-end">₹<%= number_with_precision(it['total'] || it[:total], precision: 2) %></td></tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent fw-semibold"><i class="bi bi-bank me-1 text-primary"></i>Bank Info <small class="text-muted fw-normal">(optional — can be added later)</small></div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3"><%= f.label :bank_date, 'Bank Date', class: 'form-label' %><%= f.date_field :bank_date, class: 'form-control' %></div>
+          <div class="col-md-3"><%= f.label :bank_opening_balance, 'Opening Balance (₹)', class: 'form-label' %><%= f.number_field :bank_opening_balance, step: '0.01', class: 'form-control' %></div>
+          <div class="col-md-3"><%= f.label :bank_closing_balance, 'Closing Balance (₹)', class: 'form-label' %><%= f.number_field :bank_closing_balance, step: '0.01', class: 'form-control' %></div>
+          <div class="col-md-3"><%= f.label :bank_narration, 'Bank Narration', class: 'form-label' %><%= f.text_field :bank_narration, class: 'form-control' %></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+      <%= link_to 'Cancel', admin_purchase_receipts_path, class: 'btn btn-outline-secondary' %>
+      <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Create Purchase Receipt</button>
+    </div>
+  <% end %>
+</div>
+
+<script>
+  (function() {
+    // Choosing a purchase reloads the form prefilled from it.
+    const sel = document.getElementById('prPurchaseSelect');
+    sel && sel.addEventListener('change', function() {
+      const url = new URL(window.location.href);
+      if (this.value) url.searchParams.set('vendor_purchase_id', this.value); else url.searchParams.delete('vendor_purchase_id');
+      window.location.href = url.toString();
+    });
+    // Picking a vendor fills the name if it's empty or still the previous vendor's.
+    const vsel = document.getElementById('prVendorSelect');
+    const vname = document.getElementById('prVendorName');
+    let lastAuto = vname ? vname.value : '';
+    vsel && vsel.addEventListener('change', function() {
+      const txt = this.value ? this.options[this.selectedIndex].text : '';
+      if (!vname.value || vname.value === lastAuto) { vname.value = txt; lastAuto = txt; }
+    });
+  })();
+</script>

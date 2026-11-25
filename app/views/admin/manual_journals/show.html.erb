@@ -50,6 +50,16 @@
         <div class="col-md-3"><small class="text-muted d-block">Reporting Method</small><strong><%= j.reporting_method_label %></strong></div>
         <div class="col-md-3"><small class="text-muted d-block">Store</small><strong><%= j.store&.name || 'All / Head Office' %></strong></div>
         <div class="col-md-3"><small class="text-muted d-block">Currency</small><strong><%= j.currency %></strong></div>
+        <% if j.payment_mode.present? %>
+          <% money = ->(v) { v.nil? ? '—' : "₹#{number_with_delimiter(number_with_precision(v, precision: 2))}" } %>
+          <div class="col-md-3"><small class="text-muted d-block">Payment Mode</small><strong><%= j.payment_mode_label %></strong></div>
+          <% if j.bank_mode? %>
+            <div class="col-md-3"><small class="text-muted d-block">Bank Date</small><strong><%= j.bank_date&.strftime('%d/%m/%Y') || '—' %></strong></div>
+            <div class="col-md-6"><small class="text-muted d-block">Bank Narration</small><strong><%= j.bank_narration.presence || '—' %></strong></div>
+          <% end %>
+          <div class="col-md-3"><small class="text-muted d-block">Opening Balance</small><strong><%= money.(j.opening_balance) %></strong></div>
+          <div class="col-md-3"><small class="text-muted d-block">Closing Balance</small><strong><%= money.(j.closing_balance) %></strong></div>
+        <% end %>
         <% if j.automatic? %>
           <div class="col-12"><div class="alert alert-info small mb-0"><i class="bi bi-info-circle me-1"></i>Posted automatically and kept in sync with its source document. It updates the Chart of Accounts balances but is <strong>not</strong> added to Profit &amp; Loss again (P&amp;L already reads invoices and purchases directly).</div></div>
         <% end %>

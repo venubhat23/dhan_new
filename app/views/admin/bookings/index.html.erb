@@ -581,13 +581,13 @@
                                 title="Partial Payment">
                           <i class="bi bi-cash me-1"></i>Partial
                         </button>
-                        <%= button_to mark_paid_admin_booking_path(booking),
-                                      method: :patch,
-                                      class: "btn btn-sm btn-success fw-medium py-0 px-2 text-nowrap",
-                                      title: "Mark as Paid",
-                                      form: { style: "display: inline;", data: { turbo_confirm: "Mark booking ##{booking.booking_number} as fully paid?" } } do %>
+                        <button type="button" class="btn btn-sm btn-success fw-medium py-0 px-2 text-nowrap"
+                                onclick="openMarkPaidModal(this)"
+                                data-url="<%= mark_paid_admin_booking_path(booking) %>"
+                                data-booking-number="<%= booking.booking_number %>"
+                                title="Mark as Paid">
                           <i class="bi bi-check-circle me-1"></i>Mark Paid
-                        <% end %>
+                        </button>
                       </div>
                     <% end %>
                   </div>
@@ -605,7 +605,9 @@
                       <i class="bi bi-credit-card me-1"></i>
                       <%= booking.payment_status_display %>
                     </span>
-                    <% if booking.payment_method.present? %>
+                    <% if booking.payment_status_paid? && booking.paid_via_label %>
+                      <small class="text-muted ms-1">via <%= booking.paid_via_label %></small>
+                    <% elsif booking.payment_method.present? %>
                       <small class="text-muted ms-1">(<%= booking.payment_method_display %>)</small>
                     <% end %>
                     <% if booking.payment_status_paid? || (booking.payment_status_partially_paid? && paid_so_far > 0) %>
@@ -2367,6 +2369,7 @@ td .d-flex.gap-2 {
 </div>
 
 <%= render 'admin/bookings/delivery_date_modal' %>
+<%= render 'admin/bookings/mark_paid_modal' %>
 
 <script>
   (function() {

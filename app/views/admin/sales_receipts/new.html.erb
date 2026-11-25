@@ -1,0 +1,88 @@
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<% sr = @sales_receipt %>
+<div class="container-fluid py-3" style="max-width:900px;">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0"><i class="bi bi-receipt text-success me-2"></i>New Sales Receipt</h3>
+    <%= link_to admin_sales_receipts_path, class: 'btn btn-outline-secondary' do %><i class="bi bi-arrow-left me-1"></i>Back<% end %>
+  </div>
+
+  <% if sr.errors.any? %>
+    <div class="alert alert-danger"><ul class="mb-0"><% sr.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul></div>
+  <% end %>
+
+  <%= form_with model: sr, url: admin_sales_receipts_path, scope: :sales_receipt, data: { turbo: false } do |f| %>
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <label class="form-label fw-semibold" for="srBooking">Booking # <small class="text-muted fw-normal">(optional — fills customer, items and amount from the booking)</small></label>
+        <div class="input-group">
+          <input type="text" class="form-control" id="srBooking" name="booking_number" value="<%= params[:booking_number] || sr.booking_number %>" placeholder="e.g. BK20261125001" autocomplete="off">
+          <button type="button" class="btn btn-outline-primary" id="srLookupBtn"><i class="bi bi-search me-1"></i>Fetch</button>
+        </div>
+        <div class="small mt-2" id="srLookupMsg"></div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body row g-3">
+        <div class="col-md-4"><%= f.label :receipt_date, 'Receipt Date', class: 'form-label' %><%= f.date_field :receipt_date, class: 'form-control', required: true %></div>
+        <div class="col-md-4"><%= f.label :amount, 'Amount Received (₹)', class: 'form-label' %><%= f.number_field :amount, step: '0.01', min: '0.01', class: 'form-control', required: true, id: 'srAmount' %></div>
+        <div class="col-md-4">
+          <label class="form-label d-block">Paid Via</label>
+          <% SalesReceipt::PAYMENT_MODES.each do |v, l| %>
+            <div class="form-check form-check-inline">
+              <%= f.radio_button :payment_mode, v, class: 'form-check-input', id: "srMode_#{v}", required: true %>
+              <label class="form-check-label" for="srMode_<%= v %>"><%= l %></label>
+            </div>
+          <% end %>
+        </div>
+        <div class="col-md-4"><%= f.label :customer_name, 'Customer Name', class: 'form-label' %><%= f.text_field :customer_name, class: 'form-control', required: true, id: 'srCustomerName' %></div>
+        <div class="col-md-4"><%= f.label :customer_phone, 'Phone', class: 'form-label' %><%= f.text_field :customer_phone, class: 'form-control', id: 'srCustomerPhone' %></div>
+        <div class="col-md-4"><%= f.label :customer_email, 'Email', class: 'form-label' %><%= f.email_field :customer_email, class: 'form-control', id: 'srCustomerEmail' %></div>
+        <div class="col-md-4"><%= f.label :invoice_number, 'Invoice #', class: 'form-label' %><%= f.text_field :invoice_number, class: 'form-control', id: 'srInvoice' %></div>
+        <div class="col-md-8"><%= f.label :reference_number, 'Reference # (UTR / cheque / txn id)', class: 'form-label' %><%= f.text_field :reference_number, class: 'form-control' %></div>
+        <div class="col-12"><%= f.label :notes, class: 'form-label' %><%= f.text_area :notes, rows: 2, class: 'form-control' %></div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent"><i class="bi bi-bank me-1"></i>Bank Info <small class="text-muted">(optional, can be added later)</small></div>
+      <div class="card-body row g-3">
+        <div class="col-md-3"><%= f.label :bank_date, 'Bank Date', class: 'form-label' %><%= f.date_field :bank_date, class: 'form-control' %></div>
+        <div class="col-md-3"><%= f.label :bank_opening_balance, 'Opening Balance', class: 'form-label' %><%= f.number_field :bank_opening_balance, step: '0.01', class: 'form-control' %></div>
+        <div class="col-md-3"><%= f.label :bank_closing_balance, 'Closing Balance', class: 'form-label' %><%= f.number_field :bank_closing_balance, step: '0.01', class: 'form-control' %></div>
+        <div class="col-md-3"><%= f.label :bank_narration, 'Narration', class: 'form-label' %><%= f.text_field :bank_narration, class: 'form-control' %></div>
+      </div>
+    </div>
+
+    <div class="text-end"><button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i>Create Sales Receipt</button></div>
+  <% end %>
+</div>
+
+<script>
+  (function() {
+    const msg = document.getElementById('srLookupMsg');
+    const set = (id, v) => { if (v !== null && v !== undefined && v !== '') document.getElementById(id).value = v; };
+    async function lookup() {
+      const q = document.getElementById('srBooking').value.trim();
+      if (!q) { msg.textContent = ''; return; }
+      msg.className = 'small mt-2 text-muted'; msg.textContent = 'Looking up…';
+      try {
+        const res = await fetch('<%= lookup_booking_admin_sales_receipts_path %>?q=' + encodeURIComponent(q), { headers: { Accept: 'application/json' } });
+        const d = await res.json();
+        if (!d.found) { msg.className = 'small mt-2 text-danger'; msg.textContent = 'Booking not found.'; return; }
+        set('srCustomerName', d.customer_name); set('srCustomerPhone', d.customer_phone); set('srCustomerEmail', d.customer_email);
+        set('srAmount', d.amount); set('srInvoice', d.invoice_number);
+        if (d.payment_mode) { const r = document.getElementById('srMode_' + d.payment_mode); if (r) r.checked = true; }
+        if (d.existing_receipt) {
+          msg.className = 'small mt-2 text-warning';
+          msg.textContent = 'Booking #' + d.booking_number + ' already has receipt ' + d.existing_receipt + '.';
+        } else {
+          msg.className = 'small mt-2 text-success';
+          msg.textContent = 'Booking #' + d.booking_number + ' (' + d.payment_status + ') — ' + d.items.length + ' item(s) will be captured.';
+        }
+      } catch (e) { msg.className = 'small mt-2 text-danger'; msg.textContent = 'Lookup failed.'; }
+    }
+    document.getElementById('srLookupBtn').addEventListener('click', lookup);
+    document.getElementById('srBooking').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); lookup(); } });
+  })();
+</script>

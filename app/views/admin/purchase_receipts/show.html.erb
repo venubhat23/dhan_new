@@ -1,0 +1,112 @@
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<% pr = @purchase_receipt %>
+<% money = ->(v) { v.nil? ? '—' : "₹#{number_with_delimiter(number_with_precision(v.to_f, precision: 2))}" } %>
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+      <h3 class="mb-0"><i class="bi bi-receipt-cutoff text-warning me-2"></i>Purchase Receipt <%= pr.receipt_number %></h3>
+      <small class="text-muted">
+        <span class="badge <%= pr.source == 'auto' ? 'bg-info-subtle text-info' : 'bg-secondary-subtle text-secondary' %>"><%= pr.source == 'auto' ? 'Auto' : 'Manual' %></span>
+        Created <%= pr.created_at.strftime('%d %b %Y, %I:%M %p') %><%= " by #{pr.created_by.try(:name).presence || pr.created_by.email}" if pr.created_by %>
+      </small>
+    </div>
+    <div class="d-flex gap-2">
+      <%= link_to admin_purchase_receipts_path, class: 'btn btn-outline-secondary' do %><i class="bi bi-arrow-left me-1"></i>Back<% end %>
+      <button type="button" class="btn <%= pr.bank_info_complete? ? 'btn-outline-success' : 'btn-primary' %>"
+              onclick="openBankInfoModal(this)"
+              data-url="<%= update_bank_info_admin_purchase_receipt_path(pr) %>"
+              data-receipt="<%= pr.receipt_number %>"
+              data-bank-date="<%= pr.bank_date&.iso8601 %>"
+              data-bank-narration="<%= pr.bank_narration %>"
+              data-bank-opening="<%= pr.bank_opening_balance&.to_f %>"
+              data-bank-closing="<%= pr.bank_closing_balance&.to_f %>">
+        <i class="bi bi-bank me-1"></i>Update Bank Info
+      </button>
+      <button type="button" class="btn btn-outline-dark" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print</button>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent fw-semibold"><i class="bi bi-info-circle me-1 text-primary"></i>Receipt Details</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4"><small class="text-muted d-block">Receipt Date</small><span class="fw-medium"><%= pr.receipt_date.strftime('%d %b %Y') %></span></div>
+            <div class="col-md-4"><small class="text-muted d-block">Payment Mode</small><span class="badge bg-success-subtle text-success"><%= pr.payment_mode_label %></span></div>
+            <div class="col-md-4"><small class="text-muted d-block">Amount</small><span class="fw-bold fs-5"><%= money.(pr.amount) %></span></div>
+            <div class="col-md-4"><small class="text-muted d-block">Vendor Purchase</small>
+              <% if pr.vendor_purchase %><%= link_to pr.purchase_number, admin_vendor_purchase_path(pr.vendor_purchase), class: 'text-decoration-none fw-medium' %><% else %><%= pr.purchase_number.presence || '—' %><% end %></div>
+            <div class="col-md-4"><small class="text-muted d-block">Purchase Date</small><%= pr.purchase_date&.strftime('%d %b %Y') || '—' %></div>
+            <div class="col-md-4"><small class="text-muted d-block">Reference #</small><%= pr.reference_number.presence || '—' %></div>
+            <% if pr.vendor_purchase %>
+              <div class="col-md-4"><small class="text-muted d-block">Purchase Payment Status</small>
+                <span class="badge <%= pr.vendor_purchase.payment_status_badge_class %>"><%= pr.vendor_purchase.payment_status.titleize %></span>
+                <small class="text-muted ms-1">paid <%= money.(pr.vendor_purchase.paid_amount) %></small></div>
+            <% end %>
+            <% if pr.notes.present? %>
+              <div class="col-12"><small class="text-muted d-block">Notes</small><%= simple_format(pr.notes, class: 'mb-0') %></div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <% if pr.items.present? %>
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-transparent fw-semibold"><i class="bi bi-box-seam me-1 text-primary"></i>Items (<%= pr.items.size %>)</div>
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead class="table-light"><tr><th>#</th><th>Product</th><th class="text-end">Qty</th><th class="text-end">Purchase Price</th><th class="text-end">Total</th></tr></thead>
+              <tbody>
+                <% pr.items.each_with_index do |it, i| %>
+                  <tr>
+                    <td><%= i + 1 %></td>
+                    <td><%= it['name'] %></td>
+                    <td class="text-end"><%= number_with_precision(it['quantity'], precision: 2, strip_insignificant_zeros: true) %></td>
+                    <td class="text-end"><%= money.(it['price']) %></td>
+                    <td class="text-end fw-medium"><%= money.(it['total']) %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+              <tfoot><tr class="table-light"><th colspan="4" class="text-end">Total</th><th class="text-end"><%= money.(pr.amount) %></th></tr></tfoot>
+            </table>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent fw-semibold"><i class="bi bi-truck me-1 text-primary"></i>Vendor</div>
+        <div class="card-body">
+          <div class="fw-semibold"><%= pr.vendor_name %></div>
+          <% if pr.vendor_phone.present? %><div class="small"><i class="bi bi-telephone me-1"></i><%= pr.vendor_phone %></div><% end %>
+          <% if pr.vendor_email.present? %><div class="small"><i class="bi bi-envelope me-1"></i><%= pr.vendor_email %></div><% end %>
+          <% if pr.vendor_address.present? %><div class="small text-muted mt-1"><%= pr.vendor_address %></div><% end %>
+          <% if pr.vendor_gst_no.present? %><div class="small mt-1"><span class="text-muted">GSTIN:</span> <%= pr.vendor_gst_no %></div><% end %>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent fw-semibold d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-bank me-1 text-primary"></i>Bank Info</span>
+          <% if pr.bank_info_complete? %>
+            <span class="text-success"><i class="bi bi-check-circle-fill"></i> Complete</span>
+          <% else %>
+            <small class="text-muted"><%= pr.bank_fields_filled_count %>/4 filled</small>
+          <% end %>
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0 small">
+            <dt class="col-5 text-muted fw-normal">Bank Date</dt><dd class="col-7"><%= pr.bank_date&.strftime('%d %b %Y') || '—' %></dd>
+            <dt class="col-5 text-muted fw-normal">Narration</dt><dd class="col-7"><%= pr.bank_narration.presence || '—' %></dd>
+            <dt class="col-5 text-muted fw-normal">Opening Balance</dt><dd class="col-7"><%= money.(pr.bank_opening_balance) %></dd>
+            <dt class="col-5 text-muted fw-normal">Closing Balance</dt><dd class="col-7 mb-0"><%= money.(pr.bank_closing_balance) %></dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%= render 'bank_info_modal' %>

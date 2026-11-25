@@ -412,6 +412,15 @@ Rails.application.routes.draw do
         get :clone
       end
     end
+    # Accountant: Sales Receipts (auto-created when a booking is marked paid)
+    resources :sales_receipts, only: [:index, :show, :new, :create] do
+      collection { get :lookup_booking }
+      member { patch :update_bank_info }
+    end
+    # Accountant: Purchase Receipts (auto-created with every vendor purchase)
+    resources :purchase_receipts, only: [:index, :show, :new, :create] do
+      member { patch :update_bank_info }
+    end
     # Accountant: Receipts (same form as Manual Journals, own table)
     resources :receipts do
       member do

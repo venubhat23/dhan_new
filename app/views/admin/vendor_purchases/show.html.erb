@@ -27,6 +27,12 @@
         Mark Complete
       <% end %>
     <% end %>
+    <% if vendor_area == :admin && (receipt = @vendor_purchase.purchase_receipt) %>
+      <%= link_to admin_purchase_receipt_path(receipt), class: "btn btn-outline-warning" do %>
+        <i class="bi bi-receipt-cutoff me-1"></i>
+        Receipt <%= receipt.receipt_number %><% if receipt.bank_info_complete? %> <i class="bi bi-check-circle-fill text-success"></i><% end %>
+      <% end %>
+    <% end %>
     <% if vendor_area == :admin %>
       <% debited = @vendor_purchase.debit_notes_total %>
       <%= link_to new_admin_debit_note_path(purchase: @vendor_purchase.purchase_number), class: "btn text-white", style: "background:#ea580c;" do %>
@@ -135,6 +141,9 @@
             <i class="bi bi-wallet2 me-1"></i>
             <%= @vendor_purchase.payment_status.titleize %>
           </span>
+          <% if @vendor_purchase.payment_mode_label %>
+            <small class="text-muted ms-2">via <%= @vendor_purchase.payment_mode_label %></small>
+          <% end %>
         </div>
       </div>
     </div>

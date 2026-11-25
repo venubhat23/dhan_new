@@ -7,12 +7,20 @@ class VendorPurchase < ApplicationRecord
   has_many :vendor_payments, dependent: :destroy
   has_one :vendor_invoice, dependent: :destroy
   has_many :debit_notes, dependent: :restrict_with_error
+  has_one :purchase_receipt, dependent: :nullify
 
   validates :purchase_date, presence: true
   validates :paid_amount, numericality: { greater_than_or_equal_to: 0 }
   validate :must_have_items
   validate :validate_total_amount
   validates :status, inclusion: { in: %w[pending completed cancelled] }
+
+  PAYMENT_MODES = { 'cash' => 'Cash', 'upi' => 'UPI', 'bank' => 'Bank' }.freeze
+  validates :payment_mode, inclusion: { in: PAYMENT_MODES.keys }, allow_blank: true
+
+  def payment_mode_label
+    PAYMENT_MODES[payment_mode]
+  end
 
   accepts_nested_attributes_for :vendor_purchase_items, reject_if: lambda { |attrs| attrs['product_id'].blank? && attrs['quantity'].blank? }, allow_destroy: true
 
@@ -25,6 +33,8 @@ class VendorPurchase < ApplicationRecord
   # Purchase journal: Dr Inventory Asset / Cr Accounts Payable (see AutoJournal).
   after_commit -> { AutoJournal.sync_vendor_purchase(self) }, on: [:create, :update]
   after_commit -> { AutoJournal.remove_for('VendorPurchase', id) }, on: :destroy
+  # Every vendor purchase gets a Purchase Receipt, kept in step with later edits.
+  after_commit :sync_purchase_receipt, on: [:create, :update]
   after_save :create_stock_batches, if: :saved_change_to_id?
   # Runs after the nested items have been saved (the autosave callbacks are
   # declared first), so dirty tracking on the items is already cleared here —
@@ -338,5 +348,12 @@ class VendorPurchase < ApplicationRecord
       product.update_column(:stock, new_stock)
     end
     new_stock
+  end
+
+  # Never blocks the purchase itself.
+  def sync_purchase_receipt
+    PurchaseReceipt.sync_from_vendor_purchase!(self)
+  rescue => e
+    Rails.logger.error "Purchase receipt for vendor purchase #{id} failed: #{e.message}"
   end
 end

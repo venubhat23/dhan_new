@@ -25,11 +25,12 @@
         Generate Invoice
       <% end %>
       <% unless @booking.payment_status_paid? %>
-        <%= button_to mark_paid_admin_booking_path(@booking, list_state: @list_state), method: :patch, class: "btn btn-warning",
-              data: { confirm: "Mark this booking as paid and generate invoice?" } do %>
+        <button type="button" class="btn btn-warning" onclick="openMarkPaidModal(this)"
+                data-url="<%= mark_paid_admin_booking_path(@booking, list_state: @list_state) %>"
+                data-booking-number="<%= @booking.booking_number %>">
           <i class="bi bi-check-circle me-1"></i>
           Mark as Paid & Invoice
-        <% end %>
+        </button>
       <% end %>
       <% if @booking.payment_status_unpaid? %>
         <%= button_to admin_booking_path(@booking, list_state: @list_state), method: :patch, class: "btn btn-outline-warning",
@@ -183,7 +184,7 @@
       <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Booking Summary</h5>
         <span class="badge bg-<%= @booking.payment_status == 'paid' ? 'success' : @booking.payment_status == 'partially_paid' ? 'warning' : 'danger' %>-subtle text-<%= @booking.payment_status == 'paid' ? 'success' : @booking.payment_status == 'partially_paid' ? 'warning' : 'danger' %>">
-          <%= @booking.payment_status_display %>
+          <%= @booking.payment_status_display %><% if @booking.payment_status_paid? && @booking.paid_via_label %> via <%= @booking.paid_via_label %><% end %>
         </span>
       </div>
       <div class="card-body">
@@ -204,6 +205,15 @@
             <strong class="text-muted d-block">Payment Method</strong>
             <%= @booking.payment_method_label %>
           </div>
+          <% if @booking.paid_via_label %>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">Paid Via</strong>
+              <span class="badge bg-success-subtle text-success"><%= @booking.paid_via_label %></span>
+              <% if (sr = @booking.sales_receipt) %>
+                <%= link_to sr.receipt_number, admin_sales_receipt_path(sr), class: 'small ms-1 text-decoration-none', title: 'Sales Receipt' %>
+              <% end %>
+            </div>
+          <% end %>
           <div class="col-md-6">
             <strong class="text-muted d-block">Created By</strong>
             <%= @booking.user&.first_name || 'System' %>
@@ -628,3 +638,5 @@ document.addEventListener('DOMContentLoaded', function() {
   toggleUpdateButton();
 });
 </script>
+
+<%= render 'admin/bookings/mark_paid_modal' %>

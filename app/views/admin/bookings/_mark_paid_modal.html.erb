@@ -1,0 +1,47 @@
+<%# "Mark Paid" modal: asks how the booking was paid (Bank / UPI / Cash) and
+    PATCHes mark_paid with paid_via. Open with openMarkPaidModal(button), where
+    the button carries data-url and data-booking-number. Shared by admin and
+    store_admin booking list/show pages. %>
+<div class="modal fade" id="markPaidModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <form class="modal-content" id="markPaidForm" method="post" data-turbo="false">
+      <input type="hidden" name="_method" value="patch">
+      <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token %>">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-check-circle me-1 text-success"></i>Mark as Paid</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2">Booking <span class="fw-semibold text-body" id="mpBookingNumber"></span> &mdash; how was it paid?</p>
+        <% Booking::PAID_VIA_OPTIONS.each do |value, label| %>
+          <div class="form-check py-1">
+            <input class="form-check-input" type="radio" name="paid_via" id="mpPaidVia_<%= value %>" value="<%= value %>" required>
+            <label class="form-check-label fw-medium" for="mpPaidVia_<%= value %>">
+              <i class="bi <%= { 'cash' => 'bi-cash-coin', 'upi' => 'bi-phone', 'bank' => 'bi-bank' }[value] %> me-1"></i><%= label %>
+            </label>
+          </div>
+        <% end %>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check-circle me-1"></i>Mark Paid</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+  (function() {
+    // Bootstrap puts the backdrop on <body>; a modal nested in page content renders under it.
+    const modalEl = document.getElementById('markPaidModal');
+    if (modalEl && modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
+
+    window.openMarkPaidModal = function(el) {
+      const modal = document.getElementById('markPaidModal');
+      const form = document.getElementById('markPaidForm');
+      form.reset();
+      form.action = el.dataset.url;
+      document.getElementById('mpBookingNumber').textContent = '#' + el.dataset.bookingNumber;
+      bootstrap.Modal.getOrCreateInstance(modal).show();
+    };
+  })();
+</script>

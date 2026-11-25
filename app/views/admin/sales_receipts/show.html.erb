@@ -1,0 +1,121 @@
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<% sr = @sales_receipt %>
+<% money = ->(v) { "₹#{number_with_delimiter(number_with_precision(v.to_f, precision: 2))}" } %>
+<style>
+  @media print { .no-print, .modern-sidebar, header, nav { display:none !important; } }
+  .sr-doc { max-width:900px; margin:0 auto; border-radius:16px; }
+  .sr-head { background:linear-gradient(135deg,#047857,#10b981); color:#fff; border-radius:16px 16px 0 0; padding:22px 26px; }
+</style>
+
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between gap-2 mb-3 no-print" style="max-width:900px;margin:0 auto;">
+    <%= link_to admin_sales_receipts_path, class: 'btn btn-outline-secondary' do %><i class="bi bi-arrow-left me-1"></i>Back<% end %>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-primary"
+              onclick="openBankInfoModal(this)"
+              data-url="<%= update_bank_info_admin_sales_receipt_path(sr) %>"
+              data-receipt="<%= sr.receipt_number %>"
+              data-bank-date="<%= sr.bank_date&.iso8601 %>"
+              data-bank-narration="<%= sr.bank_narration %>"
+              data-bank-opening="<%= sr.bank_opening_balance&.to_f %>"
+              data-bank-closing="<%= sr.bank_closing_balance&.to_f %>">
+        <i class="bi bi-bank me-1"></i>Update Bank Info
+      </button>
+      <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer me-1"></i>Print</button>
+    </div>
+  </div>
+
+  <div class="card sr-doc shadow-sm border-0">
+    <div class="sr-head d-flex flex-wrap justify-content-between gap-3">
+      <div>
+        <div class="small opacity-75">SALES RECEIPT</div>
+        <h3 class="mb-0"><%= sr.receipt_number %></h3>
+        <div class="small opacity-75"><%= sr.receipt_date.strftime('%d %B %Y') %> · <%= sr.source == 'auto' ? 'Auto-created on payment' : 'Manual entry' %></div>
+      </div>
+      <div class="text-end">
+        <div class="small opacity-75">Amount Received</div>
+        <h2 class="mb-0"><%= money.(sr.amount) %></h2>
+        <span class="badge bg-light text-success"><i class="bi bi-check2-circle me-1"></i>Paid via <%= sr.payment_mode_label %></span>
+      </div>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3 mb-4">
+        <div class="col-md-4"><small class="text-muted d-block">Received From</small>
+          <strong><%= sr.customer_name %></strong>
+          <div class="small text-muted"><%= sr.customer_phone %></div>
+          <div class="small text-muted"><%= sr.customer_email %></div>
+          <% if sr.gstin.present? %><div class="small">GSTIN: <%= sr.gstin %></div><% end %>
+          <% if sr.customer_address.present? %><div class="small text-muted"><%= sr.customer_address %></div><% end %>
+        </div>
+        <div class="col-md-4"><small class="text-muted d-block">Against Booking</small>
+          <% if sr.booking %>
+            <%= link_to "##{sr.booking_number}", admin_booking_path(sr.booking), class: 'fw-semibold text-decoration-none' %>
+          <% else %>
+            <strong><%= sr.booking_number.present? ? "##{sr.booking_number}" : '—' %></strong>
+          <% end %>
+          <% if sr.booking_date %><div class="small text-muted">Booked <%= sr.booking_date.strftime('%d %b %Y') %></div><% end %>
+          <% if sr.invoice_number.present? %><div class="small">Invoice: <%= sr.invoice_number %></div><% end %>
+          <% if sr.store %><div class="small text-muted"><i class="bi bi-shop"></i> <%= sr.store.name %></div><% end %>
+        </div>
+        <div class="col-md-4"><small class="text-muted d-block">Payment</small>
+          <strong><%= sr.payment_mode_label %></strong>
+          <% if sr.reference_number.present? %><div class="small">Ref: <%= sr.reference_number %></div><% end %>
+        </div>
+      </div>
+
+      <% if sr.items.present? %>
+        <table class="table align-middle">
+          <thead class="table-light"><tr><th>#</th><th>Item</th><th class="text-end">Qty</th><th class="text-end">Price</th><th class="text-end">Discount</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+            <% sr.items.each_with_index do |i, idx| %>
+              <tr>
+                <td><%= idx + 1 %></td>
+                <td><%= i['name'] %></td>
+                <td class="text-end"><%= number_with_precision(i['quantity'], precision: 2, strip_insignificant_zeros: true) %></td>
+                <td class="text-end"><%= money.(i['price']) %></td>
+                <td class="text-end"><%= i['discount_amount'].to_f > 0 ? money.(i['discount_amount']) : '—' %></td>
+                <td class="text-end"><%= money.(i['total']) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+
+      <div class="row justify-content-end mb-4">
+        <div class="col-md-5">
+          <table class="table table-sm mb-0">
+            <% if sr.items.present? %>
+              <tr><td class="text-muted">Subtotal</td><td class="text-end"><%= money.(sr.subtotal) %></td></tr>
+              <% if sr.discount_amount.to_f > 0 %><tr><td class="text-muted">Discount</td><td class="text-end text-danger">−<%= money.(sr.discount_amount) %></td></tr><% end %>
+              <% if sr.tax_amount.to_f > 0 %><tr><td class="text-muted">Tax (GST)</td><td class="text-end"><%= money.(sr.tax_amount) %></td></tr><% end %>
+              <% if sr.shipping_charges.to_f > 0 %><tr><td class="text-muted">Delivery</td><td class="text-end"><%= money.(sr.shipping_charges) %></td></tr><% end %>
+            <% end %>
+            <tr class="fw-bold"><td>Amount Received</td><td class="text-end text-success"><%= money.(sr.amount) %></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="border rounded-3 p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0"><i class="bi bi-bank me-1"></i>Bank Info</h6>
+          <% if sr.bank_info_complete? %>
+            <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Complete</span>
+          <% else %>
+            <span class="badge bg-warning-subtle text-warning"><%= sr.bank_fields_filled_count %>/4 filled</span>
+          <% end %>
+        </div>
+        <div class="row g-3 small">
+          <div class="col-md-3"><span class="text-muted d-block">Bank Date</span><strong><%= sr.bank_date&.strftime('%d %b %Y') || '—' %></strong></div>
+          <div class="col-md-3"><span class="text-muted d-block">Opening Balance</span><strong><%= sr.bank_opening_balance ? money.(sr.bank_opening_balance) : '—' %></strong></div>
+          <div class="col-md-3"><span class="text-muted d-block">Closing Balance</span><strong><%= sr.bank_closing_balance ? money.(sr.bank_closing_balance) : '—' %></strong></div>
+          <div class="col-md-3"><span class="text-muted d-block">Narration</span><strong><%= sr.bank_narration.presence || '—' %></strong></div>
+        </div>
+      </div>
+
+      <% if sr.notes.present? %><div class="alert alert-light border"><strong>Notes:</strong> <%= sr.notes %></div><% end %>
+      <div class="small text-muted">Created by <%= sr.created_by&.try(:first_name).presence || sr.created_by&.email || 'System' %> on <%= sr.created_at.strftime('%d %b %Y, %I:%M %p') %></div>
+    </div>
+  </div>
+</div>
+
+<%= render 'bank_info_modal' %>

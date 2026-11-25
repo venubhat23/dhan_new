@@ -1,0 +1,114 @@
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<style>
+  .sr-stat { border-radius:16px; border:0; color:#fff; }
+  .sr-stat .bi { font-size:1.8rem; opacity:.8; }
+  .sr-g1 { background:linear-gradient(135deg,#047857,#10b981); }
+  .sr-g2 { background:linear-gradient(135deg,#1d4ed8,#3b82f6); }
+  .sr-g3 { background:linear-gradient(135deg,#b45309,#f59e0b); }
+  .sr-g4 { background:linear-gradient(135deg,#7c3aed,#a78bfa); }
+  .sr-bank-done { color:#16a34a; font-size:1.25rem; }
+</style>
+
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+      <h3 class="mb-0"><i class="bi bi-receipt text-success me-2"></i>Sales Receipts</h3>
+      <small class="text-muted">Created automatically when a booking is marked paid, or added manually</small>
+    </div>
+    <%= link_to new_admin_sales_receipt_path, class: 'btn btn-success' do %><i class="bi bi-plus-lg me-1"></i>New Sales Receipt<% end %>
+  </div>
+
+  <% money = ->(v) { "₹#{number_with_delimiter(number_with_precision(v.to_f, precision: 2))}" } %>
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="card sr-stat sr-g1"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">Total Received (<%= @total_count %>)</small><h4 class="mb-0"><%= money.(@total_amount) %></h4></div><i class="bi bi-cash-stack"></i></div></div></div>
+    <div class="col-6 col-md-3"><div class="card sr-stat sr-g2"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">Bank</small><h4 class="mb-0"><%= money.(@mode_totals['bank']) %></h4></div><i class="bi bi-bank"></i></div></div></div>
+    <div class="col-6 col-md-3"><div class="card sr-stat sr-g3"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">UPI / Cash</small><h4 class="mb-0"><%= money.(@mode_totals['upi']) %> <small class="fs-6">/ <%= money.(@mode_totals['cash']) %></small></h4></div><i class="bi bi-phone"></i></div></div></div>
+    <div class="col-6 col-md-3"><div class="card sr-stat sr-g4"><div class="card-body d-flex justify-content-between align-items-center">
+      <div><small class="opacity-75">This Month (<%= @month_count %>)</small><h4 class="mb-0"><%= money.(@month_amount) %></h4></div><i class="bi bi-calendar-month"></i></div></div></div>
+  </div>
+
+  <%= form_with url: admin_sales_receipts_path, method: :get, class: 'row g-2 mb-3', data: { turbo: false } do %>
+    <div class="col-md-4"><input type="text" name="search" value="<%= params[:search] %>" class="form-control" placeholder="Search receipt #, booking #, invoice #, customer, phone"></div>
+    <div class="col-6 col-md-2">
+      <select name="payment_mode" class="form-select">
+        <option value="">All modes</option>
+        <% SalesReceipt::PAYMENT_MODES.each do |v, l| %><option value="<%= v %>" <%= 'selected' if params[:payment_mode] == v %>><%= l %></option><% end %>
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <select name="bank" class="form-select">
+        <option value="">Bank info: all</option>
+        <option value="done" <%= 'selected' if params[:bank] == 'done' %>>Bank info complete</option>
+        <option value="pending" <%= 'selected' if params[:bank] == 'pending' %>>Bank info pending</option>
+      </select>
+    </div>
+    <div class="col-6 col-md-1"><input type="date" name="from" value="<%= params[:from] %>" class="form-control" title="From"></div>
+    <div class="col-6 col-md-1"><input type="date" name="to" value="<%= params[:to] %>" class="form-control" title="To"></div>
+    <div class="col-md-2 d-flex gap-2">
+      <button class="btn btn-primary flex-grow-1"><i class="bi bi-funnel me-1"></i>Filter</button>
+      <%= link_to 'Clear', admin_sales_receipts_path, class: 'btn btn-outline-secondary' %>
+    </div>
+  <% end %>
+
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr><th>Receipt</th><th>Date</th><th>Customer</th><th>Booking / Invoice</th><th>Mode</th><th class="text-end">Amount</th><th class="text-center">Bank Info</th><th class="text-end">Action</th></tr>
+        </thead>
+        <tbody>
+          <% if @sales_receipts.empty? %>
+            <tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No sales receipts yet.</td></tr>
+          <% end %>
+          <% @sales_receipts.each do |sr| %>
+            <tr>
+              <td><%= link_to sr.receipt_number, admin_sales_receipt_path(sr), class: 'fw-semibold text-decoration-none' %>
+                <div><span class="badge <%= sr.source == 'auto' ? 'bg-info-subtle text-info' : 'bg-secondary-subtle text-secondary' %>"><%= sr.source == 'auto' ? 'Auto' : 'Manual' %></span></div></td>
+              <td><%= sr.receipt_date.strftime('%d %b %Y') %></td>
+              <td><%= sr.customer_name %><div class="small text-muted"><%= sr.customer_phone %></div></td>
+              <td>
+                <% if sr.booking %><%= link_to "##{sr.booking_number}", admin_booking_path(sr.booking), class: 'text-decoration-none' %><% elsif sr.booking_number.present? %>#<%= sr.booking_number %><% else %>—<% end %>
+                <% if sr.invoice_number.present? %><div class="small text-muted"><%= sr.invoice_number %></div><% end %>
+              </td>
+              <td><span class="badge bg-success-subtle text-success"><%= sr.payment_mode_label %></span></td>
+              <td class="text-end fw-bold"><%= money.(sr.amount) %></td>
+              <td class="text-center">
+                <% if sr.bank_info_complete? %>
+                  <i class="bi bi-check-circle-fill sr-bank-done" title="All 4 bank fields updated"></i>
+                <% else %>
+                  <small class="text-muted"><%= sr.bank_fields_filled_count %>/4</small>
+                <% end %>
+              </td>
+              <td class="text-end text-nowrap">
+                <button type="button" class="btn btn-sm <%= sr.bank_info_complete? ? 'btn-outline-success' : 'btn-outline-primary' %>"
+                        onclick="openBankInfoModal(this)"
+                        data-url="<%= update_bank_info_admin_sales_receipt_path(sr) %>"
+                        data-receipt="<%= sr.receipt_number %>"
+                        data-bank-date="<%= sr.bank_date&.iso8601 %>"
+                        data-bank-narration="<%= sr.bank_narration %>"
+                        data-bank-opening="<%= sr.bank_opening_balance&.to_f %>"
+                        data-bank-closing="<%= sr.bank_closing_balance&.to_f %>">
+                  <i class="bi bi-bank me-1"></i>Update Bank Info
+                </button>
+                <%= link_to admin_sales_receipt_path(sr), class: 'btn btn-sm btn-outline-secondary', title: 'View' do %><i class="bi bi-eye"></i><% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <% if @total_pages > 1 %>
+    <nav class="mt-3"><ul class="pagination justify-content-center flex-wrap">
+      <% (1..@total_pages).each do |p| %>
+        <li class="page-item <%= 'active' if p == @page %>"><%= link_to p, admin_sales_receipts_path(request.query_parameters.merge(page: p)), class: 'page-link' %></li>
+      <% end %>
+    </ul></nav>
+  <% end %>
+</div>
+
+<%= render 'bank_info_modal' %>

@@ -8,6 +8,7 @@ class Booking < ApplicationRecord
   belongs_to :franchise, optional: true
   has_many :booking_items, dependent: :destroy
   has_many :credit_notes, dependent: :restrict_with_error
+  has_one :sales_receipt, dependent: :nullify
   # has_one :order, dependent: :nullify  # Temporarily disabled until booking_id column is added to orders table
   has_many :booking_invoices, dependent: :destroy
   has_many :sale_items, dependent: :destroy
@@ -162,6 +163,7 @@ class Booking < ApplicationRecord
   after_update :sync_invoice_delivery_charge, if: :saved_change_to_shipping_charges?
   after_save :sync_invoice_items_from_booking
   after_commit :bust_mobile_customer_cache
+  after_commit :create_sales_receipt_if_paid, on: [:create, :update], if: -> { saved_change_to_payment_status? && payment_status_paid? }
 
   def bust_mobile_customer_cache
     cid = customer_id || customer&.id
@@ -173,6 +175,14 @@ class Booking < ApplicationRecord
   # Some bookings (e.g. created unpaid via the mobile UI) never got an invoice generated
   # at creation time — if one of those is later marked paid, generate the invoice now
   # instead of silently no-op'ing.
+  # Every booking that becomes Paid (Mark Paid, bulk, full settlement) gets a
+  # Sales Receipt. Never blocks the payment itself.
+  def create_sales_receipt_if_paid
+    SalesReceipt.create_from_booking!(self)
+  rescue => e
+    Rails.logger.error "Sales receipt for booking #{id} failed: #{e.message}"
+  end
+
   def sync_invoice_payment_status
     unless invoice_generated? && invoice_number.present?
       generate_quick_invoice! if payment_status_paid?
@@ -638,6 +648,13 @@ class Booking < ApplicationRecord
 
     hour, minute = expected_delivery_time.split(':').map(&:to_i)
     format('%02d:%02d %s', (hour % 12).zero? ? 12 : hour % 12, minute, hour < 12 ? 'AM' : 'PM')
+  end
+
+  # Set by "Mark Paid" in admin (modal with Bank / UPI / Cash).
+  PAID_VIA_OPTIONS = { 'cash' => 'Cash', 'upi' => 'UPI', 'bank' => 'Bank' }.freeze
+
+  def paid_via_label
+    PAID_VIA_OPTIONS[paid_via.to_s]
   end
 
   def payment_method_label

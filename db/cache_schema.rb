@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_25_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_25_000011) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -230,6 +230,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_25_000001) do
     t.integer "booking_items_count", default: 0, null: false
     t.string "expected_delivery_time", limit: 5
     t.string "gstin"
+    t.string "paid_via"
     t.index ["booked_by"], name: "index_bookings_on_booked_by"
     t.index ["booking_number"], name: "index_bookings_on_booking_number", unique: true
     t.index ["booking_number"], name: "index_bookings_on_booking_number_trgm", opclass: :gin_trgm_ops, using: :gin
@@ -740,6 +741,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_25_000001) do
     t.string "source_type"
     t.bigint "source_id"
     t.string "entry_kind"
+    t.string "payment_mode"
+    t.date "bank_date"
+    t.string "bank_narration"
+    t.decimal "opening_balance", precision: 14, scale: 2
+    t.decimal "closing_balance", precision: 14, scale: 2
     t.index ["created_by_id"], name: "index_manual_journals_on_created_by_id"
     t.index ["journal_number"], name: "index_manual_journals_on_journal_number", unique: true
     t.index ["source_type", "source_id", "entry_kind"], name: "index_manual_journals_on_source", unique: true, where: "(source_type IS NOT NULL)"
@@ -1071,6 +1077,38 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_25_000001) do
     t.index ["status"], name: "index_products_on_status"
   end
 
+  create_table "purchase_receipts", force: :cascade do |t|
+    t.string "receipt_number", null: false
+    t.date "receipt_date", null: false
+    t.bigint "vendor_purchase_id"
+    t.bigint "vendor_id"
+    t.bigint "created_by_id"
+    t.string "source", default: "manual", null: false
+    t.string "purchase_number"
+    t.date "purchase_date"
+    t.string "vendor_name"
+    t.string "vendor_phone"
+    t.string "vendor_email"
+    t.text "vendor_address"
+    t.string "vendor_gst_no"
+    t.jsonb "items", default: [], null: false
+    t.decimal "amount", precision: 14, scale: 2, default: "0.0", null: false
+    t.string "payment_mode"
+    t.string "reference_number"
+    t.text "notes"
+    t.date "bank_date"
+    t.text "bank_narration"
+    t.decimal "bank_opening_balance", precision: 14, scale: 2
+    t.decimal "bank_closing_balance", precision: 14, scale: 2
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_purchase_receipts_on_created_by_id"
+    t.index ["receipt_date"], name: "index_purchase_receipts_on_receipt_date"
+    t.index ["receipt_number"], name: "index_purchase_receipts_on_receipt_number", unique: true
+    t.index ["vendor_id"], name: "index_purchase_receipts_on_vendor_id"
+    t.index ["vendor_purchase_id"], name: "index_purchase_receipts_on_vendor_purchase_id", unique: true
+  end
+
   create_table "receipt_lines", force: :cascade do |t|
     t.bigint "receipt_id", null: false
     t.bigint "ledger_account_id", null: false
@@ -1159,6 +1197,45 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_25_000001) do
     t.index ["booking_id"], name: "index_sale_items_on_booking_id"
     t.index ["product_id"], name: "index_sale_items_on_product_id"
     t.index ["stock_batch_id"], name: "index_sale_items_on_stock_batch_id"
+  end
+
+  create_table "sales_receipts", force: :cascade do |t|
+    t.string "receipt_number", null: false
+    t.date "receipt_date", null: false
+    t.bigint "booking_id"
+    t.bigint "customer_id"
+    t.bigint "store_id"
+    t.bigint "created_by_id"
+    t.string "source", default: "manual", null: false
+    t.string "booking_number"
+    t.string "invoice_number"
+    t.string "customer_name"
+    t.string "customer_phone"
+    t.string "customer_email"
+    t.text "customer_address"
+    t.string "gstin"
+    t.datetime "booking_date"
+    t.jsonb "items", default: [], null: false
+    t.decimal "subtotal", precision: 14, scale: 2, default: "0.0"
+    t.decimal "tax_amount", precision: 14, scale: 2, default: "0.0"
+    t.decimal "discount_amount", precision: 14, scale: 2, default: "0.0"
+    t.decimal "shipping_charges", precision: 14, scale: 2, default: "0.0"
+    t.decimal "amount", precision: 14, scale: 2, default: "0.0", null: false
+    t.string "payment_mode"
+    t.string "reference_number"
+    t.text "notes"
+    t.date "bank_date"
+    t.text "bank_narration"
+    t.decimal "bank_opening_balance", precision: 14, scale: 2
+    t.decimal "bank_closing_balance", precision: 14, scale: 2
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_sales_receipts_on_booking_id", unique: true
+    t.index ["created_by_id"], name: "index_sales_receipts_on_created_by_id"
+    t.index ["customer_id"], name: "index_sales_receipts_on_customer_id"
+    t.index ["receipt_date"], name: "index_sales_receipts_on_receipt_date"
+    t.index ["receipt_number"], name: "index_sales_receipts_on_receipt_number", unique: true
+    t.index ["store_id"], name: "index_sales_receipts_on_store_id"
   end
 
   create_table "solid_cache_entries", force: :cascade do |t|
@@ -1686,6 +1763,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_25_000001) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "payment_mode"
     t.index ["vendor_id"], name: "index_vendor_purchases_on_vendor_id"
   end
 
@@ -1791,6 +1869,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_25_000001) do
   add_foreign_key "product_reviews", "users"
   add_foreign_key "product_variants", "products"
   add_foreign_key "products", "categories"
+  add_foreign_key "purchase_receipts", "users", column: "created_by_id"
+  add_foreign_key "purchase_receipts", "vendor_purchases", on_delete: :nullify
+  add_foreign_key "purchase_receipts", "vendors", on_delete: :nullify
   add_foreign_key "receipt_lines", "ledger_accounts"
   add_foreign_key "receipt_lines", "receipts", on_delete: :cascade
   add_foreign_key "receipts", "stores"
@@ -1803,6 +1884,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_25_000001) do
   add_foreign_key "sale_items", "bookings"
   add_foreign_key "sale_items", "products"
   add_foreign_key "sale_items", "stock_batches"
+  add_foreign_key "sales_receipts", "bookings"
+  add_foreign_key "sales_receipts", "customers"
+  add_foreign_key "sales_receipts", "stores"
+  add_foreign_key "sales_receipts", "users", column: "created_by_id"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

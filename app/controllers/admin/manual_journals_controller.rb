@@ -49,7 +49,7 @@ class Admin::ManualJournalsController < Admin::ApplicationController
 
   def clone
     source = @journal
-    @journal = ManualJournal.new(source.attributes.slice('reference_number', 'notes', 'reporting_method', 'currency', 'store_id')
+    @journal = ManualJournal.new(source.attributes.slice('reference_number', 'notes', 'reporting_method', 'currency', 'store_id', 'payment_mode', 'bank_narration')
                                        .merge(journal_date: Date.current, journal_number: ManualJournal.next_number))
     source.manual_journal_lines.each do |l|
       @journal.manual_journal_lines.build(l.attributes.slice('ledger_account_id', 'description', 'contact_name', 'debit', 'credit', 'position'))
@@ -130,6 +130,7 @@ class Admin::ManualJournalsController < Admin::ApplicationController
   def journal_params
     params.require(:manual_journal).permit(
       :journal_date, :journal_number, :reference_number, :notes, :reporting_method, :store_id,
+      :payment_mode, :bank_date, :bank_narration, :opening_balance, :closing_balance,
       manual_journal_lines_attributes: [:id, :ledger_account_id, :description, :contact_name, :debit, :credit, :position, :_destroy]
     )
   end

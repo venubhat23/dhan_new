@@ -282,7 +282,7 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
   end
 
   def vendor_purchase_params
-    params.require(:vendor_purchase).permit(:vendor_id, :purchase_date, :notes, :status, :paid_amount,
+    params.require(:vendor_purchase).permit(:vendor_id, :purchase_date, :notes, :status, :paid_amount, :payment_mode,
       vendor_purchase_items_attributes: [
         :id, :product_id, :product_variant_id, :quantity, :purchase_price, :selling_price, :_destroy
       ]

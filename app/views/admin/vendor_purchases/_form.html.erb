@@ -48,6 +48,18 @@
               value: @vendor_purchase.purchase_date&.strftime('%Y-%m-%d') || Date.current.strftime('%Y-%m-%d'),
               required: true %>
         </div>
+        <div class="col-md-4">
+          <%= f.label :payment_mode, "Payment Mode", class: "form-label" %>
+          <div class="d-flex gap-3 pt-1">
+            <% VendorPurchase::PAYMENT_MODES.each do |value, label| %>
+              <div class="form-check">
+                <%= f.radio_button :payment_mode, value, class: "form-check-input", id: "payment_mode_#{value}",
+                      checked: (@vendor_purchase.payment_mode.presence || 'cash') == value %>
+                <label class="form-check-label" for="payment_mode_<%= value %>"><%= label %></label>
+              </div>
+            <% end %>
+          </div>
+        </div>
         <div class="col-md-3">
           <label class="form-label">Total Amount</label>
           <div class="d-flex align-items-center">

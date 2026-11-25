@@ -296,6 +296,8 @@ class StoreAdmin::BookingsController < StoreAdmin::ApplicationController
     if @booking.payment_status_paid?
       return redirect_to(store_admin_booking_path(@booking, list_state_params), notice: 'Booking is already marked as paid.')
     end
+    paid_via = params[:paid_via].to_s
+    @booking.paid_via = paid_via if Booking::PAID_VIA_OPTIONS.key?(paid_via)
     @booking.payment_status = :paid
     @booking.save!
     flash[:payment_thanks_booking_id] = @booking.id # bookings list offers the WhatsApp thank-you note
