@@ -1,12 +1,22 @@
 module ApplicationHelper
-  # Sidebar menu search script. Loaded by its asset URL (not the import map) and
-  # never fatal: if the server's precompiled assets are stale and don't include
-  # it yet, the page still renders — only the sidebar search is missing.
+  # Sidebar menu search script, always embedded inline from
+  # app/javascript/sidebar_search.js — no asset pipeline / import map involved,
+  # so it works even when the server's precompiled assets are stale. Rendered in
+  # <head>, so Turbo runs it once per full page load (the script also guards
+  # against binding its listeners twice). Never raises.
   def sidebar_search_script_tag
-    tag.script(type: 'module', src: asset_path('sidebar_search.js'))
+    source = ApplicationHelper.sidebar_search_source
+    source ? tag.script(source.html_safe, type: 'module') : ''
+  end
+
+  def self.sidebar_search_source
+    return @sidebar_search_source if defined?(@sidebar_search_source) && Rails.env.production?
+
+    path = Rails.root.join('app/javascript/sidebar_search.js')
+    @sidebar_search_source = File.exist?(path) ? File.read(path).gsub('</script', '<\\/script') : nil
   rescue StandardError => e
-    Rails.logger.warn("[sidebar_search] #{e.class}: #{e.message} — run assets:precompile")
-    ''
+    Rails.logger.warn("[sidebar_search] #{e.class}: #{e.message}")
+    @sidebar_search_source = nil
   end
 
   # ---- B2B invoices: CGST/SGST split, GSTIN, B2B label ----------------------

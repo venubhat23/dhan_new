@@ -413,49 +413,55 @@ function close(input) {
   render(input.closest('.modern-sidebar'), '')
 }
 
-document.addEventListener('input', (event) => {
-  if (event.target.id !== 'sidebar-search-input') return
-  const sidebar = event.target.closest('.modern-sidebar')
-  if (sidebar) render(sidebar, event.target.value.trim().toLowerCase())
-})
+// The script is embedded inline in the page (see sidebar_search_script_tag), so
+// guard against binding the document listeners twice.
+if (!window.__sidebarSearchBound) {
+  window.__sidebarSearchBound = true
 
-document.addEventListener('keydown', (event) => {
-  const input = event.target
-  if (input.id !== 'sidebar-search-input') return
+  document.addEventListener('input', (event) => {
+    if (event.target.id !== 'sidebar-search-input') return
+    const sidebar = event.target.closest('.modern-sidebar')
+    if (sidebar) render(sidebar, event.target.value.trim().toLowerCase())
+  })
 
-  const sidebar = input.closest('.modern-sidebar')
-  if (event.key === 'Escape') { close(input); input.blur() }
-  else if (event.key === 'ArrowDown') { event.preventDefault(); select(sidebar, selectedIndex(sidebar) + 1) }
-  else if (event.key === 'ArrowUp') { event.preventDefault(); select(sidebar, selectedIndex(sidebar) - 1) }
-  else if (event.key === 'Enter') { event.preventDefault(); pick(sidebar, Math.max(0, selectedIndex(sidebar))) }
-})
+  document.addEventListener('keydown', (event) => {
+    const input = event.target
+    if (input.id !== 'sidebar-search-input') return
 
-document.addEventListener('click', (event) => {
-  const item = event.target.closest('.ss-item')
-  if (item) {
-    pick(item.closest('.modern-sidebar'), Number(item.dataset.index))
-    return
-  }
-  if (event.target.closest('.sidebar-search-clear')) {
+    const sidebar = input.closest('.modern-sidebar')
+    if (event.key === 'Escape') { close(input); input.blur() }
+    else if (event.key === 'ArrowDown') { event.preventDefault(); select(sidebar, selectedIndex(sidebar) + 1) }
+    else if (event.key === 'ArrowUp') { event.preventDefault(); select(sidebar, selectedIndex(sidebar) - 1) }
+    else if (event.key === 'Enter') { event.preventDefault(); pick(sidebar, Math.max(0, selectedIndex(sidebar))) }
+  })
+
+  document.addEventListener('click', (event) => {
+    const item = event.target.closest('.ss-item')
+    if (item) {
+      pick(item.closest('.modern-sidebar'), Number(item.dataset.index))
+      return
+    }
+    if (event.target.closest('.sidebar-search-clear')) {
+      const input = document.getElementById('sidebar-search-input')
+      if (input) { close(input); input.focus() }
+      return
+    }
+    const reset = event.target.closest('.sidebar-pin-reset')
+    if (reset) {
+      resetOrder(reset.closest('.modern-sidebar'))
+      return
+    }
+    // Clicking anywhere outside the search closes the dropdown
     const input = document.getElementById('sidebar-search-input')
-    if (input) { close(input); input.focus() }
-    return
-  }
-  const reset = event.target.closest('.sidebar-pin-reset')
-  if (reset) {
-    resetOrder(reset.closest('.modern-sidebar'))
-    return
-  }
-  // Clicking anywhere outside the search closes the dropdown
-  const input = document.getElementById('sidebar-search-input')
-  if (input?.value && !event.target.closest('.sidebar-search')) close(input)
-})
+    if (input?.value && !event.target.closest('.sidebar-search')) close(input)
+  })
 
-document.addEventListener('mousemove', (event) => {
-  const item = event.target.closest?.('.ss-item')
-  if (item && !item.classList.contains('is-selected')) select(item.closest('.modern-sidebar'), Number(item.dataset.index))
-})
+  document.addEventListener('mousemove', (event) => {
+    const item = event.target.closest?.('.ss-item')
+    if (item && !item.classList.contains('is-selected')) select(item.closest('.modern-sidebar'), Number(item.dataset.index))
+  })
 
-document.addEventListener('turbo:load', applyPinned)
+  document.addEventListener('turbo:load', applyPinned)
+}
 if (document.readyState !== 'loading') applyPinned()
 else document.addEventListener('DOMContentLoaded', applyPinned)
