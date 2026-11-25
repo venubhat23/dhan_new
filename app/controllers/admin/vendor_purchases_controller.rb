@@ -5,7 +5,7 @@ class Admin::VendorPurchasesController < Admin::ApplicationController
   layout 'application'
 
   def index
-    @vendor_purchases = VendorPurchase.includes(:vendor, :vendor_purchase_items, :products)
+    @vendor_purchases = VendorPurchase.includes(:vendor, :vendor_purchase_items, :products, :purchase_receipt)
                                      .recent
     @vendor_purchases = @vendor_purchases.joins(:vendor).where('vendors.name ILIKE ?', "%#{params[:search]}%") if params[:search].present?
     @vendor_purchases = @vendor_purchases.where(vendor_id: params[:vendor_id]) if params[:vendor_id].present?

@@ -1049,7 +1049,7 @@
 
     <!-- Accounts & Returns Section (one main menu + submenu) -->
     <% if current_user.has_sidebar_permission?('reports') || current_user.has_sidebar_permission?('bookings') || current_user.has_sidebar_permission?('invoices') %>
-    <% acc_menu_open = %w[/admin/credit_notes /admin/debit_notes /admin/manual_journals /admin/sales_receipts /admin/purchase_receipts /admin/receipts /admin/ledger_accounts /admin/reports/gstr1].any? { |p| request.path.start_with?(p) } %>
+    <% acc_menu_open = %w[/admin/credit_notes /admin/debit_notes /admin/manual_journals /admin/balance_sheet /admin/sales_receipts /admin/purchase_receipts /admin/receipts /admin/ledger_accounts /admin/reports/gstr1].any? { |p| request.path.start_with?(p) } %>
     <div class="nav-section">
       <div class="nav-section-title">Accounts</div>
       <ul class="nav-menu">
@@ -1107,9 +1107,9 @@
                 <% end %>
               </li>
               <li>
-                <%= link_to admin_ledger_accounts_path, class: "submenu-link #{'active' if request.path.start_with?('/admin/ledger_accounts')}" do %>
+                <%= link_to admin_balance_sheet_path, class: "submenu-link #{'active' if request.path.start_with?('/admin/balance_sheet')}" do %>
                   <span class="submenu-bullet">•</span>
-                  <span>Chart of Accounts</span>
+                  <span>Balance Sheet</span>
                 <% end %>
               </li>
               <li>

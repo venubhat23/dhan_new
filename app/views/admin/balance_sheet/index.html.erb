@@ -1,0 +1,120 @@
+<% content_for :head do %><meta name="turbo-visit-control" content="reload"><% end %>
+<% reg = @register %>
+<% money = ->(v) { v.to_f.negative? ? "₹-#{number_with_delimiter(number_with_precision(v.to_f.abs, precision: 2))}" : "₹#{number_with_delimiter(number_with_precision(v.to_f, precision: 2))}" } %>
+<% link_for = ->(r) {
+     case r.type
+     when 'sales_receipt'    then admin_sales_receipt_path(r.record)
+     when 'purchase_receipt' then admin_purchase_receipt_path(r.record)
+     when 'manual_journal'   then admin_manual_journal_path(r.record)
+     end } %>
+<% mode_labels = { 'cash' => 'Cash', 'upi' => 'UPI', 'bank' => 'Bank' } %>
+<style>
+  .bs-amount { font-size:1.6rem; font-weight:600; }
+  .bs-card { border-radius:14px; }
+  .bs-table th { font-size:.75rem; text-transform:uppercase; letter-spacing:.03em; color:#6b7280; font-weight:600; }
+  .bs-neg { color:#dc2626; }
+  .bs-type-sales_receipt { color:#047857; }
+  .bs-type-purchase_receipt { color:#b45309; }
+  .bs-type-manual_journal { color:#6d28d9; }
+</style>
+
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+      <h3 class="mb-0"><i class="bi bi-bank2 text-primary me-2"></i>Balance Sheet</h3>
+      <small class="text-muted">Sales receipts are deposits · Purchase receipts and manual journals are withdrawals · Starts at ₹0</small>
+    </div>
+    <div class="d-flex gap-2">
+      <%= link_to new_admin_sales_receipt_path, class: 'btn btn-outline-success btn-sm' do %><i class="bi bi-plus-lg me-1"></i>Record Deposit<% end %>
+      <%= link_to new_admin_manual_journal_path, class: 'btn btn-outline-secondary btn-sm' do %><i class="bi bi-plus-lg me-1"></i>Manual Journal<% end %>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="card bs-card border-0 shadow-sm"><div class="card-body">
+      <small class="text-muted">Opening Balance<%= " (as of #{reg.from.strftime('%d/%m/%Y')})" if reg.from %></small>
+      <div class="bs-amount <%= 'bs-neg' if reg.opening_balance.negative? %>"><%= money.(reg.opening_balance) %></div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card bs-card border-0 shadow-sm"><div class="card-body">
+      <small class="text-muted">Deposits</small>
+      <div class="bs-amount text-success"><%= money.(reg.total_deposits) %></div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card bs-card border-0 shadow-sm"><div class="card-body">
+      <small class="text-muted">Withdrawals</small>
+      <div class="bs-amount text-danger"><%= money.(reg.total_withdrawals) %></div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card bs-card border-0 shadow-sm bg-primary-subtle"><div class="card-body">
+      <small class="text-muted">Closing Balance<%= " (as of #{reg.to.strftime('%d/%m/%Y')})" if reg.to %></small>
+      <div class="bs-amount <%= reg.closing_balance.negative? ? 'bs-neg' : 'text-primary' %>"><%= money.(reg.closing_balance) %></div></div></div></div>
+  </div>
+
+  <%= form_with url: admin_balance_sheet_path, method: :get, class: 'row g-2 mb-3', data: { turbo: false } do %>
+    <div class="col-6 col-md-2"><input type="date" name="from" value="<%= params[:from] %>" class="form-control" title="From"></div>
+    <div class="col-6 col-md-2"><input type="date" name="to" value="<%= params[:to] %>" class="form-control" title="To"></div>
+    <div class="col-6 col-md-3">
+      <select name="type" class="form-select">
+        <option value="">All transactions</option>
+        <% BalanceSheetRegister::TYPES.each do |v, l| %><option value="<%= v %>" <%= 'selected' if reg.type == v %>><%= l %></option><% end %>
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <select name="payment_mode" class="form-select">
+        <option value="">All modes</option>
+        <% mode_labels.each do |v, l| %><option value="<%= v %>" <%= 'selected' if reg.payment_mode == v %>><%= l %></option><% end %>
+      </select>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+      <button class="btn btn-primary flex-grow-1"><i class="bi bi-funnel me-1"></i>Filter</button>
+      <%= link_to 'Clear', admin_balance_sheet_path, class: 'btn btn-outline-secondary' %>
+    </div>
+  <% end %>
+
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 bs-table">
+        <thead class="table-light">
+          <tr><th>Date</th><th>Reference#</th><th>Type</th><th>Mode</th><th class="text-end">Deposits</th><th class="text-end">Withdrawals</th><th class="text-end">Running Balance</th></tr>
+        </thead>
+        <tbody>
+          <tr class="table-light">
+            <td colspan="6" class="small text-muted fst-italic">Opening Balance</td>
+            <td class="text-end fw-semibold <%= 'bs-neg' if reg.opening_balance.negative? %>"><%= money.(reg.opening_balance) %></td>
+          </tr>
+          <% if @rows.empty? %>
+            <tr><td colspan="7" class="text-center text-muted py-5"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No transactions for this filter.</td></tr>
+          <% end %>
+          <% @rows.each do |r| %>
+            <tr>
+              <td class="text-nowrap"><%= r.date.strftime('%d/%m/%Y') %></td>
+              <td><%= link_to r.reference, link_for.(r), class: 'text-decoration-none fw-medium' %></td>
+              <td>
+                <span class="fw-medium bs-type-<%= r.type %>"><%= r.type_label %></span>
+                <% if r.party.present? %><div class="small text-muted"><%= r.type == 'manual_journal' ? 'Ref' : (r.type == 'sales_receipt' ? 'Customer' : 'Vendor') %>: <%= r.party %></div><% end %>
+                <% if r.description.present? %><div class="small text-muted"><%= r.description %></div><% end %>
+              </td>
+              <td><%= mode_labels[r.payment_mode] || '—' %></td>
+              <td class="text-end text-nowrap"><%= money.(r.deposit) if r.deposit.positive? %></td>
+              <td class="text-end text-nowrap"><%= money.(r.withdrawal) if r.withdrawal.positive? %></td>
+              <td class="text-end text-nowrap fw-semibold <%= 'bs-neg' if r.balance.negative? %>"><%= money.(r.balance) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot class="table-light">
+          <tr class="fw-bold">
+            <td colspan="4" class="text-end">Closing Balance</td>
+            <td class="text-end text-success"><%= money.(reg.total_deposits) %></td>
+            <td class="text-end text-danger"><%= money.(reg.total_withdrawals) %></td>
+            <td class="text-end <%= 'bs-neg' if reg.closing_balance.negative? %>"><%= money.(reg.closing_balance) %></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="card-footer bg-transparent d-flex justify-content-between align-items-center small">
+      <span>Total Count: <strong><%= @total_count %></strong></span>
+      <% if @total_pages > 1 %>
+        <ul class="pagination pagination-sm mb-0">
+          <% (1..@total_pages).each do |p| %>
+            <li class="page-item <%= 'active' if p == @page %>"><%= link_to p, admin_balance_sheet_path(request.query_parameters.merge(page: p)), class: 'page-link' %></li>
+          <% end %>
+        </ul>
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -610,6 +610,9 @@
                     <% elsif booking.payment_method.present? %>
                       <small class="text-muted ms-1">(<%= booking.payment_method_display %>)</small>
                     <% end %>
+                    <% if (sr = booking.sales_receipt) %>
+                      <%= link_to admin_sales_receipt_path(sr), class: 'small ms-1 text-decoration-none', title: 'Sales Receipt', data: { turbo: false } do %><i class="bi bi-receipt"></i> <%= sr.receipt_number %><% end %>
+                    <% end %>
                     <% if booking.payment_status_paid? || (booking.payment_status_partially_paid? && paid_so_far > 0) %>
                       <% thanks_url = booking_payment_thanks_whatsapp_url(booking, invoice: pay_invoice) %>
                       <% if thanks_url %>

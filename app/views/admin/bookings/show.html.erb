@@ -209,9 +209,13 @@
             <div class="col-md-6">
               <strong class="text-muted d-block">Paid Via</strong>
               <span class="badge bg-success-subtle text-success"><%= @booking.paid_via_label %></span>
-              <% if (sr = @booking.sales_receipt) %>
-                <%= link_to sr.receipt_number, admin_sales_receipt_path(sr), class: 'small ms-1 text-decoration-none', title: 'Sales Receipt' %>
-              <% end %>
+            </div>
+          <% end %>
+          <% if (sr = @booking.sales_receipt) %>
+            <div class="col-md-6">
+              <strong class="text-muted d-block">Sales Receipt</strong>
+              <%= link_to admin_sales_receipt_path(sr), class: 'text-decoration-none fw-semibold' do %><i class="bi bi-receipt me-1"></i><%= sr.receipt_number %><% end %>
+              <small class="text-muted ms-1"><%= sr.receipt_date.strftime('%d %b %Y') %></small>
             </div>
           <% end %>
           <div class="col-md-6">

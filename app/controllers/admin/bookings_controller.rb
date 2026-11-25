@@ -81,6 +81,7 @@ class Admin::BookingsController < Admin::ApplicationController
     # to be five separate round trips (bookings + customers + users +
     # franchises + stores + booking_invoices) with two.
     @bookings = @bookings.eager_load(:customer, { user: :franchise }, :store, :booking_invoices)
+                         .preload(:sales_receipt)
                          .page(params[:page]).per(@per_page)
 
     # Kaminari's #total_count issues its own COUNT(*) with the same WHERE we

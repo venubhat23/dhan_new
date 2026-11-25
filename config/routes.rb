@@ -412,6 +412,8 @@ Rails.application.routes.draw do
         get :clone
       end
     end
+    # Accountant: Balance Sheet — bank-style register (sales receipts in, purchase receipts + manual journals out)
+    get 'balance_sheet', to: 'balance_sheet#index', as: :balance_sheet
     # Accountant: Sales Receipts (auto-created when a booking is marked paid)
     resources :sales_receipts, only: [:index, :show, :new, :create] do
       collection { get :lookup_booking }
