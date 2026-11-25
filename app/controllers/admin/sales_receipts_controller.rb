@@ -33,7 +33,7 @@ class Admin::SalesReceiptsController < Admin::ApplicationController
   def show; end
 
   def new
-    @sales_receipt = SalesReceipt.new(receipt_date: Date.current, payment_mode: 'cash')
+    @sales_receipt = SalesReceipt.new(receipt_date: Date.current, payment_mode: 'upi')
     if params[:booking].present? && (booking = find_booking(params[:booking]))
       @sales_receipt.assign_attributes(SalesReceipt.attributes_from_booking(booking).merge(receipt_date: Date.current))
     end

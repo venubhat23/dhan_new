@@ -2670,12 +2670,14 @@ function stopCamera() {
 }
 
 /* Enhanced Floating Cart Styles */
-/* Sized to the viewport so the cart never climbs into the top corner (over
-   the page header / minimize control) on shorter laptop screens. */
+/* Sized to the viewport so a full cart never climbs into the top-right corner.
+   The floating Products/Checkout icons sit at top:90px (50px tall, so down to
+   140px); the cart's top edge must stay below ~150px or that cart icon covers
+   the cart's minimize button: 150px + the dock's 16px bottom padding = 166px. */
 #floatingCart {
   width: 520px;
   max-width: calc(100vw - 2rem);
-  max-height: calc(100vh - 6rem);
+  max-height: calc(100vh - 166px);
   flex-direction: column;
   border-radius: 16px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.25) !important;

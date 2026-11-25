@@ -157,6 +157,7 @@
     <%= stylesheet_link_tag "auth", "data-turbo-track": "reload" if !user_signed_in? %>
 
     <%= render "shared/number_input_ux" %>
+    <%= render 'layouts/touch_scroll_fix' %>
   </head>
 
   <body class="insurance-app">

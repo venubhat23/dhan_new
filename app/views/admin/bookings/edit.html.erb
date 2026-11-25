@@ -199,18 +199,6 @@
         </div>
       </div>
 
-      <!-- Additional Notes -->
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-transparent border-0">
-          <h5 class="mb-0">
-            <i class="bi bi-chat-square-text text-primary me-2"></i>
-            Additional Notes
-          </h5>
-        </div>
-        <div class="card-body">
-          <%= f.text_area :notes, class: 'form-control', rows: 4, placeholder: 'Add any special instructions or notes for this booking...' %>
-        </div>
-      </div>
     </div>
 
     <!-- Sidebar -->
@@ -398,6 +386,14 @@
                 </div>
               <% end %>
             <% end %>
+          </div>
+
+          <!-- Additional Notes (below the products) -->
+          <div class="border rounded p-3 mb-3 bg-light-subtle">
+            <label class="form-label fw-semibold mb-2" for="booking_notes">
+              <i class="bi bi-chat-square-text text-primary me-2"></i>Additional Notes
+            </label>
+            <%= f.text_area :notes, class: 'form-control', rows: 3, placeholder: 'Add any special instructions or notes for this booking...' %>
           </div>
 
           <!-- Add Item + Update Booking (same submit as the sidebar's Actions card) -->

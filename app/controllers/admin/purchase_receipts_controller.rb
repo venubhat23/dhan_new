@@ -33,7 +33,7 @@ class Admin::PurchaseReceiptsController < Admin::ApplicationController
   def show; end
 
   def new
-    @purchase_receipt = PurchaseReceipt.new(receipt_date: Date.current, payment_mode: 'cash')
+    @purchase_receipt = PurchaseReceipt.new(receipt_date: Date.current, payment_mode: 'bank')
     if params[:vendor_purchase_id].present? && (purchase = VendorPurchase.find_by(id: params[:vendor_purchase_id]))
       if (existing = purchase.purchase_receipt)
         return redirect_to admin_purchase_receipt_path(existing), alert: "#{purchase.purchase_number} already has receipt #{existing.receipt_number}."

@@ -2,6 +2,7 @@
   App-wide number-box behaviour for the admin / store-admin panels:
   1. No up/down spinner arrows on any <input type="number"> (they kept
      reappearing on boxes that per-page CSS had missed).
+  (Also: a grey "0" placeholder disappears when the box is clicked.)
   2. Clicking into a box that holds 0 empties it, so you can type straight
      away instead of deleting the 0 first. If you leave it empty, the 0 comes
      back, so forms never submit a blank amount.
@@ -11,6 +12,11 @@
   input[type=number]::-webkit-outer-spin-button,
   input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+  /* Many boxes show a grey "0" / "0.00" placeholder; browsers keep it visible
+     after clicking, which reads as a 0 that won't go away. Hide it on focus. */
+  input[type=number]:focus::placeholder,
+  input[inputmode=decimal]:focus::placeholder,
+  input[inputmode=numeric]:focus::placeholder { color: transparent; opacity: 0; }
 </style>
 <script>
   (function () {

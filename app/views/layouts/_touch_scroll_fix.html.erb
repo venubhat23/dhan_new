@@ -1,0 +1,38 @@
+<%# iPad / touch fix. layout_fix.css makes .main-content a position:fixed box with its
+    own inner scroll. iPad Safari can't reach the bottom of long forms in that setup
+    (worst with the on-screen keyboard open: the fixed box doesn't shrink, so e.g. the
+    Update button on New Customer is unreachable). On touch devices only, let the page
+    itself scroll instead: header + sidebar stay fixed, content flows normally.
+    Desktop (mouse) is untouched. Selectors are prefixed with html body to beat the
+    !important rules in layout_fix.css. %>
+<style>
+  @media (hover: none) and (pointer: coarse) {
+    html, html body { height: auto !important; min-height: 100% !important; overflow-y: auto !important; overflow-x: hidden !important; }
+    html body .main-content,
+    html body main.main-content {
+      position: relative !important;
+      top: auto !important; bottom: auto !important; right: auto !important; left: auto !important;
+      margin: 0 0 0 260px !important;
+      padding-top: 70px !important;
+      height: auto !important;
+      min-height: 100vh !important;
+      min-height: 100dvh !important;
+      overflow: visible !important;
+    }
+    html body .main-content .container-fluid {
+      min-height: 0 !important;
+      padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    html body .sidebar, html body #sidebar, html body nav.sidebar {
+      height: calc(100dvh - 70px) !important;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    /* Tall sticky panels (e.g. invoice summary) can't be scrolled past on a tablet; keep them in flow. */
+    html body .main-content .sticky-top { position: static !important; }
+  }
+  @media (hover: none) and (pointer: coarse) and (max-width: 768px) {
+    html body .main-content, html body main.main-content { margin-left: 0 !important; padding-top: 60px !important; }
+    html body .sidebar, html body #sidebar, html body nav.sidebar { height: calc(100dvh - 60px) !important; }
+  }
+</style>

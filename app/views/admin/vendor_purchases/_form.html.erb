@@ -54,7 +54,7 @@
             <% VendorPurchase::PAYMENT_MODES.each do |value, label| %>
               <div class="form-check">
                 <%= f.radio_button :payment_mode, value, class: "form-check-input", id: "payment_mode_#{value}",
-                      checked: (@vendor_purchase.payment_mode.presence || 'cash') == value %>
+                      checked: (@vendor_purchase.payment_mode.presence || 'bank') == value %>
                 <label class="form-check-label" for="payment_mode_<%= value %>"><%= label %></label>
               </div>
             <% end %>
