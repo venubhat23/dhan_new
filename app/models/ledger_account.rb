@@ -20,6 +20,7 @@ class LedgerAccount < ApplicationRecord
   CREDIT_NATURE = %w[income other_income liability equity].freeze
 
   has_many :manual_journal_lines, dependent: :restrict_with_error
+  has_many :receipt_lines, dependent: :restrict_with_error
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :account_type, inclusion: { in: TYPE_LABELS.keys }

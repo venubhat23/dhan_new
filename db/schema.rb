@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_24_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_25_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1071,6 +1071,40 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_24_000001) do
     t.index ["status"], name: "index_products_on_status"
   end
 
+  create_table "receipt_lines", force: :cascade do |t|
+    t.bigint "receipt_id", null: false
+    t.bigint "ledger_account_id", null: false
+    t.string "description"
+    t.string "contact_name"
+    t.decimal "debit", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "credit", precision: 14, scale: 2, default: "0.0", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ledger_account_id"], name: "index_receipt_lines_on_ledger_account_id"
+    t.index ["receipt_id"], name: "index_receipt_lines_on_receipt_id"
+  end
+
+  create_table "receipts", force: :cascade do |t|
+    t.integer "receipt_number", null: false
+    t.date "receipt_date", null: false
+    t.string "reference_number"
+    t.text "notes", null: false
+    t.string "reporting_method", default: "accrual_and_cash", null: false
+    t.string "currency", default: "INR", null: false
+    t.string "status", default: "draft", null: false
+    t.decimal "total_amount", precision: 14, scale: 2, default: "0.0", null: false
+    t.bigint "store_id"
+    t.bigint "created_by_id"
+    t.datetime "published_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_receipts_on_created_by_id"
+    t.index ["receipt_number"], name: "index_receipts_on_receipt_number", unique: true
+    t.index ["status", "receipt_date"], name: "index_receipts_on_status_and_receipt_date"
+    t.index ["store_id"], name: "index_receipts_on_store_id"
+  end
+
   create_table "referrals", force: :cascade do |t|
     t.bigint "affiliate_id"
     t.string "referred_name"
@@ -1757,6 +1791,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_24_000001) do
   add_foreign_key "product_reviews", "users"
   add_foreign_key "product_variants", "products"
   add_foreign_key "products", "categories"
+  add_foreign_key "receipt_lines", "ledger_accounts"
+  add_foreign_key "receipt_lines", "receipts", on_delete: :cascade
+  add_foreign_key "receipts", "stores"
+  add_foreign_key "receipts", "users", column: "created_by_id"
   add_foreign_key "referrals", "affiliates"
   add_foreign_key "referrals", "customers"
   add_foreign_key "referrals", "customers", column: "referring_customer_id"

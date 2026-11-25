@@ -1049,7 +1049,7 @@
 
     <!-- Accounts & Returns Section (one main menu + submenu) -->
     <% if current_user.has_sidebar_permission?('reports') || current_user.has_sidebar_permission?('bookings') || current_user.has_sidebar_permission?('invoices') %>
-    <% acc_menu_open = %w[/admin/credit_notes /admin/debit_notes /admin/manual_journals /admin/ledger_accounts /admin/reports/gstr1].any? { |p| request.path.start_with?(p) } %>
+    <% acc_menu_open = %w[/admin/credit_notes /admin/debit_notes /admin/manual_journals /admin/receipts /admin/ledger_accounts /admin/reports/gstr1].any? { |p| request.path.start_with?(p) } %>
     <div class="nav-section">
       <div class="nav-section-title">Accounts</div>
       <ul class="nav-menu">
@@ -1110,6 +1110,12 @@
                 <%= link_to admin_ledger_accounts_path, class: "submenu-link #{'active' if request.path.start_with?('/admin/ledger_accounts')}" do %>
                   <span class="submenu-bullet">•</span>
                   <span>Chart of Accounts</span>
+                <% end %>
+              </li>
+              <li>
+                <%= link_to admin_receipts_path, class: "submenu-link #{'active' if request.path.start_with?('/admin/receipts')}" do %>
+                  <span class="submenu-bullet">•</span>
+                  <span>Receipts</span>
                 <% end %>
               </li>
               <li class="px-3 pt-2 pb-1 small text-uppercase fw-semibold" style="opacity:.6;letter-spacing:.04em;font-size:10.5px">GST</li>

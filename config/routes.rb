@@ -412,6 +412,14 @@ Rails.application.routes.draw do
         get :clone
       end
     end
+    # Accountant: Receipts (same form as Manual Journals, own table)
+    resources :receipts do
+      member do
+        patch :publish
+        patch :mark_draft
+        get :clone
+      end
+    end
     resources :ledger_accounts, only: [:index, :show, :create, :update, :destroy] do
       member do
         patch :toggle_active
