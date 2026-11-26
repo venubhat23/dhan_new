@@ -64,7 +64,8 @@ class CustomerBookingReport
       s = s.where(payment_status: filters[:payment_status]) if filters[:payment_status].present?
       if filters[:address].present?
         q = "%#{Booking.sanitize_sql_like(filters[:address].to_s.strip)}%"
-        s = s.where('bookings.delivery_address ILIKE ?', q)
+        area_sql = Customer.column_names.include?('landmark') ? ' OR customers.landmark ILIKE :q' : ''
+        s = s.left_joins(:customer).where("bookings.delivery_address ILIKE :q#{area_sql}", q: q)
       end
       if filters[:product_id].present?
         s = s.where(id: BookingItem.where(product_id: filters[:product_id]).select(:booking_id))
@@ -123,7 +124,7 @@ class CustomerBookingReport
     rows = {}
     Booking.where(id: ids).includes(:customer).order(Arel.sql(BOOKING_DATE)).each do |b|
       k = b.customer_id ? "c#{b.customer_id}" : "#{b.customer_phone}|#{b.customer_name}"
-      r = rows[k] ||= { customer_id: b.customer_id, name: customer_name(b), phone: customer_phone(b), address: address_for(b),
+      r = rows[k] ||= { customer_id: b.customer_id, name: customer_name(b), phone: customer_phone(b), address: address_for(b), area: area_for(b),
                         bookings: 0, qty: 0.0, amount: 0.0, delivered: 0, pending: 0, last_date: nil, statuses: Hash.new(0) }
       r[:bookings] += 1
       r[:qty] += qty_by_booking[b.id].to_f
@@ -175,6 +176,16 @@ class CustomerBookingReport
 
   def address_for(b)
     b.delivery_address.presence || b.customer&.try(:shipping_address).presence || b.customer&.try(:address).presence
+  end
+
+  # Customer's "Area" (customers.landmark, labelled Area on the customer form).
+  def area_for(b) = b.customer&.try(:landmark).presence
+
+  # Distinct customer areas for the address/area filter dropdown.
+  def self.area_options
+    return [] unless Customer.column_names.include?('landmark')
+
+    Customer.where.not(landmark: [nil, '']).distinct.order(:landmark).limit(2000).pluck(:landmark).map(&:strip).uniq
   end
 
   def delivery_person_name(b) = b.delivery_person&.display_name || b.read_attribute(:delivery_person).presence

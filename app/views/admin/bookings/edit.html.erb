@@ -388,7 +388,15 @@
             <% end %>
           </div>
 
-          <!-- Additional Notes (below the products) -->
+          <!-- Add Item (right below the products) -->
+          <div class="mb-3">
+            <button type="button" class="btn btn-outline-primary" onclick="addBookingItem()">
+              <i class="bi bi-plus-circle me-1"></i>
+              Add Item
+            </button>
+          </div>
+
+          <!-- Additional Notes (below Add Item) -->
           <div class="border rounded p-3 mb-3 bg-light-subtle">
             <label class="form-label fw-semibold mb-2" for="booking_notes">
               <i class="bi bi-chat-square-text text-primary me-2"></i>Additional Notes
@@ -396,12 +404,8 @@
             <%= f.text_area :notes, class: 'form-control', rows: 3, placeholder: 'Add any special instructions or notes for this booking...' %>
           </div>
 
-          <!-- Add Item + Update Booking (same submit as the sidebar's Actions card) -->
-          <div class="d-flex justify-content-between align-items-center gap-2">
-            <button type="button" class="btn btn-outline-primary" onclick="addBookingItem()">
-              <i class="bi bi-plus-circle me-1"></i>
-              Add Item
-            </button>
+          <!-- Update Booking (same submit as the sidebar's Actions card) -->
+          <div class="d-flex justify-content-end">
             <%= f.submit 'Update Booking', class: 'btn btn-primary' %>
           </div>
 

@@ -712,6 +712,7 @@ class Admin::ReportsController < Admin::ApplicationController
     @stores = Store.order(:name)
     @delivery_persons = DeliveryPerson.order(:first_name, :last_name)
     @products = Product.order(:name).pluck(:name, :id)
+    @areas = CustomerBookingReport.area_options
     stamp = "#{@from_date.strftime('%Y%m%d')}_#{@to_date.strftime('%Y%m%d')}"
 
     if params[:download] == 'csv'
@@ -806,40 +807,40 @@ class Admin::ReportsController < Admin::ApplicationController
     CSV.generate do |csv|
       case view
       when 'items'
-        csv << ['Booking Date', 'Delivery Date', 'Booking', 'Customer', 'Phone', 'Delivery Address', 'Product', 'Qty', 'Unit', 'Unit Price (Rs)',
+        csv << ['Booking Date', 'Delivery Date', 'Booking', 'Customer', 'Phone', 'Area', 'Delivery Address', 'Product', 'Qty', 'Unit', 'Unit Price (Rs)',
                 'Discount (Rs)', 'Amount (Rs)', 'Status', 'Delivery Person', 'Store']
         items = report.items.to_a
         items.each do |i|
           b = i.booking
           csv << [report.booking_date(b)&.strftime('%d/%m/%Y'), b.expected_delivery_date&.strftime('%d/%m/%Y'), b.booking_number,
-                  report.customer_name(b), report.customer_phone(b), report.address_for(b), CustomerBookingReport.item_label(i),
+                  report.customer_name(b), report.customer_phone(b), report.area_for(b), report.address_for(b), CustomerBookingReport.item_label(i),
                   i.quantity.to_f, CustomerBookingReport.item_unit(i), i.price.to_f, i.try(:discount_amount).to_f, i.total.to_f, CustomerBookingReport.status_label(b.status),
                   report.delivery_person_name(b), b.store&.name]
         end
-        csv << ['', '', '', '', '', '', 'TOTAL', items.sum { |i| i.quantity.to_f }.round(2), '', '', '', items.sum { |i| i.total.to_f }.round(2)]
+        csv << ['', '', '', '', '', '', '', 'TOTAL', items.sum { |i| i.quantity.to_f }.round(2), '', '', '', items.sum { |i| i.total.to_f }.round(2)]
       when 'products'
         csv << ['Product', 'Pack Size', 'Unit', 'Total Qty', 'Bookings', 'Amount (Rs)']
         rows = report.product_qty_rows
         rows.each { |r| csv << [r[:name], r[:pack], r[:unit], r[:qty].round(2), r[:bookings], r[:amount]] }
         csv << ['TOTAL', '', '', rows.sum { |r| r[:qty] }.round(2), '', rows.sum { |r| r[:amount] }.round(2)]
       when 'customers'
-        csv << ['Customer', 'Phone', 'Address', 'Bookings', 'Delivered', 'Total Qty', 'Amount (Rs)', 'Last Booking']
+        csv << ['Customer', 'Phone', 'Area', 'Address', 'Bookings', 'Delivered', 'Total Qty', 'Amount (Rs)', 'Last Booking']
         report.customer_rows.each do |r|
-          csv << [r[:name], r[:phone], r[:address], r[:bookings], r[:delivered], r[:qty].round(2), r[:amount].round(2),
+          csv << [r[:name], r[:phone], r[:area], r[:address], r[:bookings], r[:delivered], r[:qty].round(2), r[:amount].round(2),
                   r[:last_date]&.strftime('%d/%m/%Y')]
         end
       else
-        csv << ['Booking Date', 'Delivery Date', 'Booking', 'Customer', 'Phone', 'Delivery Address', 'Items', 'Total Qty',
+        csv << ['Booking Date', 'Delivery Date', 'Booking', 'Customer', 'Phone', 'Area', 'Delivery Address', 'Items', 'Total Qty',
                 'Amount (Rs)', 'Payment', 'Status', 'Delivery Person', 'Store']
         report.bookings.each do |b|
-          items = b.booking_items.map { |i| "#{CustomerBookingReport.item_label(i)} x #{CustomerBookingReport.qty_with_unit(i)}" }.join('; ')
+          items = b.booking_items.map { |i| "#{CustomerBookingReport.item_label(i)} x #{CustomerBookingReport.qty_with_unit(i)}" }.join("\n")
           csv << [report.booking_date(b)&.strftime('%d/%m/%Y'), b.expected_delivery_date&.strftime('%d/%m/%Y'), b.booking_number,
-                  report.customer_name(b), report.customer_phone(b), report.address_for(b), items,
+                  report.customer_name(b), report.customer_phone(b), report.area_for(b), report.address_for(b), items,
                   b.booking_items.sum { |i| i.quantity.to_f }, b.total_amount.to_f, b.payment_status.to_s.humanize,
                   CustomerBookingReport.status_label(b.status), report.delivery_person_name(b), b.store&.name]
         end
         t = report.totals
-        csv << ['', '', '', "TOTAL (#{t[:bookings]} bookings)", '', '', '', t[:qty], t[:amount]]
+        csv << ['', '', '', "TOTAL (#{t[:bookings]} bookings)", '', '', '', '', t[:qty], t[:amount]]
       end
     end
   end

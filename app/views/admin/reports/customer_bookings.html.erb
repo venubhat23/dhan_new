@@ -55,12 +55,12 @@
     <div class="row g-2 align-items-end">
       <div class="col-6 col-lg-2">
         <label>Date Based On</label>
-        <%= select_tag :date_basis, options_for_select(CustomerBookingReport::DATE_BASES.map(&:reverse), @date_basis), class: 'form-select form-select-sm' %>
+        <%= select_tag :date_basis, options_for_select(CustomerBookingReport::DATE_BASES.map(&:reverse), @date_basis), class: 'form-select form-select-sm cb-s2' %>
       </div>
       <div class="col-6 col-lg-2">
         <label>Period</label>
         <%= select_tag :period, options_for_select(Admin::ReportsController::PRODUCT_SALES_PERIODS.map(&:reverse), @period),
-                       class: 'form-select form-select-sm', id: 'cb-period' %>
+                       class: 'form-select form-select-sm cb-s2', id: 'cb-period' %>
       </div>
       <div class="col-6 col-lg-2 cb-custom">
         <label>From</label><%= date_field_tag :from_date, @from_date, class: 'form-control form-control-sm' %>
@@ -70,30 +70,35 @@
       </div>
       <div class="col-12 col-lg-4">
         <label><i class="bi bi-person me-1"></i>Customer Name / Phone</label>
-        <%= text_field_tag :customer, @filters[:customer], class: 'form-control form-control-sm', placeholder: 'Type name or mobile number' %>
+        <% sel_customer = @filters[:customer_id].present? ? Customer.find_by(id: @filters[:customer_id]) : nil %>
+        <%= select_tag :customer_id,
+              (sel_customer ? options_for_select([["#{sel_customer.display_name} - #{sel_customer.mobile}", sel_customer.id]], sel_customer.id) : ''),
+              include_blank: true, id: 'cb-customer', class: 'form-select form-select-sm' %>
       </div>
 
       <div class="col-6 col-lg-3">
         <label>Product</label>
-        <%= select_tag :product_id, options_for_select(@products, @filters[:product_id]), include_blank: 'All products', class: 'form-select form-select-sm' %>
+        <%= select_tag :product_id, options_for_select(@products, @filters[:product_id]), include_blank: 'All products', class: 'form-select form-select-sm cb-s2', data: { placeholder: 'All products' } %>
       </div>
       <div class="col-6 col-lg-2">
         <label>Delivery Person</label>
         <%= select_tag :delivery_person_id, options_for_select(@delivery_persons.map { |d| [d.display_name, d.id] }, @filters[:delivery_person_id]),
-                       include_blank: 'All', class: 'form-select form-select-sm' %>
+                       include_blank: 'All', class: 'form-select form-select-sm cb-s2', data: { placeholder: 'All' } %>
       </div>
       <div class="col-6 col-lg-2">
         <label>Store</label>
-        <%= select_tag :store_id, options_for_select(@stores.map { |s| [s.name, s.id] }, @filters[:store_id]), include_blank: 'All', class: 'form-select form-select-sm' %>
+        <%= select_tag :store_id, options_for_select(@stores.map { |s| [s.name, s.id] }, @filters[:store_id]), include_blank: 'All', class: 'form-select form-select-sm cb-s2', data: { placeholder: 'All' } %>
       </div>
       <div class="col-6 col-lg-1">
         <label>Payment</label>
         <%= select_tag :payment_status, options_for_select(Booking.payment_statuses.keys.map { |k| [k.humanize, k] }, @filters[:payment_status]),
-                       include_blank: 'All', class: 'form-select form-select-sm' %>
+                       include_blank: 'All', class: 'form-select form-select-sm cb-s2', data: { placeholder: 'All' } %>
       </div>
       <div class="col-12 col-lg-3">
         <label><i class="bi bi-geo-alt me-1"></i>Delivery Address (area / pincode)</label>
-        <%= text_field_tag :address, @filters[:address], class: 'form-control form-control-sm', placeholder: 'e.g. Jayanagar or 560041' %>
+        <% area_opts = (@areas | [@filters[:address]].compact) %>
+        <%= select_tag :address, options_for_select(area_opts, @filters[:address]), include_blank: true,
+                       id: 'cb-address', class: 'form-select form-select-sm' %>
       </div>
       <div class="col-6 col-lg-1">
         <%= submit_tag 'Run', class: 'btn btn-primary btn-sm w-100', name: nil %>
@@ -266,5 +271,49 @@
     var sel = document.getElementById('cb-period');
     function toggle() { document.querySelectorAll('.cb-custom').forEach(function (el) { el.style.display = sel.value === 'custom' ? '' : 'none'; }); }
     sel.addEventListener('change', toggle); toggle();
+    if (window.jQuery) jQuery(sel).on('change', toggle); // select2 fires jQuery change only
+  })();
+
+  // Select2 on every filter dropdown (searchable).
+  (function () {
+    if (!window.jQuery || !jQuery.fn.select2) return;
+    jQuery('.cb-s2').each(function () {
+      var $s = jQuery(this);
+      $s.select2({ theme: 'bootstrap-5', width: '100%', selectionCssClass: 'select2--small', dropdownCssClass: 'select2--small',
+                   placeholder: $s.data('placeholder') || '', allowClear: !!$s.data('placeholder') });
+    });
+    // Area / pincode: pick a known customer area or type anything (tags).
+    jQuery('#cb-address').select2({
+      theme: 'bootstrap-5', width: '100%', selectionCssClass: 'select2--small', dropdownCssClass: 'select2--small',
+      placeholder: 'e.g. Jayanagar or 560041', allowClear: true, tags: true
+    });
+  })();
+
+  // Customer picker: type 2+ letters (e.g. "kal") → matching customers load
+  // via AJAX (same endpoint as Bookings); selecting one runs the report.
+  (function () {
+    if (!window.jQuery || !jQuery.fn.select2) return;
+    var $c = jQuery('#cb-customer');
+    $c.select2({
+      theme: 'bootstrap-5',
+      placeholder: 'Type name or mobile number',
+      selectionCssClass: 'select2--small',
+      dropdownCssClass: 'select2--small',
+      allowClear: true,
+      width: '100%',
+      minimumInputLength: 2,
+      ajax: {
+        url: '<%= search_customers_admin_bookings_path %>',
+        dataType: 'json',
+        delay: 250,
+        cache: true,
+        data: function (params) { return { q: params.term }; },
+        processResults: function (data) { return { results: data }; }
+      }
+    });
+    $c.on('select2:select select2:clear', function () {
+      var f = this.form;
+      setTimeout(function () { f.submit(); }, 0);
+    });
   })();
 </script>
