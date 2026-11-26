@@ -41,10 +41,10 @@
       </small>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-      <%= link_to admin_reports_customer_bookings_path(base.merge(download: 'csv')), class: 'btn btn-light', data: { turbo: false } do %>
+      <%= link_to admin_reports_customer_bookings_path(base.merge(download: 'csv')), class: 'btn btn-success fw-semibold', data: { turbo: false } do %>
         <i class="bi bi-filetype-csv me-1"></i>Download CSV (<%= CustomerBookingReport::VIEWS[@view] %>)
       <% end %>
-      <%= link_to admin_reports_customer_bookings_path(base.merge(print: 1)), class: 'btn btn-outline-light', target: '_blank', data: { turbo: false } do %>
+      <%= link_to admin_reports_customer_bookings_path(base.merge(print: 1)), class: 'btn btn-warning fw-semibold', target: '_blank', data: { turbo: false } do %>
         <i class="bi bi-printer me-1"></i>Print (<%= CustomerBookingReport::VIEWS[@view] %>)
       <% end %>
     </div>
@@ -138,10 +138,10 @@
             <% end %>
           </div>
           <div class="d-flex gap-1">
-            <%= link_to admin_reports_customer_bookings_path(base.merge(download: 'csv')), class: 'btn btn-outline-success btn-sm', data: { turbo: false } do %>
+            <%= link_to admin_reports_customer_bookings_path(base.merge(download: 'csv')), class: 'btn btn-success btn-sm', data: { turbo: false } do %>
               <i class="bi bi-filetype-csv me-1"></i>CSV
             <% end %>
-            <%= link_to admin_reports_customer_bookings_path(base.merge(print: 1)), class: 'btn btn-outline-secondary btn-sm', target: '_blank', data: { turbo: false } do %>
+            <%= link_to admin_reports_customer_bookings_path(base.merge(print: 1)), class: 'btn btn-warning btn-sm', target: '_blank', data: { turbo: false } do %>
               <i class="bi bi-printer me-1"></i>Print
             <% end %>
           </div>

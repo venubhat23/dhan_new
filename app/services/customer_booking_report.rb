@@ -52,7 +52,7 @@ class CustomerBookingReport
       s = Booking.where.not(status: 'draft')
       s = apply_dates(s)
       s = s.where(status: statuses) if statuses.any?
-      s = s.where(customer_id: filters[:customer_id]) if filters[:customer_id].present?
+      s = apply_customer_id(s, filters[:customer_id]) if filters[:customer_id].present?
       if filters[:customer].present?
         q = "%#{Booking.sanitize_sql_like(filters[:customer].to_s.strip)}%"
         s = s.left_joins(:customer).where(
@@ -206,6 +206,21 @@ class CustomerBookingReport
 
   def order_sql
     delivery_basis? ? 'bookings.expected_delivery_date DESC NULLS LAST, bookings.id DESC' : "#{BOOKING_DATE} DESC, bookings.id DESC"
+  end
+
+  # Same rule as the Bookings list: bookings keyed in with a typed name/phone
+  # but never linked to the customer record (customer_id NULL) still belong to
+  # them — match those on the last 10 digits of the phone.
+  def apply_customer_id(scope, customer_id)
+    customer = Customer.find_by(id: customer_id)
+    digits = customer&.mobile.to_s.gsub(/\D/, '').last(10)
+    return scope.where(customer_id: customer_id) unless digits.length == 10
+
+    scope.where(
+      "bookings.customer_id = :id OR (bookings.customer_id IS NULL AND " \
+      "RIGHT(REGEXP_REPLACE(bookings.customer_phone, '\\D', '', 'g'), 10) = :m)",
+      id: customer.id, m: digits
+    )
   end
 
   def apply_dates(scope)

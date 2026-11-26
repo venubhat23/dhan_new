@@ -832,12 +832,16 @@ class Admin::ReportsController < Admin::ApplicationController
       else
         csv << ['Booking Date', 'Delivery Date', 'Booking', 'Customer', 'Phone', 'Area', 'Delivery Address', 'Items', 'Total Qty',
                 'Amount (Rs)', 'Payment', 'Status', 'Delivery Person', 'Store']
+        # One item per row (spreadsheets show only the first line of a
+        # multi-line cell): the booking's details + totals go on its first
+        # row, the remaining items follow on rows with only the Items cell.
         report.bookings.each do |b|
-          items = b.booking_items.map { |i| "#{CustomerBookingReport.item_label(i)} x #{CustomerBookingReport.qty_with_unit(i)}" }.join("\n")
+          items = b.booking_items.map { |i| "#{CustomerBookingReport.item_label(i)} x #{CustomerBookingReport.qty_with_unit(i)}" }
           csv << [report.booking_date(b)&.strftime('%d/%m/%Y'), b.expected_delivery_date&.strftime('%d/%m/%Y'), b.booking_number,
-                  report.customer_name(b), report.customer_phone(b), report.area_for(b), report.address_for(b), items,
+                  report.customer_name(b), report.customer_phone(b), report.area_for(b), report.address_for(b), items.first,
                   b.booking_items.sum { |i| i.quantity.to_f }, b.total_amount.to_f, b.payment_status.to_s.humanize,
                   CustomerBookingReport.status_label(b.status), report.delivery_person_name(b), b.store&.name]
+          items.drop(1).each { |label| csv << ['', '', '', '', '', '', '', label] }
         end
         t = report.totals
         csv << ['', '', '', "TOTAL (#{t[:bookings]} bookings)", '', '', '', '', t[:qty], t[:amount]]
