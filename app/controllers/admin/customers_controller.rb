@@ -422,6 +422,12 @@ class Admin::CustomersController < Admin::ApplicationController
     # (whether admin-supplied or the default). password_digest still holds the hash.
     @customer.auto_generated_password = password
 
+    if password != password_confirmation
+      @customer.errors.add(:password_confirmation, "doesn't match Password")
+      @sub_agents = SubAgent.active.order(:first_name, :last_name)
+      return render :new, status: :unprocessable_entity
+    end
+
     begin
       ActiveRecord::Base.transaction do
         if @customer.save
@@ -437,78 +443,46 @@ class Admin::CustomersController < Admin::ApplicationController
           #   end
           # end
 
-          # Always create User account for consistency with mobile API
-          # Create User account - auto-generate password if not provided
-          should_create_user = @customer.email.present? # Always create user if email exists
-
-          if should_create_user
-            if password.present? && password_confirmation.present?
-              # Use provided password
-              if password == password_confirmation
-                generated_password = password
-                User.create!(
-                  first_name: extract_first_name(@customer.full_name),
-                  last_name: extract_last_name(@customer.full_name),
-                  email: @customer.email,
-                  mobile: @customer.mobile,
-                  password: generated_password,
-                  password_confirmation: generated_password,
-                  user_type: 'customer',
-                  address: @customer.address,
-                  city: params[:customer][:city] || 'Unknown',
-                  state: params[:customer][:state] || 'Unknown',
-                  pincode: params[:customer][:pincode] || '000000',
-                  country: 'India',  # Match mobile API default
-                  status: true,
-                  is_active: true,
-                  is_verified: false
-                )
-                notice = if password_defaulted
-                  "Customer and login account created successfully. Default password used: #{DEFAULT_CUSTOMER_PASSWORD}"
-                else
-                  'Customer and login account created successfully.'
-                end
-                redirect_to admin_customer_path(@customer), notice: notice
-              else
-                @customer.destroy
-                @customer.errors.add(:password_confirmation, "doesn't match Password")
-                @sub_agents = SubAgent.active.order(:first_name, :last_name)
-                render :new, status: :unprocessable_entity
-                return
-              end
+          # Always create the login User (mobile app / web). Customers with no
+          # real email log in by mobile via a placeholder email (see
+          # Customer#placeholder_email). Reuse an existing customer-type User
+          # with the same email/mobile instead of failing on uniqueness.
+          login_note = nil
+          begin
+            user = @customer.linked_user
+            if user
+              user.update!(password: password, password_confirmation: password)
             else
-              # Auto-generate password if no password provided but user account creation requested
-              generated_password = generate_secure_password
+              login_email = @customer.real_email? ? @customer.email : @customer.placeholder_email
               User.create!(
                 first_name: extract_first_name(@customer.full_name),
                 last_name: extract_last_name(@customer.full_name),
-                email: @customer.email,
+                email: login_email,
                 mobile: @customer.mobile,
-                password: generated_password,
-                password_confirmation: generated_password,
+                password: password,
+                password_confirmation: password,
                 user_type: 'customer',
                 address: @customer.address,
-                city: params[:customer][:city] || 'Unknown',
-                state: params[:customer][:state] || 'Unknown',
-                pincode: params[:customer][:pincode] || '000000',
+                city: params[:customer][:city].presence || 'Unknown',
+                state: params[:customer][:state].presence || 'Unknown',
+                pincode: params[:customer][:pincode].presence || '000000',
                 country: 'India',  # Match mobile API default
                 status: true,
                 is_active: true,
                 is_verified: false
               )
-              # Store generated password in flash for display (in production, send via email/SMS)
-              flash[:generated_password] = generated_password
-              redirect_to admin_customer_path(@customer),
-                         notice: "Customer created successfully. Auto-generated password: #{generated_password}"
             end
-          else
-            notice = if password_defaulted
-              "Customer was successfully created. Default password used: #{DEFAULT_CUSTOMER_PASSWORD}"
-            else
-              'Customer was successfully created.'
-            end
-            redirect_to admin_customer_path(@customer), notice: notice
+            login_note = @customer.real_email? ? "Login: #{@customer.email}." : "Login with mobile #{@customer.mobile}."
+          rescue ActiveRecord::RecordInvalid => e
+            Rails.logger.warn "Customer #{@customer.id}: login account not created: #{e.message}"
+            login_note = "Login account could not be created (#{e.record.errors.full_messages.to_sentence}); use \"Create User & Set Password\"."
           end
+
+          notice = "Customer and login account created successfully."
+          notice = "Customer created successfully." if login_note&.start_with?("Login account could not")
+          notice += " #{login_note}" if login_note
+          notice += " Default password used: #{DEFAULT_CUSTOMER_PASSWORD}" if password_defaulted
+          redirect_to admin_customer_path(@customer), notice: notice
         else
           @sub_agents = SubAgent.active.order(:first_name, :last_name)
           render :new, status: :unprocessable_entity

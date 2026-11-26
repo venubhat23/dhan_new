@@ -228,7 +228,7 @@
     </script>
 
     <!-- Address Information -->
-    <% if @customer.address.present? || @customer.latitude.present? || @customer.longitude.present? || @customer.location_link.present? %>
+    <% if @customer.address.present? || @customer.landmark.present? || @customer.latitude.present? || @customer.longitude.present? || @customer.location_link.present? %>
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-header bg-transparent border-0">
         <h5 class="mb-0">Address & Location</h5>
@@ -239,6 +239,13 @@
           <div class="col-12">
             <strong class="text-muted d-block">Address</strong>
             <%= @customer.address %>
+          </div>
+          <% end %>
+
+          <% if @customer.landmark.present? %>
+          <div class="col-12">
+            <strong class="text-muted d-block">Area</strong>
+            <%= @customer.landmark %>
           </div>
           <% end %>
 
