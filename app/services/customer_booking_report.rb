@@ -124,7 +124,7 @@ class CustomerBookingReport
     rows = {}
     Booking.where(id: ids).includes(:customer).order(Arel.sql(BOOKING_DATE)).each do |b|
       k = b.customer_id ? "c#{b.customer_id}" : "#{b.customer_phone}|#{b.customer_name}"
-      r = rows[k] ||= { customer_id: b.customer_id, name: customer_name(b), phone: customer_phone(b), address: address_for(b), area: area_for(b),
+      r = rows[k] ||= { customer_id: b.customer_id, name: customer_name(b), phone: customer_phone(b), address: address_for(b), area: area_for(b), location: location_for(b),
                         bookings: 0, qty: 0.0, amount: 0.0, delivered: 0, pending: 0, last_date: nil, statuses: Hash.new(0) }
       r[:bookings] += 1
       r[:qty] += qty_by_booking[b.id].to_f
@@ -180,6 +180,19 @@ class CustomerBookingReport
 
   # Customer's "Area" (customers.landmark, labelled Area on the customer form).
   def area_for(b) = b.customer&.try(:landmark).presence
+
+  # Customer's map location: the saved Google Maps link, else lat/long.
+  def location_for(b)
+    c = b.customer
+    return unless c
+
+    link = c.try(:location_link).to_s.strip.presence
+    return link if link
+
+    lat = c.try(:latitude)
+    lng = c.try(:longitude)
+    "https://maps.google.com/?q=#{lat},#{lng}" if lat.present? && lng.present?
+  end
 
   # Distinct customer areas for the address/area filter dropdown.
   def self.area_options

@@ -129,7 +129,7 @@
   </div>
 
   <div class="row g-3">
-    <div class="col-xl-9">
+    <div class="col-12">
       <div class="cb-card">
         <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
           <div class="cb-tabs d-flex gap-1">
@@ -137,28 +137,21 @@
               <%= link_to label, admin_reports_customer_bookings_path(base.merge(view: key)), class: (key == @view ? 'active' : nil) %>
             <% end %>
           </div>
-          <div class="d-flex gap-1">
-            <%= link_to admin_reports_customer_bookings_path(base.merge(download: 'csv')), class: 'btn btn-success btn-sm', data: { turbo: false } do %>
-              <i class="bi bi-filetype-csv me-1"></i>CSV
-            <% end %>
-            <%= link_to admin_reports_customer_bookings_path(base.merge(print: 1)), class: 'btn btn-warning btn-sm', target: '_blank', data: { turbo: false } do %>
-              <i class="bi bi-printer me-1"></i>Print
-            <% end %>
-          </div>
         </div>
 
         <div class="table-responsive">
           <% if @view == 'items' %>
             <table class="table table-sm table-hover cb-table mb-0">
-              <thead><tr><th>Date</th><th>Delivery</th><th>Booking</th><th>Customer</th><th>Delivery Address</th><th>Product</th><th class="text-end">Qty</th><th>Unit</th><th class="text-end">Amount</th><th>Status</th></tr></thead>
+              <thead><tr><th>Date</th><th>Delivery</th><th>Booking</th><th>Customer</th><th>Area</th><th>Delivery Address</th><th>Product</th><th class="text-end">Qty</th><th>Unit</th><th class="text-end">Amount</th><th>Status</th></tr></thead>
               <tbody>
-                <% if @items.empty? %><tr><td colspan="10" class="text-center text-muted py-4">No booking items match these filters.</td></tr><% end %>
+                <% if @items.empty? %><tr><td colspan="11" class="text-center text-muted py-4">No booking items match these filters.</td></tr><% end %>
                 <% @items.each do |i| b = i.booking %>
                   <tr>
                     <td class="text-nowrap"><%= @report.booking_date(b)&.strftime('%d %b %Y') %></td>
                     <td class="text-nowrap"><%= b.expected_delivery_date&.strftime('%d %b %Y') || '—' %></td>
                     <td><%= link_to "##{b.booking_number}", admin_booking_path(b), class: 'text-decoration-none' %></td>
                     <td><%= @report.customer_name(b) %><% if (ph = @report.customer_phone(b)).present? %><div class="small text-muted"><%= ph %></div><% end %></td>
+                    <td class="small text-nowrap"><%= @report.area_for(b) || '—' %></td>
                     <td class="cb-addr small"><%= @report.address_for(b) || '—' %></td>
                     <td><%= CustomerBookingReport.item_label(i) %></td>
                     <td class="text-end fw-semibold"><%= qty.(i.quantity) %></td>
@@ -173,12 +166,13 @@
 
           <% elsif @view == 'customers' %>
             <table class="table table-sm table-hover cb-table mb-0">
-              <thead><tr><th>Customer</th><th>Address</th><th class="text-end">Bookings</th><th class="text-end">Delivered</th><th class="text-end">Total Qty</th><th class="text-end">Amount</th><th>Statuses</th><th>Last Booking</th><th></th></tr></thead>
+              <thead><tr><th>Customer</th><th>Area</th><th>Address</th><th class="text-end">Bookings</th><th class="text-end">Delivered</th><th class="text-end">Total Qty</th><th class="text-end">Amount</th><th>Statuses</th><th>Last Booking</th><th></th></tr></thead>
               <tbody>
-                <% if @customer_rows.empty? %><tr><td colspan="9" class="text-center text-muted py-4">No customers match these filters.</td></tr><% end %>
+                <% if @customer_rows.empty? %><tr><td colspan="10" class="text-center text-muted py-4">No customers match these filters.</td></tr><% end %>
                 <% @customer_rows.each do |r| %>
                   <tr>
                     <td><strong><%= r[:name] %></strong><% if r[:phone].present? %><div class="small text-muted"><%= r[:phone] %></div><% end %></td>
+                    <td class="small text-nowrap"><%= r[:area].presence || '—' %></td>
                     <td class="cb-addr small"><%= r[:address] || '—' %></td>
                     <td class="text-end"><%= r[:bookings] %></td>
                     <td class="text-end text-success"><%= r[:delivered] %></td>
@@ -216,15 +210,16 @@
 
           <% else %>
             <table class="table table-sm table-hover cb-table mb-0">
-              <thead><tr><th>Date</th><th>Delivery</th><th>Booking</th><th>Customer</th><th>Delivery Address</th><th>Items × Qty</th><th class="text-end">Qty</th><th class="text-end">Amount</th><th>Payment</th><th>Status</th><th>Delivery By</th></tr></thead>
+              <thead><tr><th>Date</th><th>Delivery</th><th>Booking</th><th>Customer</th><th>Area</th><th>Delivery Address</th><th>Items × Qty</th><th class="text-end">Qty</th><th class="text-end">Amount</th><th>Payment</th><th>Status</th><th>Delivery By</th></tr></thead>
               <tbody>
-                <% if @bookings.empty? %><tr><td colspan="11" class="text-center text-muted py-4">No bookings match these filters.</td></tr><% end %>
+                <% if @bookings.empty? %><tr><td colspan="12" class="text-center text-muted py-4">No bookings match these filters.</td></tr><% end %>
                 <% @bookings.each do |b| %>
                   <tr>
                     <td class="text-nowrap"><%= @report.booking_date(b)&.strftime('%d %b %Y') %></td>
                     <td class="text-nowrap"><%= b.expected_delivery_date&.strftime('%d %b %Y') || '—' %><% if b.try(:expected_delivery_time).present? %><div class="small text-muted"><%= b.expected_delivery_time %></div><% end %></td>
                     <td><%= link_to "##{b.booking_number}", admin_booking_path(b), class: 'text-decoration-none' %><% if b.store %><div class="small text-muted"><%= b.store.name %></div><% end %></td>
                     <td><%= @report.customer_name(b) %><% if (ph = @report.customer_phone(b)).present? %><div class="small text-muted"><%= ph %></div><% end %></td>
+                    <td class="small text-nowrap"><%= @report.area_for(b) || '—' %></td>
                     <td class="cb-addr small"><%= @report.address_for(b) || '—' %></td>
                     <td>
                       <ul class="cb-items">
@@ -245,22 +240,6 @@
             <div class="mt-2"><%= paginate @bookings %></div>
           <% end %>
         </div>
-      </div>
-    </div>
-
-    <div class="col-xl-3">
-      <div class="cb-card">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="fw-bold mb-0"><i class="bi bi-box-seam me-1"></i>Quantity by Product</h6>
-          <%= link_to admin_reports_customer_bookings_path(base.merge(view: 'products', print: 1)), class: 'btn btn-outline-secondary btn-sm py-0', target: '_blank', title: 'Print packing list', data: { turbo: false } do %><i class="bi bi-printer"></i><% end %>
-        </div>
-        <% if @product_qty.empty? %><div class="text-muted small">Nothing booked.</div><% end %>
-        <% @product_qty.each do |p| %>
-          <div class="d-flex justify-content-between small border-bottom py-1">
-            <span><%= p[:name] %><% if p[:pack] %> <span class="text-muted">(<%= p[:pack] %>)</span><% end %></span>
-            <span class="text-nowrap"><strong><%= qty.(p[:qty]) %> <%= p[:unit] %></strong> · <%= p[:bookings] %> bk</span>
-          </div>
-        <% end %>
       </div>
     </div>
   </div>
