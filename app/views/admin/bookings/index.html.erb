@@ -464,7 +464,15 @@
                 <td class="align-middle">
                   <div class="d-flex align-items-center">
                     <div>
-                      <h6 class="mb-0">#<%= booking.booking_number %></h6>
+                      <h6 class="mb-0 d-flex align-items-center gap-1">
+                        #<%= booking.booking_number %>
+                        <% if (delivery_reminder_url = booking_delivery_reminder_whatsapp_url(booking)) %>
+                          <a href="<%= delivery_reminder_url %>" target="_blank" rel="noopener"
+                             class="btn btn-sm py-0 px-1 fw-bold lh-sm"
+                             style="background:#25D366;border-color:#25D366;color:#fff;font-size:0.7rem;"
+                             title="Send delivery reminder (delivery tomorrow) on WhatsApp">R</a>
+                        <% end %>
+                      </h6>
                       <small class="text-muted"><%= booking.created_at.strftime("%d %b %Y") if booking.created_at %></small>
                       <% if booking.user&.franchise? %>
                         <div class="mt-1">

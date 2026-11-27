@@ -31,6 +31,23 @@ module Admin::BookingsHelper
      'Thank you for shopping with Dhanvantari Naturals.'].join("\n")
   end
 
+  # wa.me link with the "delivery tomorrow" reminder (the "R" button in the
+  # Booking Details column). nil when there's no usable mobile number.
+  def booking_delivery_reminder_whatsapp_url(booking)
+    booking_whatsapp_url(booking, booking_delivery_reminder_message(booking))
+  end
+
+  # Wording as supplied by the client.
+  def booking_delivery_reminder_message(booking)
+    name = booking.customer&.display_name || booking.customer_name.presence || 'Customer'
+    ["Dear #{name},", '',
+     'Greetings from Dhanvantari Naturals! 🌿', '',
+     'This is a reminder that your order is scheduled for delivery tomorrow.', '',
+     'Kindly ensure that someone is available to receive the order.', '',
+     'Thank you for shopping with us!', '',
+     'Warm regards,', 'Dhanvantari Naturals'].join("\n")
+  end
+
   def booking_whatsapp_url(booking, text)
     digits = (booking.customer&.mobile || booking.customer_phone).to_s.gsub(/\D/, '').sub(/^0+/, '')
     digits = digits.delete_prefix('91') if digits.length == 12

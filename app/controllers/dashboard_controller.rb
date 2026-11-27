@@ -586,8 +586,45 @@ class DashboardController < ApplicationController
   # ?refresh=1 forces a recompute, so the numbers don't visibly lag.
   DASHBOARD_CACHE_TTL = 45.seconds
 
+  # Top-right timeframe dropdown. 'all_time' (the default) keeps the classic
+  # lifetime totals; the others scope every sales/order/customer figure to the
+  # period and compare growth against the previous equivalent period.
+  DASHBOARD_TIMEFRAMES = {
+    'all_time'     => 'All Time',
+    'today'        => 'Today',
+    'this_week'    => 'This Week',
+    'this_month'   => 'This Month',
+    'last_month'   => 'Last Month',
+    'this_quarter' => 'This Quarter'
+  }.freeze
+
+  def set_dashboard_timeframe
+    @timeframe = DASHBOARD_TIMEFRAMES.key?(params[:timeframe]) ? params[:timeframe] : 'all_time'
+    @timeframe_label = DASHBOARD_TIMEFRAMES[@timeframe]
+    now = Time.current
+    @period_range, @prev_period_range, @prev_period_label =
+      case @timeframe
+      when 'today'        then [now.all_day,              1.day.ago.all_day,     'yesterday']
+      when 'this_week'    then [now.all_week,             1.week.ago.all_week,   'last week']
+      when 'this_month'   then [now.all_month,            1.month.ago.all_month, 'last month']
+      when 'last_month'   then [1.month.ago.all_month,    2.months.ago.all_month, 'previous month']
+      when 'this_quarter' then [now.all_quarter,          3.months.ago.all_quarter, 'last quarter']
+      else                     [nil,                      nil,                   'last month']
+      end
+    # Sub-figures labelled by period ("new this month" etc.) fall back to the
+    # current month when viewing all-time totals.
+    @sub_period_range = @period_range || now.all_month
+    @sub_period_label = @period_range ? @timeframe_label : 'This Month'
+  end
+
+  # Bookings created in the selected period (all bookings for all-time).
+  def period_bookings
+    @period_range ? Booking.where(created_at: @period_range) : Booking.all
+  end
+
   def load_ecommerce_dashboard_data
-    cache_key = "dashboard:ecommerce:#{Date.current.iso8601}"
+    set_dashboard_timeframe
+    cache_key = "dashboard:ecommerce:#{Date.current.iso8601}:#{@timeframe}"
     FastCache::STORE.delete(cache_key) if params[:refresh].present?
 
     ivars = FastCache.fetch(cache_key, expires_in: DASHBOARD_CACHE_TTL) do
@@ -615,21 +652,33 @@ class DashboardController < ApplicationController
     # ---- Bookings are the real order entity everywhere on this dashboard ----
     # Every count/revenue figure below is derived from this single GROUP BY so
     # the KPI cards, the charts and the tables can never disagree.
-    booking_status_counts = Booking.group(:status).count
+    # The KPI/analytics figures follow the selected timeframe; the clickable
+    # status cards and the pending-orders backlog stay all-time so they match
+    # the (unfiltered) booking lists they link to.
+    booking_status_counts = period_bookings.group(:status).count
     real_order_counts     = booking_status_counts.except(*NON_ORDER_BOOKING_STATUSES)
+    all_time_order_counts = (@period_range ? Booking.group(:status).count : booking_status_counts)
+                              .except(*NON_ORDER_BOOKING_STATUSES)
 
     @draft_bookings     = booking_status_counts.slice(*NON_ORDER_BOOKING_STATUSES).values.sum
     @total_bookings     = real_order_counts.values.sum
     @total_orders       = @total_bookings
-    @pending_bookings   = real_order_counts.slice('ordered_and_delivery_pending', 'rescheduled', 'confirmed', 'processing', 'packed').values.sum
-    @shipped_orders     = real_order_counts.slice('shipped', 'shop_pickup', 'out_for_delivery').values.sum
+    pending_statuses    = %w[ordered_and_delivery_pending rescheduled confirmed processing packed]
+    shipped_statuses    = %w[shipped shop_pickup out_for_delivery]
+    @pending_bookings   = real_order_counts.slice(*pending_statuses).values.sum
+    @shipped_orders     = real_order_counts.slice(*shipped_statuses).values.sum
     @completed_bookings = real_order_counts.slice(*FULFILLED_BOOKING_STATUSES).values.sum
+    # All-time versions for the link cards / backlog
+    @all_pending_bookings   = all_time_order_counts.slice(*pending_statuses).values.sum
+    @all_shipped_orders     = all_time_order_counts.slice(*shipped_statuses).values.sum
+    @all_completed_bookings = all_time_order_counts.slice(*FULFILLED_BOOKING_STATUSES).values.sum
     @delivered_orders   = real_order_counts['delivered'] || 0
     @cancelled_bookings = real_order_counts.slice('cancelled', 'returned').values.sum
     @cancelled_orders   = @cancelled_bookings
     @pending_orders     = @pending_bookings
     # Orders that exist but aren't finished (used by the "Pending Orders" card)
-    @pending_orders_count = @total_bookings - @completed_bookings - @cancelled_bookings
+    @pending_orders_count = all_time_order_counts.values.sum - @all_completed_bookings -
+                            all_time_order_counts.slice('cancelled', 'returned').values.sum
 
     # Revenue = fulfilled bookings only, in 1 conditional SUM query. Drafts and
     # cancelled/returned bookings never contribute to any revenue figure.
@@ -640,7 +689,11 @@ class DashboardController < ApplicationController
        COALESCE(SUM(CASE WHEN created_at >= '#{today_start}' THEN total_amount ELSE 0 END), 0) AS today_rev,
        COALESCE(SUM(CASE WHEN created_at >= '#{month_start}'  THEN total_amount ELSE 0 END), 0) AS month_rev"
     )).take
-    @total_revenue = revenue_row.total_rev.to_f
+    @total_revenue = if @period_range
+                       period_bookings.where(status: FULFILLED_BOOKING_STATUSES).sum(:total_amount).to_f
+                     else
+                       revenue_row.total_rev.to_f
+                     end
     @today_revenue = revenue_row.today_rev.to_f
     @month_revenue = revenue_row.month_rev.to_f
     @avg_order_value = @completed_bookings > 0 ? (@total_revenue / @completed_bookings).round(2) : 0
@@ -648,7 +701,7 @@ class DashboardController < ApplicationController
     # Customer returns (Credit Notes): amount credited back + units restocked.
     credit_row = CreditNote.select(Arel.sql(
       "COUNT(*) AS cnt, COALESCE(SUM(total_amount), 0) AS amt,
-       COALESCE(SUM(CASE WHEN credit_date >= '#{Date.current.beginning_of_month}' THEN total_amount ELSE 0 END), 0) AS month_amt"
+       COALESCE(SUM(CASE WHEN credit_date BETWEEN '#{@sub_period_range.begin.to_date}' AND '#{@sub_period_range.end.to_date}' THEN total_amount ELSE 0 END), 0) AS month_amt"
     )).take
     @credit_notes_count        = credit_row.cnt.to_i
     @credit_notes_amount       = credit_row.amt.to_f
@@ -659,7 +712,7 @@ class DashboardController < ApplicationController
     # Returns to vendors (Debit Notes).
     debit_row = DebitNote.select(Arel.sql(
       "COUNT(*) AS cnt, COALESCE(SUM(total_amount), 0) AS amt,
-       COALESCE(SUM(CASE WHEN debit_date >= '#{Date.current.beginning_of_month}' THEN total_amount ELSE 0 END), 0) AS month_amt"
+       COALESCE(SUM(CASE WHEN debit_date BETWEEN '#{@sub_period_range.begin.to_date}' AND '#{@sub_period_range.end.to_date}' THEN total_amount ELSE 0 END), 0) AS month_amt"
     )).take
     @debit_notes_count        = debit_row.cnt.to_i
     @debit_notes_amount       = debit_row.amt.to_f
@@ -669,7 +722,7 @@ class DashboardController < ApplicationController
 
     # Payment collection rate: share of real orders that are fully paid.
     # One grouped query also supplies the unpaid count/total used further down.
-    booking_payment_rows = Booking.where.not(status: NON_ORDER_BOOKING_STATUSES)
+    booking_payment_rows = period_bookings.where.not(status: NON_ORDER_BOOKING_STATUSES)
                                   .group(:payment_status)
                                   .pluck(:payment_status, Arel.sql('COUNT(*)'), Arel.sql('COALESCE(SUM(total_amount), 0)'))
                                   .index_by(&:first)
@@ -715,15 +768,14 @@ class DashboardController < ApplicationController
 
     # Customer metrics
     # Total / this-month / growth-comparison figures all come from one query.
-    cur_month_start  = Date.current.beginning_of_month.beginning_of_day
-    prev_month_start = 1.month.ago.beginning_of_month.beginning_of_day
-    prev_month_end   = 1.month.ago.end_of_month.end_of_day
+    cur_range  = @period_range || Time.current.all_month
+    prev_range = @prev_period_range || 1.month.ago.all_month
     @customer_stats_row = Customer.select(Customer.sanitize_sql_array([
       "COUNT(*) AS total_cnt,
        COUNT(*) FILTER (WHERE created_at BETWEEN ? AND ?) AS month_cnt,
-       COUNT(*) FILTER (WHERE created_at >= ?) AS cur_cnt,
+       COUNT(*) FILTER (WHERE created_at BETWEEN ? AND ?) AS cur_cnt,
        COUNT(*) FILTER (WHERE created_at BETWEEN ? AND ?) AS prev_cnt",
-      month_start, Date.current.end_of_month, cur_month_start, prev_month_start, prev_month_end
+      @sub_period_range.begin, @sub_period_range.end, cur_range.begin, cur_range.end, prev_range.begin, prev_range.end
     ])).take
     @total_customers          = @customer_stats_row.total_cnt.to_i
     @new_customers_this_month = @customer_stats_row.month_cnt.to_i
@@ -779,6 +831,7 @@ class DashboardController < ApplicationController
   def calculate_category_performance
     BookingItem.joins(:booking, product: :category)
                .where.not(bookings: { status: DashboardController::NON_ORDER_BOOKING_STATUSES })
+               .merge(period_bookings)
                .group('categories.name')
                .sum('booking_items.quantity * booking_items.price')
                .reject { |_, v| v.to_f == 0 }
@@ -799,7 +852,7 @@ class DashboardController < ApplicationController
 
   # Real top customers by fulfilled spend (not a random sample).
   def calculate_top_customers
-    rows = Booking.where.not(status: NON_ORDER_BOOKING_STATUSES)
+    rows = period_bookings.where.not(status: NON_ORDER_BOOKING_STATUSES)
                   .where.not(customer_id: nil)
                   .group(:customer_id)
                   .select('customer_id,
@@ -821,6 +874,7 @@ class DashboardController < ApplicationController
     # Top 5 products by quantity sold (real orders only)
     BookingItem.joins(:product, :booking)
                .where.not(bookings: { status: DashboardController::NON_ORDER_BOOKING_STATUSES })
+               .merge(period_bookings)
                .group('products.name')
                .order('SUM(booking_items.quantity) DESC')
                .limit(5)
@@ -845,7 +899,7 @@ class DashboardController < ApplicationController
   end
 
   def calculate_payment_method_distribution
-    counts = Booking.group(:payment_method).count
+    counts = period_bookings.group(:payment_method).count
     {
       'Cash'   => counts['cash'].to_i,
       'Card'   => counts['card'].to_i,
@@ -876,16 +930,17 @@ class DashboardController < ApplicationController
   end
 
   def calculate_ecommerce_growth_metrics
-    cur_start  = Date.current.beginning_of_month.beginning_of_day
-    prev_start = 1.month.ago.beginning_of_month.beginning_of_day
-    prev_end   = 1.month.ago.end_of_month.end_of_day
+    cur_range  = @period_range || Time.current.all_month
+    prev_range = @prev_period_range || 1.month.ago.all_month
+    cur_start, cur_end   = cur_range.begin, cur_range.end
+    prev_start, prev_end = prev_range.begin, prev_range.end
 
     # Counts exclude drafts; revenue counts fulfilled bookings only — matching
     # the KPI cards exactly.
     fulfilled = FULFILLED_BOOKING_STATUSES.map { |s| ActiveRecord::Base.connection.quote(s) }.join(',')
     booking_row = Booking.where.not(status: NON_ORDER_BOOKING_STATUSES).select(Arel.sql(
-      "COALESCE(SUM(CASE WHEN created_at >= '#{cur_start}' AND status IN (#{fulfilled}) THEN total_amount ELSE 0 END), 0) AS cur_rev,
-       COUNT(CASE WHEN created_at >= '#{cur_start}'                             THEN 1 END)   AS cur_cnt,
+      "COALESCE(SUM(CASE WHEN created_at BETWEEN '#{cur_start}' AND '#{cur_end}' AND status IN (#{fulfilled}) THEN total_amount ELSE 0 END), 0) AS cur_rev,
+       COUNT(CASE WHEN created_at BETWEEN '#{cur_start}' AND '#{cur_end}'          THEN 1 END)   AS cur_cnt,
        COALESCE(SUM(CASE WHEN created_at BETWEEN '#{prev_start}' AND '#{prev_end}' AND status IN (#{fulfilled}) THEN total_amount ELSE 0 END), 0) AS prev_rev,
        COUNT(CASE WHEN created_at BETWEEN '#{prev_start}' AND '#{prev_end}'        THEN 1 END) AS prev_cnt"
     )).take

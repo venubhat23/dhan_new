@@ -661,11 +661,11 @@ class Admin::ReportsController < Admin::ApplicationController
     @sort = ProductSalesReport::SORTS.key?(params[:sort]) ? params[:sort] : 'qty'
     @search = params[:search].to_s.strip
     @stores = Store.order(:name)
-    @categories = Category.order(:name)
+    @status_options = ProductSalesReport.status_options
     @store_id = params[:store_id].presence
-    @category_id = params[:category_id].presence
 
-    @report = ProductSalesReport.new(from_date: @from_date, to_date: @to_date, store_id: @store_id, category_id: @category_id)
+    @report = ProductSalesReport.new(from_date: @from_date, to_date: @to_date, store_id: @store_id, status: params[:status])
+    @status = @report.status
     @product = Product.find_by(id: params[:product_id]) if params[:product_id].present?
     stamp = "#{@from_date.strftime('%Y%m%d')}_#{@to_date.strftime('%Y%m%d')}"
 
@@ -858,10 +858,10 @@ class Admin::ReportsController < Admin::ApplicationController
   def product_sales_csv(rows)
     require 'csv'
     CSV.generate do |csv|
-      csv << ['Rank', 'Product', 'SKU', 'Category', 'Qty Sold', 'Unit', 'Orders', 'Customers', 'Revenue (Rs)', 'Avg Price (Rs)',
+      csv << ['Rank', 'Product', 'SKU', 'Status', 'Qty Sold', 'Unit', 'Orders', 'Customers', 'Revenue (Rs)', 'Avg Price (Rs)',
               'Share %', 'Returned Qty', 'Returned (Rs)', 'Last Sold']
       rows.each_with_index do |r, i|
-        csv << [i + 1, r[:name], r[:sku], r[:category], r[:qty], r[:unit], r[:orders], r[:customers], r[:revenue], r[:avg_price],
+        csv << [i + 1, r[:name], r[:sku], r[:statuses].map { |l, q| "#{l}: #{q.to_f == q.to_i ? q.to_i : q.round(2)}" }.join(', '), r[:qty], r[:unit], r[:orders], r[:customers], r[:revenue], r[:avg_price],
                 r[:share], r[:returned_qty], r[:returned_amount], r[:last_sold]&.strftime('%d/%m/%Y')]
       end
       csv << ['', 'TOTAL', '', '', rows.sum { |r| r[:qty] }.round(2), '', '', '', rows.sum { |r| r[:revenue] }.round(2)]

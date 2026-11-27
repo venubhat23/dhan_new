@@ -13,13 +13,19 @@ class ProductSalesReport
   }.freeze
   SALE_DATE = 'COALESCE(bookings.booking_date, bookings.created_at)'.freeze
 
-  attr_reader :from_date, :to_date, :store_id, :category_id
+  attr_reader :from_date, :to_date, :store_id, :status
 
-  def initialize(from_date:, to_date:, store_id: nil, category_id: nil)
+  def initialize(from_date:, to_date:, store_id: nil, status: nil)
     @from_date = from_date
     @to_date = to_date
     @store_id = store_id.presence
-    @category_id = category_id.presence
+    @status = status.presence && Booking.normalize_status(status).to_s
+    @status = nil unless self.class.status_options.any? { |_, v| v == @status }
+  end
+
+  # Delivery statuses that can appear in this report (excluded ones never do).
+  def self.status_options
+    Booking.status_options.reject { |_, v| EXCLUDED_STATUSES.include?(v) }
   end
 
   # ---- ranking -------------------------------------------------------------
@@ -133,7 +139,7 @@ class ProductSalesReport
                        .where.not(bookings: { status: EXCLUDED_STATUSES })
                        .where("#{SALE_DATE} BETWEEN ? AND ?", from_date.beginning_of_day, to_date.end_of_day)
     scope = scope.where(bookings: { store_id: store_id }) if store_id
-    scope = scope.joins(:product).where(products: { category_id: category_id }) if category_id
+    scope = scope.where(bookings: { status: status }) if status
     scope
   end
 
@@ -153,11 +159,26 @@ class ProductSalesReport
 
         ret = returns_by_product[pid] || {}
         { product_id: pid, name: p.name, sku: p.try(:sku), category: p.category&.name, unit: p.unit_type,
+          statuses: status_qty_by_product[pid] || [],
           qty: qty.to_f, revenue: rev.to_f.round(2), orders: orders.to_i, customers: customers.to_i, last_sold: last,
           avg_price: qty.to_f.positive? ? (rev.to_f / qty.to_f).round(2) : 0.0,
           share: grand.positive? ? (rev.to_f * 100 / grand).round(1) : 0.0,
           returned_qty: ret[:qty].to_f, returned_amount: ret[:amount].to_f.round(2) }
       end
+    end
+  end
+
+  # { product_id => [[status_label, qty], ...] } in the standard status order.
+  def status_qty_by_product
+    @status_qty_by_product ||= begin
+      order = Booking::STATUS_LABELS.keys
+      line_scope.group(:product_id, 'bookings.status')
+                .pluck(:product_id, 'bookings.status', Arel.sql('SUM(booking_items.quantity)'))
+                .group_by(&:first)
+                .transform_values do |list|
+                  list.sort_by { |_, st, _| order.index(st) || order.size }
+                      .map { |_, st, q| [Booking.status_label(st), q.to_f] }
+                end
     end
   end
 

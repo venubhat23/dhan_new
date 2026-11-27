@@ -11,14 +11,12 @@
     </button>
     <div class="dropdown">
       <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" id="timeframeDropdownButton">
-        <i class="bi bi-calendar-range me-1"></i><span id="selectedTimeframe">This Month</span>
+        <i class="bi bi-calendar-range me-1"></i><span id="selectedTimeframe"><%= @timeframe_label %></span>
       </button>
-      <ul class="dropdown-menu">
-        <li><a class="dropdown-item" href="#" onclick="changeTimeframe('Today', 'today')">Today</a></li>
-        <li><a class="dropdown-item" href="#" onclick="changeTimeframe('This Week', 'this_week')">This Week</a></li>
-        <li><a class="dropdown-item active" href="#" onclick="changeTimeframe('This Month', 'this_month')">This Month</a></li>
-        <li><a class="dropdown-item" href="#" onclick="changeTimeframe('Last Month', 'last_month')">Last Month</a></li>
-        <li><a class="dropdown-item" href="#" onclick="changeTimeframe('This Quarter', 'this_quarter')">This Quarter</a></li>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <% DashboardController::DASHBOARD_TIMEFRAMES.each do |key, label| %>
+          <li><a class="dropdown-item <%= 'active' if key == @timeframe %>" href="#" onclick="changeTimeframe(event, '<%= label %>', '<%= key %>')"><%= label %></a></li>
+        <% end %>
       </ul>
     </div>
   </div>
@@ -31,7 +29,7 @@
       <div class="card-body p-3">
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
-            <h6 class="text-muted mb-1">Total Revenue</h6>
+            <h6 class="text-muted mb-1">Total Revenue<% unless @timeframe == 'all_time' %> <small class="fw-normal">(<%= @timeframe_label %>)</small><% end %></h6>
             <h5 class="mb-0">₹<%= number_with_delimiter(@total_revenue.to_i) %></h5>
           </div>
           <div class="text-success">
@@ -43,7 +41,7 @@
           <span class="badge <%= rev_up ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' %> px-2 py-1 me-2">
             <i class="bi bi-arrow-<%= rev_up ? 'up' : 'down' %> me-1"></i><%= (@revenue_growth || 0).abs %>%
           </span>
-          <small class="text-muted">from last month</small>
+          <small class="text-muted">from <%= @prev_period_label %></small>
         </div>
       </div>
     </div>
@@ -53,7 +51,7 @@
       <div class="card-body p-3">
         <div class="d-flex align-items-center">
           <div class="flex-grow-1">
-            <h6 class="text-muted mb-1">Total Orders</h6>
+            <h6 class="text-muted mb-1">Total Orders<% unless @timeframe == 'all_time' %> <small class="fw-normal">(<%= @timeframe_label %>)</small><% end %></h6>
             <h5 class="mb-0"><%= number_with_delimiter(@total_bookings) %></h5>
           </div>
           <div class="text-primary">
@@ -65,7 +63,7 @@
           <span class="badge <%= ord_up ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' %> px-2 py-1 me-2">
             <i class="bi bi-arrow-<%= ord_up ? 'up' : 'down' %> me-1"></i><%= (@order_growth || 0).abs %>%
           </span>
-          <small class="text-muted">from last month</small>
+          <small class="text-muted">from <%= @prev_period_label %></small>
         </div>
       </div>
     </div>
@@ -107,7 +105,7 @@
           <span class="badge bg-info-subtle text-info px-2 py-1 me-2">
             <i class="bi bi-plus me-1"></i><%= @new_customers_this_month %>
           </span>
-          <small class="text-muted">new this month</small>
+          <small class="text-muted">new <%= @sub_period_label.downcase %></small>
         </div>
       </div>
     </div>
@@ -123,7 +121,7 @@
           <div class="avatar-sm bg-success-subtle rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2">
             <i class="bi bi-check-circle text-success"></i>
           </div>
-          <h6 class="mb-0"><%= @completed_bookings %></h6>
+          <h6 class="mb-0"><%= @all_completed_bookings %></h6>
           <small class="text-muted">Completed Orders</small>
         </div>
       </div>
@@ -136,7 +134,7 @@
           <div class="avatar-sm bg-warning-subtle rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2">
             <i class="bi bi-clock text-warning"></i>
           </div>
-          <h6 class="mb-0 text-warning"><%= @pending_bookings %></h6>
+          <h6 class="mb-0 text-warning"><%= @all_pending_bookings %></h6>
           <small class="text-muted">Pending Orders</small>
         </div>
       </div>
@@ -149,7 +147,7 @@
           <div class="avatar-sm bg-info-subtle rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2">
             <i class="bi bi-truck text-info"></i>
           </div>
-          <h6 class="mb-0"><%= @shipped_orders || 0 %></h6>
+          <h6 class="mb-0"><%= @all_shipped_orders || 0 %></h6>
           <small class="text-muted">Shipped Orders</small>
         </div>
       </div>
@@ -210,7 +208,7 @@
       <div class="card-body">
         <div class="row g-3 mb-3 text-center">
           <div class="col-6 col-md-3"><div class="p-2 rounded bg-success-subtle"><div class="small text-muted">Total Credited</div><div class="fs-5 fw-bold text-success">₹<%= number_with_delimiter(number_with_precision(@credit_notes_amount.to_f, precision: 2)) %></div></div></div>
-          <div class="col-6 col-md-3"><div class="p-2 rounded bg-info-subtle"><div class="small text-muted">This Month</div><div class="fs-5 fw-bold text-info">₹<%= number_with_delimiter(number_with_precision(@credit_notes_month_amount.to_f, precision: 2)) %></div></div></div>
+          <div class="col-6 col-md-3"><div class="p-2 rounded bg-info-subtle"><div class="small text-muted"><%= @sub_period_label %></div><div class="fs-5 fw-bold text-info">₹<%= number_with_delimiter(number_with_precision(@credit_notes_month_amount.to_f, precision: 2)) %></div></div></div>
           <div class="col-6 col-md-3"><div class="p-2 rounded bg-danger-subtle"><div class="small text-muted">Credit Notes</div><div class="fs-5 fw-bold text-danger"><%= @credit_notes_count.to_i %></div></div></div>
           <div class="col-6 col-md-3"><div class="p-2 rounded bg-primary-subtle"><div class="small text-muted">Units Back in Stock</div><div class="fs-5 fw-bold text-primary"><%= number_with_precision(@credit_notes_units.to_f, precision: 2, strip_insignificant_zeros: true) %></div></div></div>
         </div>
@@ -254,7 +252,7 @@
       <div class="card-body">
         <div class="row g-3 mb-3 text-center">
           <div class="col-6 col-md-3"><div class="p-2 rounded bg-warning-subtle"><div class="small text-muted">Total Debited</div><div class="fs-5 fw-bold" style="color:#c2410c;">₹<%= number_with_delimiter(number_with_precision(@debit_notes_amount.to_f, precision: 2)) %></div></div></div>
-          <div class="col-6 col-md-3"><div class="p-2 rounded bg-info-subtle"><div class="small text-muted">This Month</div><div class="fs-5 fw-bold text-info">₹<%= number_with_delimiter(number_with_precision(@debit_notes_month_amount.to_f, precision: 2)) %></div></div></div>
+          <div class="col-6 col-md-3"><div class="p-2 rounded bg-info-subtle"><div class="small text-muted"><%= @sub_period_label %></div><div class="fs-5 fw-bold text-info">₹<%= number_with_delimiter(number_with_precision(@debit_notes_month_amount.to_f, precision: 2)) %></div></div></div>
           <div class="col-6 col-md-3"><div class="p-2 rounded bg-danger-subtle"><div class="small text-muted">Debit Notes</div><div class="fs-5 fw-bold text-danger"><%= @debit_notes_count.to_i %></div></div></div>
           <div class="col-6 col-md-3"><div class="p-2 rounded bg-primary-subtle"><div class="small text-muted">Units Sent Back</div><div class="fs-5 fw-bold text-primary"><%= number_with_precision(@debit_notes_units.to_f, precision: 2, strip_insignificant_zeros: true) %></div></div></div>
         </div>
@@ -1093,12 +1091,12 @@ function refreshDashboard() {
   button.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Refreshing...';
   button.disabled = true;
 
-  setTimeout(() => {
-    location.reload();
-  }, 1000);
+  const url = new URL(window.location);
+  url.searchParams.set('refresh', '1');
+  window.location.href = url.toString();
 }
 
-function changeTimeframe(label, period) {
+function changeTimeframe(event, label, period) {
   event.preventDefault();
 
   // Update dropdown button text
@@ -1119,6 +1117,7 @@ function changeTimeframe(label, period) {
   // Redirect with timeframe parameter
   const url = new URL(window.location);
   url.searchParams.set('timeframe', period);
+  url.searchParams.delete('refresh');
 
   // Redirect to update the dashboard with new timeframe
   setTimeout(() => {
