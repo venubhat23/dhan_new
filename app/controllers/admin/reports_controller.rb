@@ -721,7 +721,8 @@ class Admin::ReportsController < Admin::ApplicationController
     end
 
     @totals = @report.totals
-    if params[:print].present?
+    @pdf = params[:download] == 'pdf'
+    if params[:print].present? || @pdf
       case @view
       when 'items' then @items = @report.items
       when 'customers' then @customer_rows = @report.customer_rows
@@ -729,6 +730,12 @@ class Admin::ReportsController < Admin::ApplicationController
       else @bookings = @report.bookings
       end
       @product_qty = @report.product_qty_rows
+      if @pdf
+        html = render_to_string(:customer_bookings_print, layout: false, formats: [:html])
+        pdf = WickedPdf.new.pdf_from_string(html, page_size: 'A4', orientation: 'Landscape', encoding: 'UTF-8',
+                                            margin: { top: 8, bottom: 8, left: 6, right: 6 })
+        return send_data pdf, filename: "customer_bookings_#{@view}_#{stamp}.pdf", type: 'application/pdf', disposition: 'attachment'
+      end
       return render :customer_bookings_print, layout: false
     end
     @status_counts = @report.status_counts

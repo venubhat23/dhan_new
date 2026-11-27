@@ -43,10 +43,12 @@
   </style>
 </head>
 <body>
+  <% unless @pdf %>
   <div class="toolbar">
     <button onclick="window.print()">🖨 Print</button>
     <button onclick="window.close()">Close</button>
   </div>
+  <% end %>
 
   <h1>Customer Booking Report — <%= CustomerBookingReport::VIEWS[@view] %></h1>
   <div class="meta">
@@ -162,6 +164,8 @@
     </table>
   <% end %>
 
+  <% unless @pdf %>
   <script>window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 300); });</script>
+  <% end %>
 </body>
 </html>
