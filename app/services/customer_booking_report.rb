@@ -64,7 +64,16 @@ class CustomerBookingReport
       s = s.where(payment_status: filters[:payment_status]) if filters[:payment_status].present?
       if filters[:address].present?
         q = "%#{Booking.sanitize_sql_like(filters[:address].to_s.strip)}%"
-        area_sql = Customer.column_names.include?('landmark') ? ' OR customers.landmark ILIKE :q' : ''
+        # Area = customers.landmark; unlinked bookings (customer_id NULL) take
+        # the area of the customer with the same last-10-digit phone.
+        area_sql =
+          if Customer.column_names.include?('landmark')
+            " OR customers.landmark ILIKE :q OR (bookings.customer_id IS NULL AND " \
+              "RIGHT(REGEXP_REPLACE(bookings.customer_phone, '\\D', '', 'g'), 10) IN (" \
+              "SELECT RIGHT(REGEXP_REPLACE(pc.mobile, '\\D', '', 'g'), 10) FROM customers pc WHERE pc.landmark ILIKE :q))"
+          else
+            ''
+          end
         s = s.left_joins(:customer).where("bookings.delivery_address ILIKE :q#{area_sql}", q: q)
       end
       if filters[:product_id].present?
@@ -175,15 +184,16 @@ class CustomerBookingReport
   def booking_date(b) = b.booking_date || b.created_at
 
   def address_for(b)
-    b.delivery_address.presence || b.customer&.try(:shipping_address).presence || b.customer&.try(:address).presence
+    c = customer_for(b)
+    b.delivery_address.presence || c&.try(:shipping_address).presence || c&.try(:address).presence
   end
 
   # Customer's "Area" (customers.landmark, labelled Area on the customer form).
-  def area_for(b) = b.customer&.try(:landmark).presence
+  def area_for(b) = customer_for(b)&.try(:landmark).presence
 
   # Customer's map location: the saved Google Maps link, else lat/long.
   def location_for(b)
-    c = b.customer
+    c = customer_for(b)
     return unless c
 
     link = c.try(:location_link).to_s.strip.presence
@@ -192,6 +202,21 @@ class CustomerBookingReport
     lat = c.try(:latitude)
     lng = c.try(:longitude)
     "https://maps.google.com/?q=#{lat},#{lng}" if lat.present? && lng.present?
+  end
+
+  # The booking's customer record. Bookings keyed in with a typed name/phone
+  # but never linked (customer_id NULL) fall back to the customer whose mobile
+  # has the same last 10 digits — so Area / Location still come through.
+  def customer_for(b)
+    return b.customer if b.customer
+
+    digits = self.class.phone_digits(b.customer_phone)
+    phone_customers[digits] if digits
+  end
+
+  def self.phone_digits(phone)
+    d = phone.to_s.gsub(/\D/, '').last(10)
+    d.length == 10 ? d : nil
   end
 
   # Distinct customer areas for the address/area filter dropdown.
@@ -204,6 +229,21 @@ class CustomerBookingReport
   def delivery_person_name(b) = b.delivery_person&.display_name || b.read_attribute(:delivery_person).presence
 
   private
+
+  # { last-10-digits => Customer } for every unlinked booking in the report,
+  # loaded in one query the first time it's needed.
+  def phone_customers
+    @phone_customers ||= begin
+      phones = bookings_scope.reorder(nil).where(customer_id: nil).where.not(customer_phone: [nil, '']).distinct.pluck("bookings.customer_phone")
+      digits = phones.filter_map { |ph| self.class.phone_digits(ph) }.uniq
+      if digits.empty?
+        {}
+      else
+        Customer.where("RIGHT(REGEXP_REPLACE(customers.mobile, '\\D', '', 'g'), 10) IN (?)", digits)
+                .order(:id).each_with_object({}) { |c, h| h[self.class.phone_digits(c.mobile)] ||= c }
+      end
+    end
+  end
 
   def statuses = Array(filters[:statuses]).reject(&:blank?).map { |s| self.class.normalize_status(s) }.uniq
 
