@@ -1049,6 +1049,59 @@ Rails.application.routes.draw do
     end
   end
 
+  # Mobile app API (admin app + delivery app) — Api::V1::App::*, Bearer JWT.
+  # Postman: docs/Dhanvantari_Mobile_App_API.postman_collection.json
+  namespace :api, defaults: { format: :json } do
+    namespace :v1 do
+      namespace :app do
+        post 'auth/login',          to: 'auth#login'
+        post 'auth/delivery_login', to: 'auth#delivery_login'
+        get  'auth/me',             to: 'auth#me'
+
+        get 'meta',             to: 'meta#show'
+        get 'dashboard',        to: 'meta#dashboard'
+        get 'delivery_persons', to: 'meta#delivery_persons'
+
+        get   'customers',     to: 'customers#index'
+        post  'customers',     to: 'customers#create'
+        get   'customers/:id', to: 'customers#show'
+        patch 'customers/:id', to: 'customers#update'
+
+        get   'categories',               to: 'products#categories'
+        get   'price_list',               to: 'products#price_list'
+        get   'products',                 to: 'products#index'
+        get   'products/:id',             to: 'products#show'
+        patch 'products/:id',             to: 'products#update'
+        post  'products/:id/stock',       to: 'products#adjust_stock'
+        get   'products/:id/stock_history', to: 'products#stock_history'
+
+        get   'payment_reminders',              to: 'bookings#payment_reminders'
+        get   'bookings',                       to: 'bookings#index'
+        post  'bookings',                       to: 'bookings#create'
+        get   'bookings/:id',                   to: 'bookings#show'
+        patch 'bookings/:id',                   to: 'bookings#update'
+        patch 'bookings/:id/status',            to: 'bookings#update_status'
+        post  'bookings/:id/mark_paid',         to: 'bookings#mark_paid'
+        post  'bookings/:id/partial_payment',   to: 'bookings#partial_payment'
+        patch 'bookings/:id/delivery',          to: 'bookings#update_delivery'
+        get   'bookings/:id/whatsapp',          to: 'bookings#whatsapp'
+
+        get  'vendors',                         to: 'vendors#index'
+        post 'vendors',                         to: 'vendors#create'
+        get  'vendor_purchases',                to: 'vendors#purchases'
+        post 'vendor_purchases',                to: 'vendors#create_purchase'
+        get  'vendor_purchases/:id',            to: 'vendors#purchase'
+        post 'vendor_purchases/:id/mark_paid',  to: 'vendors#mark_purchase_paid'
+
+        get   'delivery/bookings',                     to: 'delivery#index'
+        get   'delivery/bookings/:id',                 to: 'delivery#show'
+        patch 'delivery/bookings/:id/status',          to: 'delivery#update_status'
+        post  'delivery/bookings/:id/collect_payment', to: 'delivery#collect_payment'
+        get   'delivery/route',                        to: 'delivery#route'
+      end
+    end
+  end
+
   # Mobile API routes
   namespace :api do
     namespace :v1 do

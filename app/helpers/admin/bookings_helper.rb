@@ -3,11 +3,40 @@ module Admin::BookingsHelper
   # customer, or nil when there's no usable mobile number. Plain text on
   # purpose: emojis arrive garbled through wa.me (₹ is fine).
   def booking_payment_thanks_whatsapp_url(booking, invoice: nil)
+    booking_whatsapp_url(booking, booking_payment_thanks_message(booking, invoice: invoice))
+  end
+
+  # wa.me link with a gentle "payment pending" reminder (the "R" button next
+  # to Mark Paid). nil when there's no usable mobile number.
+  def booking_payment_reminder_whatsapp_url(booking, invoice: nil)
+    booking_whatsapp_url(booking, booking_payment_reminder_message(booking, invoice: invoice))
+  end
+
+  # Reminder wording as supplied by the client. Amount = what's still pending
+  # (total minus anything already paid); falls back to the booking number when
+  # no invoice has been generated yet.
+  def booking_payment_reminder_message(booking, invoice: nil)
+    invoice ||= Invoice.find_by(invoice_number: booking.invoice_number) if booking.invoice_number.present?
+    total = (invoice&.total_amount || booking.total_amount).to_f
+    pending = [total - invoice&.paid_amount.to_f, 0].max
+    pending = total if pending.zero?
+    name = booking.customer&.display_name || booking.customer_name.presence || 'Customer'
+    reference = if invoice&.invoice_number.present? then "Invoice number: #{invoice.invoice_number}"
+                else "Booking number: #{booking.booking_number}"
+                end
+
+    ["Dear #{name},", '',
+     "This is a gentle reminder regarding the pending payment of Rs. #{format('%.2f', pending)} for your order (#{reference}).", '',
+     'Kindly complete the payment at your earliest convenience and share the payment screenshot with us for confirmation.', '',
+     'Thank you for shopping with Dhanvantari Naturals.'].join("\n")
+  end
+
+  def booking_whatsapp_url(booking, text)
     digits = (booking.customer&.mobile || booking.customer_phone).to_s.gsub(/\D/, '').sub(/^0+/, '')
     digits = digits.delete_prefix('91') if digits.length == 12
     return nil unless digits.length == 10
 
-    "https://wa.me/91#{digits}?text=#{ERB::Util.url_encode(booking_payment_thanks_message(booking, invoice: invoice))}"
+    "https://wa.me/91#{digits}?text=#{ERB::Util.url_encode(text)}"
   end
 
   # The one WhatsApp thank-you text used by every "Thanks" button. Wording as

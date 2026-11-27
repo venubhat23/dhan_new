@@ -1,0 +1,2494 @@
+{
+  "info": {
+    "_postman_id": "6bb86cd0-f8d8-4f5b-951c-d19f35ad3266",
+    "name": "Dhanvantari Mobile App API (Admin + Delivery)",
+    "description": "End-to-end collection for /api/v1/app. Run folder by folder, top to bottom (or with the Collection Runner): logins save the tokens and each create request saves the ids the next requests use.\n\n1. Set admin_username / admin_password (an admin account on the website) and, for folder 8, delivery_mobile / delivery_password.\n2. base_url defaults to https://dhanvantari-naturals.com (use http://localhost:3000 locally).\n\nAll responses: { success, message?, data, meta? }. Errors: { success: false, message, errors? } with HTTP 400/401/403/404/422. Tokens are valid for 30 days.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Admin login with email or mobile + password (same admin account as the website). Saves admin_token.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{admin_username}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });",
+                  "var j = pm.response.json(); if (j.success && j.data.token) { pm.collectionVariables.set('admin_token', j.data.token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me (admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Dashboard & Dropdowns",
+      "item": [
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/dashboard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "dashboard"
+              ]
+            },
+            "description": "Today / this month bookings, pending deliveries, unpaid count + amount due, low-stock count.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Meta (statuses, paid_via, stores, delivery persons, categories)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/meta",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "meta"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delivery Persons",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/delivery_persons",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "delivery_persons"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });",
+                  "var j = pm.response.json(); if (j.success && (j.data[0] && j.data[0].id)) { pm.collectionVariables.set('delivery_person_id', (j.data[0] && j.data[0].id)); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Customers (search / create for booking)",
+      "item": [
+        {
+          "name": "Search Customers (type-ahead)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/customers?q=kal&page=1&per_page=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "kal"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Matches name, mobile, email or area as the user types.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/customers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "customers"
+              ]
+            },
+            "description": "If the mobile already exists, returns that customer (200) instead of an error.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": {\n    \"full_name\": \"Postman Test Customer\",\n    \"mobile\": \"9000011122\",\n    \"email\": \"\",\n    \"address\": \"12, 4th Cross, Jayanagar, Bengaluru 560041\",\n    \"landmark\": \"Jayanagar\",\n    \"location_link\": \"https://maps.app.goo.gl/example\",\n    \"is_b2b\": false,\n    \"gst_no\": \"\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });",
+                  "var j = pm.response.json(); if (j.success && j.data.id) { pm.collectionVariables.set('customer_id', j.data.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer Details (+ recent bookings, amount due)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/customers/{{customer_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "customers",
+                "{{customer_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Customer",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/customers/{{customer_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "customers",
+                "{{customer_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": {\n    \"landmark\": \"Jayanagar\",\n    \"shipping_address\": \"12, 4th Cross, Jayanagar, Bengaluru 560041\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Products, Price List & Stock",
+      "item": [
+        {
+          "name": "Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "categories"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Price List (grouped by category)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/price_list?q=&category_id=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "price_list"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": ""
+                },
+                {
+                  "key": "category_id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Products (type-ahead)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/products?q=orange&status=active&in_stock=&low_stock=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "orange"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "key": "in_stock",
+                  "value": ""
+                },
+                {
+                  "key": "low_stock",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Type to search name / SKU / barcode. in_stock=1 \u2192 only in stock, low_stock=1 \u2192 at/below threshold. Saves the first product as product_id.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });",
+                  "var j = pm.response.json(); if (j.success && (j.data[0] && j.data[0].id)) { pm.collectionVariables.set('product_id', (j.data[0] && j.data[0].id)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Product Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/products/{{product_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "products",
+                "{{product_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });",
+                  "var j = pm.response.json(); if (j.data && j.data.variants && j.data.variants.length) { pm.collectionVariables.set('variant_id', j.data.variants[0].id); } else { pm.collectionVariables.set('variant_id', ''); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit Product (price, buying price, threshold, variants)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/products/{{product_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "products",
+                "{{product_id}}"
+              ]
+            },
+            "description": "Optional: \"variants\": [{\"id\": 7, \"selling_price\": 60, \"buying_price\": 45, \"b2b_price\": 55, \"low_stock_threshold\": 3}]. Stock is changed with the Stock Adjustment request.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product\": {\n    \"price\": 120,\n    \"buying_price\": 90,\n    \"b2b_price\": 110,\n    \"low_stock_threshold\": 5,\n    \"status\": \"active\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock Adjustment - Add",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/products/{{product_id}}/stock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "products",
+                "{{product_id}}",
+                "stock"
+              ]
+            },
+            "description": "mode: set | add | remove. Adding creates a stock batch (needs cost_price if the product has no buying price). For a product with variants pass product_variant_id.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"add\",\n  \"quantity\": 10,\n  \"cost_price\": 40,\n  \"product_variant_id\": null,\n  \"note\": \"New stock\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock Adjustment - Set (recount)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/products/{{product_id}}/stock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "products",
+                "{{product_id}}",
+                "stock"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"set\",\n  \"quantity\": 25,\n  \"product_variant_id\": null,\n  \"note\": \"Physical recount\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock Adjustment - Remove (damage)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/products/{{product_id}}/stock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "products",
+                "{{product_id}}",
+                "stock"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"remove\",\n  \"quantity\": 1,\n  \"product_variant_id\": null,\n  \"note\": \"Damaged\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/products/{{product_id}}/stock_history",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "products",
+                "{{product_id}}",
+                "stock_history"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Bookings",
+      "item": [
+        {
+          "name": "List Bookings (filters)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/bookings?q=&status=&payment_status=&customer_id=&delivery_person_id=&date_from=&date_to=&delivery_date=&page=1&per_page=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "payment_status",
+                  "value": ""
+                },
+                {
+                  "key": "customer_id",
+                  "value": ""
+                },
+                {
+                  "key": "delivery_person_id",
+                  "value": ""
+                },
+                {
+                  "key": "date_from",
+                  "value": ""
+                },
+                {
+                  "key": "date_to",
+                  "value": ""
+                },
+                {
+                  "key": "delivery_date",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/bookings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "bookings"
+              ]
+            },
+            "description": "price omitted \u2192 product/variant selling price (B2B price for B2B customers). Invoice is generated immediately, same as admin. Instead of customer_id you can send customer_name + customer_phone (customer is linked/created by phone). payment_status: unpaid | paid (with paid_via cash/upi/bank). Out-of-stock lines return 422 with the reason.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking\": {\n    \"customer_id\": \"{{customer_id}}\",\n    \"delivery_address\": \"\",\n    \"store_id\": null,\n    \"discount_amount\": 0,\n    \"shipping_charges\": 0,\n    \"notes\": \"Booked from mobile app\",\n    \"payment_status\": \"unpaid\",\n    \"paid_via\": \"\",\n    \"expected_delivery_date\": \"\",\n    \"expected_delivery_time\": \"\",\n    \"delivery_person_id\": \"{{delivery_person_id}}\",\n    \"items\": [\n      {\n        \"product_id\": \"{{product_id}}\",\n        \"product_variant_id\": \"{{variant_id}}\",\n        \"quantity\": 1,\n        \"price\": null,\n        \"discount_type\": null,\n        \"discount_value\": null\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });",
+                  "var j = pm.response.json(); if (j.success && j.data.id) { pm.collectionVariables.set('booking_id', j.data.id); }",
+                  "if (pm.response.json().data && pm.response.json().data.items[0]) { pm.collectionVariables.set('booking_item_id', pm.response.json().data.items[0].id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Booking Details (items, invoice, location, WhatsApp links)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/bookings/{{booking_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "bookings",
+                "{{booking_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit Booking (items / notes / charges)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/bookings/{{booking_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "bookings",
+                "{{booking_id}}"
+              ]
+            },
+            "description": "items: {id, quantity, price} edits a line, {id, _destroy: true} removes it, {product_id, product_variant_id, quantity} adds a line.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking\": {\n    \"notes\": \"Updated from app\",\n    \"shipping_charges\": 0,\n    \"discount_amount\": 0,\n    \"items\": [\n      {\n        \"id\": \"{{booking_item_id}}\",\n        \"quantity\": 2\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change Delivery Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/bookings/{{booking_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "bookings",
+                "{{booking_id}}",
+                "status"
+              ]
+            },
+            "description": "status: ordered_and_delivery_pending | packed | shipped | shop_pickup | rescheduled | reconfirm_order | delivered | cancelled (reason) | returned | refund",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"packed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set Delivery Date / Time / Delivery Person",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/bookings/{{booking_id}}/delivery",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "bookings",
+                "{{booking_id}}",
+                "delivery"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_delivery_date\": \"2026-11-28\",\n  \"expected_delivery_time\": \"10:30\",\n  \"delivery_person_id\": \"{{delivery_person_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Partial Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/bookings/{{booking_id}}/partial_payment",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "bookings",
+                "{{booking_id}}",
+                "partial_payment"
+              ]
+            },
+            "description": "Recorded on the booking's invoice; booking becomes partially_paid, or paid when the balance reaches 0.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 10,\n  \"notes\": \"Advance via UPI\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WhatsApp: Send Invoice / Thank You / Reminder links",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/bookings/{{booking_id}}/whatsapp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "bookings",
+                "{{booking_id}}",
+                "whatsapp"
+              ]
+            },
+            "description": "Returns wa.me links (open them on the phone) + the message texts: send_invoice, payment_thank_you (after payment), payment_reminder (unpaid).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark Paid (PAID button)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/bookings/{{booking_id}}/mark_paid",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "bookings",
+                "{{booking_id}}",
+                "mark_paid"
+              ]
+            },
+            "description": "paid_via: cash | upi | bank. Updates/creates the invoice and Sales Receipt like admin. Then use the WhatsApp payment_thank_you link.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paid_via\": \"upi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Payment Reminders (delayed payments)",
+      "item": [
+        {
+          "name": "Unpaid / Partially Paid Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/payment_reminders?min_days=0&q=&page=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "payment_reminders"
+              ],
+              "query": [
+                {
+                  "key": "min_days",
+                  "value": "0"
+                },
+                {
+                  "key": "q",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Oldest first, with due_amount, days_since_booking, due_date (booking date + invoice due days), days_overdue, reminder_message and whatsapp_reminder_url. min_days=7 \u2192 only bookings at least 7 days old. meta.total_due = total outstanding.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Vendors & Vendor Purchases",
+      "item": [
+        {
+          "name": "List Vendors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/vendors?q=&active=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "vendors"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": ""
+                },
+                {
+                  "key": "active",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });",
+                  "var j = pm.response.json(); if (j.success && (j.data[0] && j.data[0].id)) { pm.collectionVariables.set('vendor_id', (j.data[0] && j.data[0].id)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/vendors",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "vendors"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendor\": {\n    \"name\": \"Postman Vendor\",\n    \"phone\": \"9000000001\",\n    \"email\": \"\",\n    \"address\": \"\",\n    \"gst_no\": \"\",\n    \"payment_type\": \"Paid\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });",
+                  "var j = pm.response.json(); if (j.success && j.data.id) { pm.collectionVariables.set('vendor_id', j.data.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Vendor Purchase (adds stock)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/vendor_purchases",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "vendor_purchases"
+              ]
+            },
+            "description": "Same as admin Vendor Purchase: creates stock batches for each line (variant lines add to the variant).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendor_purchase\": {\n    \"vendor_id\": \"{{vendor_id}}\",\n    \"purchase_date\": \"\",\n    \"paid_amount\": 0,\n    \"payment_mode\": \"cash\",\n    \"notes\": \"\",\n    \"items\": [\n      {\n        \"product_id\": \"{{product_id}}\",\n        \"product_variant_id\": \"{{variant_id}}\",\n        \"quantity\": 10,\n        \"purchase_price\": 40,\n        \"selling_price\": 60\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });",
+                  "var j = pm.response.json(); if (j.success && j.data.id) { pm.collectionVariables.set('vendor_purchase_id', j.data.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Vendor Purchases",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/vendor_purchases?vendor_id=&payment_status=&page=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "vendor_purchases"
+              ],
+              "query": [
+                {
+                  "key": "vendor_id",
+                  "value": ""
+                },
+                {
+                  "key": "payment_status",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vendor Purchase Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/vendor_purchases/{{vendor_purchase_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "vendor_purchases",
+                "{{vendor_purchase_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark Vendor Purchase Paid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/vendor_purchases/{{vendor_purchase_id}}/mark_paid",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "vendor_purchases",
+                "{{vendor_purchase_id}}",
+                "mark_paid"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_mode\": \"upi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Delivery App (delivery person)",
+      "item": [
+        {
+          "name": "(Admin) Create Unpaid Booking assigned to Delivery Person",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/bookings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "bookings"
+              ]
+            },
+            "description": "Setup step for this folder: an unpaid booking assigned to {{delivery_person_id}}, saved as delivery_booking_id.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking\": {\n    \"customer_id\": \"{{customer_id}}\",\n    \"delivery_address\": \"\",\n    \"store_id\": null,\n    \"discount_amount\": 0,\n    \"shipping_charges\": 0,\n    \"notes\": \"For delivery app test\",\n    \"payment_status\": \"unpaid\",\n    \"paid_via\": \"\",\n    \"expected_delivery_date\": \"\",\n    \"expected_delivery_time\": \"\",\n    \"delivery_person_id\": \"{{delivery_person_id}}\",\n    \"items\": [\n      {\n        \"product_id\": \"{{product_id}}\",\n        \"product_variant_id\": \"{{variant_id}}\",\n        \"quantity\": 1,\n        \"price\": null,\n        \"discount_type\": null,\n        \"discount_value\": null\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });",
+                  "var j = pm.response.json(); if (j.success && j.data.id) { pm.collectionVariables.set('delivery_booking_id', j.data.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delivery Person Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/auth/delivery_login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "auth",
+                "delivery_login"
+              ]
+            },
+            "description": "Mobile (or email) + the password set in Admin \u2192 Delivery Persons. Saves delivery_token. The delivery person only sees bookings assigned to them.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"{{delivery_mobile}}\",\n  \"password\": \"{{delivery_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });",
+                  "var j = pm.response.json(); if (j.success && j.data.token) { pm.collectionVariables.set('delivery_token', j.data.token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me (delivery person)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{delivery_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/delivery/bookings?scope=pending&date=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "delivery",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "scope",
+                  "value": "pending"
+                },
+                {
+                  "key": "date",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "scope: today | pending | delivered | all. Each row has location.maps_url for navigation.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{delivery_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });",
+                  "var j = pm.response.json(); if (j.success && j.data[0] && !pm.collectionVariables.get('delivery_booking_id')) { pm.collectionVariables.set('delivery_booking_id', j.data[0].id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Booking Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/delivery/bookings/{{delivery_booking_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "delivery",
+                "bookings",
+                "{{delivery_booking_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{delivery_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Route Map (today's stops + Google Maps directions)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/delivery/route?date=&origin_lat=&origin_lng=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "delivery",
+                "route"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": ""
+                },
+                {
+                  "key": "origin_lat",
+                  "value": ""
+                },
+                {
+                  "key": "origin_lng",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Open data.directions_url in Google Maps for turn-by-turn route through all stops (up to 10). Each stop also has maps_url, phone and due_amount.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{delivery_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Collect Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/delivery/bookings/{{delivery_booking_id}}/collect_payment",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "delivery",
+                "bookings",
+                "{{delivery_booking_id}}",
+                "collect_payment"
+              ]
+            },
+            "description": "amount omitted/full \u2192 booking paid; less \u2192 partial payment.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{delivery_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": null,\n  \"paid_via\": \"cash\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark Delivered",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/delivery/bookings/{{delivery_booking_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "delivery",
+                "bookings",
+                "{{delivery_booking_id}}",
+                "status"
+              ]
+            },
+            "description": "status: shipped (out for delivery) | delivered | rescheduled",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{delivery_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"delivered\",\n  \"note\": \"Handed to customer\",\n  \"delivered_to\": \"Self\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://dhanvantari-naturals.com"
+    },
+    {
+      "key": "admin_username",
+      "value": "admin@example.com"
+    },
+    {
+      "key": "admin_password",
+      "value": ""
+    },
+    {
+      "key": "delivery_mobile",
+      "value": ""
+    },
+    {
+      "key": "delivery_password",
+      "value": ""
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    },
+    {
+      "key": "delivery_token",
+      "value": ""
+    },
+    {
+      "key": "customer_id",
+      "value": ""
+    },
+    {
+      "key": "product_id",
+      "value": ""
+    },
+    {
+      "key": "variant_id",
+      "value": ""
+    },
+    {
+      "key": "booking_id",
+      "value": ""
+    },
+    {
+      "key": "booking_item_id",
+      "value": ""
+    },
+    {
+      "key": "delivery_person_id",
+      "value": ""
+    },
+    {
+      "key": "vendor_id",
+      "value": ""
+    },
+    {
+      "key": "vendor_purchase_id",
+      "value": ""
+    },
+    {
+      "key": "delivery_booking_id",
+      "value": ""
+    }
+  ]
+}
