@@ -24,7 +24,10 @@
       <h3 class="mb-0"><i class="bi bi-bank2 text-primary me-2"></i>Balance Sheet</h3>
       <small class="text-muted">Sales receipts are deposits · Purchase receipts and manual journals are withdrawals · Starts at ₹0</small>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex flex-wrap gap-2">
+      <%= link_to admin_bookings_path, class: 'btn btn-outline-primary btn-sm' do %><i class="bi bi-bag me-1"></i>Bookings<% end %>
+      <%= link_to admin_invoices_path, class: 'btn btn-outline-primary btn-sm' do %><i class="bi bi-receipt me-1"></i>Invoices<% end %>
+      <%= link_to admin_vendor_purchases_path, class: 'btn btn-outline-warning btn-sm' do %><i class="bi bi-clock-history me-1"></i>Purchase History<% end %>
       <%= link_to new_admin_sales_receipt_path, class: 'btn btn-success btn-sm' do %><i class="bi bi-plus-lg me-1"></i>Record Deposit<% end %>
       <%= link_to new_admin_manual_journal_path, class: 'btn btn-outline-secondary btn-sm' do %><i class="bi bi-plus-lg me-1"></i>Manual Journal<% end %>
     </div>
@@ -70,15 +73,16 @@
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0 bs-table">
         <thead class="table-light">
-          <tr><th>Date</th><th>Reference#</th><th>Type</th><th>Mode</th><th class="text-end">Deposits</th><th class="text-end">Withdrawals</th><th class="text-end">Running Balance</th></tr>
+          <tr><th>Date</th><th>Reference#</th><th>Type</th><th>Mode</th><th class="text-end">Deposits</th><th class="text-end">Withdrawals</th><th class="text-end">Running Balance</th><th>Linked To</th></tr>
         </thead>
         <tbody>
           <tr class="table-light">
             <td colspan="6" class="small text-muted fst-italic">Opening Balance</td>
             <td class="text-end fw-semibold <%= 'bs-neg' if reg.opening_balance.negative? %>"><%= money.(reg.opening_balance) %></td>
+            <td></td>
           </tr>
           <% if @rows.empty? %>
-            <tr><td colspan="7" class="text-center text-muted py-5"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No transactions for this filter.</td></tr>
+            <tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No transactions for this filter.</td></tr>
           <% end %>
           <% @rows.each do |r| %>
             <tr>
@@ -88,19 +92,36 @@
                 <span class="fw-medium bs-type-<%= r.type %>"><%= r.type_label %></span>
                 <% if r.party.present? %><div class="small text-muted"><%= r.type == 'manual_journal' ? 'Ref' : (r.type == 'sales_receipt' ? 'Customer' : 'Vendor') %>: <%= r.party %></div><% end %>
                 <% if r.description.present? %><div class="small text-muted"><%= r.description %></div><% end %>
-                <% if r.booking || r.invoice || r.vendor_purchase || r.vendor_invoice %>
-                  <div class="small mt-1 d-flex flex-wrap gap-1">
-                    <% if r.booking %><%= link_to admin_booking_path(r.booking), class: 'badge text-bg-light border text-decoration-none' do %><i class="bi bi-bag me-1"></i>Booking #<%= r.booking.booking_number %><% end %><% end %>
-                    <% if r.invoice %><%= link_to admin_invoice_path(r.invoice), class: 'badge text-bg-light border text-decoration-none' do %><i class="bi bi-receipt me-1"></i>Invoice <%= r.invoice.invoice_number %><% end %><% end %>
-                    <% if r.vendor_purchase %><%= link_to admin_vendor_purchase_path(r.vendor_purchase), class: 'badge text-bg-light border text-decoration-none' do %><i class="bi bi-cart me-1"></i>Purchase <%= r.vendor_purchase.purchase_number %><% end %><% end %>
-                    <% if r.vendor_invoice&.share_token.present? %><%= link_to vendor_invoice_public_path(r.vendor_invoice.share_token), target: '_blank', rel: 'noopener', class: 'badge text-bg-light border text-decoration-none' do %><i class="bi bi-file-earmark-text me-1"></i>Purchase Invoice <%= r.vendor_invoice.invoice_number %><% end %><% end %>
-                  </div>
-                <% end %>
               </td>
               <td><%= mode_labels[r.payment_mode] || '—' %></td>
               <td class="text-end text-nowrap"><%= money.(r.deposit) if r.deposit.positive? %></td>
               <td class="text-end text-nowrap"><%= money.(r.withdrawal) if r.withdrawal.positive? %></td>
               <td class="text-end text-nowrap fw-semibold <%= 'bs-neg' if r.balance.negative? %>"><%= money.(r.balance) %></td>
+              <td>
+                <div class="d-flex flex-wrap gap-1">
+                  <% case r.type %>
+                  <% when 'sales_receipt' %>
+                    <% if r.booking %>
+                      <%= link_to admin_booking_path(r.booking), class: 'btn btn-sm btn-outline-primary py-0', title: "Open booking ##{r.booking.booking_number}" do %><i class="bi bi-bag me-1"></i>Booking<% end %>
+                    <% end %>
+                    <% if r.invoice %>
+                      <%= link_to admin_invoice_path(r.invoice), class: 'btn btn-sm btn-outline-success py-0', title: "Open invoice #{r.invoice.invoice_number}" do %><i class="bi bi-receipt me-1"></i>Invoice<% end %>
+                    <% end %>
+                    <% unless r.booking || r.invoice %><span class="small text-muted">No booking linked</span><% end %>
+                  <% when 'purchase_receipt' %>
+                    <% if r.vendor_purchase %>
+                      <%= link_to admin_vendor_purchase_path(r.vendor_purchase), class: 'btn btn-sm btn-outline-warning py-0', title: "Open purchase #{r.vendor_purchase.purchase_number}" do %><i class="bi bi-cart me-1"></i>Vendor Purchase<% end %>
+                    <% end %>
+                    <% if r.vendor_invoice&.share_token.present? %>
+                      <%= link_to vendor_invoice_public_path(r.vendor_invoice.share_token), target: '_blank', rel: 'noopener', class: 'btn btn-sm btn-outline-secondary py-0', title: "Purchase invoice #{r.vendor_invoice.invoice_number}" do %><i class="bi bi-file-earmark-text me-1"></i>Purchase Invoice<% end %>
+                    <% end %>
+                    <% vendor_id = r.vendor_purchase&.vendor_id || r.record.vendor_id %>
+                    <%= link_to admin_vendor_purchases_path(vendor_id.present? ? { vendor_id: vendor_id } : {}), class: 'btn btn-sm btn-outline-dark py-0', title: (r.party.present? ? "All purchases from #{r.party}" : 'Purchase history') do %><i class="bi bi-clock-history me-1"></i>Purchase History<% end %>
+                  <% else %>
+                    <span class="small text-muted">—</span>
+                  <% end %>
+                </div>
+              </td>
             </tr>
           <% end %>
         </tbody>
@@ -110,6 +131,7 @@
             <td class="text-end text-success"><%= money.(reg.total_deposits) %></td>
             <td class="text-end text-danger"><%= money.(reg.total_withdrawals) %></td>
             <td class="text-end <%= 'bs-neg' if reg.closing_balance.negative? %>"><%= money.(reg.closing_balance) %></td>
+            <td></td>
           </tr>
         </tfoot>
       </table>
