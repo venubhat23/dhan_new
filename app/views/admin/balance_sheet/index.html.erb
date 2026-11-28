@@ -88,6 +88,14 @@
                 <span class="fw-medium bs-type-<%= r.type %>"><%= r.type_label %></span>
                 <% if r.party.present? %><div class="small text-muted"><%= r.type == 'manual_journal' ? 'Ref' : (r.type == 'sales_receipt' ? 'Customer' : 'Vendor') %>: <%= r.party %></div><% end %>
                 <% if r.description.present? %><div class="small text-muted"><%= r.description %></div><% end %>
+                <% if r.booking || r.invoice || r.vendor_purchase || r.vendor_invoice %>
+                  <div class="small mt-1 d-flex flex-wrap gap-1">
+                    <% if r.booking %><%= link_to admin_booking_path(r.booking), class: 'badge text-bg-light border text-decoration-none' do %><i class="bi bi-bag me-1"></i>Booking #<%= r.booking.booking_number %><% end %><% end %>
+                    <% if r.invoice %><%= link_to admin_invoice_path(r.invoice), class: 'badge text-bg-light border text-decoration-none' do %><i class="bi bi-receipt me-1"></i>Invoice <%= r.invoice.invoice_number %><% end %><% end %>
+                    <% if r.vendor_purchase %><%= link_to admin_vendor_purchase_path(r.vendor_purchase), class: 'badge text-bg-light border text-decoration-none' do %><i class="bi bi-cart me-1"></i>Purchase <%= r.vendor_purchase.purchase_number %><% end %><% end %>
+                    <% if r.vendor_invoice&.share_token.present? %><%= link_to vendor_invoice_public_path(r.vendor_invoice.share_token), target: '_blank', rel: 'noopener', class: 'badge text-bg-light border text-decoration-none' do %><i class="bi bi-file-earmark-text me-1"></i>Purchase Invoice <%= r.vendor_invoice.invoice_number %><% end %><% end %>
+                  </div>
+                <% end %>
               </td>
               <td><%= mode_labels[r.payment_mode] || '—' %></td>
               <td class="text-end text-nowrap"><%= money.(r.deposit) if r.deposit.positive? %></td>

@@ -12,7 +12,10 @@ class BalanceSheetRegister
   TYPES = { 'sales_receipt' => 'Sales Receipt', 'purchase_receipt' => 'Purchase Receipt', 'manual_journal' => 'Manual Journal' }.freeze
 
   Row = Struct.new(:date, :type, :reference, :description, :party, :payment_mode, :deposit, :withdrawal,
-                   :balance, :record, :sort_time, keyword_init: true) do
+                   :balance, :record, :sort_time,
+                   # Source documents the row links to: booking + invoice for
+                   # sales, vendor purchase + its purchase invoice for purchases.
+                   :booking, :invoice, :vendor_purchase, :vendor_invoice, keyword_init: true) do
     def type_label = TYPES[type]
   end
 
@@ -59,20 +62,25 @@ class BalanceSheetRegister
   end
 
   def sales_rows
-    SalesReceipt.includes(:booking).map do |sr|
+    receipts = SalesReceipt.includes(:booking).to_a
+    invoice_numbers = receipts.map { |sr| sr.invoice_number.presence || sr.booking&.invoice_number.presence }.compact.uniq
+    invoices = Invoice.where(invoice_number: invoice_numbers).index_by(&:invoice_number)
+    receipts.map do |sr|
       Row.new(date: sr.receipt_date, type: 'sales_receipt', reference: sr.receipt_number,
               description: ["Customer Payment", sr.booking_number.presence && "Booking ##{sr.booking_number}", sr.invoice_number].compact.join(' · '),
               party: sr.customer_name, payment_mode: sr.payment_mode, deposit: sr.amount.to_f, withdrawal: 0.0,
-              record: sr, sort_time: sr.created_at)
+              record: sr, sort_time: sr.created_at, booking: sr.booking,
+              invoice: invoices[sr.invoice_number.presence || sr.booking&.invoice_number.presence])
     end
   end
 
   def purchase_rows
-    PurchaseReceipt.all.map do |pr|
+    PurchaseReceipt.includes(vendor_purchase: :vendor_invoice).map do |pr|
       Row.new(date: pr.receipt_date, type: 'purchase_receipt', reference: pr.receipt_number,
               description: ["Vendor Payment", pr.purchase_number.presence && "Purchase #{pr.purchase_number}"].compact.join(' · '),
               party: pr.vendor_name, payment_mode: pr.payment_mode, deposit: 0.0, withdrawal: pr.amount.to_f,
-              record: pr, sort_time: pr.created_at)
+              record: pr, sort_time: pr.created_at, vendor_purchase: pr.vendor_purchase,
+              vendor_invoice: pr.vendor_purchase&.vendor_invoice)
     end
   end
 
